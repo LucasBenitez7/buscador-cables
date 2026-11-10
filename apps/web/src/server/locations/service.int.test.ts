@@ -163,21 +163,31 @@ describe("deleteLocation", () => {
 });
 
 describe("listLocationTree and findSubtreeIds", () => {
-  it("returns the nested tree with active cable counts", async () => {
-    const { unit } = await seedTree();
+  it("returns the nested tree with active cable counts per subtree", async () => {
+    const { plant, unit, site, sibling } = await seedTree();
     await prisma.cable.createMany({
       data: [
         { code: "SH-1", originId: unit.id },
         { code: "SH-2", destinationId: unit.id },
         { code: "SH-3", originId: unit.id, deletedAt: new Date() },
+        // Regresión: enrollado en su propio origen contaba dos veces.
+        { code: "SH-4", originId: site.id, currentLocationId: site.id },
+        // Va de un sitio del subárbol a otro: un solo cable para los ancestros comunes.
+        { code: "SH-5", originId: site.id, destinationId: unit.id },
+        { code: "SH-6", originId: sibling.id, destinationId: site.id },
       ],
     });
 
-    const [plant] = await listLocationTree();
-    const area = plant?.children.find((node) => node.code === "A1");
+    const [root] = await listLocationTree();
+    const area = root?.children.find((node) => node.code === "A1");
+    const unitNode = area?.children[0];
 
-    expect(plant?.children.map((node) => node.code)).toEqual(["A1", "A10"]);
-    expect(area?.children[0]).toMatchObject({ code: "R-X", cableCount: 2 });
+    expect(root?.children.map((node) => node.code)).toEqual(["A1", "A10"]);
+    expect(unitNode?.children[0]).toMatchObject({ code: "S-XZ", cableCount: 3 });
+    expect(unitNode).toMatchObject({ code: "R-X", cableCount: 5 });
+    expect(area).toMatchObject({ cableCount: 5 });
+    expect(root?.children.find((node) => node.code === "A10")).toMatchObject({ cableCount: 1 });
+    expect(root).toMatchObject({ id: plant.id, cableCount: 5 });
   });
 
   it("selects a subtree without its siblings", async () => {
