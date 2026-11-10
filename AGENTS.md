@@ -6,7 +6,7 @@ Lee antes de trabajar: `docs/PLAN.md`, `docs/ARQUITECTURA.md` y `CONTRIBUTING.md
 
 1. Trabaja solo en ramas `feat/*`, `fix/*`, `chore/*` o `docs/*` creadas desde `dev`. Nunca hagas commit en `main` ni en `dev`.
 2. No hagas merge, push ni tag sin pedírselo antes al usuario.
-3. Antes de dar una tarea por terminada, ejecuta `pnpm check` (y `pnpm test:e2e` si afecta a flujos) y asegúrate de que todo pasa.
+3. Antes de dar una tarea por terminada, ejecuta `pnpm check` y asegúrate de que todo pasa. Los E2E (`pnpm test:e2e`) se escriben y ejecutan solo al cerrar cada fase, no en cada rama.
 4. Toda funcionalidad lleva tests. Todo bug corregido lleva un test que lo reproduce.
 5. Sigue Conventional Commits en inglés (`feat(cables): ...`).
 6. Código en inglés y textos de la UI / documentación en español.
@@ -20,12 +20,12 @@ Lee antes de trabajar: `docs/PLAN.md`, `docs/ARQUITECTURA.md` y `CONTRIBUTING.md
 
 En Windows PowerShell usa `pnpm.cmd` / `npm.cmd` si la política de ejecución bloquea los `.ps1`.
 
-| Comando              | Acción                                         |
-| -------------------- | ---------------------------------------------- |
-| `docker compose up -d` | Levanta Postgres + Mailpit                   |
-| `pnpm dev`           | Arranca la app en http://localhost:3000        |
-| `pnpm check`         | Lint + typecheck + tests unitarios/integración |
-| `pnpm test:e2e`      | Tests E2E con Playwright                       |
-| `pnpm db:migrate`    | Crea/aplica migraciones de Prisma              |
-| `pnpm db:seed`       | Carga datos de ejemplo                         |
-| `pnpm db:studio`     | Abre Prisma Studio                             |
+| Comando                | Acción                                         |
+| ---------------------- | ---------------------------------------------- |
+| `docker compose up -d` | Levanta Postgres + Mailpit                     |
+| `pnpm dev`             | Arranca la app en http://localhost:3000        |
+| `pnpm check`           | Lint + typecheck + tests unitarios/integración |
+| `pnpm test:e2e`        | Tests E2E con Playwright                       |
+| `pnpm db:migrate`      | Crea/aplica migraciones de Prisma              |
+| `pnpm db:seed`         | Carga datos de ejemplo                         |
+| `pnpm db:studio`       | Abre Prisma Studio                             |

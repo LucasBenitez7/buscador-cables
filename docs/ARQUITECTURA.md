@@ -2,20 +2,20 @@
 
 ## Stack
 
-| Capa              | Tecnología                                   | Motivo                                              |
-| ----------------- | -------------------------------------------- | --------------------------------------------------- |
-| Monorepo          | pnpm workspaces + Turborepo                  | Paquetes compartidos, builds cacheados              |
-| Frontend + Backend| Next.js (App Router) + TypeScript estricto   | Un solo despliegue; Server Actions / Route Handlers |
-| UI                | Tailwind CSS + shadcn/ui                     | Rápido, accesible y consistente                     |
-| Base de datos     | PostgreSQL 16 (+ extensión `pg_trgm`)        | Robusta; búsqueda tolerante a errores               |
-| ORM               | Prisma                                       | Migraciones y tipado                                |
-| Validación        | Zod (compartido cliente/servidor)            | Una sola fuente de verdad                           |
-| Autenticación     | Better Auth (email + contraseña)             | Sesiones, reset y verificación integrados           |
-| Email             | Mailpit (local) / Resend (producción)        |                                                     |
-| Tests             | Vitest + Testing Library + Playwright        | Unitarios, integración y E2E                        |
-| Offline (fase 7)  | Serwist (service worker) + Dexie (IndexedDB) |                                                     |
-| CI                | GitHub Actions                               |                                                     |
-| Despliegue        | Vercel + Railway                             | Docker solo en local (y opcional en producción)     |
+| Capa               | Tecnología                                   | Motivo                                              |
+| ------------------ | -------------------------------------------- | --------------------------------------------------- |
+| Monorepo           | pnpm workspaces + Turborepo                  | Paquetes compartidos, builds cacheados              |
+| Frontend + Backend | Next.js (App Router) + TypeScript estricto   | Un solo despliegue; Server Actions / Route Handlers |
+| UI                 | Tailwind CSS + shadcn/ui                     | Rápido, accesible y consistente                     |
+| Base de datos      | PostgreSQL 16 (+ extensión `pg_trgm`)        | Robusta; búsqueda tolerante a errores               |
+| ORM                | Prisma                                       | Migraciones y tipado                                |
+| Validación         | Zod (compartido cliente/servidor)            | Una sola fuente de verdad                           |
+| Autenticación      | Better Auth (email + contraseña)             | Sesiones, reset y verificación integrados           |
+| Email              | Mailpit (local) / Resend (producción)        |                                                     |
+| Tests              | Vitest + Testing Library + Playwright        | Unitarios, integración y E2E                        |
+| Offline (fase 7)   | Serwist (service worker) + Dexie (IndexedDB) |                                                     |
+| CI                 | GitHub Actions                               |                                                     |
+| Despliegue         | Vercel + Railway                             | Docker solo en local (y opcional en producción)     |
 
 ### ¿Por qué Next.js "puro" y no una API separada?
 

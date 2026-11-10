@@ -1,0 +1,11 @@
+// Esquema de la base de datos. Los modelos se añaden a partir de la fase 1 (auth)
+// y la fase 2 (cables, ubicaciones). Ver docs/ARQUITECTURA.md.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
