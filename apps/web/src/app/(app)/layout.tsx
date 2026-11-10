@@ -8,6 +8,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // Comprobación real en servidor. El proxy solo mira si existe la cookie.
   const user = await requireUser();
   const canManageUsers = hasPermission(user.role, "user:manage");
+  const canManageCatalogs = hasPermission(user.role, "catalog:manage");
 
   return (
     <div className="min-h-dvh">
@@ -20,6 +21,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link href="/locations" className="text-muted-foreground hover:text-foreground">
               Ubicaciones
             </Link>
+            {canManageCatalogs ? (
+              <Link href="/catalogs" className="text-muted-foreground hover:text-foreground">
+                Catálogos
+              </Link>
+            ) : null}
             {canManageUsers ? (
               <Link href="/admin/users" className="text-muted-foreground hover:text-foreground">
                 Usuarios
