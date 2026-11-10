@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@cables/db";
-import { createCableSchema, updateCableSchema } from "@cables/shared";
+import { createCableSchema, parseCableSearch, updateCableSchema } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   CableServiceError,
@@ -8,9 +8,9 @@ import {
   deleteCable,
   getCableForEdit,
   getCableFormOptions,
-  listRecentCables,
   updateCable,
 } from "./service";
+import { searchCables } from "./search";
 
 let actor: { id: string };
 let refs: { typeId: string; colorId: string; origin: string; destination: string; store: string };
@@ -199,7 +199,7 @@ describe("deleteCable", () => {
     expect(event.notes).toBe("Duplicado de SH-49");
     // Ya no se puede editar ni aparece en los listados.
     expect(await getCableForEdit(id)).toBeNull();
-    expect(await listRecentCables()).toEqual([]);
+    expect((await searchCables(parseCableSearch({}))).total).toBe(0);
     await expect(deleteCable(actor, { id, version: 2, reason: "Otra vez" })).rejects.toThrow(
       /no existe o está dado de baja/,
     );
@@ -217,20 +217,6 @@ describe("deleteCable", () => {
 });
 
 describe("queries", () => {
-  it("lists recent active cables with readable names", async () => {
-    await createCable(actor, createInput());
-
-    expect(await listRecentCables()).toEqual([
-      expect.objectContaining({
-        code: "SH-50",
-        type: "Control",
-        origin: "Calderas › Sitio S1",
-        destination: "Calderas › Sitio S2",
-        installationStatus: "IN_STOCK",
-      }),
-    ]);
-  });
-
   it("offers catalogs and non-plant locations labelled with their route", async () => {
     const options = await getCableFormOptions();
 

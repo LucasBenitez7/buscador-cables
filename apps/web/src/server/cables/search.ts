@@ -9,6 +9,12 @@ import {
   type ConnectionStatus,
   type InstallationStatus,
 } from "@cables/shared";
+import {
+  getCableFormOptions,
+  listLocationOptions,
+  type LocationOption,
+  type Option,
+} from "@/server/cables/service";
 import { findSubtreeIds } from "@/server/locations/service";
 
 export type CableSearchItem = {
@@ -217,4 +223,25 @@ export async function searchCables(
   });
 
   return { items, total: count, page, pageCount };
+}
+
+export type SearchOptions = {
+  cableTypes: Option[];
+  colors: Option[];
+  manufacturers: Option[];
+  /** Including plants: filtering by a plant includes everything in it. */
+  locations: LocationOption[];
+};
+
+export async function getSearchOptions(): Promise<SearchOptions> {
+  const [form, locations] = await Promise.all([
+    getCableFormOptions(),
+    listLocationOptions({ includePlants: true }),
+  ]);
+  return {
+    cableTypes: form.cableTypes,
+    colors: form.colors,
+    manufacturers: form.manufacturers,
+    locations,
+  };
 }
