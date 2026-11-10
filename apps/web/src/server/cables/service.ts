@@ -372,37 +372,46 @@ export type CableFormOptions = {
   locations: LocationOption[];
 };
 
+/** Locations labelled with their route ("Planta › Área › Sitio"), sorted by it. */
+export async function listLocationOptions(
+  options: { includePlants?: boolean } = {},
+): Promise<LocationOption[]> {
+  const locations = await prisma.location.findMany({
+    select: { id: true, name: true, type: true, parentId: true },
+  });
+  const byId = new Map(locations.map((location) => [location.id, location]));
+  const route = (id: string): string[] => {
+    const location = byId.get(id);
+    if (!location) {
+      return [];
+    }
+    return [...(location.parentId ? route(location.parentId) : []), location.name];
+  };
+
+  return locations
+    .filter((location) => options.includePlants || location.type !== "PLANT")
+    .map((location) => ({
+      id: location.id,
+      label: route(location.id).join(" › "),
+      type: location.type,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "es", { numeric: true }));
+}
+
 export async function getCableFormOptions(): Promise<CableFormOptions> {
   const byName = { orderBy: { name: "asc" }, select: { id: true, name: true } } as const;
   const [cableTypes, colors, manufacturers, locations] = await Promise.all([
     prisma.cableType.findMany(byName),
     prisma.color.findMany(byName),
     prisma.manufacturer.findMany(byName),
-    prisma.location.findMany({
-      orderBy: { path: "asc" },
-      select: { id: true, name: true, type: true, parentId: true },
-    }),
+    listLocationOptions(),
   ]);
-
-  const byId = new Map(locations.map((location) => [location.id, location]));
-  const route = (id: string): string[] => {
-    const location = byId.get(id);
-    if (!location) return [];
-    return [...(location.parentId ? route(location.parentId) : []), location.name];
-  };
   const toOption = (item: { id: string; name: string }) => ({ id: item.id, label: item.name });
 
   return {
     cableTypes: cableTypes.map(toOption),
     colors: colors.map(toOption),
     manufacturers: manufacturers.map(toOption),
-    locations: locations
-      .filter((location) => location.type !== "PLANT")
-      .map((location) => ({
-        id: location.id,
-        label: route(location.id).join(" › "),
-        type: location.type,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, "es", { numeric: true })),
+    locations,
   };
 }

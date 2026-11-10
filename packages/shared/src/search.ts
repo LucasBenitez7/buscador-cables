@@ -1,0 +1,113 @@
+import { z } from "zod";
+import { CONNECTION_STATUSES, INSTALLATION_STATUSES } from "./cables";
+
+/**
+ * Cable search filters as they travel in the URL (`/cables?q=sh50&type=…`).
+ *
+ * URLs are shared and edited by hand, so an invalid value is ignored instead of
+ * failing the whole search. Numbers accept a decimal comma ("2,5").
+ */
+export const CABLE_SORTS = ["relevance", "code", "updated", "length", "section"] as const;
+export type CableSort = (typeof CABLE_SORTS)[number];
+
+export const CABLE_SORT_LABELS: Record<CableSort, string> = {
+  relevance: "Relevancia",
+  code: "Código",
+  updated: "Última modificación",
+  length: "Longitud",
+  section: "Sección",
+};
+
+export const SEARCH_PAGE_SIZE = 25;
+
+const text = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((value) => (value === "" ? undefined : value))
+    .optional()
+    .catch(undefined);
+
+const id = text(64);
+
+const decimal = z
+  .string()
+  .trim()
+  .regex(/^\d+([.,]\d+)?$/)
+  .transform((value) => Number(value.replace(",", ".")))
+  .pipe(z.number().max(1_000_000))
+  .optional()
+  .catch(undefined);
+
+export const cableSearchSchema = z.object({
+  q: text(50),
+  location: id,
+  type: id,
+  color: id,
+  manufacturer: id,
+  installation: z.enum(INSTALLATION_STATUSES).optional().catch(undefined),
+  connection: z.enum(CONNECTION_STATUSES).optional().catch(undefined),
+  sectionMin: decimal,
+  sectionMax: decimal,
+  diameterMin: decimal,
+  diameterMax: decimal,
+  lengthMin: decimal,
+  lengthMax: decimal,
+  sort: z.enum(CABLE_SORTS).optional().catch(undefined),
+  dir: z.enum(["asc", "desc"]).optional().catch(undefined),
+  page: z.coerce.number().int().min(1).max(10_000).optional().catch(undefined),
+});
+
+export type CableSearch = z.infer<typeof cableSearchSchema>;
+
+type RawParams = Record<string, string | string[] | undefined>;
+
+/** Parses Next.js `searchParams` (repeated keys keep the first value). */
+export function parseCableSearch(params: RawParams): CableSearch {
+  const first: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    const single = Array.isArray(value) ? value[0] : value;
+    if (single !== undefined && single !== "") {
+      first[key] = single;
+    }
+  }
+  return cableSearchSchema.parse(first);
+}
+
+/** Sort actually applied: relevance only makes sense with a text query. */
+export function effectiveSort(search: CableSearch): { sort: CableSort; dir: "asc" | "desc" } {
+  const sort = search.sort ?? (search.q ? "relevance" : "code");
+  if (sort === "relevance" && !search.q) {
+    return { sort: "code", dir: search.dir ?? "asc" };
+  }
+  const defaultDir = sort === "updated" ? "desc" : "asc";
+  return { sort, dir: search.dir ?? defaultDir };
+}
+
+/** Query string for links (pagination, sorting), without empty values. */
+export function cableSearchQuery(
+  search: CableSearch,
+  overrides: Partial<CableSearch> = {},
+): string {
+  const merged = { ...search, ...overrides };
+  const params = new URLSearchParams();
+  for (const key of Object.keys(cableSearchSchema.shape) as (keyof CableSearch)[]) {
+    const value = merged[key];
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+    if (key === "page" && value === 1) {
+      continue;
+    }
+    params.set(key, String(value));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+/** True when any filter (not paging or sorting) is set. */
+export function hasActiveFilters(search: CableSearch): boolean {
+  const { sort: _sort, dir: _dir, page: _page, ...filters } = search;
+  return Object.values(filters).some((value) => value !== undefined);
+}
