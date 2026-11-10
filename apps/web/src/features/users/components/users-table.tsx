@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ROLES, ROLE_LABELS, canManageActor, type Role } from "@cables/shared";
+import { ROLES, ROLE_LABELS, canManageActor, isRole, type Role } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { changeRoleAction, setUserActiveAction, type ActionResult } from "@/features/users/actions";
 import type { UserRow } from "@/server/users/service";
@@ -50,6 +50,8 @@ function UserRowView({
   currentRole: Role;
 }) {
   const [message, setMessage] = useState<ActionResult | null>(null);
+  // Controlado: si el servidor rechaza el cambio, el selector vuelve al rol real.
+  const [role, setRole] = useState<Role>(user.role);
   const [pending, startTransition] = useTransition();
   const manageable = !isSelf && canManageActor(currentRole, user.role);
   const assignable = ROLES.filter((role) => canManageActor(currentRole, role));
@@ -57,14 +59,25 @@ function UserRowView({
   function run(
     action: (formData: FormData) => Promise<ActionResult>,
     fields: Record<string, string>,
+    onFailure?: () => void,
   ) {
     const formData = new FormData();
     for (const [key, value] of Object.entries(fields)) {
       formData.set(key, value);
     }
     startTransition(async () => {
-      setMessage(await action(formData));
+      const result = await action(formData);
+      if (!result.ok) {
+        onFailure?.();
+      }
+      setMessage(result);
     });
+  }
+
+  function changeRole(next: Role) {
+    const previous = role;
+    setRole(next);
+    run(changeRoleAction, { userId: user.id, role: next }, () => setRole(previous));
   }
 
   return (
@@ -78,11 +91,14 @@ function UserRowView({
         {manageable ? (
           <select
             aria-label={`Rol de ${user.name}`}
-            defaultValue={user.role}
+            value={role}
             disabled={pending}
-            onChange={(event) =>
-              run(changeRoleAction, { userId: user.id, role: event.currentTarget.value })
-            }
+            onChange={(event) => {
+              const next = event.currentTarget.value;
+              if (isRole(next)) {
+                changeRole(next);
+              }
+            }}
             className="border-input bg-background h-8 rounded-lg border px-2 text-sm"
           >
             {assignable.includes(user.role) ? null : (

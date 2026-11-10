@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { prisma } from "@cables/db";
+import { Prisma, prisma } from "@cables/db";
 import { hashPassword } from "better-auth/crypto";
 import {
   validateActiveChange,
@@ -23,6 +23,12 @@ export type UserRow = {
 };
 
 export class UserServiceError extends Error {}
+
+const DUPLICATE_EMAIL = "Ya existe un usuario con ese correo.";
+
+function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
 
 const USER_SELECT = {
   id: true,
@@ -59,31 +65,39 @@ export async function createUser(actor: CurrentUser, input: CreateUserInput): Pr
 
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
-    throw new UserServiceError("Ya existe un usuario con ese correo.");
+    throw new UserServiceError(DUPLICATE_EMAIL);
   }
 
   const passwordHash = await hashPassword(input.password);
   // En Better Auth, el accountId de una cuenta de contraseña es el id del propio usuario.
   const id = randomUUID();
 
-  const user = await prisma.user.create({
-    data: {
-      id,
-      name: input.name,
-      email: input.email,
-      role: input.role,
-      emailVerified: true,
-      accounts: {
-        create: {
-          id: randomUUID(),
-          accountId: id,
-          providerId: "credential",
-          password: passwordHash,
+  const user = await prisma.user
+    .create({
+      data: {
+        id,
+        name: input.name,
+        email: input.email,
+        role: input.role,
+        emailVerified: true,
+        accounts: {
+          create: {
+            id: randomUUID(),
+            accountId: id,
+            providerId: "credential",
+            password: passwordHash,
+          },
         },
       },
-    },
-    select: USER_SELECT,
-  });
+      select: USER_SELECT,
+    })
+    .catch((error: unknown) => {
+      // Dos altas simultáneas con el mismo correo: la segunda choca con el índice único.
+      if (isUniqueViolation(error)) {
+        throw new UserServiceError(DUPLICATE_EMAIL);
+      }
+      throw error;
+    });
 
   return { ...user, role: user.role as Role };
 }
