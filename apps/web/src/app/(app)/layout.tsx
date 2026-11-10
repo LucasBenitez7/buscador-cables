@@ -18,6 +18,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link href="/" className="font-semibold">
               Buscador de Cables
             </Link>
+            <Link href="/cables" className="text-muted-foreground hover:text-foreground">
+              Cables
+            </Link>
             <Link href="/locations" className="text-muted-foreground hover:text-foreground">
               Ubicaciones
             </Link>

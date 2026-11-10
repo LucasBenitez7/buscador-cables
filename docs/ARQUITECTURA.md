@@ -140,7 +140,7 @@ model Cable {
 }
 
 enum CableAction {
-  CREATED UPDATED LAID COILED CONNECTED DISCONNECTED MOVED RETIRED CORRECTION
+  CREATED UPDATED LAID COILED CONNECTED DISCONNECTED MOVED RETIRED CORRECTION DELETED
 }
 
 // Registro INMUTABLE de lo que hace cada usuario sobre un cable (nunca se edita ni se borra).

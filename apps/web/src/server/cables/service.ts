@@ -325,6 +325,16 @@ export type CableListItem = {
   updatedAt: Date;
 };
 
+const locationLabelSelect = { name: true, parent: { select: { name: true } } } as const;
+
+/** "Caldera 1 › Bandeja norte": site names repeat in every unit, so add the parent. */
+function locationLabel(location: { name: string; parent: { name: string } | null } | null) {
+  if (!location) {
+    return null;
+  }
+  return location.parent ? `${location.parent.name} › ${location.name}` : location.name;
+}
+
 /** Most recently changed active cables (the full search arrives in phase 4). */
 export async function listRecentCables(limit = 50): Promise<CableListItem[]> {
   const cables = await prisma.cable.findMany({
@@ -339,15 +349,15 @@ export async function listRecentCables(limit = 50): Promise<CableListItem[]> {
       connectionStatus: true,
       updatedAt: true,
       type: { select: { name: true } },
-      origin: { select: { name: true } },
-      destination: { select: { name: true } },
+      origin: { select: locationLabelSelect },
+      destination: { select: locationLabelSelect },
     },
   });
   return cables.map(({ type, origin, destination, ...cable }) => ({
     ...cable,
     type: type?.name ?? null,
-    origin: origin?.name ?? null,
-    destination: destination?.name ?? null,
+    origin: locationLabel(origin),
+    destination: locationLabel(destination),
   }));
 }
 

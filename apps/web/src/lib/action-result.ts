@@ -11,3 +11,15 @@ export function formValue(formData: FormData, key: string): string {
 export function firstIssue(error: { issues: readonly { message: string }[] }): string {
   return error.issues[0]?.message ?? "Datos no válidos.";
 }
+
+/** First message per top-level field of a failed Zod parse, for inline form errors. */
+export function issuesByField(error: {
+  issues: readonly { message: string; path: readonly PropertyKey[] }[];
+}): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const field = String(issue.path[0] ?? "form");
+    errors[field] ??= issue.message;
+  }
+  return errors;
+}
