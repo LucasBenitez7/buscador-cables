@@ -2,7 +2,21 @@ import type { OutgoingEmail } from "@/server/email";
 
 const APP_NAME = "Buscador de Cables";
 
-function layout(title: string, body: string, actionLabel: string, url: string): string {
+const HTML_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+/** Escapes text before interpolating it into the HTML body of an email. */
+export function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char);
+}
+
+function layout(title: string, body: string, actionLabel: string, rawUrl: string): string {
+  const url = escapeHtml(rawUrl);
   return `<!doctype html>
 <html lang="es">
   <body style="font-family:Arial,Helvetica,sans-serif;color:#202321">
@@ -20,7 +34,7 @@ export function passwordResetEmail(input: {
   name: string;
   url: string;
 }): OutgoingEmail {
-  const body = `Hola ${input.name}. Hemos recibido una solicitud para restablecer tu contraseña. El enlace caduca en 1 hora y solo puede usarse una vez.`;
+  const body = `Hola ${escapeHtml(input.name)}. Hemos recibido una solicitud para restablecer tu contraseña. El enlace caduca en 1 hora y solo puede usarse una vez.`;
   return {
     to: input.to,
     subject: `${APP_NAME}: restablecer contraseña`,
@@ -30,7 +44,7 @@ export function passwordResetEmail(input: {
 }
 
 export function verificationEmail(input: { to: string; name: string; url: string }): OutgoingEmail {
-  const body = `Hola ${input.name}. Confirma tu dirección de correo para completar tu cuenta.`;
+  const body = `Hola ${escapeHtml(input.name)}. Confirma tu dirección de correo para completar tu cuenta.`;
   return {
     to: input.to,
     subject: `${APP_NAME}: confirma tu correo`,
