@@ -10,13 +10,16 @@ type SearchParams = Promise<{ next?: string; reset?: string }>;
 
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
+  const next = safeNextPath(params.next);
+
+  // Validación real contra la base de datos (el proxy solo ve la cookie).
   if (await getCurrentUser()) {
-    redirect("/");
+    redirect(next);
   }
 
   return (
     <LoginForm
-      next={safeNextPath(params.next)}
+      next={next}
       notice={params.reset === "ok" ? "Contraseña actualizada. Ya puedes entrar." : undefined}
     />
   );
