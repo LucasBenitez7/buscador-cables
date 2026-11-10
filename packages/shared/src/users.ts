@@ -4,19 +4,43 @@ import { ROLES, canManageActor, type Role } from "./permissions";
 export const PASSWORD_MIN_LENGTH = 10;
 export const PASSWORD_MAX_LENGTH = 128;
 
+const nameField = z
+  .string({ error: "El nombre es obligatorio" })
+  .trim()
+  .min(2, "El nombre debe tener al menos 2 caracteres")
+  .max(100, "El nombre no puede superar 100 caracteres");
+
+const emailField = z.email({ error: "Introduce un correo válido" }).trim().toLowerCase();
+
+const passwordField = z
+  .string({ error: "La contraseña es obligatoria" })
+  .min(PASSWORD_MIN_LENGTH, `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres`)
+  .max(PASSWORD_MAX_LENGTH, "La contraseña es demasiado larga");
+
+/** Alta hecha por un administrador desde el panel. */
 export const createUserSchema = z.object({
-  name: z
-    .string({ error: "El nombre es obligatorio" })
-    .trim()
-    .min(2, "El nombre debe tener al menos 2 caracteres")
-    .max(100, "El nombre no puede superar 100 caracteres"),
-  email: z.email({ error: "Introduce un correo válido" }).trim().toLowerCase(),
+  name: nameField,
+  email: emailField,
   role: z.enum(ROLES, { error: "Rol no válido" }),
-  password: z
-    .string({ error: "La contraseña es obligatoria" })
-    .min(PASSWORD_MIN_LENGTH, `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres`)
-    .max(PASSWORD_MAX_LENGTH, "La contraseña es demasiado larga"),
+  password: passwordField,
 });
+
+/** Datos de perfil que se validan en el servidor cuando alguien se registra. */
+export const signUpProfileSchema = z.object({
+  name: nameField,
+  email: emailField,
+});
+
+/** Formulario público de registro. El rol siempre es VIEWER; lo sube un administrador. */
+export const signUpSchema = signUpProfileSchema
+  .extend({
+    password: passwordField,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  });
 
 export const changeRoleSchema = z.object({
   userId: z.string().min(1),
@@ -29,6 +53,7 @@ export const setUserActiveSchema = z.object({
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ChangeRoleInput = z.infer<typeof changeRoleSchema>;
 export type SetUserActiveInput = z.infer<typeof setUserActiveSchema>;
 

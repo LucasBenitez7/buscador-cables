@@ -3,6 +3,8 @@ import {
   changeRoleSchema,
   createUserSchema,
   setUserActiveSchema,
+  signUpProfileSchema,
+  signUpSchema,
   validateActiveChange,
   validateCreateUser,
   validateRoleChange,
@@ -33,6 +35,51 @@ describe("createUserSchema", () => {
 
   it("rejects an invalid email", () => {
     expect(createUserSchema.safeParse({ ...validUser, email: "no-es-correo" }).success).toBe(false);
+  });
+});
+
+describe("signUpSchema", () => {
+  const valid = {
+    name: "  Luis Gómez ",
+    email: "Luis@Planta.example",
+    password: "clave-segura-1",
+    confirmPassword: "clave-segura-1",
+  };
+
+  it("normalizes name and email", () => {
+    const parsed = signUpSchema.parse(valid);
+
+    expect(parsed.name).toBe("Luis Gómez");
+    expect(parsed.email).toBe("luis@planta.example");
+  });
+
+  it("rejects mismatched passwords on the confirmation field", () => {
+    const result = signUpSchema.safeParse({ ...valid, confirmPassword: "otra-clave-12" });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["confirmPassword"]);
+  });
+
+  it("rejects a short password", () => {
+    const result = signUpSchema.safeParse({
+      ...valid,
+      password: "corta",
+      confirmPassword: "corta",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("does not accept a role", () => {
+    const parsed = signUpSchema.parse({ ...valid, role: "ADMIN" });
+
+    expect(parsed).not.toHaveProperty("role");
+  });
+});
+
+describe("signUpProfileSchema", () => {
+  it("rejects a one-letter name", () => {
+    expect(signUpProfileSchema.safeParse({ name: "A", email: "a@b.example" }).success).toBe(false);
   });
 });
 
