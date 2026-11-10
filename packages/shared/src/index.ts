@@ -3,3 +3,4 @@ export * from "./environment";
 export * from "./permissions";
 export * from "./users";
 export * from "./locations";
+export * from "./catalogs";
