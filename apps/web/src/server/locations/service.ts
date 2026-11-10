@@ -4,10 +4,12 @@ import {
   PATH_SEPARATOR,
   buildLocationPath,
   buildLocationTree,
+  isWithinPath,
   validateLocationPlacement,
   type CreateLocationInput,
   type FlatLocation,
   type LocationNode,
+  type MoveLocationInput,
   type UpdateLocationInput,
 } from "@cables/shared";
 
@@ -102,6 +104,18 @@ export async function createLocation(input: CreateLocationInput): Promise<FlatLo
  * Renames a location. When the code changes, the materialized path of the
  * location and of its whole subtree is rewritten in the same transaction.
  */
+type Transaction = Prisma.TransactionClient;
+
+/** Moves every descendant of `oldPath` under `newPath`. */
+async function rewriteDescendantPaths(tx: Transaction, oldPath: string, newPath: string) {
+  // Los códigos no admiten "%" ni "_", así que el prefijo no tiene comodines de LIKE.
+  await tx.$executeRaw`
+    UPDATE "location"
+    SET "path" = ${newPath} || substr("path", ${oldPath.length + 1}::int),
+        "updatedAt" = now()
+    WHERE "path" LIKE ${`${oldPath}${PATH_SEPARATOR}%`}`;
+}
+
 export async function updateLocation(input: UpdateLocationInput): Promise<void> {
   const current = await prisma.location.findUnique({
     where: { id: input.id },
@@ -121,12 +135,7 @@ export async function updateLocation(input: UpdateLocationInput): Promise<void> 
         data: { name: input.name, code: input.code, path: newPath },
       });
       if (newPath !== oldPath) {
-        // Los códigos no admiten "%" ni "_", así que el prefijo no tiene comodines de LIKE.
-        await tx.$executeRaw`
-          UPDATE "location"
-          SET "path" = ${newPath} || substr("path", ${oldPath.length + 1}::int),
-              "updatedAt" = now()
-          WHERE "path" LIKE ${`${oldPath}${PATH_SEPARATOR}%`}`;
+        await rewriteDescendantPaths(tx, oldPath, newPath);
       }
     });
   } catch (caught) {
@@ -135,6 +144,54 @@ export async function updateLocation(input: UpdateLocationInput): Promise<void> 
     }
     throw caught;
   }
+}
+
+/**
+ * Moves a location (with its whole subtree) under another parent of the right
+ * level: an area to another plant, a unit to another area, a site to another
+ * unit. Plants stay at the root. Cables keep pointing at the same locations, so
+ * only the materialized paths change.
+ */
+export async function moveLocation(input: MoveLocationInput): Promise<void> {
+  const [location, parent] = await Promise.all([
+    prisma.location.findUnique({
+      where: { id: input.id },
+      select: { type: true, code: true, path: true, parentId: true },
+    }),
+    prisma.location.findUnique({
+      where: { id: input.parentId },
+      select: { type: true, path: true },
+    }),
+  ]);
+  if (!location) {
+    throw new LocationServiceError("La ubicación no existe.");
+  }
+  if (!parent) {
+    throw new LocationServiceError("La ubicación de destino no existe.");
+  }
+  if (location.type === "PLANT") {
+    throw new LocationServiceError("Las plantas no se pueden mover.");
+  }
+  if (location.parentId === input.parentId) {
+    return;
+  }
+  // Imposible con la jerarquía por niveles, pero un ciclo rompería el árbol entero.
+  if (isWithinPath(parent.path, location.path)) {
+    throw new LocationServiceError("No se puede mover una ubicación dentro de sí misma.");
+  }
+  const error = validateLocationPlacement(location.type, parent.type);
+  if (error) {
+    throw new LocationServiceError(error);
+  }
+
+  const newPath = buildLocationPath(parent.path, location.code);
+  await prisma.$transaction(async (tx) => {
+    await tx.location.update({
+      where: { id: input.id },
+      data: { parentId: input.parentId, path: newPath },
+    });
+    await rewriteDescendantPaths(tx, location.path, newPath);
+  });
 }
 
 /** Deletes a location that has no sub-locations and is not referenced anywhere. */

@@ -1,12 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createLocationSchema, deleteLocationSchema, updateLocationSchema } from "@cables/shared";
+import {
+  createLocationSchema,
+  deleteLocationSchema,
+  moveLocationSchema,
+  updateLocationSchema,
+} from "@cables/shared";
 import { firstIssue, formValue, type ActionResult } from "@/lib/action-result";
 import {
   LocationServiceError,
   createLocation,
   deleteLocation,
+  moveLocation,
   updateLocation,
 } from "@/server/locations/service";
 import { authorize } from "@/server/session";
@@ -91,6 +97,29 @@ export async function deleteLocationAction(formData: FormData): Promise<ActionRe
     await deleteLocation(parsed.data.id);
     revalidatePath(LOCATIONS_PATH);
     return { ok: true, message: "Ubicación eliminada." };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function moveLocationAction(formData: FormData): Promise<ActionResult> {
+  const auth = await authorize("location:manage");
+  if (!auth.ok) {
+    return auth;
+  }
+
+  const parsed = moveLocationSchema.safeParse({
+    id: formValue(formData, "id"),
+    parentId: formValue(formData, "parentId"),
+  });
+  if (!parsed.success) {
+    return { ok: false, message: firstIssue(parsed.error) };
+  }
+
+  try {
+    await moveLocation(parsed.data);
+    revalidatePath(LOCATIONS_PATH);
+    return { ok: true, message: "Ubicación movida." };
   } catch (error) {
     return fail(error);
   }

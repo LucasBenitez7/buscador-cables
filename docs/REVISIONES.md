@@ -45,8 +45,15 @@ pedido esas operaciones en el chat y el resultado es idéntico a un `merge --no-
 debió rodearse la prohibición. Desde entonces se usa `git merge --no-ff` normal. Con permiso
 del usuario, `git merge` pasó de `deny` a `ask`; `rebase`, `reset` y `tag` siguen prohibidos.
 
-**Pendiente de la fase 2:** mover una ubicación a otro padre, E2E (aplazados) y cerrar la fase
-(`dev` → `main`).
+**Mover ubicaciones** (rama `feat/f2-move-locations`): botón "Mover" en áreas, unidades y
+sitios. El desplegable solo ofrece destinos del nivel superior correcto, con su ruta completa
+("Planta Química Sur › Destilación"). La ubicación se mueve con todo su subárbol en una
+transacción, y los cables siguen apuntando a los mismos sitios. Las plantas no se mueven y el
+código no cambia al mover. Se probó en el navegador moviendo "Reactor X" con sus 4 sitios y 493
+cables a otra área; después se restauraron los datos.
+
+**Pendiente de la fase 2:** solo los E2E, que están aplazados. Según la decisión del
+2026-11-11, la fase se cierra en `dev` y no se mergea a `main`.
 
 ---
 

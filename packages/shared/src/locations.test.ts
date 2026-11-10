@@ -5,6 +5,9 @@ import {
   childLocationType,
   createLocationSchema,
   isWithinPath,
+  listMoveTargets,
+  moveLocationSchema,
+  parentLocationType,
   rebasePath,
   updateLocationSchema,
   validateLocationPlacement,
@@ -109,5 +112,72 @@ describe("buildLocationTree", () => {
     const roots = buildLocationTree([{ ...flat[0]!, parentId: "missing" }]);
 
     expect(roots.map((node) => node.id)).toEqual(["s"]);
+  });
+});
+
+describe("moving locations", () => {
+  const tree = buildLocationTree<FlatLocation>([
+    { id: "p1", name: "Norte", code: "N", type: "PLANT", parentId: null, path: "/N" },
+    { id: "p2", name: "Sur", code: "S", type: "PLANT", parentId: null, path: "/S" },
+    { id: "a1", name: "Calderas", code: "N-CAL", type: "AREA", parentId: "p1", path: "/N/N-CAL" },
+    { id: "a2", name: "Turbinas", code: "N-TUR", type: "AREA", parentId: "p1", path: "/N/N-TUR" },
+    { id: "a3", name: "Reactores", code: "S-REA", type: "AREA", parentId: "p2", path: "/S/S-REA" },
+    {
+      id: "u1",
+      name: "Caldera 1",
+      code: "N-CAL-U1",
+      type: "UNIT",
+      parentId: "a1",
+      path: "/N/N-CAL/N-CAL-U1",
+    },
+  ]);
+
+  it("knows the parent level of each type", () => {
+    expect(parentLocationType("PLANT")).toBeNull();
+    expect(parentLocationType("AREA")).toBe("PLANT");
+    expect(parentLocationType("SITE")).toBe("UNIT");
+  });
+
+  it("offers every location of the parent level except the current parent, with its route", () => {
+    const unit = {
+      id: "u1",
+      name: "Caldera 1",
+      code: "N-CAL-U1",
+      type: "UNIT",
+      parentId: "a1",
+      path: "/N/N-CAL/N-CAL-U1",
+    } as const;
+
+    expect(listMoveTargets(tree, unit)).toEqual([
+      { id: "a2", label: "Norte › Turbinas" },
+      { id: "a3", label: "Sur › Reactores" },
+    ]);
+  });
+
+  it("moves areas between plants and never offers anything for a plant", () => {
+    const area = {
+      id: "a1",
+      name: "Calderas",
+      code: "N-CAL",
+      type: "AREA",
+      parentId: "p1",
+      path: "/N/N-CAL",
+    } as const;
+    const plant = {
+      id: "p1",
+      name: "Norte",
+      code: "N",
+      type: "PLANT",
+      parentId: null,
+      path: "/N",
+    } as const;
+
+    expect(listMoveTargets(tree, area).map((target) => target.id)).toEqual(["p2"]);
+    expect(listMoveTargets(tree, plant)).toEqual([]);
+  });
+
+  it("requires a destination", () => {
+    expect(moveLocationSchema.safeParse({ id: "u1", parentId: "" }).success).toBe(false);
+    expect(moveLocationSchema.safeParse({ id: "u1", parentId: "a2" }).success).toBe(true);
   });
 });
