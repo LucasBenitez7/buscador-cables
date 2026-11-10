@@ -6,6 +6,25 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-10 — Fix: el login ignoraba la página pedida (rama `fix/login-redirect`)
+
+**Encontrado** al probar la fase 2 en el navegador: tras iniciar sesión desde
+`/login?next=/locations`, la app llevaba a `/verify-email` ("Correo confirmado").
+
+**Causa:** en la rama del registro se añadió `callbackURL: "/verify-email"` a
+`authClient.signIn.email`, para que el enlace que se reenvía a las cuentas sin confirmar
+apuntara a esa página. Pero Better Auth también usa `callbackURL` para redirigir después de un
+login correcto, y eso anulaba el `router.replace(next)`.
+
+**Corrección:** el login ya no pasa `callbackURL`. El enlace reenviado lleva a `/`, donde el
+usuario llega con la sesión iniciada tras confirmar el correo. Test de regresión:
+`features/auth/components/login-form.test.tsx`, que falla sin la corrección.
+
+**Alcance:** el bug está en `dev` y en `main` (`v0.2.0`). La corrección se mergea en `dev` y
+llegará a `main` al cerrar la fase 2, salvo que se decida antes un hotfix.
+
+---
+
 ## 2026-11-10 — Registro abierto y forma de trabajo (rama `feat/f1-sign-up`)
 
 **Decisiones del usuario:**

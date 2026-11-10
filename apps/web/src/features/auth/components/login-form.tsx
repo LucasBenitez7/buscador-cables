@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { signInErrorMessage } from "@/lib/auth-errors";
-import { VERIFY_EMAIL_PATH } from "@/lib/route-access";
 
 export function LoginForm({ next, notice }: { next: string; notice?: string }) {
   const router = useRouter();
@@ -25,8 +24,8 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
       email: String(form.get("email") ?? ""),
       password: String(form.get("password") ?? ""),
       rememberMe: true,
-      // Si el correo no está confirmado, Better Auth reenvía el enlace con este destino.
-      callbackURL: VERIFY_EMAIL_PATH,
+      // Sin `callbackURL`: Better Auth redirigiría ahí tras un login correcto e
+      // ignoraría `next`. El enlace que reenvía a cuentas sin confirmar lleva a "/".
     });
 
     setPending(false);
