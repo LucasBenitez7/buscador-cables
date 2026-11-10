@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { changeRoleSchema, createUserSchema, setUserActiveSchema } from "@cables/shared";
+import { firstIssue, formValue, type ActionResult } from "@/lib/action-result";
 import { authorize } from "@/server/session";
 import {
   UserServiceError,
@@ -10,7 +11,7 @@ import {
   setUserActive,
 } from "@/server/users/service";
 
-export type ActionResult = { ok: true; message: string } | { ok: false; message: string };
+export type { ActionResult } from "@/lib/action-result";
 
 const USERS_PATH = "/admin/users";
 
@@ -20,11 +21,6 @@ function fail(error: unknown): ActionResult {
   }
   console.error("Error en la gestión de usuarios", error);
   return { ok: false, message: "No se pudo completar la operación. Inténtalo de nuevo." };
-}
-
-function formValue(formData: FormData, key: string): string {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
 }
 
 export async function createUserAction(
@@ -43,7 +39,7 @@ export async function createUserAction(
     password: formValue(formData, "password"),
   });
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+    return { ok: false, message: firstIssue(parsed.error) };
   }
 
   try {
