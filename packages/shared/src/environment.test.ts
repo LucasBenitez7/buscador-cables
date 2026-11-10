@@ -20,4 +20,13 @@ describe("parseEnvironment", () => {
   it("rejects malformed application URLs", () => {
     expect(() => parseEnvironment({ APP_URL: "not-a-url" })).toThrow();
   });
+
+  it("rejects a short BETTER_AUTH_SECRET", () => {
+    expect(() => parseEnvironment({ BETTER_AUTH_SECRET: "too-short" })).toThrow();
+  });
+
+  it("accepts a 32+ character BETTER_AUTH_SECRET", () => {
+    const secret = "a".repeat(32);
+    expect(parseEnvironment({ BETTER_AUTH_SECRET: secret }).BETTER_AUTH_SECRET).toBe(secret);
+  });
 });

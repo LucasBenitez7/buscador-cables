@@ -1,5 +1,6 @@
-// Esquema de la base de datos. Los modelos se añaden a partir de la fase 1 (auth)
-// y la fase 2 (cables, ubicaciones). Ver docs/ARQUITECTURA.md.
+// Esquema de la base de datos.
+// Modelos de autenticación (fase 1) + cables y ubicaciones (fase 2).
+// Ver docs/ARQUITECTURA.md.
 
 generator client {
   provider = "prisma-client"
@@ -8,4 +9,89 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Autenticación (Better Auth)
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  TECHNICIAN
+  VIEWER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(VIEWER)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// Contadores del rate limiting de Better Auth. En base de datos (y no en memoria)
+// para que el límite se comparta entre todas las instancias serverless.
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit")
 }

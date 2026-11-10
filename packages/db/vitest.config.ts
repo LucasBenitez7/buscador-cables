@@ -7,6 +7,7 @@ config({ path: path.resolve(import.meta.dirname, "../../.env"), quiet: true });
 export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
+    globalSetup: ["./test/global-setup.ts"],
     // Integration tests hit a real Postgres: run files sequentially.
     fileParallelism: false,
     env: {

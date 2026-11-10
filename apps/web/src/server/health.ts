@@ -8,7 +8,6 @@ export type HealthReport = {
   database: HealthStatus;
   version: string;
   checkedAt: string;
-  error?: string;
 };
 
 export async function getHealth(): Promise<HealthReport> {
@@ -21,11 +20,8 @@ export async function getHealth(): Promise<HealthReport> {
     await prisma.$queryRaw`SELECT 1`;
     return { ...base, status: "ok", database: "ok" };
   } catch (error) {
-    return {
-      ...base,
-      status: "error",
-      database: "error",
-      error: error instanceof Error ? error.message : "Error desconocido",
-    };
+    // `/api/health` es público: el detalle (host, usuario, motivo) solo va al log.
+    console.error("Health check: la base de datos no responde", error);
+    return { ...base, status: "error", database: "error" };
   }
 }
