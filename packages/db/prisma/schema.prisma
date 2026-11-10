@@ -84,3 +84,14 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+// Contadores del rate limiting de Better Auth. En base de datos (y no en memoria)
+// para que el límite se comparta entre todas las instancias serverless.
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit")
+}

@@ -7,6 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { after } from "next/server";
 import { ROLES } from "@cables/shared";
 import { env } from "@/lib/env";
+import { authRateLimit } from "@/lib/auth-rate-limit";
 import { passwordResetEmail, verificationEmail } from "@/lib/email-templates";
 import { assertAccountActive } from "@/server/auth-policy";
 import { sendEmail } from "@/server/email";
@@ -61,16 +62,7 @@ export const auth = betterAuth({
     updateAge: 60 * 60,
   },
 
-  rateLimit: {
-    enabled: true,
-    window: 60,
-    max: 100,
-    customRules: {
-      "/sign-in/email": { window: 60, max: 5 },
-      "/request-password-reset": { window: 60, max: 3 },
-      "/send-verification-email": { window: 60, max: 3 },
-    },
-  },
+  rateLimit: authRateLimit,
 
   databaseHooks: {
     session: {
