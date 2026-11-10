@@ -37,7 +37,7 @@
       "dependsOn": ["^generate"]
     },
     "test": {
-      "dependsOn": ["^generate"]
+      "dependsOn": ["^generate", "^test"]
     }
   }
 }
