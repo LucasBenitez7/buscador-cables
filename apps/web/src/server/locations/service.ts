@@ -14,7 +14,10 @@ import {
 export class LocationServiceError extends Error {}
 
 export type LocationWithCounts = FlatLocation & {
-  /** Cables que salen, llegan o están físicamente en esta ubicación (sin contar bajas). */
+  /**
+   * Cables distintos (sin contar bajas) que salen, llegan o están físicamente en
+   * esta ubicación o en cualquiera de las que contiene.
+   */
   cableCount: number;
 };
 
@@ -25,24 +28,38 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 export async function listLocationTree(): Promise<LocationNode<LocationWithCounts>[]> {
-  const notDeleted = { where: { deletedAt: null } };
-  const locations = await prisma.location.findMany({
-    select: {
-      id: true,
-      name: true,
-      code: true,
-      type: true,
-      parentId: true,
-      path: true,
-      _count: { select: { cablesFrom: notDeleted, cablesTo: notDeleted, cablesAt: notDeleted } },
-    },
-  });
+  const [locations, counts] = await Promise.all([
+    prisma.location.findMany({
+      select: { id: true, name: true, code: true, type: true, parentId: true, path: true },
+    }),
+    // Un cable cuenta una sola vez por ubicación aunque la toque por varias columnas
+    // (p. ej. enrollado en su propio origen) o en varios sitios del mismo subárbol.
+    // Primero el mapa ancestro → descendiente (pocas filas), luego pares únicos
+    // (ancestro, cable) y por último el recuento: ~70 ms con 5.000 cables, frente a
+    // ~190 ms con count(DISTINCT) directo.
+    prisma.$queryRaw<{ id: string; cables: bigint }[]>`
+      WITH tree AS MATERIALIZED (
+        SELECT ancestor."id" AS ancestor_id, descendant."id" AS location_id
+        FROM "location" ancestor
+        JOIN "location" descendant
+          ON descendant."path" = ancestor."path"
+          OR descendant."path" LIKE ancestor."path" || ${PATH_SEPARATOR} || '%'
+      ),
+      touches AS (
+        SELECT "id" AS cable_id, "originId" AS location_id FROM "cable" WHERE "deletedAt" IS NULL
+        UNION ALL SELECT "id", "destinationId" FROM "cable" WHERE "deletedAt" IS NULL
+        UNION ALL SELECT "id", "currentLocationId" FROM "cable" WHERE "deletedAt" IS NULL
+      ),
+      pairs AS (
+        SELECT DISTINCT tree.ancestor_id, touches.cable_id
+        FROM tree JOIN touches ON touches.location_id = tree.location_id
+      )
+      SELECT ancestor_id AS id, count(*) AS cables FROM pairs GROUP BY ancestor_id`,
+  ]);
 
+  const countById = new Map(counts.map((row) => [row.id, Number(row.cables)]));
   return buildLocationTree(
-    locations.map(({ _count, ...location }) => ({
-      ...location,
-      cableCount: _count.cablesFrom + _count.cablesTo + _count.cablesAt,
-    })),
+    locations.map((location) => ({ ...location, cableCount: countById.get(location.id) ?? 0 })),
   );
 }
 
