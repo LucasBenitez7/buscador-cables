@@ -1,6 +1,11 @@
+/** Página a la que lleva el enlace del correo de confirmación. */
+export const VERIFY_EMAIL_PATH = "/verify-email";
+
 // Rutas accesibles sin sesión. Todo lo demás requiere sesión.
 export const PUBLIC_PATHS = [
   "/login",
+  "/register",
+  VERIFY_EMAIL_PATH,
   "/forgot-password",
   "/reset-password",
   "/api/auth",

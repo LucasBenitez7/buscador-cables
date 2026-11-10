@@ -16,8 +16,9 @@ export default async function AdminUsersPage() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Usuarios</h1>
         <p className="text-muted-foreground text-sm">
-          No hay registro público. Las altas las hace un administrador y el usuario puede cambiar su
-          contraseña desde “He olvidado mi contraseña”.
+          Cualquiera puede crear su cuenta con su correo y contraseña; entra con rol de consulta
+          cuando confirma el correo. Desde aquí se cambian los roles, se desactivan cuentas y se
+          pueden dar de alta usuarios directamente.
         </p>
       </div>
 

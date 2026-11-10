@@ -9,6 +9,7 @@ describe("authRateLimit", () => {
 
   it.each([
     ["/sign-in/email", 5],
+    ["/sign-up/email", 3],
     ["/request-password-reset", 3],
     ["/reset-password", 5],
   ] as const)("limits %s to %i requests per minute", (path, max) => {

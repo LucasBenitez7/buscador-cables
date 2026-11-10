@@ -2,21 +2,23 @@ import "server-only";
 import { prisma } from "@cables/db";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { after } from "next/server";
 import { ROLES } from "@cables/shared";
 import { env } from "@/lib/env";
 import { authRateLimit } from "@/lib/auth-rate-limit";
-import { passwordResetEmail, verificationEmail } from "@/lib/email-templates";
-import { assertAccountActive } from "@/server/auth-policy";
+import { accountExistsEmail, passwordResetEmail, verificationEmail } from "@/lib/email-templates";
+import { assertAccountActive, prepareSignUpUser } from "@/server/auth-policy";
 import { sendEmail } from "@/server/email";
 
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+export const EMAIL_VERIFICATION_EXPIRES_SECONDS = 60 * 60 * 24;
+
+const baseURL = env.BETTER_AUTH_URL ?? env.APP_URL;
 
 export const auth = betterAuth({
   appName: "Buscador de Cables",
-  baseURL: env.BETTER_AUTH_URL ?? env.APP_URL,
+  baseURL,
   secret: env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
@@ -26,13 +28,30 @@ export const auth = betterAuth({
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: 60 * 60,
     revokeSessionsOnPasswordReset: true,
+    // Registro abierto: cualquiera crea su cuenta con su correo y contraseña, pero
+    // no puede entrar hasta confirmar el correo. Empieza como VIEWER (solo lectura).
+    requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       await sendEmail(passwordResetEmail({ to: user.email, name: user.name, url }));
+    },
+    // Con verificación obligatoria, Better Auth responde igual exista o no el
+    // correo (no revela cuentas). Avisamos solo al dueño real del buzón.
+    onExistingUserSignUp: async ({ user }) => {
+      await sendEmail(
+        accountExistsEmail({
+          to: user.email,
+          name: user.name,
+          forgotPasswordUrl: new URL("/forgot-password", env.APP_URL).toString(),
+        }),
+      );
     },
   },
 
   emailVerification: {
-    sendOnSignUp: false,
+    sendOnSignUp: true,
+    // Si intenta entrar sin haber confirmado, se le reenvía el enlace.
+    sendOnSignIn: true,
+    expiresIn: EMAIL_VERIFICATION_EXPIRES_SECONDS,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await sendEmail(verificationEmail({ to: user.email, name: user.name, url }));
@@ -76,13 +95,9 @@ export const auth = betterAuth({
     },
     user: {
       create: {
-        // El registro público está desactivado: las altas se hacen desde el panel
-        // de administración, que escribe con Prisma directamente.
-        before: async () => {
-          throw new APIError("FORBIDDEN", {
-            message: "El registro público está desactivado. Pide un alta a un administrador.",
-          });
-        },
+        // Valida el nombre con Zod y fuerza rol VIEWER y cuenta activa. Las altas
+        // del panel de administración escriben con Prisma y no pasan por aquí.
+        before: async (user) => prepareSignUpUser(user),
       },
     },
   },
