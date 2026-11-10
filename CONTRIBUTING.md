@@ -42,13 +42,18 @@ git branch -d feat/f1-login
 
 ```bash
 git switch main && git pull
-git merge --no-ff dev -m "release: v0.2.0 - fase 1 autenticacion"
+git merge --no-ff dev -m "chore(release): merge phase one into main"
 git tag -a v0.2.0 -m "Fase 1: autenticación y usuarios"
 git push && git push --tags
 ```
 
 Solo se cierra una fase si se cumplen **todos** los criterios de aceptación de `docs/PLAN.md`
-y el CI está en verde en `dev`.
+y `pnpm check` está en verde en `dev`.
+
+> **De momento (decisión del 2026-11-10):** no hay remoto ni Pull Requests. Se trabaja en
+> local con merges directos `feat/*` → `dev` → `main` (`--no-ff`), sin `git push`. El CI de
+> GitHub Actions ya está configurado, pero se activará más adelante, cuando el proyecto tenga
+> más fases; hasta entonces `pnpm check` en local hace de CI.
 
 ## Commits — Conventional Commits (en inglés)
 
@@ -82,11 +87,16 @@ valor cuando hay un flujo de usuario completo que romper. Por eso:
 - **Durante el día a día se trabaja con `pnpm check`** (unitarios, integración y componentes).
 - **Los E2E se escriben y ejecutan al cerrar cada fase**, sobre los flujos reales que esa
   fase entrega. La infraestructura ya está lista desde la fase 0 (`pnpm test:e2e`).
+- **Aplazado de momento (decisión del 2026-11-10):** los E2E de las fases 1 en adelante se
+  escribirán más adelante, junto con la activación del CI. Mientras tanto, cada flujo nuevo
+  se prueba a mano contra la app arrancada y se anota en `docs/REVISIONES.md`.
 - Excepción: si un bug afecta a un flujo ya cubierto por un E2E, se reproduce con un E2E.
 - En CI, el job de E2E solo se ejecuta en `dev` y `main`, no en cada rama `feat/*`.
 
 Reglas:
 
+- Los tests de integración se nombran `*.int.test.ts` y usan la base `cables_test`
+  (`DATABASE_URL_TEST`); las migraciones se aplican solas antes de ejecutarlos.
 - Toda funcionalidad nueva incluye sus tests en la misma rama.
 - Todo bug corregido incluye un test que lo reproduce.
 - Cobertura mínima de `server/` y `packages/shared`: **80 %**.
@@ -96,7 +106,7 @@ Reglas:
 
 - [ ] Cumple lo pedido en la tarea de `docs/PLAN.md`.
 - [ ] `pnpm check` en verde (lint, typecheck, tests unitarios y de integración).
-- [ ] `pnpm test:e2e` en verde **al cerrar la fase** (no en cada rama).
+- [ ] `pnpm test:e2e` en verde **al cerrar la fase** (no en cada rama; aplazado de momento).
 - [ ] Sin `console.log`, `any` injustificados ni código comentado.
 - [ ] Migraciones de Prisma creadas y probadas si cambia el esquema.
 - [ ] Permisos verificados en servidor.

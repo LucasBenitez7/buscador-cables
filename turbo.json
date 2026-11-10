@@ -1,7 +1,22 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "globalDependencies": [".env"],
-  "globalEnv": ["NODE_ENV", "DATABASE_URL", "APP_URL", "SMTP_HOST", "SMTP_PORT", "EMAIL_FROM"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "DATABASE_URL_TEST",
+    "APP_URL",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_USER",
+    "SMTP_PASSWORD",
+    "EMAIL_FROM",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "SEED_ADMIN_EMAIL",
+    "SEED_ADMIN_PASSWORD",
+    "SEED_ADMIN_NAME"
+  ],
   "tasks": {
     "generate": {
       "cache": false

@@ -39,6 +39,9 @@ jobs:
       DATABASE_URL: postgresql://cables:cables@localhost:5432/cables?schema=public
       DATABASE_URL_TEST: postgresql://cables:cables@localhost:5432/cables_test?schema=public
       APP_URL: http://localhost:3000
+      # Secreto solo para CI (no protege datos reales). Nunca reutilizar fuera de aquí.
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production-use
+      BETTER_AUTH_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v4
@@ -107,6 +110,9 @@ jobs:
       DATABASE_URL: postgresql://cables:cables@localhost:5432/cables?schema=public
       DATABASE_URL_TEST: postgresql://cables:cables@localhost:5432/cables_test?schema=public
       APP_URL: http://localhost:3000
+      # Secreto solo para CI (no protege datos reales). Nunca reutilizar fuera de aquí.
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production-use
+      BETTER_AUTH_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v4

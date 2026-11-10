@@ -6,7 +6,7 @@ Lee antes de trabajar: `docs/PLAN.md`, `docs/ARQUITECTURA.md` y `CONTRIBUTING.md
 
 1. Trabaja solo en ramas `feat/*`, `fix/*`, `chore/*` o `docs/*` creadas desde `dev`. Nunca hagas commit en `main` ni en `dev`.
 2. No hagas merge, push ni tag sin pedírselo antes al usuario.
-3. Antes de dar una tarea por terminada, ejecuta `pnpm check` y asegúrate de que todo pasa. Los E2E (`pnpm test:e2e`) se escriben y ejecutan solo al cerrar cada fase, no en cada rama.
+3. Antes de dar una tarea por terminada, ejecuta `pnpm check` y asegúrate de que todo pasa. Los E2E (`pnpm test:e2e`) se escriben y ejecutan solo al cerrar cada fase, no en cada rama. De momento los E2E y el CI están aplazados (ver `CONTRIBUTING.md`).
 4. Toda funcionalidad lleva tests. Todo bug corregido lleva un test que lo reproduce.
 5. Sigue Conventional Commits en inglés (`feat(cables): ...`).
 6. Código en inglés y textos de la UI / documentación en español.

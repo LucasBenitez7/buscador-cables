@@ -9,7 +9,12 @@ export const environmentSchema = z.object({
   DATABASE_URL_TEST: optionalUrl,
   SMTP_HOST: z.string().default("localhost"),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
   EMAIL_FROM: z.string().trim().min(1).default("no-reply@cables.local"),
+  // Better Auth reads these two straight from process.env; we only validate them.
+  BETTER_AUTH_SECRET: z.string().min(32).optional(),
+  BETTER_AUTH_URL: optionalUrl,
 });
 
 export type AppEnvironment = z.infer<typeof environmentSchema>;
