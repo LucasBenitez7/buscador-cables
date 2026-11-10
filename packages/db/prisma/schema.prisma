@@ -196,6 +196,7 @@ enum CableAction {
   MOVED
   RETIRED
   CORRECTION
+  DELETED // baja lógica (deletedAt)
 }
 
 model Cable {
