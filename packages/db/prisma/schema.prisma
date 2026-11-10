@@ -23,17 +23,22 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  role          Role      @default(VIEWER)
-  active        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  id               String       @id @default(cuid())
+  name             String
+  email            String       @unique
+  emailVerified    Boolean      @default(false)
+  image            String?
+  role             Role         @default(VIEWER)
+  active           Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  sessions         Session[]
+  accounts         Account[]
+  // Trazabilidad (fase 5): qué hizo cada usuario sobre los cables.
+  cableEvents      CableEvent[]
+  lastActionCables Cable[]      @relation("CableLastActionBy")
+  installedCables  Cable[]      @relation("CableInstalledBy")
+  connectedCables  Cable[]      @relation("CableConnectedBy")
 
   @@map("user")
 }
@@ -94,4 +99,191 @@ model RateLimit {
   lastRequest BigInt
 
   @@map("rateLimit")
+}
+
+// ---------------------------------------------------------------------------
+// Ubicaciones y catálogos (fase 2)
+// ---------------------------------------------------------------------------
+
+enum LocationType {
+  PLANT // central / planta
+  AREA // área
+  UNIT // unidad, p. ej. "Reactor X"
+  SITE // sitio, p. ej. "Sitio XZ"
+}
+
+/// Árbol Planta → Área → Unidad → Sitio. `path` es materializado ("/PLANTA/AREA-1/R-X")
+/// para filtrar un subárbol con un prefijo.
+model Location {
+  id        String       @id @default(cuid())
+  name      String
+  code      String       @unique
+  type      LocationType
+  parentId  String?
+  parent    Location?    @relation("LocationTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Location[]   @relation("LocationTree")
+  path      String       @unique
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  cablesFrom Cable[]      @relation("CableOrigin")
+  cablesTo   Cable[]      @relation("CableDestination")
+  cablesAt   Cable[]      @relation("CableCurrent")
+  eventsFrom CableEvent[] @relation("EventFromLocation")
+  eventsTo   CableEvent[] @relation("EventToLocation")
+
+  @@index([parentId])
+  @@map("location")
+}
+
+/// "Potencia", "Control", "Instrumentación"...
+model CableType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cables    Cable[]
+
+  @@map("cable_type")
+}
+
+model Color {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  hex       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cables    Cable[]
+
+  @@map("color")
+}
+
+model Manufacturer {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cables    Cable[]
+
+  @@map("manufacturer")
+}
+
+// ---------------------------------------------------------------------------
+// Cables y trazabilidad (fases 3 a 5)
+// ---------------------------------------------------------------------------
+
+enum InstallationStatus {
+  IN_STOCK // en almacén
+  COILED // enrollado
+  LAID // tendido
+  RETIRED // retirado
+}
+
+enum ConnectionStatus {
+  DISCONNECTED
+  ORIGIN_ONLY
+  DESTINATION_ONLY
+  CONNECTED
+}
+
+enum CableAction {
+  CREATED
+  UPDATED
+  LAID
+  COILED
+  CONNECTED
+  DISCONNECTED
+  MOVED
+  RETIRED
+  CORRECTION
+}
+
+model Cable {
+  id                 String             @id @default(cuid())
+  /// Normalizado con `normalizeCableCode`: "SH-50".
+  code               String             @unique
+  description        String?
+  typeId             String?
+  type               CableType?         @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  colorId            String?
+  color              Color?             @relation(fields: [colorId], references: [id], onDelete: Restrict)
+  manufacturerId     String?
+  manufacturer       Manufacturer?      @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  conductors         Int?
+  crossSectionMm2    Decimal?           @db.Decimal(8, 2)
+  outerDiameterMm    Decimal?           @db.Decimal(8, 2)
+  lengthM            Decimal?           @db.Decimal(10, 2)
+  voltageRating      String?
+  originId           String?
+  origin             Location?          @relation("CableOrigin", fields: [originId], references: [id], onDelete: Restrict)
+  destinationId      String?
+  destination        Location?          @relation("CableDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+  /// Dónde está físicamente (si está enrollado o en almacén).
+  currentLocationId  String?
+  currentLocation    Location?          @relation("CableCurrent", fields: [currentLocationId], references: [id], onDelete: Restrict)
+  installationStatus InstallationStatus @default(IN_STOCK)
+  connectionStatus   ConnectionStatus   @default(DISCONNECTED)
+
+  // Columnas resumen (desnormalizadas) para la tabla del buscador. Se actualizan
+  // en la misma transacción que crea el CableEvent.
+  lastAction     CableAction?
+  lastActionById String?
+  lastActionBy   User?        @relation("CableLastActionBy", fields: [lastActionById], references: [id], onDelete: Restrict)
+  lastActionAt   DateTime?
+  installedById  String?
+  installedBy    User?        @relation("CableInstalledBy", fields: [installedById], references: [id], onDelete: Restrict)
+  installedAt    DateTime?
+  connectedById  String?
+  connectedBy    User?        @relation("CableConnectedBy", fields: [connectedById], references: [id], onDelete: Restrict)
+  connectedAt    DateTime?
+
+  notes     String?
+  /// Control de concurrencia y sincronización offline.
+  version   Int          @default(1)
+  /// Baja lógica: los cables nunca se borran.
+  deletedAt DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  events    CableEvent[]
+
+  @@index([installationStatus, connectionStatus])
+  @@index([originId])
+  @@index([destinationId])
+  @@index([currentLocationId])
+  @@index([typeId])
+  @@index([colorId])
+  @@index([manufacturerId])
+  @@index([lastActionById, lastActionAt])
+  // Búsqueda tolerante a errores por código (fase 4).
+  @@index([code(ops: raw("gin_trgm_ops"))], type: Gin, map: "cable_code_trgm_idx")
+  @@map("cable")
+}
+
+/// Registro INMUTABLE de lo que hace cada usuario sobre un cable. Nunca se edita
+/// ni se borra: los errores se corrigen con un evento CORRECTION.
+model CableEvent {
+  id              String       @id @default(cuid())
+  cableId         String
+  cable           Cable        @relation(fields: [cableId], references: [id], onDelete: Restrict)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  action          CableAction
+  fromLocationId  String?
+  fromLocation    Location?    @relation("EventFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  toLocationId    String?
+  toLocation      Location?    @relation("EventToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
+  /// { campo: { from, to } }
+  changes         Json
+  notes           String?
+  correctsEventId String?
+  correctsEvent   CableEvent?  @relation("EventCorrection", fields: [correctsEventId], references: [id], onDelete: Restrict)
+  corrections     CableEvent[] @relation("EventCorrection")
+  /// Hora real en campo (acciones hechas sin conexión).
+  clientCreatedAt DateTime?
+  createdAt       DateTime     @default(now())
+
+  @@index([cableId, createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("cable_event")
 }
