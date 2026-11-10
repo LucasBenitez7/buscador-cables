@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { escapeHtml, passwordResetEmail, verificationEmail } from "./email-templates";
+import {
+  accountExistsEmail,
+  escapeHtml,
+  passwordResetEmail,
+  verificationEmail,
+} from "./email-templates";
 
 const url = "https://cables.example/reset-password?token=abc123";
 
@@ -48,5 +53,19 @@ describe("HTML escaping", () => {
 
     expect(email.html).toContain("token=abc123&amp;x=1");
     expect(email.text).toContain(`${url}&x=1`);
+  });
+});
+
+describe("accountExistsEmail", () => {
+  it("points the owner to password recovery", () => {
+    const email = accountExistsEmail({
+      to: "ana@planta.example",
+      name: "Ana <b>",
+      forgotPasswordUrl: "https://cables.example/forgot-password",
+    });
+
+    expect(email.subject).toMatch(/ya tienes una cuenta/i);
+    expect(email.text).toContain("https://cables.example/forgot-password");
+    expect(email.html).toContain("Ana &lt;b&gt;");
   });
 });

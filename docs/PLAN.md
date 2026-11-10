@@ -52,7 +52,8 @@ Objetivo: que cualquiera pueda clonar, ejecutar `pnpm dev` y tener todo funciona
 - [x] Página de estado con verificación de conexión a la base de datos y endpoint `/api/health`.
 
 **Criterio de aceptación:** `pnpm install && docker compose up -d && pnpm dev` levanta la app;
-`pnpm check` (lint + typecheck + tests) pasa en local y en CI.
+`pnpm check` (lint + typecheck + tests) pasa en local y en CI. _(El CI se activará más
+adelante; de momento solo hay verificación local.)_
 
 ## Fase 1 — Autenticación y usuarios (v0.2.0)
 
@@ -61,13 +62,17 @@ Objetivo: que cualquiera pueda clonar, ejecutar `pnpm dev` y tener todo funciona
 - [x] Páginas: login, logout, "olvidé mi contraseña", "restablecer contraseña".
 - [x] Recuperación de contraseña por email con token de un solo uso y caducidad (1 h).
   - Local: Mailpit. Producción: Resend (u otro SMTP).
-- [ ] Verificación de email.
+- [x] Verificación de email (obligatoria para entrar; enlace de 24 h, se reenvía al intentar entrar).
 - [x] Roles: `ADMIN`, `SUPERVISOR`, `TECHNICIAN`, `VIEWER`.
-- [x] Sin registro público: el **ADMIN crea/invita usuarios** (entorno industrial).
+- [x] Registro abierto: cada usuario crea su cuenta con **su propio correo y contraseña**.
+      Entra como `VIEWER` (solo consulta) y un `ADMIN` le asigna el rol. El ADMIN también
+      puede dar de alta usuarios desde el panel. _(Cambio de decisión del 2026-11-10: antes
+      el plan decía "sin registro público".)_
 - [x] Panel de administración de usuarios (crear, desactivar, cambiar rol).
 - [x] Middleware de protección de rutas + comprobación de permisos en servidor.
 - [x] Rate limiting en login y recuperación de contraseña.
-- [ ] Tests: unitarios de permisos, E2E de login, logout y recuperación de contraseña.
+- [x] Tests: unitarios de permisos y de integración del servicio de usuarios.
+- [ ] Tests E2E de registro, login, logout y recuperación de contraseña (aplazados, ver `CONTRIBUTING.md`).
 
 ## Fase 2 — Modelo de datos y ubicaciones (v0.3.0)
 

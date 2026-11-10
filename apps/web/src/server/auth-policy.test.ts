@@ -2,7 +2,7 @@
 import { APIError } from "better-auth/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AUTH_ERROR_CODES } from "@/lib/auth-errors";
-import { assertAccountActive } from "./auth-policy";
+import { assertAccountActive, prepareSignUpUser } from "./auth-policy";
 
 const { findUnique } = vi.hoisted(() => ({ findUnique: vi.fn() }));
 
@@ -34,5 +34,34 @@ describe("assertAccountActive", () => {
     findUnique.mockResolvedValue(null);
 
     await expect(assertAccountActive("ghost")).rejects.toBeInstanceOf(APIError);
+  });
+});
+
+describe("prepareSignUpUser", () => {
+  const base = { id: "u9", name: "  Luis Gómez ", email: "Luis@Planta.example", image: null };
+
+  it("normalizes the profile and forces an active VIEWER", () => {
+    const { data } = prepareSignUpUser({ ...base, role: "ADMIN", active: false });
+
+    expect(data).toMatchObject({
+      id: "u9",
+      name: "Luis Gómez",
+      email: "luis@planta.example",
+      role: "VIEWER",
+      active: true,
+    });
+  });
+
+  it("rejects an invalid name with INVALID_PROFILE", () => {
+    const error = (() => {
+      try {
+        prepareSignUpUser({ ...base, name: " " });
+      } catch (caught) {
+        return caught;
+      }
+    })();
+
+    expect(error).toBeInstanceOf(APIError);
+    expect((error as APIError).body?.code).toBe(AUTH_ERROR_CODES.INVALID_PROFILE);
   });
 });

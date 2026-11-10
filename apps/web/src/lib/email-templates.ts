@@ -44,11 +44,30 @@ export function passwordResetEmail(input: {
 }
 
 export function verificationEmail(input: { to: string; name: string; url: string }): OutgoingEmail {
-  const body = `Hola ${escapeHtml(input.name)}. Confirma tu dirección de correo para completar tu cuenta.`;
+  const body = `Hola ${escapeHtml(input.name)}. Confirma tu dirección de correo para activar tu cuenta. El enlace caduca en 24 horas.`;
   return {
     to: input.to,
     subject: `${APP_NAME}: confirma tu correo`,
-    text: `Hola ${input.name}.\n\nConfirma tu correo en este enlace:\n${input.url}`,
+    text: `Hola ${input.name}.\n\nConfirma tu correo en este enlace (caduca en 24 horas):\n${input.url}`,
     html: layout("Confirma tu correo", body, "Confirmar correo", input.url),
+  };
+}
+
+/**
+ * Sent when someone tries to register with an email that already has an account.
+ * The sign-up form always shows the same answer, so only the real owner of the
+ * mailbox learns that the account exists.
+ */
+export function accountExistsEmail(input: {
+  to: string;
+  name: string;
+  forgotPasswordUrl: string;
+}): OutgoingEmail {
+  const body = `Hola ${escapeHtml(input.name)}. Alguien ha intentado crear una cuenta con este correo, pero ya tienes una. Si has olvidado la contraseña, puedes restablecerla. Si no has sido tú, ignora este mensaje.`;
+  return {
+    to: input.to,
+    subject: `${APP_NAME}: ya tienes una cuenta`,
+    text: `Hola ${input.name}.\n\nAlguien ha intentado crear una cuenta con este correo, pero ya tienes una.\nSi has olvidado la contraseña, restablécela aquí:\n${input.forgotPasswordUrl}\n\nSi no has sido tú, ignora este mensaje.`,
+    html: layout("Ya tienes una cuenta", body, "Restablecer contraseña", input.forgotPasswordUrl),
   };
 }

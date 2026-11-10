@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { signInErrorMessage } from "@/lib/auth-errors";
+import { VERIFY_EMAIL_PATH } from "@/lib/route-access";
 
 export function LoginForm({ next, notice }: { next: string; notice?: string }) {
   const router = useRouter();
@@ -24,6 +25,8 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
       email: String(form.get("email") ?? ""),
       password: String(form.get("password") ?? ""),
       rememberMe: true,
+      // Si el correo no está confirmado, Better Auth reenvía el enlace con este destino.
+      callbackURL: VERIFY_EMAIL_PATH,
     });
 
     setPending(false);
@@ -74,6 +77,13 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
       <p className="text-center text-sm">
         <Link href="/forgot-password" className="underline underline-offset-4">
           He olvidado mi contraseña
+        </Link>
+      </p>
+
+      <p className="text-center text-sm">
+        ¿No tienes cuenta?{" "}
+        <Link href="/register" className="underline underline-offset-4">
+          Crear cuenta
         </Link>
       </p>
     </form>

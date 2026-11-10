@@ -4,6 +4,8 @@ import { isPublicPath, safeNextPath } from "./route-access";
 describe("isPublicPath", () => {
   it.each([
     "/login",
+    "/register",
+    "/verify-email",
     "/forgot-password",
     "/reset-password",
     "/api/auth/sign-in/email",
