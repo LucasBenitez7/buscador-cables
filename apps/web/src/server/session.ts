@@ -1,6 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { hasPermission, isRole, type Permission, type Role } from "@cables/shared";
 import { auth } from "@/lib/auth";
 
@@ -14,8 +15,11 @@ export type CurrentUser = {
 /**
  * Reads the session from the request cookies and re-validates it against the
  * database. Returns null for anonymous requests and for deactivated accounts.
+ *
+ * Wrapped in React `cache` so the layout and the page of the same request share
+ * one lookup instead of querying the database twice.
  */
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const result = await auth.api.getSession({ headers: await headers() });
   if (!result) {
     return null;
@@ -27,7 +31,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   }
 
   return { id: user.id, name: user.name, email: user.email, role: user.role };
-}
+});
 
 /** For pages: sends anonymous users to the login screen. */
 export async function requireUser(): Promise<CurrentUser> {
