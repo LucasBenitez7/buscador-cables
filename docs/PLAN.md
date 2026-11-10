@@ -56,16 +56,16 @@ Objetivo: que cualquiera pueda clonar, ejecutar `pnpm dev` y tener todo funciona
 
 ## Fase 1 — Autenticación y usuarios (v0.2.0)
 
-- [ ] **Better Auth** con email + contraseña (sin Google/Apple), adaptador Prisma.
-- [ ] Sesiones en base de datos (cookie httpOnly, segura, SameSite=Lax).
-- [ ] Páginas: login, logout, "olvidé mi contraseña", "restablecer contraseña".
-- [ ] Recuperación de contraseña por email con token de un solo uso y caducidad (1 h).
+- [x] **Better Auth** con email + contraseña (sin Google/Apple), adaptador Prisma.
+- [x] Sesiones en base de datos (cookie httpOnly, segura, SameSite=Lax).
+- [x] Páginas: login, logout, "olvidé mi contraseña", "restablecer contraseña".
+- [x] Recuperación de contraseña por email con token de un solo uso y caducidad (1 h).
   - Local: Mailpit. Producción: Resend (u otro SMTP).
 - [ ] Verificación de email.
-- [ ] Roles: `ADMIN`, `SUPERVISOR`, `TECHNICIAN`, `VIEWER`.
-- [ ] Sin registro público: el **ADMIN crea/invita usuarios** (entorno industrial).
-- [ ] Panel de administración de usuarios (crear, desactivar, cambiar rol).
-- [ ] Middleware de protección de rutas + comprobación de permisos en servidor.
+- [x] Roles: `ADMIN`, `SUPERVISOR`, `TECHNICIAN`, `VIEWER`.
+- [x] Sin registro público: el **ADMIN crea/invita usuarios** (entorno industrial).
+- [x] Panel de administración de usuarios (crear, desactivar, cambiar rol).
+- [x] Middleware de protección de rutas + comprobación de permisos en servidor.
 - [ ] Rate limiting en login y recuperación de contraseña.
 - [ ] Tests: unitarios de permisos, E2E de login, logout y recuperación de contraseña.
 
