@@ -1,36 +1,62 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 import { ROLES, ROLE_LABELS, canManageActor, type Role } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createUserAction, type ActionResult } from "@/features/users/actions";
 
+const EMPTY = { name: "", email: "", role: "VIEWER", password: "" };
+
 export function CreateUserForm({ currentRole }: { currentRole: Role }) {
+  // Con `<form action>` React 19 resetea el formulario al terminar la acción, también
+  // si el servidor devuelve un error, y un <select> volvía a su primera opción
+  // (Administrador). Se envía con onSubmit y solo se vacía tras un alta correcta.
+  const [values, setValues] = useState(EMPTY);
   const [result, formAction, pending] = useActionState<ActionResult | null, FormData>(
-    createUserAction,
+    async (previous, formData) => {
+      const outcome = await createUserAction(previous, formData);
+      if (outcome.ok) {
+        setValues(EMPTY);
+      }
+      return outcome;
+    },
     null,
   );
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    startTransition(() => formAction(formData));
+  }
+
+  function field(key: keyof typeof EMPTY) {
+    return {
+      name: key,
+      value: values[key],
+      onChange: (event: { target: { value: string } }) =>
+        setValues((current) => ({ ...current, [key]: event.target.value })),
+    };
+  }
 
   const assignable = ROLES.filter((role) => canManageActor(currentRole, role));
 
   return (
-    <form action={formAction} className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
       <div className="space-y-2">
         <Label htmlFor="name">Nombre</Label>
-        <Input id="name" name="name" required />
+        <Input id="name" {...field("name")} required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="email">Correo electrónico</Label>
-        <Input id="email" name="email" type="email" required />
+        <Input id="email" type="email" {...field("email")} required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="role">Rol</Label>
         <select
           id="role"
-          name="role"
-          defaultValue="VIEWER"
+          {...field("role")}
           className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
         >
           {assignable.map((role) => (
@@ -42,7 +68,13 @@ export function CreateUserForm({ currentRole }: { currentRole: Role }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Contraseña temporal</Label>
-        <Input id="password" name="password" type="password" autoComplete="new-password" required />
+        <Input
+          id="password"
+          type="password"
+          autoComplete="new-password"
+          {...field("password")}
+          required
+        />
       </div>
 
       <div className="flex items-center justify-between gap-4 sm:col-span-2">
