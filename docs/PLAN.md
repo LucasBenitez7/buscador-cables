@@ -81,8 +81,8 @@ adelante; de momento solo hay verificación local.)_
 - [x] Esquema Prisma completo (ver `docs/ARQUITECTURA.md`). Borrados con `RESTRICT`, historial
       inmutable con trigger e índice trigram sobre el código.
 - [x] Ubicaciones jerárquicas: Planta → Área → Unidad (ej. "Reactor X") → Sitio (ej. "Sitio XZ").
-- [x] CRUD de ubicaciones (árbol navegable en `/locations`). Mover una ubicación a otro padre
-      queda pendiente; de momento se crea, se renombra (también el código) y se elimina.
+- [x] CRUD de ubicaciones (árbol navegable en `/locations`): crear, renombrar (también el
+      código), mover a otro padre del mismo nivel con todo su subárbol, y eliminar.
 - [x] Catálogos administrables: tipos de cable, colores, fabricantes (`/catalogs`).
 - [x] Seed con datos realistas (~5.000 cables de ejemplo) para desarrollo y rendimiento.
 - [x] Tests de integración contra Postgres real (base de datos de test en Docker).

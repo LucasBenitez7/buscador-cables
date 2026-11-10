@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   createLocation: vi.fn(),
   updateLocation: vi.fn(),
   deleteLocation: vi.fn(),
+  moveLocation: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -18,10 +19,11 @@ vi.mock("@/server/locations/service", async () => {
     createLocation: mocks.createLocation,
     updateLocation: mocks.updateLocation,
     deleteLocation: mocks.deleteLocation,
+    moveLocation: mocks.moveLocation,
   };
 });
 
-const { createLocationAction, deleteLocationAction, updateLocationAction } =
+const { createLocationAction, deleteLocationAction, moveLocationAction, updateLocationAction } =
   await import("./actions");
 const { LocationServiceError } = await import("@/server/locations/service");
 
@@ -99,5 +101,18 @@ describe("location actions", () => {
       message: "Primero elimina…",
     });
     expect((await deleteLocationAction(form({ id: "l1" }))).message).toMatch(/No se pudo/);
+  });
+
+  it("moves a location only with permission and a destination", async () => {
+    expect(await moveLocationAction(form({ id: "u1", parentId: "" }))).toEqual({
+      ok: false,
+      message: "Elige el nuevo destino",
+    });
+    expect(mocks.moveLocation).not.toHaveBeenCalled();
+
+    await moveLocationAction(form({ id: "u1", parentId: "a2" }));
+
+    expect(mocks.authorize).toHaveBeenCalledWith("location:manage");
+    expect(mocks.moveLocation).toHaveBeenCalledWith({ id: "u1", parentId: "a2" });
   });
 });

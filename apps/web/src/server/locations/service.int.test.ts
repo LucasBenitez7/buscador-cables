@@ -7,6 +7,7 @@ import {
   deleteLocation,
   findSubtreeIds,
   listLocationTree,
+  moveLocation,
   updateLocation,
 } from "./service";
 
@@ -198,5 +199,81 @@ describe("listLocationTree and findSubtreeIds", () => {
     expect(ids.sort()).toEqual([area.id, unit.id, site.id].sort());
     expect(ids).not.toContain(sibling.id);
     expect(await findSubtreeIds("missing")).toEqual([]);
+  });
+});
+
+describe("moveLocation", () => {
+  it("moves a unit with its sites to another area and rewrites every path", async () => {
+    const { unit, site, sibling } = await seedTree();
+    const cable = await prisma.cable.create({ data: { code: "SH-9", originId: site.id } });
+
+    await moveLocation({ id: unit.id, parentId: sibling.id });
+
+    expect(await prisma.location.findUniqueOrThrow({ where: { id: unit.id } })).toMatchObject({
+      parentId: sibling.id,
+      path: "/PL/A10/R-X",
+    });
+    expect(await pathOf(site.id)).toBe("/PL/A10/R-X/S-XZ");
+    // Los cables siguen apuntando a la misma ubicación; ahora cuentan en el área nueva.
+    expect((await prisma.cable.findUniqueOrThrow({ where: { id: cable.id } })).originId).toBe(
+      site.id,
+    );
+    expect(await findSubtreeIds(sibling.id)).toEqual(expect.arrayContaining([unit.id, site.id]));
+  });
+
+  it("moves an area to another plant", async () => {
+    const { area, site } = await seedTree();
+    const otherPlant = await createLocation({
+      name: "Sur",
+      code: "SUR",
+      type: "PLANT",
+      parentId: null,
+    });
+
+    await moveLocation({ id: area.id, parentId: otherPlant.id });
+
+    expect(await pathOf(area.id)).toBe("/SUR/A1");
+    expect(await pathOf(site.id)).toBe("/SUR/A1/R-X/S-XZ");
+  });
+
+  it("only accepts a destination of the parent level", async () => {
+    const { plant, unit, site } = await seedTree();
+
+    await expect(moveLocation({ id: unit.id, parentId: plant.id })).rejects.toThrow(
+      /solo se puede crear: área/,
+    );
+    await expect(moveLocation({ id: site.id, parentId: site.id })).rejects.toThrow(
+      /dentro de sí misma/,
+    );
+    expect(await pathOf(site.id)).toBe("/PL/A1/R-X/S-XZ");
+  });
+
+  it("does not move plants and reports missing locations", async () => {
+    const { plant, area } = await seedTree();
+    const otherPlant = await createLocation({
+      name: "Sur",
+      code: "SUR",
+      type: "PLANT",
+      parentId: null,
+    });
+
+    await expect(moveLocation({ id: plant.id, parentId: otherPlant.id })).rejects.toThrow(
+      "Las plantas no se pueden mover.",
+    );
+    await expect(moveLocation({ id: "missing", parentId: plant.id })).rejects.toThrow(
+      "La ubicación no existe.",
+    );
+    await expect(moveLocation({ id: area.id, parentId: "missing" })).rejects.toThrow(
+      "La ubicación de destino no existe.",
+    );
+  });
+
+  it("does nothing when the parent does not change", async () => {
+    const { plant, area } = await seedTree();
+    const before = await prisma.location.findUniqueOrThrow({ where: { id: area.id } });
+
+    await moveLocation({ id: area.id, parentId: plant.id });
+
+    expect(await prisma.location.findUniqueOrThrow({ where: { id: area.id } })).toEqual(before);
   });
 });

@@ -1,17 +1,27 @@
 "use client";
 
 import { useCallback, useState, useTransition } from "react";
-import { LOCATION_TYPE_LABELS, childLocationType, type LocationNode } from "@cables/shared";
+import {
+  LOCATION_TYPE_LABELS,
+  childLocationType,
+  listMoveTargets,
+  type LocationNode,
+} from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { deleteLocationAction } from "@/features/locations/actions";
 import type { ActionResult } from "@/lib/action-result";
 import type { LocationWithCounts } from "@/server/locations/service";
 import { LocationForm } from "./location-form";
+import { LocationMoveForm } from "./location-move-form";
 
 type Node = LocationNode<LocationWithCounts>;
 
-/** Which inline form is open: adding under a node ("root" = new plant) or editing one. */
-type OpenForm = { kind: "add"; parentId: string | "root" } | { kind: "edit"; id: string } | null;
+/** Which inline form is open: adding under a node ("root" = new plant), editing or moving one. */
+type OpenForm =
+  | { kind: "add"; parentId: string | "root" }
+  | { kind: "edit"; id: string }
+  | { kind: "move"; id: string }
+  | null;
 
 export function LocationTree({ tree, canManage }: { tree: Node[]; canManage: boolean }) {
   const [open, setOpen] = useState<OpenForm>(null);
@@ -37,6 +47,7 @@ export function LocationTree({ tree, canManage }: { tree: Node[]; canManage: boo
             <TreeItem
               key={node.id}
               node={node}
+              tree={tree}
               canManage={canManage}
               open={open}
               setOpen={setOpen}
@@ -51,19 +62,22 @@ export function LocationTree({ tree, canManage }: { tree: Node[]; canManage: boo
 
 type ItemProps = {
   node: Node;
+  /** Whole tree, to list where a node can be moved. */
+  tree: Node[];
   canManage: boolean;
   open: OpenForm;
   setOpen: (form: OpenForm) => void;
   close: () => void;
 };
 
-function TreeItem({ node, canManage, open, setOpen, close }: ItemProps) {
+function TreeItem({ node, tree, canManage, open, setOpen, close }: ItemProps) {
   const [expanded, setExpanded] = useState(node.type === "PLANT" || node.type === "AREA");
   const [message, setMessage] = useState<ActionResult | null>(null);
   const [pending, startTransition] = useTransition();
   const childType = childLocationType(node.type);
   const editing = open?.kind === "edit" && open.id === node.id;
   const adding = open?.kind === "add" && open.parentId === node.id;
+  const moving = open?.kind === "move" && open.id === node.id;
 
   function remove() {
     if (!window.confirm(`¿Eliminar "${node.name}"? No se puede deshacer.`)) {
@@ -80,6 +94,8 @@ function TreeItem({ node, canManage, open, setOpen, close }: ItemProps) {
     <li>
       {editing ? (
         <LocationForm mode="edit" location={node} onDone={close} />
+      ) : moving ? (
+        <LocationMoveForm location={node} targets={listMoveTargets(tree, node)} onDone={close} />
       ) : (
         <div className="hover:bg-muted/50 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-2 py-1.5">
           {node.children.length > 0 ? (
@@ -125,6 +141,16 @@ function TreeItem({ node, canManage, open, setOpen, close }: ItemProps) {
               >
                 Editar
               </Button>
+              {node.type !== "PLANT" ? (
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => setOpen({ kind: "move", id: node.id })}
+                  aria-label={`Mover ${node.name}`}
+                >
+                  Mover
+                </Button>
+              ) : null}
               <Button size="xs" variant="ghost" onClick={remove} disabled={pending}>
                 Eliminar
               </Button>
@@ -150,6 +176,7 @@ function TreeItem({ node, canManage, open, setOpen, close }: ItemProps) {
             <TreeItem
               key={child.id}
               node={child}
+              tree={tree}
               canManage={canManage}
               open={open}
               setOpen={setOpen}

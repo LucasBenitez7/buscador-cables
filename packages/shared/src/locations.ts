@@ -25,6 +25,11 @@ export function childLocationType(type: LocationType): LocationType | null {
   return LOCATION_TYPES[LOCATION_TYPES.indexOf(type) + 1] ?? null;
 }
 
+/** Type that the parent of `type` must have, or null for plants (always at the root). */
+export function parentLocationType(type: LocationType): LocationType | null {
+  return LOCATION_TYPES[LOCATION_TYPES.indexOf(type) - 1] ?? null;
+}
+
 /** Returns an error message in Spanish, or null when the placement is valid. */
 export function validateLocationPlacement(
   type: LocationType,
@@ -90,6 +95,12 @@ export const updateLocationSchema = z.object({
 
 export const deleteLocationSchema = z.object({ id: z.string().min(1) });
 
+export const moveLocationSchema = z.object({
+  id: z.string().min(1),
+  parentId: z.string({ error: "Elige el nuevo destino" }).min(1, "Elige el nuevo destino"),
+});
+
+export type MoveLocationInput = z.infer<typeof moveLocationSchema>;
 export type CreateLocationInput = z.infer<typeof createLocationSchema>;
 export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;
 
@@ -135,4 +146,34 @@ export function buildLocationTree<T extends FlatLocation>(
   };
   sortDeep(roots);
   return roots;
+}
+
+export type MoveTarget = { id: string; label: string };
+
+/**
+ * Locations where `node` can be moved: every location of the parent level except
+ * its current parent, labelled with their full route ("Planta › Área").
+ */
+export function listMoveTargets(tree: readonly LocationNode[], node: FlatLocation): MoveTarget[] {
+  const parentType = parentLocationType(node.type);
+  if (parentType === null) {
+    return [];
+  }
+
+  const targets: MoveTarget[] = [];
+  const visit = (nodes: readonly LocationNode[], trail: string[]) => {
+    for (const candidate of nodes) {
+      const label = [...trail, candidate.name];
+      if (
+        candidate.type === parentType &&
+        candidate.id !== node.parentId &&
+        !isWithinPath(candidate.path, node.path)
+      ) {
+        targets.push({ id: candidate.id, label: label.join(" › ") });
+      }
+      visit(candidate.children, label);
+    }
+  };
+  visit(tree, []);
+  return targets;
 }
