@@ -87,6 +87,8 @@ valor cuando hay un flujo de usuario completo que romper. Por eso:
 
 Reglas:
 
+- Los tests de integración se nombran `*.int.test.ts` y usan la base `cables_test`
+  (`DATABASE_URL_TEST`); las migraciones se aplican solas antes de ejecutarlos.
 - Toda funcionalidad nueva incluye sus tests en la misma rama.
 - Todo bug corregido incluye un test que lo reproduce.
 - Cobertura mínima de `server/` y `packages/shared`: **80 %**.

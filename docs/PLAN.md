@@ -66,7 +66,7 @@ Objetivo: que cualquiera pueda clonar, ejecutar `pnpm dev` y tener todo funciona
 - [x] Sin registro público: el **ADMIN crea/invita usuarios** (entorno industrial).
 - [x] Panel de administración de usuarios (crear, desactivar, cambiar rol).
 - [x] Middleware de protección de rutas + comprobación de permisos en servidor.
-- [ ] Rate limiting en login y recuperación de contraseña.
+- [x] Rate limiting en login y recuperación de contraseña.
 - [ ] Tests: unitarios de permisos, E2E de login, logout y recuperación de contraseña.
 
 ## Fase 2 — Modelo de datos y ubicaciones (v0.3.0)
