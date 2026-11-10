@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { sendMail, createTransport } = vi.hoisted(() => {
   const sendMail = vi.fn();
-  return { sendMail, createTransport: vi.fn(() => ({ sendMail })) };
+  return { sendMail, createTransport: vi.fn((_options: unknown) => ({ sendMail })) };
 });
 
 vi.mock("nodemailer", () => ({ default: { createTransport } }));
