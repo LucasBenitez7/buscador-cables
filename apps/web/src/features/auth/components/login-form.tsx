@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { signInErrorMessage } from "@/lib/auth-errors";
 
 export function LoginForm({ next, notice }: { next: string; notice?: string }) {
   const router = useRouter();
@@ -28,11 +29,7 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
     setPending(false);
 
     if (signInError) {
-      setError(
-        signInError.status === 429
-          ? "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
-          : "Correo o contraseña incorrectos.",
-      );
+      setError(signInErrorMessage(signInError));
       return;
     }
 

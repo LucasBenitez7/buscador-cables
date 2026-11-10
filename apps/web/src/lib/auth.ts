@@ -7,6 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { ROLES } from "@cables/shared";
 import { env } from "@/lib/env";
 import { passwordResetEmail, verificationEmail } from "@/lib/email-templates";
+import { assertAccountActive } from "@/server/auth-policy";
 import { sendEmail } from "@/server/email";
 
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
@@ -71,6 +72,15 @@ export const auth = betterAuth({
   },
 
   databaseHooks: {
+    session: {
+      create: {
+        // Better Auth no conoce nuestro campo `active`: sin esto, un usuario
+        // desactivado podría volver a entrar con su contraseña.
+        before: async (session) => {
+          await assertAccountActive(session.userId);
+        },
+      },
+    },
     user: {
       create: {
         // El registro público está desactivado: las altas se hacen desde el panel
