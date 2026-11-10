@@ -1,4 +1,4 @@
-﻿import { getSessionCookie } from "better-auth/cookies";
+import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import { isPublicPath } from "@/lib/route-access";
 
