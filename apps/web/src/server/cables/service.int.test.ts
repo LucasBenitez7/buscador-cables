@@ -224,8 +224,8 @@ describe("queries", () => {
       expect.objectContaining({
         code: "SH-50",
         type: "Control",
-        origin: "Sitio S1",
-        destination: "Sitio S2",
+        origin: "Calderas › Sitio S1",
+        destination: "Calderas › Sitio S2",
         installationStatus: "IN_STOCK",
       }),
     ]);
