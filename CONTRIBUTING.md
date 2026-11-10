@@ -3,7 +3,7 @@
 ## Ramas
 
 ```
-main      ← producción. Solo recibe merges desde dev al cerrar una fase. Etiquetada (vX.Y.Z).
+main      ← producción. Solo recibe dev al terminar el proyecto o cuando lo decida el responsable.
  └─ dev   ← integración. Siempre debe compilar y pasar los tests.
      ├─ feat/<fase>-<descripcion>    nueva funcionalidad   ej. feat/f1-password-reset
      ├─ fix/<descripcion>            corrección            ej. fix/search-empty-filter
@@ -38,22 +38,26 @@ git push
 git branch -d feat/f1-login
 ```
 
-### Cierre de fase (dev → main)
+### Cierre de fase
+
+Una fase se da por cerrada **en `dev`** cuando se cumplen **todos** sus criterios de aceptación
+de `docs/PLAN.md` y `pnpm check` está en verde en `dev`. Cerrar una fase **no** implica merge a
+`main` (decisión del 2026-11-11).
+
+### Merge a `main` (solo al final o cuando lo diga el responsable)
+
+`main` recibe `dev` únicamente al terminar el proyecto o cuando el responsable lo pida
+expresamente. Nadie (tampoco un agente) lo propone ni lo hace por su cuenta:
 
 ```bash
-git switch main && git pull
-git merge --no-ff dev -m "chore(release): merge phase one into main"
-git tag -a v0.2.0 -m "Fase 1: autenticación y usuarios"
-git push && git push --tags
+git switch main
+git merge --no-ff dev -m "chore(release): merge dev into main"
+git tag -a vX.Y.Z -m "…"      # el tag lo crea el responsable
 ```
 
-Solo se cierra una fase si se cumplen **todos** los criterios de aceptación de `docs/PLAN.md`
-y `pnpm check` está en verde en `dev`.
-
-> **De momento (decisión del 2026-11-10):** no hay remoto ni Pull Requests. Se trabaja en
-> local con merges directos `feat/*` → `dev` → `main` (`--no-ff`), sin `git push`. El CI de
-> GitHub Actions ya está configurado, pero se activará más adelante, cuando el proyecto tenga
-> más fases; hasta entonces `pnpm check` en local hace de CI.
+> **De momento:** no hay remoto ni Pull Requests. Se trabaja en local con merges directos
+> `feat/*` → `dev` (`--no-ff`), sin `git push`. El CI de GitHub Actions ya está configurado,
+> pero se activará más adelante; hasta entonces `pnpm check` en local hace de CI.
 
 ## Commits — Conventional Commits (en inglés)
 

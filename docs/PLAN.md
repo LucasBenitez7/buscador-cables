@@ -28,7 +28,9 @@ hizo qué y cuándo.
 
 **Total: 9 fases (0 a 8).** Al terminar la fase 8 se publica la **v1.0.0**.
 
-Cada fase termina con: todos los tests en verde → merge `dev` → `main` → tag de versión.
+Cada fase termina con todos los tests en verde en `dev`. Las versiones de la tabla son
+orientativas: `dev` → `main` (y sus tags) solo se hace al final del proyecto o cuando lo decida
+el responsable.
 
 ---
 

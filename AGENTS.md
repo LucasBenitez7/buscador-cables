@@ -5,7 +5,7 @@ Lee antes de trabajar: `docs/PLAN.md`, `docs/ARQUITECTURA.md` y `CONTRIBUTING.md
 ## Reglas
 
 1. Trabaja solo en ramas `feat/*`, `fix/*`, `chore/*` o `docs/*` creadas desde `dev`. Nunca hagas commit en `main` ni en `dev`.
-2. No hagas merge, push ni tag sin pedírselo antes al usuario.
+2. Al terminar una rama, mergéala solo en `dev` (`git merge --no-ff`, luego borra la rama). Nunca mergees en `main`: eso solo se hace al final del proyecto o cuando el usuario lo pida. No hagas push ni tags. Si un comando de git está prohibido por la configuración de permisos, no busques otro comando que logre lo mismo: pregunta.
 3. Antes de dar una tarea por terminada, ejecuta `pnpm check` y asegúrate de que todo pasa. Los E2E (`pnpm test:e2e`) se escriben y ejecutan solo al cerrar cada fase, no en cada rama. De momento los E2E y el CI están aplazados (ver `CONTRIBUTING.md`).
 4. Toda funcionalidad lleva tests. Todo bug corregido lleva un test que lo reproduce.
 5. Sigue Conventional Commits en inglés (`feat(cables): ...`).
