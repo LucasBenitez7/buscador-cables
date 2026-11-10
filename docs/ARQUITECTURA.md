@@ -163,6 +163,10 @@ model CableEvent {
 - Contraseñas con hash (gestionado por Better Auth, scrypt/argon2).
 - Tokens de recuperación de un solo uso, con caducidad y almacenados con hash.
 - La respuesta de "olvidé mi contraseña" es siempre la misma, exista o no el email (no revela usuarios).
+- Registro abierto con verificación de email obligatoria. Toda cuenta nueva es `VIEWER` activa
+  (lo fuerza un hook en el servidor, el cliente no puede elegir rol). Registrarse con un correo
+  que ya existe da la misma respuesta y solo avisa por correo al dueño real.
+- Las cuentas desactivadas no pueden abrir sesión (hook `session.create.before`).
 - Toda Server Action / Route Handler valida la sesión, el rol y la entrada (Zod) en el servidor.
-- Rate limiting en endpoints de autenticación.
+- Rate limiting en endpoints de autenticación, con contadores en base de datos (tabla `rateLimit`).
 - Ningún secreto en el repositorio; solo `.env.example`.

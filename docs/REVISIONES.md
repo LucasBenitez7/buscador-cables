@@ -6,6 +6,46 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-10 — Registro abierto y forma de trabajo (rama `feat/f1-sign-up`)
+
+**Decisiones del usuario:**
+
+- Los usuarios **se registran con su propio correo y contraseña** (antes el plan decía "sin
+  registro público").
+- El **CI** y los **E2E** se dejan para más adelante, cuando haya más fases.
+- Ramas `main`, `dev` y `feat/*` con **merges directos** (`--no-ff`), sin Pull Requests ni
+  remoto de momento.
+
+**Ramas:** se mergeó la fase 0 en `main` (que seguía en el commit inicial) y `feat/f1-auth` en
+`dev`, y se borró `feat/f1-auth`. Los merges se crearon sin cambiar de rama, porque las tres
+ramas estaban en línea y el árbol resultante es idéntico al ya verificado. Así no se interrumpió
+el `pnpm dev` abierto.
+
+**Qué se ha hecho:**
+
+- Páginas `/register` y `/verify-email` y enlace "Crear cuenta" en el login.
+- Verificación obligatoria. Sin confirmar el correo no se puede entrar; al intentarlo se
+  reenvía el enlace, que caduca en 24 h.
+- Hook `user.create.before` (`prepareSignUpUser`): valida el nombre con Zod y **fuerza
+  `VIEWER` y cuenta activa**, aunque el cliente envíe `role: "ADMIN"`.
+- Un correo duplicado recibe la misma respuesta que uno nuevo, así que no revela cuentas. El
+  dueño real recibe un correo "ya tienes una cuenta" con el enlace de recuperación.
+- Rate limit de registro: 3 por minuto e IP.
+- Corregido el ejemplo de merge de cierre de fase en `CONTRIBUTING.md`: `release: …` no pasa
+  commitlint y ahora es `chore(release): …`.
+
+**Prueba manual** (`next start` + Mailpit): registro → correo de confirmación; login sin
+confirmar → `403 EMAIL_NOT_VERIFIED` y reenvío; registro duplicado → respuesta genérica y correo
+"ya tienes una cuenta"; nombre de 1 letra → `400 INVALID_PROFILE`; enlace válido → `302` a
+`/verify-email` con sesión iniciada; enlace manipulado → `?error=INVALID_TOKEN`; login tras
+confirmar → `200`; el rol queda en `VIEWER`. Los datos de prueba se borraron.
+
+**A tener en cuenta:** con el registro abierto, cualquiera que llegue a la URL y confirme un
+correo puede **consultar** todos los cables (rol `VIEWER`). Si hiciera falta restringirlo, la
+opción sencilla es una lista de dominios de correo permitidos.
+
+---
+
 ## 2026-11-10 — Fase 1 (rama `feat/f1-auth`)
 
 **Alcance:** todo el trabajo de autenticación y usuarios, que estaba sin commitear, más la
