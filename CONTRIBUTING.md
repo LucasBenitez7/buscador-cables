@@ -28,7 +28,7 @@ git switch -c feat/f1-login
 # 3. Antes de mergear: actualizar y verificar
 git fetch && git rebase origin/dev        # o merge de dev si se prefiere
 pnpm check                                # lint + typecheck + unit + integración
-pnpm test:e2e                             # E2E
+pnpm test:e2e                             # solo al cerrar fase (ver "Tests")
 
 # 4. Merge a dev (siempre --no-ff para conservar la historia de la rama)
 git switch dev
@@ -67,14 +67,26 @@ commitlint lo valida automáticamente en cada commit.
 
 ## Tests — obligatorios
 
-| Tipo        | Herramienta               | Qué cubre                                            |
-| ----------- | ------------------------- | ---------------------------------------------------- |
-| Unitario    | Vitest                    | Validaciones Zod, normalizadores, permisos, estados  |
-| Integración | Vitest + Postgres (Docker)| Servicios y consultas contra base de datos real      |
-| Componentes | Vitest + Testing Library  | Formularios y componentes con lógica                 |
-| E2E         | Playwright                | Flujos críticos: login, reset, buscar, alta, estados |
+| Tipo        | Herramienta                | Qué cubre                                            | Cuándo              |
+| ----------- | -------------------------- | ---------------------------------------------------- | ------------------- |
+| Unitario    | Vitest                     | Validaciones Zod, normalizadores, permisos, estados  | Siempre             |
+| Integración | Vitest + Postgres (Docker) | Servicios y consultas contra base de datos real      | Siempre             |
+| Componentes | Vitest + Testing Library   | Formularios y componentes con lógica                 | Siempre             |
+| E2E         | Playwright                 | Flujos críticos: login, reset, buscar, alta, estados | Al cerrar cada fase |
+
+### Política de E2E
+
+Los tests E2E son caros (levantan navegador + servidor + base de datos) y solo aportan
+valor cuando hay un flujo de usuario completo que romper. Por eso:
+
+- **Durante el día a día se trabaja con `pnpm check`** (unitarios, integración y componentes).
+- **Los E2E se escriben y ejecutan al cerrar cada fase**, sobre los flujos reales que esa
+  fase entrega. La infraestructura ya está lista desde la fase 0 (`pnpm test:e2e`).
+- Excepción: si un bug afecta a un flujo ya cubierto por un E2E, se reproduce con un E2E.
+- En CI, el job de E2E solo se ejecuta en `dev` y `main`, no en cada rama `feat/*`.
 
 Reglas:
+
 - Toda funcionalidad nueva incluye sus tests en la misma rama.
 - Todo bug corregido incluye un test que lo reproduce.
 - Cobertura mínima de `server/` y `packages/shared`: **80 %**.
@@ -84,7 +96,7 @@ Reglas:
 
 - [ ] Cumple lo pedido en la tarea de `docs/PLAN.md`.
 - [ ] `pnpm check` en verde (lint, typecheck, tests unitarios y de integración).
-- [ ] `pnpm test:e2e` en verde si toca flujos de usuario.
+- [ ] `pnpm test:e2e` en verde **al cerrar la fase** (no en cada rama).
 - [ ] Sin `console.log`, `any` injustificados ni código comentado.
 - [ ] Migraciones de Prisma creadas y probadas si cambia el esquema.
 - [ ] Permisos verificados en servidor.
@@ -99,7 +111,9 @@ Reglas:
 - Server Components por defecto; `"use client"` solo cuando haga falta.
 - Validar siempre con Zod en el servidor, aunque también se valide en el cliente.
 - Lógica de negocio en `server/` (sin dependencias de React ni de Next).
-- Formato automático con Prettier (lo aplica lint-staged al hacer commit).
+- Formato automático con Prettier: lo aplica `lint-staged` en el hook `pre-commit`.
+- ESLint **no** corre en el hook (en un monorepo pnpm el binario no es resoluble desde la
+  raíz); se ejecuta con `pnpm check` y en CI.
 
 ## Base de datos
 

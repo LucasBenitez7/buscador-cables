@@ -14,17 +14,17 @@ hizo qué y cuándo.
 
 ## Resumen de fases
 
-| Fase | Nombre                              | Versión | Resultado principal                                     |
-| ---- | ----------------------------------- | ------- | ------------------------------------------------------- |
-| 0    | Fundamentos del repositorio         | v0.1.0  | Monorepo, Docker local, lint, tests, CI funcionando      |
-| 1    | Autenticación y usuarios            | v0.2.0  | Login, sesiones, roles, recuperación de contraseña       |
-| 2    | Modelo de datos y ubicaciones       | v0.3.0  | Esquema Prisma, árbol de ubicaciones, catálogos, seed    |
-| 3    | Carga y edición de cables           | v0.4.0  | Formularios de alta/edición con validación               |
-| 4    | Buscador y ficha del cable          | v0.5.0  | Búsqueda tolerante + filtros + ficha completa            |
-| 5    | Estados y trazabilidad              | v0.6.0  | Tendido/enrollado, conectado, historial por usuario      |
-| 6    | Importación / exportación y panel   | v0.7.0  | CSV/Excel masivo, dashboard de estadísticas              |
-| 7    | Modo sin conexión (PWA)             | v0.8.0  | Consulta offline + cola de cambios sincronizable         |
-| 8    | Producción y endurecimiento         | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs    |
+| Fase | Nombre                            | Versión | Resultado principal                                   |
+| ---- | --------------------------------- | ------- | ----------------------------------------------------- |
+| 0    | Fundamentos del repositorio       | v0.1.0  | Monorepo, Docker local, lint, tests, CI funcionando   |
+| 1    | Autenticación y usuarios          | v0.2.0  | Login, sesiones, roles, recuperación de contraseña    |
+| 2    | Modelo de datos y ubicaciones     | v0.3.0  | Esquema Prisma, árbol de ubicaciones, catálogos, seed |
+| 3    | Carga y edición de cables         | v0.4.0  | Formularios de alta/edición con validación            |
+| 4    | Buscador y ficha del cable        | v0.5.0  | Búsqueda tolerante + filtros + ficha completa         |
+| 5    | Estados y trazabilidad            | v0.6.0  | Tendido/enrollado, conectado, historial por usuario   |
+| 6    | Importación / exportación y panel | v0.7.0  | CSV/Excel masivo, dashboard de estadísticas           |
+| 7    | Modo sin conexión (PWA)           | v0.8.0  | Consulta offline + cola de cambios sincronizable      |
+| 8    | Producción y endurecimiento       | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
 
 **Total: 9 fases (0 a 8).** Al terminar la fase 8 se publica la **v1.0.0**.
 
@@ -36,19 +36,20 @@ Cada fase termina con: todos los tests en verde → merge `dev` → `main` → t
 
 Objetivo: que cualquiera pueda clonar, ejecutar `pnpm dev` y tener todo funcionando.
 
-- [ ] Inicializar Git con ramas `main` y `dev`.
-- [ ] Monorepo con **pnpm workspaces** + **Turborepo**:
+- [x] Inicializar Git con ramas `main` y `dev`.
+- [x] Monorepo con **pnpm workspaces** + **Turborepo**:
   - `apps/web` → Next.js (App Router, TypeScript estricto).
   - `packages/db` → Prisma (esquema, cliente, migraciones, seed).
   - `packages/shared` → esquemas Zod, tipos y utilidades compartidas.
   - `packages/config` → configuración compartida de ESLint, TypeScript y Prettier.
-- [ ] `docker-compose.yml` local: PostgreSQL 16 + Mailpit (correo de pruebas).
-- [ ] Tailwind CSS + shadcn/ui.
-- [ ] ESLint + Prettier + `tsc --noEmit`.
-- [ ] Vitest (unitarios/integración) y Playwright (E2E) con un test de ejemplo cada uno.
-- [ ] Husky + lint-staged + commitlint (Conventional Commits).
-- [ ] GitHub Actions: lint → typecheck → test → build en cada push a `dev`/`main` y en ramas `feat/*`.
-- [ ] `.env.example` documentado y validación de variables de entorno con Zod.
+- [x] `docker-compose.yml` local: PostgreSQL 16 + Mailpit (correo de pruebas).
+- [x] Tailwind CSS + shadcn/ui.
+- [x] ESLint + Prettier + `tsc --noEmit`.
+- [x] Vitest (unitarios/integración) y Playwright (E2E) con tests de ejemplo.
+- [x] Husky + lint-staged + commitlint (Conventional Commits).
+- [x] GitHub Actions: format → lint → typecheck → test → build en cada push/PR; el job de E2E solo en `dev` y `main` (ver "Política de E2E" en `CONTRIBUTING.md`).
+- [x] `.env.example` documentado y validación de variables de entorno con Zod.
+- [x] Página de estado con verificación de conexión a la base de datos y endpoint `/api/health`.
 
 **Criterio de aceptación:** `pnpm install && docker compose up -d && pnpm dev` levanta la app;
 `pnpm check` (lint + typecheck + tests) pasa en local y en CI.
@@ -122,15 +123,15 @@ hizo cada cosa y cuándo.
 
 ### Acciones disponibles
 
-| Acción          | Efecto en el cable                                      | Datos que pide        |
-| --------------- | ------------------------------------------------------- | --------------------- |
-| Tender          | `installationStatus = LAID`                             | nota                  |
-| Enrollar        | `installationStatus = COILED`, `connectionStatus = DISCONNECTED` | ubicación actual, nota |
-| Conectar        | `connectionStatus` = `ORIGIN_ONLY` / `DESTINATION_ONLY` / `CONNECTED` | extremo(s), nota |
-| Desconectar     | `connectionStatus` = `DISCONNECTED` (o un solo extremo) | extremo(s), nota      |
-| Mover           | cambia `currentLocation` (y/o origen/destino)           | nuevo sitio, nota     |
-| Retirar         | `installationStatus = RETIRED`, desconectado            | motivo (obligatorio)  |
-| Corrección      | revierte/ajusta un dato, referencia al evento corregido | motivo (obligatorio)  |
+| Acción      | Efecto en el cable                                                    | Datos que pide         |
+| ----------- | --------------------------------------------------------------------- | ---------------------- |
+| Tender      | `installationStatus = LAID`                                           | nota                   |
+| Enrollar    | `installationStatus = COILED`, `connectionStatus = DISCONNECTED`      | ubicación actual, nota |
+| Conectar    | `connectionStatus` = `ORIGIN_ONLY` / `DESTINATION_ONLY` / `CONNECTED` | extremo(s), nota       |
+| Desconectar | `connectionStatus` = `DISCONNECTED` (o un solo extremo)               | extremo(s), nota       |
+| Mover       | cambia `currentLocation` (y/o origen/destino)                         | nuevo sitio, nota      |
+| Retirar     | `installationStatus = RETIRED`, desconectado                          | motivo (obligatorio)   |
+| Corrección  | revierte/ajusta un dato, referencia al evento corregido               | motivo (obligatorio)   |
 
 Reglas de transición (ej.): no se puede conectar un cable en almacén ni retirado; para
 retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
@@ -152,7 +153,7 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
 
 ### En la ficha del cable
 
-- Línea de tiempo del historial: "03/02/2026 10:42 — Juan Pérez movió el cable de *Sitio XZ* a *Reactor X*. Nota: …".
+- Línea de tiempo del historial: "03/02/2026 10:42 — Juan Pérez movió el cable de _Sitio XZ_ a _Reactor X_. Nota: …".
 
 ### Tareas
 
@@ -203,10 +204,10 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
 
 ## Entornos
 
-| Entorno    | Web             | Base de datos        | Email   | Rama   |
-| ---------- | --------------- | -------------------- | ------- | ------ |
-| Local      | `pnpm dev`      | Postgres en Docker   | Mailpit | `feat/*` |
-| Staging    | Vercel Preview  | Railway (staging)    | Resend  | `dev`  |
-| Producción | Vercel          | Railway (producción) | Resend  | `main` |
+| Entorno    | Web            | Base de datos        | Email   | Rama     |
+| ---------- | -------------- | -------------------- | ------- | -------- |
+| Local      | `pnpm dev`     | Postgres en Docker   | Mailpit | `feat/*` |
+| Staging    | Vercel Preview | Railway (staging)    | Resend  | `dev`    |
+| Producción | Vercel         | Railway (producción) | Resend  | `main`   |
 
 El entorno de staging se conecta en cuanto termine la fase 1, para probar en real desde el principio.
