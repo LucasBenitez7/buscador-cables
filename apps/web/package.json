@@ -13,7 +13,6 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@better-auth/prisma-adapter": "^1.7.19",
     "@cables/db": "workspace:*",
     "@cables/shared": "workspace:*",
     "@next/env": "^16.4.5",
