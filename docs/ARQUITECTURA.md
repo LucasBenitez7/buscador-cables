@@ -57,7 +57,12 @@ buscador-cables/
 Regla de dependencias: `app` → `features` → `server` → `packages/db` y `packages/shared`.
 Nunca al revés. Los componentes cliente no acceden a la base de datos.
 
-## Modelo de datos (borrador)
+## Modelo de datos
+
+> La fuente de verdad es `packages/db/prisma/schema.prisma`; lo de abajo es el diseño
+> original. Diferencias importantes: todas las referencias usan `ON DELETE RESTRICT`, la tabla
+> `cable_event` rechaza `UPDATE` y `DELETE` mediante un trigger, y `cable.code` tiene un índice
+> GIN trigram (`pg_trgm` lo crea la propia migración).
 
 ```prisma
 enum Role { ADMIN SUPERVISOR TECHNICIAN VIEWER }
