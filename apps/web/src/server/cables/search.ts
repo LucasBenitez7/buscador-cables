@@ -1,0 +1,220 @@
+import "server-only";
+import { Prisma, prisma } from "@cables/db";
+import {
+  SEARCH_PAGE_SIZE,
+  effectiveSort,
+  normalizeCableCode,
+  type CableAction,
+  type CableSearch,
+  type ConnectionStatus,
+  type InstallationStatus,
+} from "@cables/shared";
+import { findSubtreeIds } from "@/server/locations/service";
+
+export type CableSearchItem = {
+  id: string;
+  code: string;
+  description: string | null;
+  type: string | null;
+  color: { name: string; hex: string | null } | null;
+  conductors: number | null;
+  crossSectionMm2: number | null;
+  lengthM: number | null;
+  installationStatus: InstallationStatus;
+  connectionStatus: ConnectionStatus;
+  origin: string | null;
+  destination: string | null;
+  lastAction: CableAction | null;
+  lastActionAt: Date | null;
+  lastActionBy: string | null;
+};
+
+export type CableSearchResult = {
+  items: CableSearchItem[];
+  total: number;
+  page: number;
+  pageCount: number;
+};
+
+/** Escapes LIKE wildcards typed by the user ("%" or "_" must match literally). */
+function likeContains(value: string): string {
+  return `%${value.replace(/[\\%_]/g, "\\$&")}%`;
+}
+
+/** "SH-2" before "SH-10": letters first, then the first number padded, then the code. */
+function naturalCodeOrder(direction: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`
+    substring(c."code" from '^[^0-9]*') ${direction},
+    lpad(coalesce(substring(c."code" from '[0-9]+'), ''), 20, '0') ${direction},
+    c."code" ${direction}`;
+}
+
+async function buildConditions(search: CableSearch): Promise<Prisma.Sql[] | null> {
+  const conditions: Prisma.Sql[] = [Prisma.sql`c."deletedAt" IS NULL`];
+
+  if (search.q) {
+    // "sh50" → "SH-50"; también se compara sin guiones para encontrar "SH50" en "SH-50".
+    // Si la búsqueda solo tiene signos ("_", "-"), lo normalizado queda vacío y
+    // "ILIKE '%%'" encontraría todos los cables: entonces solo se busca en la descripción.
+    const normalized = normalizeCableCode(search.q);
+    const compact = normalized.replace(/-/g, "");
+    const matches: Prisma.Sql[] = [Prisma.sql`c."description" ILIKE ${likeContains(search.q)}`];
+    if (normalized) {
+      matches.push(
+        Prisma.sql`c."code" ILIKE ${likeContains(normalized)}`,
+        Prisma.sql`c."code" % ${normalized}`,
+      );
+    }
+    if (compact) {
+      matches.push(Prisma.sql`replace(c."code", '-', '') ILIKE ${likeContains(compact)}`);
+    }
+    conditions.push(Prisma.sql`(${Prisma.join(matches, " OR ")})`);
+  }
+
+  if (search.location) {
+    const ids = await findSubtreeIds(search.location);
+    if (ids.length === 0) {
+      return null;
+    }
+    const list = Prisma.join(ids);
+    conditions.push(Prisma.sql`(
+      c."originId" IN (${list})
+      OR c."destinationId" IN (${list})
+      OR c."currentLocationId" IN (${list})
+    )`);
+  }
+
+  if (search.type) conditions.push(Prisma.sql`c."typeId" = ${search.type}`);
+  if (search.color) conditions.push(Prisma.sql`c."colorId" = ${search.color}`);
+  if (search.manufacturer) conditions.push(Prisma.sql`c."manufacturerId" = ${search.manufacturer}`);
+  if (search.installation) {
+    conditions.push(
+      Prisma.sql`c."installationStatus" = ${search.installation}::"InstallationStatus"`,
+    );
+  }
+  if (search.connection) {
+    conditions.push(Prisma.sql`c."connectionStatus" = ${search.connection}::"ConnectionStatus"`);
+  }
+
+  const ranges: [number | undefined, number | undefined, Prisma.Sql][] = [
+    [search.sectionMin, search.sectionMax, Prisma.sql`c."crossSectionMm2"`],
+    [search.diameterMin, search.diameterMax, Prisma.sql`c."outerDiameterMm"`],
+    [search.lengthMin, search.lengthMax, Prisma.sql`c."lengthM"`],
+  ];
+  for (const [min, max, column] of ranges) {
+    if (min !== undefined) conditions.push(Prisma.sql`${column} >= ${min}`);
+    if (max !== undefined) conditions.push(Prisma.sql`${column} <= ${max}`);
+  }
+
+  return conditions;
+}
+
+function orderBy(search: CableSearch): Prisma.Sql {
+  const { sort, dir } = effectiveSort(search);
+  // `dir` solo puede ser "asc" o "desc" (lo valida el esquema), nunca texto del usuario.
+  const direction = Prisma.raw(dir === "desc" ? "DESC" : "ASC");
+  const natural = naturalCodeOrder(Prisma.raw("ASC"));
+
+  switch (sort) {
+    case "relevance": {
+      const normalized = normalizeCableCode(search.q ?? "");
+      return Prisma.sql`(c."code" = ${normalized}) DESC, similarity(c."code", ${normalized}) DESC, ${natural}`;
+    }
+    case "updated":
+      return Prisma.sql`c."updatedAt" ${direction}, ${natural}`;
+    case "length":
+      return Prisma.sql`c."lengthM" ${direction} NULLS LAST, ${natural}`;
+    case "section":
+      return Prisma.sql`c."crossSectionMm2" ${direction} NULLS LAST, ${natural}`;
+    case "code":
+      return naturalCodeOrder(direction);
+  }
+}
+
+const locationLabel = (location: { name: string; parent: { name: string } | null } | null) =>
+  location
+    ? location.parent
+      ? `${location.parent.name} › ${location.name}`
+      : location.name
+    : null;
+
+/**
+ * Searches active cables. Filtering, sorting and paging run in one SQL query
+ * over ids; the page of cables is then loaded with its related names.
+ */
+export async function searchCables(
+  search: CableSearch,
+  pageSize = SEARCH_PAGE_SIZE,
+): Promise<CableSearchResult> {
+  const conditions = await buildConditions(search);
+  if (conditions === null) {
+    return { items: [], total: 0, page: 1, pageCount: 0 };
+  }
+  const where = Prisma.join(conditions, " AND ");
+
+  const [{ total }] = await prisma.$queryRaw<[{ total: bigint }]>`
+    SELECT count(*) AS total FROM "cable" c WHERE ${where}`;
+  const count = Number(total);
+  const pageCount = Math.ceil(count / pageSize);
+  const page = Math.min(search.page ?? 1, Math.max(pageCount, 1));
+  if (count === 0) {
+    return { items: [], total: 0, page: 1, pageCount: 0 };
+  }
+
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT c."id" FROM "cable" c
+    WHERE ${where}
+    ORDER BY ${orderBy(search)}
+    LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`;
+  const ids = rows.map((row) => row.id);
+
+  const cables = await prisma.cable.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      code: true,
+      description: true,
+      conductors: true,
+      crossSectionMm2: true,
+      lengthM: true,
+      installationStatus: true,
+      connectionStatus: true,
+      lastAction: true,
+      lastActionAt: true,
+      type: { select: { name: true } },
+      color: { select: { name: true, hex: true } },
+      origin: { select: { name: true, parent: { select: { name: true } } } },
+      destination: { select: { name: true, parent: { select: { name: true } } } },
+      lastActionBy: { select: { name: true } },
+    },
+  });
+  const byId = new Map(cables.map((cable) => [cable.id, cable]));
+
+  const items = ids.flatMap((id) => {
+    const cable = byId.get(id);
+    if (!cable) {
+      return [];
+    }
+    return [
+      {
+        id: cable.id,
+        code: cable.code,
+        description: cable.description,
+        type: cable.type?.name ?? null,
+        color: cable.color,
+        conductors: cable.conductors,
+        crossSectionMm2: cable.crossSectionMm2?.toNumber() ?? null,
+        lengthM: cable.lengthM?.toNumber() ?? null,
+        installationStatus: cable.installationStatus,
+        connectionStatus: cable.connectionStatus,
+        origin: locationLabel(cable.origin),
+        destination: locationLabel(cable.destination),
+        lastAction: cable.lastAction,
+        lastActionAt: cable.lastActionAt,
+        lastActionBy: cable.lastActionBy?.name ?? null,
+      },
+    ];
+  });
+
+  return { items, total: count, page, pageCount };
+}
