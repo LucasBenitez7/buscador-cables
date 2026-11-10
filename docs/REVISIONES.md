@@ -6,6 +6,64 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-11 — Fase 3: alta y edición de cables
+
+**Ramas mergeadas en `dev`:** `feat/f3-cable-rules`, `feat/f3-cable-service` y
+`feat/f3-cable-forms`.
+
+**Qué hay nuevo:**
+
+- Reglas compartidas (`packages/shared/src/cables.ts`), las mismas en el navegador y en el
+  servidor:
+  - El código se normaliza: "prueba 1" se guarda como `PRUEBA-1`.
+  - Las medidas admiten coma o punto, con 2 decimales como máximo.
+  - El origen tiene que ser distinto del destino.
+  - El estado inicial tiene que ser coherente:
+    - no se da de alta un cable retirado;
+    - solo un cable tendido puede estar conectado;
+    - un cable en almacén o enrollado necesita saber dónde está;
+    - un cable tendido necesita origen y destino.
+- Nueva acción `DELETED` en el enum `CableAction` (migración `add_deleted_cable_action`).
+- Servicio (`server/cables/service.ts`). Cada alta, edición y baja escribe en una sola
+  transacción el cable, sus columnas de resumen (`lastAction`, quién y cuándo) y el evento
+  inmutable del historial:
+  - El alta guarda todos los valores iniciales.
+  - La edición guarda solo los campos que cambian.
+  - La baja guarda el motivo.
+  - Las ediciones y bajas usan `version`: si otra persona guardó antes, se avisa en lugar de
+    pisar sus cambios.
+  - Comprueba que el código no lo use otro cable (tampoco uno dado de baja) y que los catálogos
+    y ubicaciones elegidos existan.
+- Páginas:
+  - `/cables`: los últimos 50 cables modificados. Es provisional, hasta el buscador de la
+    fase 4.
+  - `/cables/new` y `/cables/[id]/edit` (técnico o superior).
+  - La baja con motivo solo la hace un `ADMIN`.
+  - El formulario valida antes de enviar y muestra los errores junto a cada campo, incluidos
+    los que devuelve el servidor.
+
+**Encontrado y corregido al probar en el navegador:**
+
+| Problema                                                                                                                                       | Corrección                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Tras guardar una edición, el aviso "Cambios guardados." desaparecía: el formulario se vuelve a montar con la nueva versión y pierde su estado. | Tras un guardado con cambios se navega a `?saved=1` y el aviso lo muestra la página. Hay un test de regresión. |
+| En el listado, el origen y el destino solo mostraban el nombre del sitio ("Bandeja sur"), que se repite en todas las unidades.                 | Ahora se muestran como "Unidad › Sitio".                                                                       |
+| El código del cable se partía en dos líneas en la tabla.                                                                                       | `whitespace-nowrap`.                                                                                           |
+
+**Prueba manual** (`next start` con el seed): alta de `PRUEBA-1` tendido y conectado; dos
+ediciones; baja con motivo; vuelta al listado con el aviso. En la base quedaron los eventos
+`CREATED`, `UPDATED` (solo `lengthM`), `UPDATED` (solo `notes`) y `DELETED` con el motivo.
+`PRUEBA-1` sigue dado de baja en la base de desarrollo: el trigger impide borrar su historial,
+y es intencionado.
+
+**Comportamiento a tener en cuenta:** Zod 4 no comprueba las reglas entre campos (origen ≠
+destino, estado inicial) mientras haya errores en campos sueltos. Esos avisos aparecen al
+corregir los anteriores.
+
+**Pendiente de la fase 3:** solo los E2E, que están aplazados.
+
+---
+
 ## 2026-11-11 — Fase 2: modelo de datos, ubicaciones, catálogos y seed
 
 **Ramas mergeadas en `dev`:** `feat/f2-schema`, `feat/f2-locations`, `feat/f2-catalogs`,

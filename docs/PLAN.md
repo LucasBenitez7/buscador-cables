@@ -91,14 +91,17 @@ adelante; de momento solo hay verificación local.)_
 
 El "apartado donde cargar el cable".
 
-- [ ] Formulario de alta: código (único, ej. `SH-50`), tipo, color, sección (mm²),
+- [x] Formulario de alta: código (único, ej. `SH-50`), tipo, color, sección (mm²),
       nº de conductores, diámetro exterior (mm), longitud (m), tensión nominal,
       fabricante, ubicación de origen y de destino, notas.
-- [ ] Normalización del código (`sh50`, `SH 50`, `sh-50` → `SH-50`).
-- [ ] Edición y baja lógica (soft delete, nunca se borra realmente).
-- [ ] Validación compartida cliente/servidor con Zod.
-- [ ] Permisos: solo `TECHNICIAN`+ puede crear o editar.
-- [ ] Tests: validaciones, Server Actions y E2E de alta/edición.
+- [x] Normalización del código (`sh50`, `SH 50`, `sh-50` → `SH-50`).
+- [x] Edición y baja lógica (soft delete, nunca se borra realmente). La baja la hace un
+      `ADMIN` y exige motivo. Cada alta, edición y baja queda en el historial (`CableEvent`), y
+      la edición usa `version` para avisar si otra persona guardó antes.
+- [x] Validación compartida cliente/servidor con Zod.
+- [x] Permisos: solo `TECHNICIAN`+ puede crear o editar.
+- [x] Tests: validaciones, Server Actions, servicio contra Postgres y formulario.
+- [ ] Tests E2E de alta/edición (aplazados, ver `CONTRIBUTING.md`).
 
 ## Fase 4 — Buscador y ficha del cable (v0.5.0)
 
