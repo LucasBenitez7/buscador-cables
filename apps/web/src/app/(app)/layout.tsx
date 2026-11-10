@@ -17,6 +17,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link href="/" className="font-semibold">
               Buscador de Cables
             </Link>
+            <Link href="/locations" className="text-muted-foreground hover:text-foreground">
+              Ubicaciones
+            </Link>
             {canManageUsers ? (
               <Link href="/admin/users" className="text-muted-foreground hover:text-foreground">
                 Usuarios

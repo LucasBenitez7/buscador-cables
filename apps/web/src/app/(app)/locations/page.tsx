@@ -1,0 +1,27 @@
+import type { Metadata } from "next";
+import { hasPermission } from "@cables/shared";
+import { LocationTree } from "@/features/locations/components/location-tree";
+import { listLocationTree } from "@/server/locations/service";
+import { requireUser } from "@/server/session";
+
+export const metadata: Metadata = { title: "Ubicaciones" };
+export const dynamic = "force-dynamic";
+
+export default async function LocationsPage() {
+  const user = await requireUser();
+  const tree = await listLocationTree();
+  const canManage = hasPermission(user.role, "location:manage");
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Ubicaciones</h1>
+        <p className="text-muted-foreground text-sm">
+          Planta → Área → Unidad → Sitio. Al filtrar cables por una ubicación se incluyen todas las
+          que contiene.
+        </p>
+      </div>
+      <LocationTree tree={tree} canManage={canManage} />
+    </div>
+  );
+}
