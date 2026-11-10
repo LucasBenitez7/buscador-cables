@@ -4,6 +4,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
+import { after } from "next/server";
 import { ROLES } from "@cables/shared";
 import { env } from "@/lib/env";
 import { passwordResetEmail, verificationEmail } from "@/lib/email-templates";
@@ -25,7 +26,7 @@ export const auth = betterAuth({
     resetPasswordTokenExpiresIn: 60 * 60,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
-      void sendEmail(passwordResetEmail({ to: user.email, name: user.name, url }));
+      await sendEmail(passwordResetEmail({ to: user.email, name: user.name, url }));
     },
   },
 
@@ -33,7 +34,7 @@ export const auth = betterAuth({
     sendOnSignUp: false,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      void sendEmail(verificationEmail({ to: user.email, name: user.name, url }));
+      await sendEmail(verificationEmail({ to: user.email, name: user.name, url }));
     },
   },
 
@@ -92,6 +93,13 @@ export const auth = betterAuth({
         },
       },
     },
+  },
+
+  advanced: {
+    // Better Auth lanza el envío de correos como tarea en segundo plano para no
+    // revelar por tiempos si un correo existe. `after` mantiene viva la función
+    // serverless (Vercel) hasta que termina; con `void` el correo podía perderse.
+    backgroundTasks: { handler: (promise) => after(promise) },
   },
 
   plugins: [nextCookies()],
