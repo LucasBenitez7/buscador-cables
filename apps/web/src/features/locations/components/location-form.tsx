@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { LOCATION_TYPE_LABELS, type LocationType } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,10 @@ export function LocationForm(props: Props) {
   const action = props.mode === "create" ? createLocationAction : updateLocationAction;
   const [result, formAction, pending] = useActionState<ActionResult | null, FormData>(action, null);
   const { onDone } = props;
+  // Campos controlados: React 19 vacía los no controlados al terminar la acción,
+  // y si el servidor devuelve un error el usuario perdería lo que escribió.
+  const [name, setName] = useState(props.mode === "edit" ? props.location.name : "");
+  const [code, setCode] = useState(props.mode === "edit" ? props.location.code : "");
 
   useEffect(() => {
     if (result?.ok) {
@@ -51,7 +55,8 @@ export function LocationForm(props: Props) {
         <Input
           id={`${idPrefix}-name`}
           name="name"
-          defaultValue={props.mode === "edit" ? props.location.name : ""}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
           required
           autoFocus
         />
@@ -61,7 +66,8 @@ export function LocationForm(props: Props) {
         <Input
           id={`${idPrefix}-code`}
           name="code"
-          defaultValue={props.mode === "edit" ? props.location.code : ""}
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
           className="uppercase"
           required
         />

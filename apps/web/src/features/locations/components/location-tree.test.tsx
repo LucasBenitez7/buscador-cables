@@ -71,3 +71,24 @@ describe("LocationTree", () => {
     expect(screen.getByRole("button", { name: "Nueva planta" })).toBeInTheDocument();
   });
 });
+
+describe("LocationForm", () => {
+  // Regresión: React 19 vaciaba los campos tras una respuesta de error del servidor.
+  it("keeps what the user typed when the server rejects it", async () => {
+    const { createLocationAction } = await import("@/features/locations/actions");
+    vi.mocked(createLocationAction).mockResolvedValue({
+      ok: false,
+      message: "Ya existe una ubicación con ese código.",
+    });
+    render(<LocationTree tree={[]} canManage />);
+    fireEvent.click(screen.getByRole("button", { name: "Nueva planta" }));
+
+    fireEvent.change(screen.getByLabelText("Nombre (planta)"), { target: { value: "Planta Sur" } });
+    fireEvent.change(screen.getByLabelText("Código"), { target: { value: "PS" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear" }));
+
+    await screen.findByText("Ya existe una ubicación con ese código.");
+    expect(screen.getByLabelText("Nombre (planta)")).toHaveValue("Planta Sur");
+    expect(screen.getByLabelText("Código")).toHaveValue("PS");
+  });
+});
