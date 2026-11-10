@@ -12,6 +12,9 @@ test-results/
 .env*.local
 !.env.example
 *.log
+*.tsbuildinfo
+apps/web/next-env.d.ts
 .DS_Store
 Thumbs.db
 .vercel
+packages/db/src/generated/

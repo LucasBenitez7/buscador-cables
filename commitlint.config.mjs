@@ -1,0 +1,30 @@
+export default {
+  extends: ["@commitlint/config-conventional"],
+  rules: {
+    "scope-enum": [
+      2,
+      "always",
+      [
+        "repo",
+        "auth",
+        "users",
+        "cables",
+        "locations",
+        "search",
+        "actions",
+        "import",
+        "export",
+        "dashboard",
+        "offline",
+        "db",
+        "shared",
+        "ui",
+        "web",
+        "deps",
+        "ci",
+        "release",
+      ],
+    ],
+    "subject-case": [2, "never", ["sentence-case", "start-case", "pascal-case", "upper-case"]],
+  },
+};

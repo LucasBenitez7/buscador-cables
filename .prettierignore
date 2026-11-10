@@ -1,0 +1,11 @@
+node_modules
+.next
+.turbo
+coverage
+playwright-report
+test-results
+pnpm-lock.yaml
+**/generated/**
+**/migrations/**
+apps/web/AGENTS.md
+apps/web/next-env.d.ts
