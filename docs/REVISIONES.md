@@ -51,8 +51,8 @@ junto con el lockfile, y ya no hace falta `group-by`. El PR #4 (GitHub Actions v
 mergeó con el CI en verde. `upload-artifact` aún no se ha probado, porque solo lo usa el job
 `e2e`.
 
-**Pendiente (fuera del alcance):** la página de inicio aún dice "La búsqueda de cables llega en la
-fase 4", que ya está hecha.
+**Corregido después (rama `fix/home-intro`):** la página de inicio decía "La búsqueda de cables
+llega en la fase 4", que ya estaba hecha.
 
 ---
 

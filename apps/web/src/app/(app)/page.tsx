@@ -12,8 +12,7 @@ export default async function HomePage() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Inicio</h1>
         <p className="text-muted-foreground text-sm">
-          La búsqueda de cables llega en la fase 4. Mientras tanto, esta es la base de la
-          aplicación.
+          Busca un cable por su código en Cables para ver su ficha, su recorrido y su estado.
         </p>
       </div>
       <HealthCard database={health.database} />
