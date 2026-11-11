@@ -2,6 +2,11 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# Parches de seguridad en dependencias transitivas (herramientas de desarrollo).
+# minimatch 7-11.0.0: DoS por amplificación de globparts (GHSA, Dependabot #2). Sin parche en 10.x.
+overrides:
+  "minimatch@>=7.0.0 <11.0.1": "^11.0.1"
+
 onlyBuiltDependencies:
   - "@prisma/client"
   - "@prisma/engines"
