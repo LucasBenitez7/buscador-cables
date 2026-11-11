@@ -73,6 +73,10 @@ llega en la fase 4", que ya estaba hecha.
   correo personal. **No hay que subirlos.** Sus commits nuevos son `9a96c2d`
   (`v0.1.0`, merge de la fase 0 en `main`) y `c992a33` (`v0.2.0`, el `main` actual). El
   responsable los recrea.
+  - _Resuelto ese mismo día:_ el responsable dio permiso para crear tags. Crear es libre;
+    borrar, mover y publicar piden confirmación. Se borraron los dos tags viejos y se rehicieron
+    sobre `9a96c2d` y `c992a33`, con los mismos mensajes y el correo noreply. Comprobado: ningún
+    commit de su historial lleva el correo personal.
 - `gitleaks` sobre `dev` y `main`: ningún secreto. Revisó 51 commits; los otros 22 son merges sin
   contenido propio.
 
