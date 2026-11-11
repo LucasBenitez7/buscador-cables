@@ -132,8 +132,8 @@ empiezan en la fase 6.
 - Repositorio **público** en la cuenta de GitHub del responsable. Con cuenta gratuita, solo un
   repo público permite obligar a pasar el CI (protección de ramas) y trae gratis CodeQL, la
   revisión de dependencias y el bloqueo de secretos. El repo no contiene datos reales.
-- Rama por defecto del repo: **`dev`** (los PR apuntan ahí sin tocar nada, y `main` sigue en
-  el commit inicial).
+- Rama por defecto del repo: **`dev`** (los PR apuntan ahí sin tocar nada, y `main` va por
+  detrás: está en la fase 1).
 - Flujo: `feat/*`, `fix/*`, `chore/*` y `docs/*` → **PR a `dev`** → CI en verde → merge con
   **merge commit** (equivale a `--no-ff`) → se borra la rama. Detalle en `CONTRIBUTING.md`.
 - `main` no cambia de regla: solo recibe `dev` al final del proyecto o cuando lo pida el
@@ -153,36 +153,39 @@ empiezan en la fase 6.
 
 ### 1 — Antes del primer push
 
-- [ ] Buscar secretos en todo el historial con `gitleaks` antes de publicarlo. Comprobado a mano
-      el 2026-11-11: nunca se ha commiteado un `.env`, solo `.env.example`.
-- [ ] Crear el repo público, añadir el remoto `origin` y subir `main` y `dev`.
-- [ ] Ajustes del repo: rama por defecto `dev`; solo "merge commit" (desactivar squash y rebase);
-      borrar la rama al mergear; activar alertas de Dependabot, secret scanning y push protection.
+- [x] Reescribir el historial antes de publicarlo (decisión del responsable): los 73 commits
+      usan el correo noreply de GitHub en lugar del personal, y se quitan las menciones a una
+      empresa real. Copia de seguridad previa en un `git bundle`.
+- [x] Buscar secretos en el historial con `gitleaks`: ninguno en `dev` ni en `main`.
+- [x] Crear el repo público, añadir el remoto `origin` y subir `main` y `dev`.
+- [x] Ajustes del repo: rama por defecto `dev`; solo "merge commit" (squash y rebase
+      desactivados); borrar la rama al mergear; alertas de Dependabot, secret scanning y push
+      protection activados; token de Actions de solo lectura por defecto.
 
 ### 2 — CI principal (`.github/workflows/ci.yml`)
 
-El workflow existe desde la fase 0 pero nunca se ha ejecutado.
+El workflow existía desde la fase 0 pero nunca se había ejecutado.
 
-- [ ] Primera ejecución y corrección de lo que falle. Fallo probable ya detectado:
-      `pnpm/action-setup` recibe `version: 10` y el `package.json` declara
-      `packageManager: pnpm@10.33.4`; la acción falla si ve dos versiones. Hay que quitar
-      `version` y dejar que lea `packageManager`.
-- [ ] Disparadores: PR a `dev` y `main`, push a `dev` y `main`, y ejecución manual
+- [x] Primera ejecución y corrección. Falló como se esperaba: `pnpm/action-setup` recibía
+      `version: 10` y el `package.json` declara `packageManager: pnpm@10.33.4`. Se quita
+      `version` y la acción lee `packageManager`.
+- [x] Disparadores: PR a `dev` y `main`, push a `dev` y `main`, y ejecución manual
       (`workflow_dispatch`). Sin `paths-ignore`: un check obligatorio que no llega a ejecutarse
       deja el PR bloqueado para siempre.
-- [ ] `permissions: contents: read` en el workflow (mínimo privilegio).
-- [ ] Job `check` (ya existe): formato → lint → typecheck → tests unitarios y de integración
+- [x] `permissions: contents: read` en el workflow (mínimo privilegio).
+- [x] Job `check`: formato → migraciones → lint → typecheck → tests unitarios y de integración
       (Postgres 16 como servicio) → build.
-- [ ] Cobertura mínima del 80 % en `server/` y `packages/shared`: hoy es una norma escrita; pasa
-      a ser un umbral de Vitest que hace fallar el CI.
-- [ ] Comprobar que `schema.prisma` y las migraciones coinciden. Falla si alguien cambia el
-      esquema sin crear la migración.
-- [ ] Commitlint sobre los commits del PR. El hook local se puede saltar con `--no-verify`; el
-      CI no.
-- [ ] Caché de Turborepo y de `.next/cache` entre ejecuciones.
-- [ ] El job `e2e` pasa a ejecutarse solo a mano hasta la fase 6.
-- [ ] Plantilla de PR (`.github/pull_request_template.md`) con la Definición de Hecho.
-- [ ] Insignia del CI en el `README.md`.
+- [x] Cobertura mínima como umbral de Vitest: `pnpm test` (y por tanto `pnpm check` y el CI)
+      falla si baja. `packages/shared`: 80 % en todo (hoy 99 %). `server/`: 80 % en líneas,
+      sentencias y funciones (hoy 90 %) y 75 % en ramas (hoy 79 %; objetivo, 80 %).
+- [x] `pnpm db:check`: falla si `schema.prisma` no coincide con las migraciones (alguien cambió
+      el esquema sin crear la migración). Probado con un campo sin migrar: sale con código 2.
+- [x] Job `commitlint` sobre los commits del PR. El hook local se puede saltar con
+      `--no-verify`; el CI no.
+- [x] Caché de Turborepo y de `.next/cache` entre ejecuciones.
+- [x] El job `e2e` solo se lanza a mano hasta la fase 6.
+- [x] Plantilla de PR (`.github/pull_request_template.md`) con la Definición de Hecho.
+- [x] Insignia del CI en el `README.md`.
 
 ### 3 — Protección de ramas (ruleset de GitHub)
 

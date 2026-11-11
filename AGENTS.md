@@ -31,5 +31,6 @@ En Windows PowerShell usa `pnpm.cmd` / `npm.cmd` si la política de ejecución b
 | `pnpm db:migrate`         | Crea/aplica migraciones de Prisma                             |
 | `pnpm db:seed`            | Carga datos de ejemplo                                        |
 | `pnpm db:studio`          | Abre Prisma Studio                                            |
+| `pnpm db:check`           | Falla si `schema.prisma` no coincide con las migraciones      |
 | `gh pr create --base dev` | Abre el PR de la rama actual contra `dev` (desde la fase 4.5) |
 | `gh pr checks --watch`    | Sigue el CI del PR hasta que termina                          |

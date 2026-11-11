@@ -140,7 +140,11 @@ Reglas:
   (`DATABASE_URL_TEST`); las migraciones se aplican solas antes de ejecutarlos.
 - Toda funcionalidad nueva incluye sus tests en la misma rama.
 - Todo bug corregido incluye un test que lo reproduce.
-- Cobertura mínima de `server/` y `packages/shared`: **80 %**.
+- Cobertura mínima de `server/` y `packages/shared`: **80 %**. `pnpm test` mide la cobertura y
+  falla si baja (umbrales en `vitest.config`). Excepción temporal: las ramas de `server/` tienen
+  un mínimo del 75 % (2026-11-11: 79 %) hasta que se suban al 80 %.
+- Si cambias `schema.prisma`, `pnpm db:check` comprueba que la migración existe (necesita las
+  migraciones aplicadas en tu base local con `pnpm db:migrate`). El CI lo ejecuta siempre.
 - No se mergea nada con tests fallando, saltados (`.skip`) u `.only`.
 
 ## Definición de "hecho" (Definition of Done)
