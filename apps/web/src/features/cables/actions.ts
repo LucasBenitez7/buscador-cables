@@ -2,12 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  CABLE_ACTION_PERMISSIONS,
   CABLE_EDITABLE_FIELDS,
+  CABLE_FIELD_ACTIONS,
+  cableActionSchema,
   createCableSchema,
   deleteCableSchema,
   updateCableSchema,
+  type CableFieldAction,
 } from "@cables/shared";
 import { firstIssue, formValue, issuesByField } from "@/lib/action-result";
+import { runCableAction } from "@/server/cables/field-actions";
 import { CableServiceError, createCable, deleteCable, updateCable } from "@/server/cables/service";
 import { authorize } from "@/server/session";
 
@@ -107,6 +112,51 @@ export async function deleteCableAction(formData: FormData): Promise<CableFormRe
     await deleteCable(auth.user, parsed.data);
     revalidatePath(CABLES_PATH);
     return { ok: true, message: "Cable dado de baja.", id: parsed.data.id };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+const ACTION_FIELDS = [
+  "cableId",
+  "version",
+  "action",
+  "notes",
+  "locationId",
+  "end",
+  "correctsEventId",
+  "installationStatus",
+  "connectionStatus",
+  "currentLocationId",
+] as const;
+
+function isFieldAction(value: string): value is CableFieldAction {
+  return (CABLE_FIELD_ACTIONS as readonly string[]).includes(value);
+}
+
+/** Lay, coil, connect, disconnect, move, retire or correct a cable (phase 5). */
+export async function runCableActionAction(formData: FormData): Promise<CableFormResult> {
+  const action = formValue(formData, "action");
+  if (!isFieldAction(action)) {
+    return { ok: false, message: "Acción no válida." };
+  }
+
+  // Each action has its own permission: a technician can connect but not retire.
+  const auth = await authorize(CABLE_ACTION_PERMISSIONS[action]);
+  if (!auth.ok) {
+    return auth;
+  }
+
+  const parsed = cableActionSchema.safeParse(read(formData, ACTION_FIELDS));
+  if (!parsed.success) {
+    return invalid(parsed.error);
+  }
+
+  try {
+    const result = await runCableAction(auth.user, parsed.data);
+    revalidatePath(CABLES_PATH);
+    revalidatePath(`${CABLES_PATH}/${result.cableId}`);
+    return { ok: true, message: result.message, id: result.cableId };
   } catch (error) {
     return fail(error);
   }
