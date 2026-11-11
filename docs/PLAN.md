@@ -201,16 +201,22 @@ El workflow existía desde la fase 0 pero nunca se había ejecutado.
 
 ### 4 — Seguridad (`chore/ci-security`)
 
-- [ ] Commitlint no debe bloquear los PR de Dependabot: sus mensajes traen líneas de más de
-      100 caracteres. Ignorar sus commits o configurar su `commit-message`.
-
-- [ ] CodeQL (JavaScript/TypeScript) en cada PR a `dev` y una vez por semana.
-- [ ] Revisión de dependencias en cada PR (`actions/dependency-review-action`): falla si el PR
-      añade una dependencia con una vulnerabilidad alta o crítica conocida.
-- [ ] Dependabot (`.github/dependabot.yml`): actualizaciones semanales agrupadas de npm y de
-      GitHub Actions, con PR contra `dev`.
-- [ ] Acciones de terceros fijadas por SHA (Dependabot las mantiene al día). Evita que una
-      acción comprometida entre sola en el CI.
+- [x] CodeQL (JavaScript/TypeScript, `.github/workflows/codeql.yml`) en cada PR y push a
+      `dev`/`main` y los lunes. Resultados en la pestaña Security del repo.
+- [x] Revisión de dependencias en cada PR (`dependency-review.yml`): falla si el PR añade una
+      dependencia con una vulnerabilidad alta o crítica conocida.
+- [x] Dependabot (`.github/dependabot.yml`): los lunes, PRs contra `dev` con las versiones
+      menores y parches de npm agrupados (las mayores, una a una) y las GitHub Actions en un
+      solo PR. Además, PRs automáticos de seguridad cuando hay parche.
+- [x] Commitlint ignora los commits de Dependabot (sus notas de versión traen líneas de más de
+      100 caracteres). Su cabecera ya sigue el formato: `chore(deps): …` y `ci(deps): …`.
+- [x] Acciones de terceros fijadas por SHA, con la versión en un comentario. Dependabot propone
+      los saltos de versión mayor (hay v6-v7 de casi todas) en PRs con su propio CI.
+- [x] Alertas abiertas al subir el repo:
+  - `minimatch` 10.2.6 (moderada, DoS): corregida con un override a la 11 en
+    `pnpm-workspace.yaml`. Lint, typecheck y el CLI de shadcn funcionan.
+  - `deepmerge` 4.3.1 (baja, prototype poisoning): sin versión corregida. Solo la usa el CLI de
+    shadcn en desarrollo, nunca llega a la app. Queda abierta hasta que haya parche.
 
 ### 5 — Tema oscuro (`feat/f4.5-dark-theme`)
 

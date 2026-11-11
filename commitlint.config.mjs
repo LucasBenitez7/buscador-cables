@@ -1,5 +1,8 @@
 export default {
   extends: ["@commitlint/config-conventional"],
+  // Los commits de Dependabot traen notas de versión con líneas de más de 100 caracteres.
+  // Su cabecera ya sigue el formato (ver .github/dependabot.yml), así que no se validan.
+  ignores: [(message) => message.includes("Signed-off-by: dependabot[bot]")],
   rules: {
     "scope-enum": [
       2,
