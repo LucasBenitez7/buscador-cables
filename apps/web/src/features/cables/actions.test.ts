@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   createCable: vi.fn(),
   updateCable: vi.fn(),
   deleteCable: vi.fn(),
+  runCableAction: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -17,8 +18,10 @@ vi.mock("@/server/cables/service", () => ({
   updateCable: mocks.updateCable,
   deleteCable: mocks.deleteCable,
 }));
+vi.mock("@/server/cables/field-actions", () => ({ runCableAction: mocks.runCableAction }));
 
-const { createCableAction, deleteCableAction, updateCableAction } = await import("./actions");
+const { createCableAction, deleteCableAction, runCableActionAction, updateCableAction } =
+  await import("./actions");
 const { CableServiceError } = await import("@/server/cables/service");
 
 function form(fields: Record<string, string>): FormData {
@@ -113,5 +116,75 @@ describe("cable actions", () => {
 
     expect(result).toEqual({ ok: false, message: "Indica el motivo de la baja" });
     expect(mocks.deleteCable).not.toHaveBeenCalled();
+  });
+});
+
+describe("runCableActionAction", () => {
+  beforeEach(() => {
+    for (const mock of Object.values(mocks)) {
+      mock.mockReset();
+    }
+    mocks.authorize.mockResolvedValue(technician);
+  });
+
+  it("asks for the permission of each specific action", async () => {
+    mocks.authorize.mockResolvedValue({ ok: false, message: "No tienes permiso." });
+
+    await runCableActionAction(form({ cableId: "c1", version: "1", action: "CONNECTED" }));
+    await runCableActionAction(form({ cableId: "c1", version: "1", action: "RETIRED" }));
+    await runCableActionAction(form({ cableId: "c1", version: "1", action: "CORRECTION" }));
+
+    expect(mocks.authorize.mock.calls.map(([permission]) => permission)).toEqual([
+      "cable:connect",
+      "cable:retire",
+      "cable:correct",
+    ]);
+    expect(mocks.runCableAction).not.toHaveBeenCalled();
+  });
+
+  it("rejects unknown and non-field actions before checking anything", async () => {
+    for (const action of ["DELETED", "CREATED", "HACK", ""]) {
+      expect(await runCableActionAction(form({ cableId: "c1", version: "1", action }))).toEqual({
+        ok: false,
+        message: "Acción no válida.",
+      });
+    }
+    expect(mocks.authorize).not.toHaveBeenCalled();
+  });
+
+  it("runs a valid action and refreshes the list and the record", async () => {
+    mocks.runCableAction.mockResolvedValue({ cableId: "c1", message: "Movimiento registrado." });
+
+    const result = await runCableActionAction(
+      form({ cableId: "c1", version: "4", action: "CONNECTED", end: "ORIGIN", notes: "" }),
+    );
+
+    expect(result).toEqual({ ok: true, message: "Movimiento registrado.", id: "c1" });
+    expect(mocks.runCableAction).toHaveBeenCalledWith(technician.user, {
+      cableId: "c1",
+      version: 4,
+      action: "CONNECTED",
+      end: "ORIGIN",
+      notes: null,
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/cables");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/cables/c1");
+  });
+
+  it("requires a reason to retire and shows service errors", async () => {
+    const withoutReason = await runCableActionAction(
+      form({ cableId: "c1", version: "1", action: "RETIRED", notes: "" }),
+    );
+    expect(withoutReason).toMatchObject({ ok: false, fieldErrors: { notes: "Indica el motivo" } });
+    expect(mocks.runCableAction).not.toHaveBeenCalled();
+
+    mocks.runCableAction.mockRejectedValue(
+      new CableServiceError("Solo se puede conectar un cable tendido."),
+    );
+    expect(
+      await runCableActionAction(
+        form({ cableId: "c1", version: "1", action: "CONNECTED", end: "BOTH" }),
+      ),
+    ).toEqual({ ok: false, message: "Solo se puede conectar un cable tendido." });
   });
 });

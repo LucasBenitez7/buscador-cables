@@ -324,18 +324,25 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
     El estado resultante debe ser coherente.
   - Un cable dado de baja no admite acciones, y una acción que no cambia nada se rechaza.
 
-- [ ] Servicio de acciones (`server/cable-actions`) con transacción única: aplica la máquina de
-      estados, crea el `CableEvent` y actualiza las columnas resumen.
-- [ ] `CableEvent` inmutable con `fromLocation`/`toLocation`, `changes` (antes/después) y nota.
-- [ ] Columnas resumen en `Cable` (`lastAction`, `lastActionById`, `lastActionAt`) para la tabla.
+- [x] Servicio de acciones (`server/cables/field-actions.ts`, rama `feat/f5-cable-actions`).
+      En una sola transacción aplica la máquina de estados, crea el `CableEvent` y actualiza las
+      columnas resumen. Antes comprueba que la ubicación nueva existe y que el evento que se
+      corrige es de ese cable. La Server Action `runCableActionAction` pide el permiso de cada
+      acción concreta y valida con `cableActionSchema`.
+- [x] `CableEvent` inmutable con `fromLocation`/`toLocation` (al enrollar y mover), `changes`
+      (antes/después), nota y `correctsEventId` en las correcciones.
+- [x] Columnas resumen en `Cable` (`lastAction`, `lastActionById`, `lastActionAt`), más
+      `installedBy`/`installedAt` al tender y `connectedBy`/`connectedAt` al conectar.
 - [ ] Botones de acción en la ficha y en la tabla, con diálogos.
 - [ ] Columnas y filtros de "quién/qué/cuándo" en el buscador.
 - [ ] Línea de tiempo del historial en la ficha.
 - [ ] Página "Mi actividad": acciones del usuario actual.
 - [ ] Página "Actividad reciente" (todas las acciones, filtrable) para supervisores.
-- [ ] Control de concurrencia con `version` (si dos personas actúan a la vez, la segunda recibe aviso).
-- [ ] Tests: máquina de estados, permisos por rol y transacción (cable + evento). Los E2E de
-      cada acción se escriben al empezar la fase 6.
+- [x] Control de concurrencia con `version`: si dos personas actúan a la vez, solo entra una y la
+      otra recibe aviso para recargar. Probado con dos acciones simultáneas contra Postgres.
+- [x] Tests: máquina de estados (34), servicio contra Postgres real (12: cada acción, evento,
+      columnas resumen, conflicto, concurrencia, permisos, corrección) y Server Action (4). Los
+      E2E de cada acción se escriben al empezar la fase 6.
 
 ## Fase 6 — E2E, importación / exportación y panel (v0.7.0)
 
