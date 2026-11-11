@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hasPermission } from "@cables/shared";
 import { CableForm } from "@/features/cables/components/cable-form";
@@ -28,9 +29,14 @@ export default async function EditCablePage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Cable <span className="font-mono">{cable.code}</span>
-      </h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Editar <span className="font-mono">{cable.code}</span>
+        </h1>
+        <Link href={`/cables/${cable.id}`} className="text-sm underline underline-offset-4">
+          Ver ficha
+        </Link>
+      </div>
       {created ? (
         <p role="status" className="bg-muted rounded-md px-3 py-2 text-sm">
           Cable dado de alta. Puedes seguir completando sus datos.
