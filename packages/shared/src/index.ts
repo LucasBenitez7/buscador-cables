@@ -5,4 +5,5 @@ export * from "./users";
 export * from "./locations";
 export * from "./catalogs";
 export * from "./cables";
+export * from "./cable-actions";
 export * from "./search";
