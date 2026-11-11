@@ -14,7 +14,7 @@
 | Email              | Mailpit (local) / Resend (producción)        |                                                     |
 | Tests              | Vitest + Testing Library + Playwright        | Unitarios, integración y E2E                        |
 | Offline (fase 7)   | Serwist (service worker) + Dexie (IndexedDB) |                                                     |
-| CI                 | GitHub Actions                               |                                                     |
+| CI                 | GitHub Actions + CodeQL + Dependabot         | Gratis en repo público; activo desde la fase 4.5    |
 | Despliegue         | Vercel + Railway                             | Docker solo en local (y opcional en producción)     |
 
 ### ¿Por qué Next.js "puro" y no una API separada?
@@ -56,6 +56,47 @@ buscador-cables/
 
 Regla de dependencias: `app` → `features` → `server` → `packages/db` y `packages/shared`.
 Nunca al revés. Los componentes cliente no acceden a la base de datos.
+
+## Interfaz: tema oscuro
+
+Decisión del 2026-11-11 (se aplica en la fase 4.5). La app tiene **un único tema, oscuro**:
+nada de fondos blancos, sin modo claro ni selector de tema.
+
+- Fondo: gris casi negro con un ligero tono azul, más agradable que el negro puro.
+- Texto: gris muy claro, no blanco puro (cansa menos la vista).
+- Acento: **azul** para botones, enlaces y foco.
+- El **verde esmeralda queda reservado** para "conectado / correcto", el ámbar para estados
+  intermedios y el rojo para errores y retirados. Por eso el acento no es verde: en la fase 5
+  los estados se distinguen de los botones a simple vista.
+
+Los tokens se definen en `apps/web/src/app/globals.css` (formato `oklch`, compatible con
+shadcn/ui). Los valores hex son aproximados, solo de referencia.
+
+| Token                  | Uso                               | `oklch`           | ≈ Hex     |
+| ---------------------- | --------------------------------- | ----------------- | --------- |
+| `--background`         | Fondo de la página                | `0.19 0.012 255`  | `#101419` |
+| `--card`, `--popover`  | Tarjetas, diálogos, menús         | `0.225 0.014 255` | `#171c22` |
+| `--muted`, `--accent`  | Filas alternas, hover, secundario | `0.27 0.016 255`  | `#21272e` |
+| `--border`, `--input`  | Bordes y campos                   | `0.34 0.018 255`  | `#323941` |
+| `--foreground`         | Texto principal                   | `0.93 0.008 255`  | `#e4e8ed` |
+| `--muted-foreground`   | Texto secundario                  | `0.72 0.015 255`  | `#9ea5ae` |
+| `--primary`, `--ring`  | Botones, enlaces, foco (azul)     | `0.70 0.14 245`   | `#46a6ef` |
+| `--primary-foreground` | Texto sobre el azul               | `0.17 0.02 255`   | `#091018` |
+| `--success` (nuevo)    | Conectado, activo, correcto       | `0.74 0.15 162`   | `#30c78d` |
+| `--warning` (nuevo)    | Estados intermedios               | `0.80 0.14 80`    | `#edb345` |
+| `--destructive`        | Errores, bajas, retirados         | `0.68 0.19 25`    | `#f75d59` |
+
+Contraste calculado (WCAG): texto principal sobre el fondo 15:1; texto secundario 7,4:1;
+azul sobre el fondo 7:1; texto sobre el botón azul 7,2:1; verde 8,5:1; ámbar 9,7:1; rojo
+5,9:1. Todo supera el mínimo AA (4,5:1). Los valores finales se ajustan al aplicarlos si alguna
+pantalla lo pide, sin bajar de AA.
+
+Reglas:
+
+- En los componentes, solo tokens (`bg-card`, `text-muted-foreground`, `text-success`…), nunca
+  colores fijos de Tailwind (`bg-white`, `text-black`, `text-emerald-600`). Un test lo vigila.
+- `color-scheme: dark` en `:root`, para que el navegador pinte oscuros los controles nativos
+  (scroll, selectores de fecha, autocompletado).
 
 ## Modelo de datos
 

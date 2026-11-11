@@ -16,6 +16,7 @@ estado de instalación (enrollado / tendido), estado de conexión y trazabilidad
 - Node.js 22+ (probado con 24)
 - pnpm 9+ (`corepack enable`)
 - Docker Desktop
+- GitHub CLI (`gh`) con sesión iniciada, para abrir los Pull Requests (desde la fase 4.5)
 
 ## Puesta en marcha (disponible tras la fase 0)
 

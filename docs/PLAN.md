@@ -14,23 +14,25 @@ hizo qué y cuándo.
 
 ## Resumen de fases
 
-| Fase | Nombre                            | Versión | Resultado principal                                   |
-| ---- | --------------------------------- | ------- | ----------------------------------------------------- |
-| 0    | Fundamentos del repositorio       | v0.1.0  | Monorepo, Docker local, lint, tests, CI funcionando   |
-| 1    | Autenticación y usuarios          | v0.2.0  | Login, sesiones, roles, recuperación de contraseña    |
-| 2    | Modelo de datos y ubicaciones     | v0.3.0  | Esquema Prisma, árbol de ubicaciones, catálogos, seed |
-| 3    | Carga y edición de cables         | v0.4.0  | Formularios de alta/edición con validación            |
-| 4    | Buscador y ficha del cable        | v0.5.0  | Búsqueda tolerante + filtros + ficha completa         |
-| 5    | Estados y trazabilidad            | v0.6.0  | Tendido/enrollado, conectado, historial por usuario   |
-| 6    | Importación / exportación y panel | v0.7.0  | CSV/Excel masivo, dashboard de estadísticas           |
-| 7    | Modo sin conexión (PWA)           | v0.8.0  | Consulta offline + cola de cambios sincronizable      |
-| 8    | Producción y endurecimiento       | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
+| Fase | Nombre                        | Versión | Resultado principal                                   |
+| ---- | ----------------------------- | ------- | ----------------------------------------------------- |
+| 0    | Fundamentos del repositorio   | v0.1.0  | Monorepo, Docker local, lint, tests, CI funcionando   |
+| 1    | Autenticación y usuarios      | v0.2.0  | Login, sesiones, roles, recuperación de contraseña    |
+| 2    | Modelo de datos y ubicaciones | v0.3.0  | Esquema Prisma, árbol de ubicaciones, catálogos, seed |
+| 3    | Carga y edición de cables     | v0.4.0  | Formularios de alta/edición con validación            |
+| 4    | Buscador y ficha del cable    | v0.5.0  | Búsqueda tolerante + filtros + ficha completa         |
+| 4.5  | CI, GitHub y Pull Requests    | v0.5.1  | Repo en GitHub, PRs a `dev` con CI, tema oscuro       |
+| 5    | Estados y trazabilidad        | v0.6.0  | Tendido/enrollado, conectado, historial por usuario   |
+| 6    | E2E, importación/exportación  | v0.7.0  | E2E de las fases 1-5, CSV/Excel masivo, dashboard     |
+| 7    | Modo sin conexión (PWA)       | v0.8.0  | Consulta offline + cola de cambios sincronizable      |
+| 8    | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
 
-**Total: 9 fases (0 a 8).** Al terminar la fase 8 se publica la **v1.0.0**.
+**Total: 10 fases (0 a 8, más la 4.5 añadida el 2026-11-11).** Al terminar la fase 8 se
+publica la **v1.0.0**.
 
-Cada fase termina con todos los tests en verde en `dev`. Las versiones de la tabla son
-orientativas: `dev` → `main` (y sus tags) solo se hace al final del proyecto o cuando lo decida
-el responsable.
+Cada fase termina con todos los tests en verde en `dev`. Desde la fase 4.5, todo llega a `dev`
+por Pull Request y con el CI en verde. Las versiones de la tabla son orientativas: `dev` → `main`
+(y sus tags) solo se hace al final del proyecto o cuando lo decida el responsable.
 
 ---
 
@@ -54,8 +56,8 @@ Objetivo: que cualquiera pueda clonar, ejecutar `pnpm dev` y tener todo funciona
 - [x] Página de estado con verificación de conexión a la base de datos y endpoint `/api/health`.
 
 **Criterio de aceptación:** `pnpm install && docker compose up -d && pnpm dev` levanta la app;
-`pnpm check` (lint + typecheck + tests) pasa en local y en CI. _(El CI se activará más
-adelante; de momento solo hay verificación local.)_
+`pnpm check` (lint + typecheck + tests) pasa en local y en CI. _(El workflow existe desde la
+fase 0, pero nunca se ha ejecutado: se activa en la fase 4.5.)_
 
 ## Fase 1 — Autenticación y usuarios (v0.2.0)
 
@@ -74,7 +76,7 @@ adelante; de momento solo hay verificación local.)_
 - [x] Middleware de protección de rutas + comprobación de permisos en servidor.
 - [x] Rate limiting en login y recuperación de contraseña.
 - [x] Tests: unitarios de permisos y de integración del servicio de usuarios.
-- [ ] Tests E2E de registro, login, logout y recuperación de contraseña (aplazados, ver `CONTRIBUTING.md`).
+- [ ] Tests E2E de registro, login, logout y recuperación de contraseña (aplazados a la fase 6).
 
 ## Fase 2 — Modelo de datos y ubicaciones (v0.3.0)
 
@@ -101,7 +103,7 @@ El "apartado donde cargar el cable".
 - [x] Validación compartida cliente/servidor con Zod.
 - [x] Permisos: solo `TECHNICIAN`+ puede crear o editar.
 - [x] Tests: validaciones, Server Actions, servicio contra Postgres y formulario.
-- [ ] Tests E2E de alta/edición (aplazados, ver `CONTRIBUTING.md`).
+- [ ] Tests E2E de alta/edición (aplazados a la fase 6).
 
 ## Fase 4 — Buscador y ficha del cable (v0.5.0)
 
@@ -117,7 +119,107 @@ El "apartado donde cargar el cable".
       3-25 ms en base de datos y 35-90 ms la página completa).
 - [x] Diseño responsive (uso desde tablet/móvil en planta).
 - [x] Tests: consultas de búsqueda, filtros, ficha y componentes.
-- [ ] Tests E2E de búsqueda → ficha (aplazados, ver `CONTRIBUTING.md`).
+- [ ] Tests E2E de búsqueda → ficha (aplazados a la fase 6).
+
+## Fase 4.5 — CI, GitHub y Pull Requests (v0.5.1)
+
+Fase añadida el 2026-11-11, antes de empezar la fase 5. Objetivo: que el código esté en GitHub
+y que **nada llegue a `dev` sin un Pull Request con el CI en verde**. Los E2E no entran aquí:
+empiezan en la fase 6.
+
+### Decisiones (2026-11-11)
+
+- Repositorio **público** en la cuenta de GitHub del responsable. Con cuenta gratuita, solo un
+  repo público permite obligar a pasar el CI (protección de ramas) y trae gratis CodeQL, la
+  revisión de dependencias y el bloqueo de secretos. El repo no contiene datos reales.
+- Rama por defecto del repo: **`dev`** (los PR apuntan ahí sin tocar nada, y `main` sigue en
+  el commit inicial).
+- Flujo: `feat/*`, `fix/*`, `chore/*` y `docs/*` → **PR a `dev`** → CI en verde → merge con
+  **merge commit** (equivale a `--no-ff`) → se borra la rama. Detalle en `CONTRIBUTING.md`.
+- `main` no cambia de regla: solo recibe `dev` al final del proyecto o cuando lo pida el
+  responsable (también por PR `dev` → `main`).
+- **Tema oscuro único** con acento azul; nunca fondos blancos. Paleta en
+  `docs/ARQUITECTURA.md` → "Interfaz: tema oscuro".
+
+### Orden de trabajo
+
+1. Comprobaciones previas y primer push de `main` y `dev` (sin protección todavía).
+2. `chore/ci-workflow`: arreglar y endurecer el CI principal. Es el primer PR: sirve para ver
+   fallar y pasar el CI de verdad.
+3. Protección de ramas. Va después del paso 2 porque GitHub solo deja marcar como obligatorio
+   un check que ya se ha ejecutado alguna vez.
+4. `chore/ci-security`: CodeQL, revisión de dependencias y Dependabot.
+5. `feat/f4.5-dark-theme`: el tema oscuro, primer cambio de código por el flujo completo.
+
+### 1 — Antes del primer push
+
+- [ ] Buscar secretos en todo el historial con `gitleaks` antes de publicarlo. Comprobado a mano
+      el 2026-11-11: nunca se ha commiteado un `.env`, solo `.env.example`.
+- [ ] Crear el repo público, añadir el remoto `origin` y subir `main` y `dev`.
+- [ ] Ajustes del repo: rama por defecto `dev`; solo "merge commit" (desactivar squash y rebase);
+      borrar la rama al mergear; activar alertas de Dependabot, secret scanning y push protection.
+
+### 2 — CI principal (`.github/workflows/ci.yml`)
+
+El workflow existe desde la fase 0 pero nunca se ha ejecutado.
+
+- [ ] Primera ejecución y corrección de lo que falle. Fallo probable ya detectado:
+      `pnpm/action-setup` recibe `version: 10` y el `package.json` declara
+      `packageManager: pnpm@10.33.4`; la acción falla si ve dos versiones. Hay que quitar
+      `version` y dejar que lea `packageManager`.
+- [ ] Disparadores: PR a `dev` y `main`, push a `dev` y `main`, y ejecución manual
+      (`workflow_dispatch`). Sin `paths-ignore`: un check obligatorio que no llega a ejecutarse
+      deja el PR bloqueado para siempre.
+- [ ] `permissions: contents: read` en el workflow (mínimo privilegio).
+- [ ] Job `check` (ya existe): formato → lint → typecheck → tests unitarios y de integración
+      (Postgres 16 como servicio) → build.
+- [ ] Cobertura mínima del 80 % en `server/` y `packages/shared`: hoy es una norma escrita; pasa
+      a ser un umbral de Vitest que hace fallar el CI.
+- [ ] Comprobar que `schema.prisma` y las migraciones coinciden. Falla si alguien cambia el
+      esquema sin crear la migración.
+- [ ] Commitlint sobre los commits del PR. El hook local se puede saltar con `--no-verify`; el
+      CI no.
+- [ ] Caché de Turborepo y de `.next/cache` entre ejecuciones.
+- [ ] El job `e2e` pasa a ejecutarse solo a mano hasta la fase 6.
+- [ ] Plantilla de PR (`.github/pull_request_template.md`) con la Definición de Hecho.
+- [ ] Insignia del CI en el `README.md`.
+
+### 3 — Protección de ramas (ruleset de GitHub)
+
+- [ ] `dev` y `main`: solo se cambian por PR, con el CI obligatorio y en verde (y CodeQL y la
+      revisión de dependencias cuando existan). Sin force-push ni borrado.
+- [ ] Sin aprobación obligatoria de otra persona: el equipo es de una persona y GitHub no deja
+      aprobar tu propio PR, así que quedaría bloqueado.
+- [ ] Comprobar que un push directo a `dev` se rechaza y que un PR con el CI en rojo no se
+      puede mergear.
+
+### 4 — Seguridad (`chore/ci-security`)
+
+- [ ] CodeQL (JavaScript/TypeScript) en cada PR a `dev` y una vez por semana.
+- [ ] Revisión de dependencias en cada PR (`actions/dependency-review-action`): falla si el PR
+      añade una dependencia con una vulnerabilidad alta o crítica conocida.
+- [ ] Dependabot (`.github/dependabot.yml`): actualizaciones semanales agrupadas de npm y de
+      GitHub Actions, con PR contra `dev`.
+- [ ] Acciones de terceros fijadas por SHA (Dependabot las mantiene al día). Evita que una
+      acción comprometida entre sola en el CI.
+
+### 5 — Tema oscuro (`feat/f4.5-dark-theme`)
+
+- [ ] Sustituir los tokens de `apps/web/src/app/globals.css` por la paleta oscura de
+      `docs/ARQUITECTURA.md`. Un único tema: sin modo claro ni selector, y con
+      `color-scheme: dark` para que los controles nativos también salgan oscuros.
+- [ ] Tokens nuevos `success` y `warning` (para los estados de la fase 5).
+- [ ] Quitar los colores fijos de Tailwind: `text-white` en `components/ui/badge.tsx` y
+      `text-emerald-600` en `users-table.tsx` y `health-card.tsx`.
+- [ ] Test que falla si aparece un color fijo (`bg-white`, `text-black`, `text-emerald-600`…)
+      fuera de `globals.css`.
+- [ ] Repasar todas las páginas (login, registro, buscador, ficha, formularios, ubicaciones,
+      catálogos, usuarios, estado), también a 375 px, con contraste AA.
+- Los correos (HTML) quedan fuera: cada cliente de correo aplica sus propios colores.
+
+**Criterio de aceptación:** el código está en GitHub; un PR a `dev` ejecuta el CI y no se puede
+mergear si falla; `dev` y `main` rechazan el push directo; CodeQL, la revisión de dependencias y
+Dependabot funcionan; la app se ve solo en oscuro, sin ningún fondo blanco.
 
 ## Fase 5 — Acciones de usuario y trazabilidad (v0.6.0)
 
@@ -184,9 +286,28 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
 - [ ] Página "Mi actividad": acciones del usuario actual.
 - [ ] Página "Actividad reciente" (todas las acciones, filtrable) para supervisores.
 - [ ] Control de concurrencia con `version` (si dos personas actúan a la vez, la segunda recibe aviso).
-- [ ] Tests: máquina de estados, permisos por rol, transacción (cable + evento) y E2E de cada acción.
+- [ ] Tests: máquina de estados, permisos por rol y transacción (cable + evento). Los E2E de
+      cada acción se escriben al empezar la fase 6.
 
-## Fase 6 — Importación / exportación y panel (v0.7.0)
+## Fase 6 — E2E, importación / exportación y panel (v0.7.0)
+
+### Primero: tests E2E (decisión del 2026-11-11)
+
+Los E2E empiezan aquí, con la app ya completa hasta la fase 5. A partir de esta fase, cada fase
+cierra con sus E2E escritos y en verde en el CI.
+
+- [ ] Flujos de la fase 1: registro, verificación de correo, login, logout y recuperación de
+      contraseña (correo leído desde Mailpit).
+- [ ] Flujos de la fase 3: alta, edición y baja de un cable, y el aviso de edición simultánea.
+- [ ] Flujos de la fase 4: buscar → filtrar → abrir la ficha, y que los filtros sobrevivan al
+      botón atrás.
+- [ ] Flujos de la fase 5: cada acción (tender, enrollar, conectar, mover, retirar, corrección)
+      y su reflejo en el historial.
+- [ ] Permisos: un `VIEWER` no ve ni puede usar las acciones de edición.
+- [ ] Activar el job `e2e` del CI. Recomendación: ejecutarlo en cada PR a `dev`. Como todo
+      entra por PR, ejecutarlo solo tras el merge avisaría tarde.
+
+### Importación / exportación y panel
 
 - [ ] Importación masiva desde CSV/Excel con previsualización y validación fila a fila.
 - [ ] Informe de errores descargable.
@@ -226,4 +347,6 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
 | Staging    | Vercel Preview | Railway (staging)    | Resend  | `dev`    |
 | Producción | Vercel         | Railway (producción) | Resend  | `main`   |
 
-El entorno de staging se conecta en cuanto termine la fase 1, para probar en real desde el principio.
+El entorno de staging estaba previsto al terminar la fase 1, para probar en real desde el
+principio. A 2026-11-11 sigue sin conectar: la fase 4.5 sube el código a GitHub, pero no
+despliega nada.
