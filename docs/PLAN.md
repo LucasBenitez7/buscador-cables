@@ -302,9 +302,30 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
 
 ### Tareas
 
-- [ ] Estado de instalación: `IN_STOCK` (en almacén), `COILED` (enrollado), `LAID` (tendido), `RETIRED` (retirado).
-- [ ] Estado de conexión: `DISCONNECTED`, `ORIGIN_ONLY`, `DESTINATION_ONLY`, `CONNECTED`.
-- [ ] Servicio de acciones (`server/cable-actions`) con máquina de estados y transacción única.
+- [x] Estado de instalación: `IN_STOCK` (en almacén), `COILED` (enrollado), `LAID` (tendido), `RETIRED` (retirado). _(En el esquema desde la fase 2.)_
+- [x] Estado de conexión: `DISCONNECTED`, `ORIGIN_ONLY`, `DESTINATION_ONLY`, `CONNECTED`. _(En el esquema desde la fase 2.)_
+- [x] Máquina de estados (`packages/shared/src/cable-actions.ts`, rama `feat/f5-state-machine`).
+      Funciones puras, sin base de datos:
+  - `applyCableAction` calcula el estado nuevo y los cambios `{ from, to }`, o un error en
+    español.
+  - `canRunCableAction` comprueba el permiso por rol.
+  - `cableActionAvailability` dice qué botones ver y por qué están desactivados.
+  - `cableActionSchema` (Zod) valida la entrada de los diálogos.
+
+  Reglas acordadas el 2026-11-11:
+  - Tender necesita origen y destino, y deja el cable sin ubicación física.
+  - Enrollar desconecta el cable y pide dónde queda. Si ya está enrollado, se usa Mover.
+  - Conectar solo un cable tendido, extremo a extremo o los dos a la vez. Desconectar quita el
+    extremo que se indique.
+  - Mover solo un cable en almacén o enrollado. Un cable tendido primero se enrolla.
+  - Retirar desconecta en el mismo paso y exige motivo. Un cable retirado solo admite
+    Corrección.
+  - Corregir (supervisor+) fija el estado, referencia el evento que corrige y exige motivo.
+    El estado resultante debe ser coherente.
+  - Un cable dado de baja no admite acciones, y una acción que no cambia nada se rechaza.
+
+- [ ] Servicio de acciones (`server/cable-actions`) con transacción única: aplica la máquina de
+      estados, crea el `CableEvent` y actualiza las columnas resumen.
 - [ ] `CableEvent` inmutable con `fromLocation`/`toLocation`, `changes` (antes/después) y nota.
 - [ ] Columnas resumen en `Cable` (`lastAction`, `lastActionById`, `lastActionAt`) para la tabla.
 - [ ] Botones de acción en la ficha y en la tabla, con diálogos.
