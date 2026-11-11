@@ -37,7 +37,8 @@
       "dependsOn": ["^generate"]
     },
     "test": {
-      "dependsOn": ["^generate", "^test"]
+      "dependsOn": ["^generate", "^test"],
+      "outputs": ["coverage/**"]
     }
   }
 }
