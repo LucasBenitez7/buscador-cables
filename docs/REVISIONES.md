@@ -43,6 +43,14 @@ cada `package.json` por separado. eslint 10 y TypeScript 7 salían repetidos en 
 
 Se cerraron los PRs por carpeta: Dependabot los vuelve a proponer agrupados.
 
+**Segundo ajuste (rama `fix/dependabot-lockfile`):** el PR #6 (react 19.3.1) solo cambiaba
+`apps/web/package.json`, sin el `pnpm-lock.yaml` de la raíz, y el CI fallaba con
+`ERR_PNPM_OUTDATED_LOCKFILE`. La causa era revisar `/apps/*` y `/packages/*` por separado. Ahora
+Dependabot solo revisa la raíz. Desde ahí lee el workspace y actualiza cada `package.json`
+junto con el lockfile, y ya no hace falta `group-by`. El PR #4 (GitHub Actions v4 → v6/v7) se
+mergeó con el CI en verde. `upload-artifact` aún no se ha probado, porque solo lo usa el job
+`e2e`.
+
 **Corregido después (rama `fix/home-intro`):** la página de inicio decía "La búsqueda de cables
 llega en la fase 4", que ya estaba hecha.
 

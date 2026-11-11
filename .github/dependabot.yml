@@ -2,10 +2,10 @@ version: 2
 
 updates:
   - package-ecosystem: npm
-    directories:
-      - "/"
-      - "/apps/*"
-      - "/packages/*"
+    # Solo la raíz: ahí están pnpm-workspace.yaml y el único pnpm-lock.yaml. Desde la raíz,
+    # Dependabot actualiza los package.json de cada paquete y el lockfile a la vez. Con
+    # "/apps/*" y "/packages/*" cambiaba el package.json sin el lockfile y el CI fallaba.
+    directory: "/"
     target-branch: dev
     schedule:
       interval: weekly
@@ -28,11 +28,7 @@ updates:
       eslint-major:
         update-types: [major]
         patterns: ["eslint", "@eslint/*", "eslint-*", "typescript-eslint", "@typescript-eslint/*"]
-      # Cualquier otra versión mayor: un PR por dependencia que cubre todas las carpetas
-      # (sin esto, Dependabot abre un PR por cada package.json).
-      npm-major:
-        update-types: [major]
-        group-by: dependency-name
+      # Cualquier otra versión mayor va en su propio PR, que cubre todo el monorepo.
 
   - package-ecosystem: github-actions
     directory: "/"

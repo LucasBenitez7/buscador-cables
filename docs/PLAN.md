@@ -205,9 +205,10 @@ El workflow existía desde la fase 0 pero nunca se había ejecutado.
       `dev`/`main` y los lunes. Resultados en la pestaña Security del repo.
 - [x] Revisión de dependencias en cada PR (`dependency-review.yml`): falla si el PR añade una
       dependencia con una vulnerabilidad alta o crítica conocida.
-- [x] Dependabot (`.github/dependabot.yml`): los lunes, PRs contra `dev`. Menores y parches de
-      npm en un PR; las versiones mayores, un PR por dependencia para todo el monorepo (ESLint y
-      sus piezas, juntos); las GitHub Actions en un solo PR. `@types/node` no sube de versión
+- [x] Dependabot (`.github/dependabot.yml`): los lunes, PRs contra `dev`. Revisa solo la raíz,
+      donde están `pnpm-workspace.yaml` y el lockfile. Menores y parches de npm en un PR; las
+      versiones mayores, un PR por dependencia para todo el monorepo (ESLint y sus piezas,
+      juntos); las GitHub Actions en un solo PR. `@types/node` no sube de versión
       mayor: sigue a Node 24. Además, PRs automáticos de seguridad cuando hay parche.
 - [x] Commitlint ignora los commits de Dependabot (sus notas de versión traen líneas de más de
       100 caracteres). Su cabecera ya sigue el formato: `chore(deps): …` y `ci(deps): …`.
