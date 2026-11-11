@@ -108,12 +108,21 @@ const codes = async (params: Record<string, string>, pageSize?: number) =>
   (await search(params, pageSize)).items.map((item) => item.code);
 
 describe("searchCables: text", () => {
-  it('finds "SH-50" first when typing "sh50"', async () => {
-    const result = await codes({ q: "sh50" });
+  it('finds "SH-50" first when typing "sh50", without unrelated short codes', async () => {
+    const result = await search({ q: "sh50" });
 
-    expect(result[0]).toBe("SH-50");
-    expect(result).toContain("SH-500");
-    expect(result).not.toContain("SH-51");
+    expect(result.items.map((item) => item.code)).toEqual(["SH-50", "SH-500"]);
+    expect(result.fuzzy).toBeUndefined();
+  });
+
+  // Regresión: con la similitud de trigramas siempre activa, "sh50" devolvía más de
+  // 1.000 de los 5.000 cables del seed. Ahora solo se usa si no hay coincidencias.
+  it("falls back to similar codes only when nothing contains the text", async () => {
+    const result = await search({ q: "shh50" });
+
+    expect(result.fuzzy).toBe(true);
+    expect(result.items[0]?.code).toBe("SH-50");
+    expect(result.items.map((item) => item.code)).not.toContain("PW-50");
   });
 
   it("puts the exact code first among partial matches", async () => {
