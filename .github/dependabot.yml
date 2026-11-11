@@ -15,10 +15,24 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps)"
+    ignore:
+      # Los tipos de Node siguen a la versión de Node del proyecto (24, ver package.json y CI).
+      # Se suben a mano cuando se cambie de Node.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
-      # Menores y parches juntos en un PR; las versiones mayores van una a una.
+      # Menores y parches de todo el monorepo juntos en un PR.
       npm-minor-patch:
         update-types: [minor, patch]
+      # ESLint y sus piezas cambian de versión mayor a la vez: un único PR para todas.
+      eslint-major:
+        update-types: [major]
+        patterns: ["eslint", "@eslint/*", "eslint-*", "typescript-eslint", "@typescript-eslint/*"]
+      # Cualquier otra versión mayor: un PR por dependencia que cubre todas las carpetas
+      # (sin esto, Dependabot abre un PR por cada package.json).
+      npm-major:
+        update-types: [major]
+        group-by: dependency-name
 
   - package-ecosystem: github-actions
     directory: "/"

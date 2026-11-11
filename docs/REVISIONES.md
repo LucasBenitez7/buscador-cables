@@ -33,6 +33,16 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
   catálogos, usuarios, inicio y 404.
 - `pnpm check`: 315 tests en verde.
 
+**Dependabot, primer día (rama `chore/dependabot-grouping`):** abrió 14 PRs porque revisaba
+cada `package.json` por separado. eslint 10 y TypeScript 7 salían repetidos en 4 carpetas, y
+`@types/node` 26 en 3, aunque el proyecto usa Node 24. Cambios:
+
+- Las versiones mayores se agrupan por dependencia (`group-by: dependency-name`).
+- ESLint va en un único PR con todas sus piezas.
+- `@types/node` no sube de versión mayor.
+
+Se cerraron los PRs por carpeta: Dependabot los vuelve a proponer agrupados.
+
 **Pendiente (fuera del alcance):** la página de inicio aún dice "La búsqueda de cables llega en la
 fase 4", que ya está hecha.
 
