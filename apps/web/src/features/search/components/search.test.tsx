@@ -123,4 +123,15 @@ describe("SearchResults", () => {
     );
     expect(screen.getByRole("status")).toHaveTextContent("60 cables · página 2 de 3");
   });
+
+  it("warns when it shows similar codes instead of matches", () => {
+    render(
+      <SearchResults
+        search={{ q: "shh50" }}
+        result={{ items: [item], total: 1, page: 1, pageCount: 1, fuzzy: true }}
+      />,
+    );
+
+    expect(screen.getByText(/Ningún código contiene «shh50»/)).toBeInTheDocument();
+  });
 });

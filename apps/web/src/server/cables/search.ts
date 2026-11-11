@@ -40,7 +40,12 @@ export type CableSearchResult = {
   total: number;
   page: number;
   pageCount: number;
+  /** True when no code contained the text and similar codes are shown instead. */
+  fuzzy?: boolean;
 };
+
+/** Similarity from which a code counts as "parecido" in the typo fallback. */
+const FUZZY_THRESHOLD = 0.4;
 
 /** Escapes LIKE wildcards typed by the user ("%" or "_" must match literally). */
 function likeContains(value: string): string {
@@ -55,7 +60,7 @@ function naturalCodeOrder(direction: Prisma.Sql): Prisma.Sql {
     c."code" ${direction}`;
 }
 
-async function buildConditions(search: CableSearch): Promise<Prisma.Sql[] | null> {
+async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Prisma.Sql[] | null> {
   const conditions: Prisma.Sql[] = [Prisma.sql`c."deletedAt" IS NULL`];
 
   if (search.q) {
@@ -64,17 +69,22 @@ async function buildConditions(search: CableSearch): Promise<Prisma.Sql[] | null
     // "ILIKE '%%'" encontraría todos los cables: entonces solo se busca en la descripción.
     const normalized = normalizeCableCode(search.q);
     const compact = normalized.replace(/-/g, "");
-    const matches: Prisma.Sql[] = [Prisma.sql`c."description" ILIKE ${likeContains(search.q)}`];
-    if (normalized) {
-      matches.push(
-        Prisma.sql`c."code" ILIKE ${likeContains(normalized)}`,
-        Prisma.sql`c."code" % ${normalized}`,
+    if (fuzzy) {
+      // Solo si no hubo coincidencias exactas: códigos parecidos para tolerar erratas
+      // ("shh50" → SH-50). `%` usa el índice GIN; el umbral afina la similitud.
+      conditions.push(
+        Prisma.sql`(c."code" % ${normalized} AND similarity(c."code", ${normalized}) > ${FUZZY_THRESHOLD})`,
       );
+    } else {
+      const matches: Prisma.Sql[] = [Prisma.sql`c."description" ILIKE ${likeContains(search.q)}`];
+      if (normalized) {
+        matches.push(Prisma.sql`c."code" ILIKE ${likeContains(normalized)}`);
+      }
+      if (compact) {
+        matches.push(Prisma.sql`replace(c."code", '-', '') ILIKE ${likeContains(compact)}`);
+      }
+      conditions.push(Prisma.sql`(${Prisma.join(matches, " OR ")})`);
     }
-    if (compact) {
-      matches.push(Prisma.sql`replace(c."code", '-', '') ILIKE ${likeContains(compact)}`);
-    }
-    conditions.push(Prisma.sql`(${Prisma.join(matches, " OR ")})`);
   }
 
   if (search.location) {
@@ -152,15 +162,29 @@ export async function searchCables(
   search: CableSearch,
   pageSize = SEARCH_PAGE_SIZE,
 ): Promise<CableSearchResult> {
-  const conditions = await buildConditions(search);
-  if (conditions === null) {
+  const countWhere = async (fuzzy: boolean) => {
+    const conditions = await buildConditions(search, fuzzy);
+    if (conditions === null) {
+      return null;
+    }
+    const where = Prisma.join(conditions, " AND ");
+    const [{ total }] = await prisma.$queryRaw<[{ total: bigint }]>`
+      SELECT count(*) AS total FROM "cable" c WHERE ${where}`;
+    return { where, count: Number(total) };
+  };
+
+  // Primero coincidencias exactas (subcadena); si no hay ninguna y se buscaba un
+  // código, códigos parecidos. Así "sh50" no devuelve cientos de "SH-…" cortos.
+  let fuzzy = false;
+  let found = await countWhere(false);
+  if (found?.count === 0 && search.q && normalizeCableCode(search.q)) {
+    fuzzy = true;
+    found = await countWhere(true);
+  }
+  if (!found) {
     return { items: [], total: 0, page: 1, pageCount: 0 };
   }
-  const where = Prisma.join(conditions, " AND ");
-
-  const [{ total }] = await prisma.$queryRaw<[{ total: bigint }]>`
-    SELECT count(*) AS total FROM "cable" c WHERE ${where}`;
-  const count = Number(total);
+  const { where, count } = found;
   const pageCount = Math.ceil(count / pageSize);
   const page = Math.min(search.page ?? 1, Math.max(pageCount, 1));
   if (count === 0) {
@@ -222,7 +246,7 @@ export async function searchCables(
     ];
   });
 
-  return { items, total: count, page, pageCount };
+  return { items, total: count, page, pageCount, ...(fuzzy ? { fuzzy } : {}) };
 }
 
 export type SearchOptions = {

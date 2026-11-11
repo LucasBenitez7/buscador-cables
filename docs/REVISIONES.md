@@ -6,6 +6,52 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-11 — Fase 4: buscador y ficha del cable
+
+**Ramas mergeadas en `dev`:** `feat/f4-search-service`, `feat/f4-search-page` y
+`feat/f4-cable-detail`.
+
+**Qué hay nuevo:**
+
+- `/cables` es el buscador:
+  - Búsqueda por código o descripción.
+  - Ubicación (incluye todo lo que contiene).
+  - Tipo, estado de instalación y de conexión.
+  - En "Más filtros": color, fabricante y rangos de sección, diámetro y longitud.
+- Los filtros viven en la URL (`packages/shared/src/search.ts`). Un valor inválido se ignora
+  en lugar de romper la búsqueda, y los números aceptan coma. Al buscar se navega a una URL
+  limpia; la ordenación por columna y la paginación son enlaces, así que el botón atrás
+  funciona.
+- Una sola consulta SQL parametrizada (`server/cables/search.ts`):
+  - Los comodines `%` y `_` que escribe el usuario se toman literalmente.
+  - Los códigos se ordenan de forma natural: SH-5, SH-10, SH-50.
+  - Con texto, primero la coincidencia exacta.
+- `/cables/[id]`, la ficha:
+  - Todos los datos, la ruta completa origen → destino, dónde está, el estado y el último
+    movimiento.
+  - El historial con nombres en lugar de ids.
+  - Un cable dado de baja sigue accesible: muestra quién lo dio de baja, cuándo y por qué.
+- Responsive: en pantallas estrechas se ocultan las columnas secundarias de la tabla.
+
+**Rendimiento** (5.000 cables del seed): en base de datos, 3-25 ms por búsqueda. La página
+completa, con sesión y render, tarda 35-90 ms de mediana. El objetivo era menos de 200 ms.
+
+**Encontrado y corregido:**
+
+| Problema                                                                                                                     | Corrección                                                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Con la similitud de trigramas siempre activa, "sh50" devolvía 1.010 de los 5.000 cables: todos los "SH-…" cortos se parecen. | Primero coincidencia por subcadena ("sh50" da 11 resultados, `SH-50` el primero). Solo si no hay ninguna se buscan códigos parecidos con umbral 0,4 ("shh50" encuentra `SH-50`), y la página lo avisa. |
+| Una búsqueda formada solo por signos ("_", "--") quedaba vacía al normalizarla y `ILIKE '%%'` devolvía todos los cables.     | Sin código normalizado, solo se busca en la descripción.                                                                                                                                               |
+| En un móvil de 375 px toda la app se desplazaba en horizontal: la navegación de la cabecera no saltaba de línea.             | La navegación salta de línea y se reducen los márgenes. Comprobado en seis páginas a 375 px sin desplazamiento lateral.                                                                                |
+
+Cada bug tiene su test de regresión, salvo el de la cabecera, que se comprobó midiendo en el
+navegador.
+
+**Pendiente de la fase 4:** solo los E2E, que están aplazados. Los cables del seed no tienen
+historial; los eventos de campo (tender, conectar…) llegan en la fase 5.
+
+---
+
 ## 2026-11-11 — Fase 3: alta y edición de cables
 
 **Ramas mergeadas en `dev`:** `feat/f3-cable-rules`, `feat/f3-cable-service` y

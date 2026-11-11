@@ -13,9 +13,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh">
       <header className="bg-background border-b">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-3">
-          <nav className="flex items-center gap-5 text-sm">
-            <Link href="/" className="font-semibold">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm sm:gap-x-5">
+            <Link href="/" className="font-semibold whitespace-nowrap">
               Buscador de Cables
             </Link>
             <Link href="/cables" className="text-muted-foreground hover:text-foreground">
@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl p-6">{children}</main>
+      <main className="mx-auto max-w-5xl p-4 sm:p-6">{children}</main>
     </div>
   );
 }

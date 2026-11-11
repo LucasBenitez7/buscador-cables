@@ -105,15 +105,19 @@ El "apartado donde cargar el cable".
 
 ## Fase 4 — Buscador y ficha del cable (v0.5.0)
 
-- [ ] Búsqueda por código tolerante a errores (`pg_trgm`): "sh50" encuentra "SH-50".
-- [ ] Filtros: ubicación (incluye sububicaciones), tipo, color, sección/grosor,
+- [x] Búsqueda por código tolerante a errores (`pg_trgm`): "sh50" encuentra "SH-50". Primero
+      por subcadena (con y sin guiones); si no hay coincidencias, códigos parecidos ("shh50").
+- [x] Filtros: ubicación (incluye sububicaciones), tipo, color, sección/grosor,
       rango de longitud, estado de instalación, estado de conexión, fabricante.
-- [ ] Filtros reflejados en la URL (compartibles, botón atrás funciona).
-- [ ] Paginación en servidor y ordenación.
-- [ ] Ficha del cable: todos los datos, ruta origen → destino, estado y último movimiento.
-- [ ] Índices en base de datos; objetivo < 200 ms por búsqueda con 5.000+ cables.
-- [ ] Diseño responsive (uso desde tablet/móvil en planta).
-- [ ] Tests: consultas de búsqueda, filtros y E2E de búsqueda → ficha.
+- [x] Filtros reflejados en la URL (compartibles, botón atrás funciona).
+- [x] Paginación en servidor y ordenación (código en orden natural, longitud, sección, fecha).
+- [x] Ficha del cable: todos los datos, ruta origen → destino, estado y último movimiento
+      (más el historial legible).
+- [x] Índices en base de datos; objetivo < 200 ms por búsqueda con 5.000+ cables (medido:
+      3-25 ms en base de datos y 35-90 ms la página completa).
+- [x] Diseño responsive (uso desde tablet/móvil en planta).
+- [x] Tests: consultas de búsqueda, filtros, ficha y componentes.
+- [ ] Tests E2E de búsqueda → ficha (aplazados, ver `CONTRIBUTING.md`).
 
 ## Fase 5 — Acciones de usuario y trazabilidad (v0.6.0)
 

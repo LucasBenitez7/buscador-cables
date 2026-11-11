@@ -55,6 +55,11 @@ export function SearchResults({ search, result }: Props) {
 
   return (
     <div className="space-y-3">
+      {result.fuzzy ? (
+        <p className="bg-muted rounded-md px-3 py-2 text-sm">
+          Ningún código contiene «{search.q}». Se muestran los códigos más parecidos.
+        </p>
+      ) : null}
       <p role="status" className="text-muted-foreground text-sm">
         {result.total.toLocaleString("es-ES")} {result.total === 1 ? "cable" : "cables"}
         {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
