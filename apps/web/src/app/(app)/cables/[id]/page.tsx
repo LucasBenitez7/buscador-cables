@@ -106,7 +106,7 @@ export default async function CablePage({ params }: { params: Params }) {
               <span className="inline-flex items-center gap-1.5">
                 <span
                   aria-hidden
-                  className="size-3 rounded-full border"
+                  className="border-foreground/40 size-3 rounded-full border"
                   style={{ backgroundColor: cable.color.hex ?? "transparent" }}
                 />
                 {cable.color.name}

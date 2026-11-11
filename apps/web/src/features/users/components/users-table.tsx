@@ -115,7 +115,7 @@ function UserRowView({
         )}
       </td>
       <td className="px-4 py-3">
-        <span className={user.active ? "text-emerald-600" : "text-muted-foreground"}>
+        <span className={user.active ? "text-success" : "text-muted-foreground"}>
           {user.active ? "Activo" : "Desactivado"}
         </span>
       </td>
