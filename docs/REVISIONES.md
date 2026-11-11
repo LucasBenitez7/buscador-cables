@@ -6,6 +6,41 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-11 — Planificación de la fase 4.5 (rama `docs/phase-4-5-plan`)
+
+Se añade una fase 4.5 entre la 4 y la 5. El detalle está en `docs/PLAN.md`.
+
+**Decisiones del responsable:**
+
+- Se sube el código a un repo **público** de GitHub. Desde entonces, toda rama entra en `dev`
+  por PR, con el CI en verde y con merge commit. `main` sigue igual: solo al final o cuando lo
+  diga el responsable.
+- CI que se va a montar (recomendación del agente):
+  - el workflow existente (formato, lint, typecheck, tests y build);
+  - cobertura mínima;
+  - comprobación de migraciones;
+  - commitlint;
+  - CodeQL;
+  - revisión de dependencias y Dependabot;
+  - protección de `dev` y `main`.
+- Los **E2E empiezan en la fase 6**. Lo primero de esa fase es escribir los pendientes de las
+  fases 1 a 5 y activar su job en el CI.
+- **Tema solo oscuro con acento azul**, sin fondos blancos. El verde esmeralda se reserva para
+  "conectado / correcto". Paleta y contrastes en `docs/ARQUITECTURA.md`.
+
+**Comprobado al preparar la fase:**
+
+- El historial de git nunca ha contenido un `.env`, solo `.env.example`. Antes del primer push
+  se pasará `gitleaks` igualmente.
+- El CI nunca se ha ejecutado. Fallo probable: `pnpm/action-setup` recibe `version: 10` y el
+  `package.json` declara `packageManager: pnpm@10.33.4`. La acción falla si ve dos versiones.
+- Hay pocos colores fijos que quitar con el tema: `text-white` en `badge.tsx` y
+  `text-emerald-600` en `users-table.tsx` y `health-card.tsx`.
+- El flujo de `CONTRIBUTING.md` usaba `git rebase origin/dev`, que la configuración de permisos
+  prohíbe. Se cambia por `git merge origin/dev`.
+
+---
+
 ## 2026-11-11 — Fase 4: buscador y ficha del cable
 
 **Ramas mergeadas en `dev`:** `feat/f4-search-service`, `feat/f4-search-page` y
