@@ -76,7 +76,7 @@ export function CatalogSection({ kind, items }: Props) {
                 {kind === "color" ? (
                   <span
                     aria-hidden
-                    className="size-4 rounded-full border"
+                    className="border-foreground/40 size-4 rounded-full border"
                     style={{ backgroundColor: item.hex ?? "transparent" }}
                   />
                 ) : null}

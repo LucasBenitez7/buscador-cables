@@ -98,7 +98,7 @@ export function SearchResults({ search, result }: Props) {
                       <span
                         aria-hidden
                         title={cable.color.name}
-                        className="size-3 shrink-0 rounded-full border"
+                        className="border-foreground/40 size-3 shrink-0 rounded-full border"
                         style={{ backgroundColor: cable.color.hex ?? "transparent" }}
                       />
                     ) : null}

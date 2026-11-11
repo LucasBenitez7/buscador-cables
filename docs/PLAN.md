@@ -196,8 +196,8 @@ El workflow existía desde la fase 0 pero nunca se había ejecutado.
       aprobar tu propio PR, así que quedaría bloqueado.
 - [x] Comprobado con la API de GitHub (`rules/branches/dev` y `main`): se aplican las cuatro
       reglas. El PR que documenta este bloque es el primero que pasa por ellas.
-- [ ] Añadir CodeQL y la revisión de dependencias a los checks obligatorios cuando existan
-      (bloque 4).
+- [x] Añadir CodeQL y la revisión de dependencias a los checks obligatorios. Desde el PR #3, los
+      checks obligatorios son `check`, `commitlint`, `codeql` y `dependency-review`.
 
 ### 4 — Seguridad (`chore/ci-security`)
 
@@ -220,17 +220,27 @@ El workflow existía desde la fase 0 pero nunca se había ejecutado.
 
 ### 5 — Tema oscuro (`feat/f4.5-dark-theme`)
 
-- [ ] Sustituir los tokens de `apps/web/src/app/globals.css` por la paleta oscura de
+- [x] Sustituir los tokens de `apps/web/src/app/globals.css` por la paleta oscura de
       `docs/ARQUITECTURA.md`. Un único tema: sin modo claro ni selector, y con
-      `color-scheme: dark` para que los controles nativos también salgan oscuros.
-- [ ] Tokens nuevos `success` y `warning` (para los estados de la fase 5).
-- [ ] Quitar los colores fijos de Tailwind: `text-white` en `components/ui/badge.tsx` y
-      `text-emerald-600` en `users-table.tsx` y `health-card.tsx`.
-- [ ] Test que falla si aparece un color fijo (`bg-white`, `text-black`, `text-emerald-600`…)
-      fuera de `globals.css`.
-- [ ] Repasar todas las páginas (login, registro, buscador, ficha, formularios, ubicaciones,
-      catálogos, usuarios, estado), también a 375 px, con contraste AA.
+      `color-scheme: dark` para que los controles nativos también salgan oscuros. `<html>` lleva
+      siempre la clase `dark`, para que las variantes `dark:` de shadcn/ui se apliquen.
+- [x] Tokens nuevos `success` y `warning` (más `destructive-foreground`), y variantes del `Badge`
+      con esos colores, listas para los estados de la fase 5.
+- [x] Quitar los colores fijos: `text-emerald-600` en `users-table.tsx` y `health-card.tsx`.
+      El `Badge` usaba `text-white` y dos variables inexistentes (`--signal`, `--line`): los
+      estados de la ficha se pintaban sin fondo.
+- [x] Test (`app/theme.test.ts`) que falla con colores fijos de Tailwind, con variables CSS sin
+      definir, si la paleta deja de ser oscura o si `<html>` pierde la clase `dark`. Comprobado
+      contra el código anterior: detecta los cuatro problemas.
+- [x] Páginas 404 y de error propias. Las de Next eran negro puro con texto blanco, fuera del
+      tema. La de error no muestra el mensaje interno.
+- [x] Puntos de color de los cables con borde visible: el negro desaparecía sobre el fondo.
+- [x] Repaso en el navegador de login, inicio, buscador, ficha, formulario, ubicaciones,
+      catálogos, usuarios y 404. A 375 px, ninguna página tiene fondos claros ni desplazamiento
+      lateral (comprobado con un script que recorre los colores calculados).
 - Los correos (HTML) quedan fuera: cada cliente de correo aplica sus propios colores.
+
+**Fase 4.5 cerrada el 2026-11-11** (al mergear este bloque en `dev`).
 
 **Criterio de aceptación:** el código está en GitHub; un PR a `dev` ejecuta el CI y no se puede
 mergear si falla; `dev` y `main` rechazan el push directo; CodeQL, la revisión de dependencias y

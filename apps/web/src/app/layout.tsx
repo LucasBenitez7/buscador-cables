@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { env } from "@/lib/env";
@@ -24,9 +24,16 @@ export const metadata: Metadata = {
   metadataBase: new URL(env.APP_URL),
 };
 
+// Barra del navegador en móvil con el mismo fondo que la app (--background).
+export const viewport: Viewport = {
+  themeColor: "#101419",
+  colorScheme: "dark",
+};
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    // Tema único y oscuro: la clase "dark" activa las variantes `dark:` de shadcn/ui.
+    <html lang="es" className="dark" suppressHydrationWarning>
       <body className={cn("min-h-full antialiased", geistSans.variable, geistMono.variable)}>
         {children}
       </body>

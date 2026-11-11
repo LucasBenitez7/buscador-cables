@@ -6,6 +6,38 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-11 — Fase 4.5: tema oscuro (rama `feat/f4.5-dark-theme`)
+
+**Qué hay nuevo:**
+
+- Un único tema oscuro con acento azul. La paleta de `docs/ARQUITECTURA.md` está aplicada en
+  `globals.css`. También hay `color-scheme: dark` y `themeColor` para la barra del móvil.
+- Tokens `success` y `warning`, y variantes del `Badge` (`success`, `warning`, `destructive`,
+  `outline`) para los estados de la fase 5.
+- Páginas 404 y de error propias.
+
+**Encontrado y corregido:**
+
+| Problema                                                                                                              | Corrección                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| El `Badge` usaba `var(--signal)` y `var(--line)`, que no existen: los estados de la ficha del cable salían sin fondo. | Variantes con tokens del tema. El test de variables sin definir lo vigila.                    |
+| El punto de color de un cable negro no se veía sobre el fondo oscuro (buscador, ficha y catálogos).                   | Borde `border-foreground/40` en los tres sitios.                                              |
+| Las páginas 404 y de error por defecto de Next eran negro puro con texto blanco.                                      | `app/not-found.tsx` y `app/error.tsx` con el tema. La de error no muestra el mensaje interno. |
+
+**Verificación:**
+
+- `app/theme.test.ts`, ejecutado contra el código anterior, falla en sus 4 casos: colores fijos,
+  variables sin definir, paleta clara y falta de la clase `dark`. Con el código nuevo pasa.
+- En el navegador: 7 páginas a 375 px, sin fondos claros (script sobre los colores calculados)
+  ni desplazamiento lateral. Repaso visual de login, buscador, ficha, formulario, ubicaciones,
+  catálogos, usuarios, inicio y 404.
+- `pnpm check`: 315 tests en verde.
+
+**Pendiente (fuera del alcance):** la página de inicio aún dice "La búsqueda de cables llega en la
+fase 4", que ya está hecha.
+
+---
+
 ## 2026-11-11 — Fase 4.5: repo en GitHub y CI (rama `chore/ci-workflow`)
 
 **Antes del primer push:**
