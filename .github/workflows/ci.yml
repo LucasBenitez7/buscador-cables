@@ -1,22 +1,28 @@
 name: CI
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
-    branches: [main, dev]
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+# Mínimo privilegio: el token del workflow solo puede leer el repo.
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # En un PR, un push nuevo cancela la ejecución anterior. En dev/main cada merge se comprueba entero.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NODE_VERSION: "24"
-  PNPM_VERSION: "10"
+  # La versión de pnpm sale de "packageManager" en package.json (pnpm/action-setup la lee de ahí).
 
 jobs:
   check:
-    name: Lint, typecheck y tests
+    name: check
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -47,13 +53,25 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
+
+      - name: Caché de Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Caché de Next.js
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**') }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Preparar bases de datos
         run: |
@@ -70,26 +88,56 @@ jobs:
       - name: Formato
         run: pnpm format:check
 
+      - name: Migraciones al día con el esquema
+        run: |
+          pnpm db:deploy
+          pnpm db:check
+
       - name: Lint
         run: pnpm lint
 
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Tests unitarios y de integración
+      - name: Tests unitarios y de integración (con umbral de cobertura)
         run: pnpm test
 
       - name: Build
         run: pnpm build
 
+  commitlint:
+    name: commitlint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Commits del PR en Conventional Commits
+        run: >-
+          pnpm exec commitlint --verbose
+          --from ${{ github.event.pull_request.base.sha }}
+          --to ${{ github.event.pull_request.head.sha }}
+
   e2e:
-    name: Tests E2E (Playwright)
+    name: e2e
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: check
-    # Los E2E solo se ejecutan al integrar en dev/main, no en cada rama feat/*.
-    # Ver "Política de E2E" en CONTRIBUTING.md.
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
+    # Los E2E empiezan en la fase 6. Hasta entonces este job solo se lanza a mano
+    # (Actions → CI → Run workflow). Ver "Política de E2E" en CONTRIBUTING.md.
+    if: github.event_name == 'workflow_dispatch'
 
     services:
       postgres:
@@ -118,8 +166,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v4
         with:

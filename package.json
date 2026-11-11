@@ -18,6 +18,7 @@
     "db:generate": "pnpm --filter @cables/db generate",
     "db:migrate": "pnpm --filter @cables/db migrate",
     "db:deploy": "pnpm --filter @cables/db deploy",
+    "db:check": "pnpm --filter @cables/db migrations:check",
     "db:seed": "pnpm --filter @cables/db seed",
     "db:studio": "pnpm --filter @cables/db studio",
     "prepare": "husky"
