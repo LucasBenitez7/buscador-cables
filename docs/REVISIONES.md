@@ -6,6 +6,56 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-11 — Fase 4.5: repo en GitHub y CI (rama `chore/ci-workflow`)
+
+**Antes del primer push:**
+
+- **Historial reescrito** con `git filter-branch`, con el visto bueno del responsable:
+  - Los 73 commits usan el correo noreply de GitHub en lugar del personal. El repo usa ese correo
+    para los commits nuevos (`git config user.email`).
+  - Las menciones a una empresa real pasan a ser genéricas: "una refinería o una central
+    eléctrica" y `@planta.example` en los tests.
+  - Comprobado antes de seguir: el contenido final solo difiere en esos textos, y `pnpm check`
+    pasa.
+  - Todos los hashes cambian. Copia de seguridad previa en un `git bundle` fuera del repo.
+- **Los tags `v0.1.0` y `v0.2.0` no se reescribieron**: la configuración de permisos prohíbe
+  `git tag` al agente. Siguen en local apuntando a los commits antiguos, que aún llevan el
+  correo personal. **No hay que subirlos.** Sus commits nuevos son `9a96c2d`
+  (`v0.1.0`, merge de la fase 0 en `main`) y `c992a33` (`v0.2.0`, el `main` actual). El
+  responsable los recrea.
+- `gitleaks` sobre `dev` y `main`: ningún secreto. Revisó 51 commits; los otros 22 son merges sin
+  contenido propio.
+
+**Repo:** público, rama por defecto `dev`, solo merge commits, borrado de ramas al mergear,
+alertas de Dependabot, secret scanning y push protection activos, y token de Actions de solo
+lectura por defecto.
+
+**Primera ejecución del CI:** falló en `pnpm/action-setup`, por las dos versiones de pnpm, como
+estaba previsto.
+
+**Cambios del CI:**
+
+- Se quita la versión duplicada de pnpm.
+- Ejecución manual (`workflow_dispatch`) y `permissions: contents: read`.
+- Un push nuevo a un PR cancela la ejecución anterior; en `dev` y `main` no se cancela nada.
+- Comprobación de migraciones: `pnpm db:check`, con `prisma migrate diff --exit-code` contra
+  una base con las migraciones aplicadas.
+- Umbrales de cobertura en `pnpm test`.
+- Job `commitlint` en los PR.
+- Cachés de Turborepo y Next.js.
+- El job `e2e` queda solo manual.
+
+Se comprobó que los dos controles nuevos fallan cuando deben:
+
+- Con el umbral de `server/` subido a propósito al 95 % de líneas, `pnpm test` falla (hay un
+  89,97 %).
+- Con un campo nuevo en `schema.prisma` sin migración, `pnpm db:check` sale con código 2.
+
+**Corrección de documentación:** el plan de la fase 4.5 decía que `main` seguía en el commit
+inicial. No era así: está en la fase 1 (`v0.2.0`).
+
+---
+
 ## 2026-11-11 — Planificación de la fase 4.5 (rama `docs/phase-4-5-plan`)
 
 Se añade una fase 4.5 entre la 4 y la 5. El detalle está en `docs/PLAN.md`.
