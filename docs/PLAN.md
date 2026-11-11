@@ -189,14 +189,20 @@ El workflow existía desde la fase 0 pero nunca se había ejecutado.
 
 ### 3 — Protección de ramas (ruleset de GitHub)
 
-- [ ] `dev` y `main`: solo se cambian por PR, con el CI obligatorio y en verde (y CodeQL y la
-      revisión de dependencias cuando existan). Sin force-push ni borrado.
-- [ ] Sin aprobación obligatoria de otra persona: el equipo es de una persona y GitHub no deja
+- [x] Ruleset "Proteger dev y main" (activo desde el 2026-11-11): `dev` y `main` solo cambian
+      por PR, con merge commit y con `check` y `commitlint` en verde. Sin force-push ni borrado,
+      y sin excepciones (nadie puede saltárselo, tampoco el dueño del repo).
+- [x] Sin aprobación obligatoria de otra persona: el equipo es de una persona y GitHub no deja
       aprobar tu propio PR, así que quedaría bloqueado.
-- [ ] Comprobar que un push directo a `dev` se rechaza y que un PR con el CI en rojo no se
-      puede mergear.
+- [x] Comprobado con la API de GitHub (`rules/branches/dev` y `main`): se aplican las cuatro
+      reglas. El PR que documenta este bloque es el primero que pasa por ellas.
+- [ ] Añadir CodeQL y la revisión de dependencias a los checks obligatorios cuando existan
+      (bloque 4).
 
 ### 4 — Seguridad (`chore/ci-security`)
+
+- [ ] Commitlint no debe bloquear los PR de Dependabot: sus mensajes traen líneas de más de
+      100 caracteres. Ignorar sus commits o configurar su `commit-message`.
 
 - [ ] CodeQL (JavaScript/TypeScript) en cada PR a `dev` y una vez por semana.
 - [ ] Revisión de dependencias en cada PR (`actions/dependency-review-action`): falla si el PR

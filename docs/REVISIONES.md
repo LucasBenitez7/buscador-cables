@@ -51,6 +51,22 @@ Se comprobó que los dos controles nuevos fallan cuando deben:
   89,97 %).
 - Con un campo nuevo en `schema.prisma` sin migración, `pnpm db:check` sale con código 2.
 
+**Fallo en el primer PR (#1):** el script raíz `db:deploy` hacía `pnpm --filter @cables/db
+deploy`, pero `deploy` es un comando propio de pnpm, así que nunca llegaba al script del paquete
+(`ERR_PNPM_INVALID_DEPLOY_TARGET`). Existía desde la fase 0 y nadie lo había ejecutado. Ahora usa
+`run deploy`. Lo encontró el CI nuevo en su primera ejecución.
+
+**Protección de ramas:** el PR #1 se mergeó con el CI en verde. Después se creó el ruleset
+"Proteger dev y main":
+
+- `dev` y `main` solo cambian por PR, con merge commit.
+- `check` y `commitlint` obligatorios.
+- Sin force-push, sin borrado y sin excepciones.
+
+Además, la configuración de Claude Code ya no pide permiso para `git commit`, `git push` ni
+`gh pr create`. `git merge` y `gh pr merge` siguen pidiendo confirmación. El force-push y el
+push directo a `dev` o `main` están prohibidos también en local.
+
 **Corrección de documentación:** el plan de la fase 4.5 decía que `main` seguía en el commit
 inicial. No era así: está en la fase 1 (`v0.2.0`).
 
