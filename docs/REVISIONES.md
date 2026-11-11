@@ -67,6 +67,15 @@ Además, la configuración de Claude Code ya no pide permiso para `git commit`, 
 `gh pr create`. `git merge` y `gh pr merge` siguen pidiendo confirmación. El force-push y el
 push directo a `dev` o `main` están prohibidos también en local.
 
+**Seguridad (rama `chore/ci-security`):**
+
+- Workflows nuevos de CodeQL y de revisión de dependencias, y `dependabot.yml`.
+- Todas las acciones fijadas por SHA.
+- Commitlint ignora los commits de Dependabot. Comprobado: un mensaje real de Dependabot pasa
+  y uno normal con una línea de 120 caracteres falla.
+- `minimatch` 10.2.6, vulnerable, pasa a la 11 con un override. `deepmerge` no tiene parche y
+  solo afecta al CLI de shadcn en desarrollo.
+
 **Corrección de documentación:** el plan de la fase 4.5 decía que `main` seguía en el commit
 inicial. No era así: está en la fase 1 (`v0.2.0`).
 
