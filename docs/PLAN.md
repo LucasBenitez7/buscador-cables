@@ -76,7 +76,7 @@ fase 0, pero nunca se ha ejecutado: se activa en la fase 4.5.)_
 - [x] Middleware de protección de rutas + comprobación de permisos en servidor.
 - [x] Rate limiting en login y recuperación de contraseña.
 - [x] Tests: unitarios de permisos y de integración del servicio de usuarios.
-- [ ] Tests E2E de registro, login, logout y recuperación de contraseña (aplazados a la fase 6).
+- [x] Tests E2E de registro, login, logout y recuperación de contraseña (escritos en la fase 6).
 
 ## Fase 2 — Modelo de datos y ubicaciones (v0.3.0)
 
@@ -103,7 +103,7 @@ El "apartado donde cargar el cable".
 - [x] Validación compartida cliente/servidor con Zod.
 - [x] Permisos: solo `TECHNICIAN`+ puede crear o editar.
 - [x] Tests: validaciones, Server Actions, servicio contra Postgres y formulario.
-- [ ] Tests E2E de alta/edición (aplazados a la fase 6).
+- [x] Tests E2E de alta/edición (escritos en la fase 6).
 
 ## Fase 4 — Buscador y ficha del cable (v0.5.0)
 
@@ -119,7 +119,7 @@ El "apartado donde cargar el cable".
       3-25 ms en base de datos y 35-90 ms la página completa).
 - [x] Diseño responsive (uso desde tablet/móvil en planta).
 - [x] Tests: consultas de búsqueda, filtros, ficha y componentes.
-- [ ] Tests E2E de búsqueda → ficha (aplazados a la fase 6).
+- [x] Tests E2E de búsqueda → ficha (escritos en la fase 6).
 
 ## Fase 4.5 — CI, GitHub y Pull Requests (v0.5.1)
 
@@ -381,21 +381,42 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
 
 ## Fase 6 — E2E, importación / exportación y panel (v0.7.0)
 
-### Primero: tests E2E (decisión del 2026-11-11)
+### Antes de los E2E: navegación, responsive y estados (2026-11-13)
+
+Pedido por el usuario al empezar la fase. Va en la misma rama de la fase, `feat/f6-e2e-import`.
+
+- [x] Menú: la sección actual resaltada (texto claro sobre fondo suave, `aria-current`) y el
+      resto en el color normal hasta pasar el ratón.
+- [x] Por debajo de 1280 px (móvil y tablet) el menú es un panel lateral con enlaces grandes,
+      el usuario y "Cerrar sesión"; se cierra al navegar. Cabecera fija arriba.
+- [x] Buscador en móvil: solo el campo de búsqueda y un botón "Filtros (n)" que despliega el
+      resto; los resultados son tarjetas con el botón "Acción". Tabla desde 768 px.
+- [x] Usuarios: la tabla se apila como tarjetas en móvil.
+- [x] Controles a tamaño táctil en móvil (40 px) y normales desde 768 px; selects y áreas de
+      texto con los mismos estilos que los campos.
+- [x] Estados hover, pulsado y foco en botones, enlaces, filas de tabla, desplegables y
+      opciones del diálogo de conectar.
+
+### Tests E2E (decisión del 2026-11-11)
 
 Los E2E empiezan aquí, con la app ya completa hasta la fase 5. A partir de esta fase, cada fase
-cierra con sus E2E escritos y en verde en el CI.
+cierra con sus E2E escritos y en verde en el CI. Cómo funcionan: `CONTRIBUTING.md`.
 
-- [ ] Flujos de la fase 1: registro, verificación de correo, login, logout y recuperación de
-      contraseña (correo leído desde Mailpit).
-- [ ] Flujos de la fase 3: alta, edición y baja de un cable, y el aviso de edición simultánea.
-- [ ] Flujos de la fase 4: buscar → filtrar → abrir la ficha, y que los filtros sobrevivan al
-      botón atrás.
-- [ ] Flujos de la fase 5: cada acción (tender, enrollar, conectar, mover, retirar, corrección)
-      y su reflejo en el historial.
-- [ ] Permisos: un `VIEWER` no ve ni puede usar las acciones de edición.
-- [ ] Activar el job `e2e` del CI. Recomendación: ejecutarlo en cada PR a `dev`. Como todo
-      entra por PR, ejecutarlo solo tras el merge avisaría tarde.
+- [x] Infraestructura: base propia `cables_e2e` con datos conocidos, app compilada en el puerto
+      3100, una sesión guardada por rol, correos leídos de Mailpit y proyectos escritorio y
+      móvil (Pixel 7).
+- [x] Flujos de la fase 1: registro, verificación de correo, cuenta sin confirmar, contraseña
+      incorrecta, logout y recuperación de contraseña.
+- [x] Flujos de la fase 3: alta, edición y baja de un cable, y el aviso de edición simultánea.
+- [x] Flujos de la fase 4: buscar → filtrar → abrir la ficha, que los filtros sobrevivan al
+      botón atrás, ordenar y limpiar.
+- [x] Flujos de la fase 5: tender, conectar los dos extremos, enrollar, mover, retirar y
+      corregir, su reflejo en el historial y en las páginas de actividad, y el aviso de dos
+      movimientos a la vez.
+- [x] Permisos: un `VIEWER` no ve ni puede usar las acciones de edición; un técnico no entra
+      en "Actividad"; las páginas sin permiso llevan al inicio.
+- [x] Móvil: menú, filtros desplegables, tarjetas y acción desde una tarjeta.
+- [x] Job `e2e` del CI activado en cada PR a `dev` y en cada push a `dev`/`main`, con Mailpit.
 
 ### Importación / exportación y panel
 
