@@ -302,6 +302,10 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
 
 ### Tareas
 
+> Ramas: la máquina de estados y el servicio entraron en `dev` en ramas propias. Desde el
+> 2026-11-12 la regla es una sola rama por fase, así que todo lo que queda de la fase 5 va en
+> `feat/f5-traceability`, que se mergea al terminar la fase.
+
 - [x] Estado de instalación: `IN_STOCK` (en almacén), `COILED` (enrollado), `LAID` (tendido), `RETIRED` (retirado). _(En el esquema desde la fase 2.)_
 - [x] Estado de conexión: `DISCONNECTED`, `ORIGIN_ONLY`, `DESTINATION_ONLY`, `CONNECTED`. _(En el esquema desde la fase 2.)_
 - [x] Máquina de estados (`packages/shared/src/cable-actions.ts`, rama `feat/f5-state-machine`).
@@ -333,7 +337,7 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
       (antes/después), nota y `correctsEventId` en las correcciones.
 - [x] Columnas resumen en `Cable` (`lastAction`, `lastActionById`, `lastActionAt`), más
       `installedBy`/`installedAt` al tender y `connectedBy`/`connectedAt` al conectar.
-- [x] Botones de acción en la ficha, con diálogos (rama `feat/f5-action-ui`):
+- [x] Botones de acción en la ficha, con diálogos (rama `feat/f5-traceability`):
   - Cada rol ve solo sus acciones.
   - Las que no tienen sentido en ese momento salen desactivadas, con el motivo en "Por qué hay
     acciones desactivadas".
@@ -341,8 +345,8 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
     corrige, y la nota.
   - Los estados se ven en colores: verde conectado, ámbar a medias, rojo retirado.
   - Probado en la app: tender → conectar origen → enrollar, también a 375 px.
-- [ ] Botones de acción también en la tabla del buscador (en `feat/f5-activity`, junto con las
-      columnas de quién/qué/cuándo).
+- [ ] Botones de acción también en la tabla del buscador (junto con las columnas de
+      quién/qué/cuándo).
 - [ ] Columnas y filtros de "quién/qué/cuándo" en el buscador.
 - [ ] Línea de tiempo del historial en la ficha. Pendiente detectado: Postgres guarda los
       cambios de cada evento (`jsonb`) en otro orden, así que la ficha los muestra desordenados.
