@@ -22,6 +22,7 @@ export const PERMISSIONS = [
   "cable:move",
   "cable:retire",
   "cable:correct",
+  "activity:view",
   "location:manage",
   "catalog:manage",
   "import:run",
@@ -56,6 +57,8 @@ const SUPERVISOR_PERMISSIONS: readonly Permission[] = [
   ...TECHNICIAN_PERMISSIONS,
   "cable:retire",
   "cable:correct",
+  // "Actividad reciente": todas las acciones de todos. Cada uno ve siempre la suya.
+  "activity:view",
   "location:manage",
   "catalog:manage",
   "import:run",
