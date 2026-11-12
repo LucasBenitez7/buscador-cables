@@ -207,6 +207,9 @@ function computeNext(
     case "DISCONNECTED": {
       const bits = CONNECTION_BITS[state.connectionStatus];
       const end = END_BITS[input.end];
+      if (bits === 0) {
+        return { error: "El cable no está conectado." };
+      }
       if ((bits & end) === 0) {
         return { error: "El cable no está conectado por ese extremo." };
       }
