@@ -1,5 +1,5 @@
 import "server-only";
-import { Prisma, prisma } from "@cables/db";
+import { prisma, type Prisma } from "@cables/db";
 import {
   ACTIVITY_PAGE_SIZE,
   describeCableEvent,
