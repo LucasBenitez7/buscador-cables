@@ -139,7 +139,7 @@ export function SearchFilters({ search, options }: Props) {
         </div>
 
         <details open={advancedActive} className="group">
-          <summary className="text-muted-foreground cursor-pointer text-sm select-none">
+          <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-sm text-sm transition-colors outline-none select-none focus-visible:ring-3">
             Más filtros
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

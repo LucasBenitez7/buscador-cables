@@ -266,7 +266,7 @@ export function CableActions({
       ) : null}
       {blocked.length > 0 ? (
         <details className="text-muted-foreground text-sm">
-          <summary className="cursor-pointer select-none">
+          <summary className="hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-sm transition-colors outline-none select-none focus-visible:ring-3">
             Por qué hay acciones desactivadas
           </summary>
           <ul className="mt-2 space-y-1 pl-4">
@@ -319,7 +319,10 @@ function ActionFields({
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Extremo</legend>
           {CABLE_ENDS.map((end) => (
-            <label key={end} className="flex items-center gap-2 text-sm">
+            <label
+              key={end}
+              className="hover:bg-accent/60 has-checked:bg-accent flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 text-sm transition-colors"
+            >
               <input
                 type="radio"
                 name="end"
