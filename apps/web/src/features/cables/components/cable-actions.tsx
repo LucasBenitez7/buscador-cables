@@ -30,6 +30,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import { runCableActionAction, type CableFormResult } from "@/features/cables/actions";
 
 export type ActionOption = { id: string; label: string };
@@ -402,13 +404,12 @@ function ActionFields({
 function NotesField({ required, error }: { required: boolean; error?: string }) {
   return (
     <Field id="action-notes" label={required ? "Motivo" : "Nota (opcional)"} error={error}>
-      <textarea
+      <Textarea
         id="action-notes"
         name="notes"
         rows={3}
         required={required}
         aria-invalid={error ? true : undefined}
-        className="border-input bg-background aria-invalid:border-destructive w-full rounded-lg border px-2.5 py-1.5 text-sm"
       />
     </Field>
   );
@@ -439,12 +440,7 @@ function ErrorText({ children }: { children: ReactNode }) {
 }
 
 function Select(props: ComponentProps<"select">) {
-  return (
-    <select
-      {...props}
-      className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
-    />
-  );
+  return <NativeSelect {...props} />;
 }
 
 function LocationSelect({

@@ -74,14 +74,20 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
       </Button>
 
       <p className="text-center text-sm">
-        <Link href="/forgot-password" className="underline underline-offset-4">
+        <Link
+          href="/forgot-password"
+          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
+        >
           He olvidado mi contraseña
         </Link>
       </p>
 
       <p className="text-center text-sm">
         ¿No tienes cuenta?{" "}
-        <Link href="/register" className="underline underline-offset-4">
+        <Link
+          href="/register"
+          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
+        >
           Crear cuenta
         </Link>
       </p>

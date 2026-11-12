@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "cn";
+import { ChevronRightIcon } from "lucide-react";
 import { useCallback, useState, useTransition } from "react";
 import {
   LOCATION_TYPE_LABELS,
@@ -104,12 +106,15 @@ function TreeItem({ node, tree, canManage, open, setOpen, close }: ItemProps) {
               onClick={() => setExpanded((value) => !value)}
               aria-expanded={expanded}
               aria-label={`${expanded ? "Contraer" : "Expandir"} ${node.name}`}
-              className="text-muted-foreground w-4 text-xs"
+              className="text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/70 focus-visible:ring-ring/50 -m-1.5 grid size-8 place-items-center rounded-md outline-none focus-visible:ring-3 md:size-6"
             >
-              {expanded ? "▾" : "▸"}
+              <ChevronRightIcon
+                aria-hidden
+                className={cn("size-4 transition-transform", expanded && "rotate-90")}
+              />
             </button>
           ) : (
-            <span className="w-4" aria-hidden />
+            <span className="w-5 md:w-3" aria-hidden />
           )}
           <span className="font-medium">{node.name}</span>
           <code className="bg-muted rounded px-1.5 text-xs">{node.code}</code>

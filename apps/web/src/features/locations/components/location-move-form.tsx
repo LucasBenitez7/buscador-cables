@@ -4,6 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { LOCATION_TYPE_LABELS, parentLocationType, type MoveTarget } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { moveLocationAction } from "@/features/locations/actions";
 import type { ActionResult } from "@/lib/action-result";
 import type { LocationWithCounts } from "@/server/locations/service";
@@ -40,7 +41,7 @@ export function LocationMoveForm({ location, targets, onDone }: Props) {
       onSubmit={submit}
       className="bg-muted/40 flex flex-wrap items-end gap-3 rounded-lg border p-3"
     >
-      <div className="min-w-64 flex-1 space-y-1">
+      <div className="min-w-0 flex-1 space-y-1 sm:min-w-64">
         <Label htmlFor={selectId}>
           Mover &quot;{location.name}&quot; a otra{" "}
           {parentType ? LOCATION_TYPE_LABELS[parentType].toLowerCase() : "ubicación"}
@@ -48,11 +49,10 @@ export function LocationMoveForm({ location, targets, onDone }: Props) {
         {targets.length === 0 ? (
           <p className="text-muted-foreground text-sm">No hay otro destino posible.</p>
         ) : (
-          <select
+          <NativeSelect
             id={selectId}
             value={parentId}
             onChange={(event) => setParentId(event.target.value)}
-            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
             required
           >
             <option value="" disabled>
@@ -63,7 +63,7 @@ export function LocationMoveForm({ location, targets, onDone }: Props) {
                 {target.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         )}
       </div>
       <div className="flex gap-2">

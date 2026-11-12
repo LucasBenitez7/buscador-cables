@@ -24,7 +24,10 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
         <p className="text-sm">
           Inicia sesión con tu correo y contraseña y te enviaremos un enlace nuevo.
         </p>
-        <Link href="/login" className="text-sm underline underline-offset-4">
+        <Link
+          href="/login"
+          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm text-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
+        >
           Ir al inicio de sesión
         </Link>
       </div>
@@ -38,7 +41,10 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
       <p role="status" className="text-sm">
         Correo confirmado. Tu cuenta ya está activa.
       </p>
-      <Link href={user ? "/" : "/login"} className="text-sm underline underline-offset-4">
+      <Link
+        href={user ? "/" : "/login"}
+        className="hover:text-primary focus-visible:ring-ring/50 rounded-sm text-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
+      >
         {user ? "Entrar en la aplicación" : "Iniciar sesión"}
       </Link>
     </div>

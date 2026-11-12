@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Props = {
   basePath: string;
@@ -96,13 +97,9 @@ function Field({
 
 function Select({ children, defaultValue, ...props }: ComponentProps<"select">) {
   return (
-    <select
-      {...props}
-      defaultValue={defaultValue ?? ""}
-      className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
-    >
+    <NativeSelect {...props} defaultValue={defaultValue ?? ""}>
       <option value="">Todos</option>
       {children}
-    </select>
+    </NativeSelect>
   );
 }
