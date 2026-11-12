@@ -333,9 +333,20 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
       (antes/después), nota y `correctsEventId` en las correcciones.
 - [x] Columnas resumen en `Cable` (`lastAction`, `lastActionById`, `lastActionAt`), más
       `installedBy`/`installedAt` al tender y `connectedBy`/`connectedAt` al conectar.
-- [ ] Botones de acción en la ficha y en la tabla, con diálogos.
+- [x] Botones de acción en la ficha, con diálogos (rama `feat/f5-action-ui`):
+  - Cada rol ve solo sus acciones.
+  - Las que no tienen sentido en ese momento salen desactivadas, con el motivo en "Por qué hay
+    acciones desactivadas".
+  - Cada diálogo pide solo lo necesario: extremo, sitio, motivo o el movimiento que se
+    corrige, y la nota.
+  - Los estados se ven en colores: verde conectado, ámbar a medias, rojo retirado.
+  - Probado en la app: tender → conectar origen → enrollar, también a 375 px.
+- [ ] Botones de acción también en la tabla del buscador (en `feat/f5-activity`, junto con las
+      columnas de quién/qué/cuándo).
 - [ ] Columnas y filtros de "quién/qué/cuándo" en el buscador.
-- [ ] Línea de tiempo del historial en la ficha.
+- [ ] Línea de tiempo del historial en la ficha. Pendiente detectado: Postgres guarda los
+      cambios de cada evento (`jsonb`) en otro orden, así que la ficha los muestra desordenados.
+      Hay que ordenarlos al mostrarlos.
 - [ ] Página "Mi actividad": acciones del usuario actual.
 - [ ] Página "Actividad reciente" (todas las acciones, filtrable) para supervisores.
 - [x] Control de concurrencia con `version`: si dos personas actúan a la vez, solo entra una y la

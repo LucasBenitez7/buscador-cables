@@ -7,6 +7,7 @@ import {
   formatDecimal,
   isRole,
   type CableAction,
+  type CableState,
   type ConnectionStatus,
   type FieldChange,
   type InstallationStatus,
@@ -27,6 +28,10 @@ export type CableHistoryEntry = {
 export type CableDetail = {
   id: string;
   code: string;
+  /** For the action dialogs: the version the user acts on (concurrency control). */
+  version: number;
+  /** Raw state for the action state machine (ids, not names). */
+  state: CableState;
   description: string | null;
   type: string | null;
   color: { name: string; hex: string | null } | null;
@@ -154,6 +159,15 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
   return {
     id: cable.id,
     code: cable.code,
+    version: cable.version,
+    state: {
+      installationStatus: cable.installationStatus,
+      connectionStatus: cable.connectionStatus,
+      currentLocationId: cable.currentLocationId,
+      originId: cable.originId,
+      destinationId: cable.destinationId,
+      deleted: cable.deletedAt !== null,
+    },
     description: cable.description,
     type: cable.type?.name ?? null,
     color: cable.color,
