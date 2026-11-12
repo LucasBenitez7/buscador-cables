@@ -3,11 +3,14 @@
 import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import {
+  CABLE_ACTIONS,
+  CABLE_ACTION_LABELS,
   CONNECTION_STATUSES,
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUSES,
   INSTALLATION_STATUS_LABELS,
   cableSearchQuery,
+  hasActivityFilters,
   parseCableSearch,
   type CableSearch,
 } from "@cables/shared";
@@ -34,6 +37,7 @@ export function SearchFilters({ search, options }: Props) {
   const advancedActive = Boolean(
     search.manufacturer ||
     search.color ||
+    hasActivityFilters(search) ||
     RANGES.some(
       ([name]) => search[`${name}Min`] !== undefined || search[`${name}Max`] !== undefined,
     ),
@@ -159,6 +163,38 @@ export function SearchFilters({ search, options }: Props) {
             </fieldset>
           ))}
         </div>
+        <fieldset className="mt-4 space-y-3">
+          <legend className="text-sm font-medium">
+            Movimientos{" "}
+            <span className="text-muted-foreground font-normal">(quién, qué, cuándo)</span>
+          </legend>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Filter label="Quién" htmlFor="actor">
+              <Select id="actor" name="actor" defaultValue={search.actor}>
+                {options.users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.label}
+                  </option>
+                ))}
+              </Select>
+            </Filter>
+            <Filter label="Qué hizo" htmlFor="action">
+              <Select id="action" name="action" defaultValue={search.action}>
+                {CABLE_ACTIONS.map((action) => (
+                  <option key={action} value={action}>
+                    {CABLE_ACTION_LABELS[action]}
+                  </option>
+                ))}
+              </Select>
+            </Filter>
+            <Filter label="Desde" htmlFor="from">
+              <Input id="from" name="from" type="date" defaultValue={search.from ?? ""} />
+            </Filter>
+            <Filter label="Hasta" htmlFor="to">
+              <Input id="to" name="to" type="date" defaultValue={search.to ?? ""} />
+            </Filter>
+          </div>
+        </fieldset>
       </details>
 
       <div className="flex flex-wrap gap-2">

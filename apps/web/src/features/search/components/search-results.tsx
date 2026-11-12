@@ -81,7 +81,7 @@ export function SearchResults({ search, result }: Props) {
               <th scope="col" className="px-3 py-2 font-medium">
                 Estado
               </th>
-              {header("Último movimiento", "updated", "hidden md:table-cell")}
+              {header("Último movimiento", "activity", "hidden md:table-cell")}
             </tr>
           </thead>
           <tbody>

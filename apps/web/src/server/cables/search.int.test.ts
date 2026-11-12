@@ -211,3 +211,81 @@ describe("searchCables: sorting and paging", () => {
     });
   });
 });
+
+describe("searchCables: who / what / when", () => {
+  async function seedEvents() {
+    const [juan, ana] = await Promise.all(
+      ["Juan", "Ana"].map((name) =>
+        prisma.user.create({
+          data: { id: name.toLowerCase(), name, email: `${name}@cables.test`, role: "TECHNICIAN" },
+        }),
+      ),
+    );
+    const cable = (code: string) =>
+      prisma.cable.findUniqueOrThrow({ where: { code }, select: { id: true } });
+    const [sh50, pw50, sh5] = await Promise.all([cable("SH-50"), cable("PW-50"), cable("SH-5")]);
+    await prisma.cableEvent.createMany({
+      data: [
+        // Juan conectó SH-50 el 10 de noviembre (23:30 en Madrid sigue siendo el 10).
+        {
+          cableId: sh50.id,
+          userId: juan!.id,
+          action: "CONNECTED",
+          changes: {},
+          createdAt: new Date("2026-11-10T22:30:00Z"),
+        },
+        // Juan movió PW-50 el 11; Ana conectó PW-50 el 11.
+        {
+          cableId: pw50.id,
+          userId: juan!.id,
+          action: "MOVED",
+          changes: {},
+          createdAt: new Date("2026-11-11T09:00:00Z"),
+        },
+        {
+          cableId: pw50.id,
+          userId: ana!.id,
+          action: "CONNECTED",
+          changes: {},
+          createdAt: new Date("2026-11-11T10:00:00Z"),
+        },
+        {
+          cableId: sh5.id,
+          userId: ana!.id,
+          action: "LAID",
+          changes: {},
+          createdAt: new Date("2026-11-12T08:00:00Z"),
+        },
+      ],
+    });
+    await prisma.cable.update({
+      where: { id: sh5.id },
+      data: { lastAction: "LAID", lastActionAt: new Date("2026-11-12T08:00:00Z") },
+    });
+  }
+
+  it("finds the cables a person connected, combining both conditions on the same event", async () => {
+    await seedEvents();
+
+    // PW-50 tiene un evento de Juan y otro de conexión, pero no uno de Juan conectando.
+    expect(await codes({ actor: "juan", action: "CONNECTED" })).toEqual(["SH-50"]);
+    expect(await codes({ action: "CONNECTED" })).toEqual(["PW-50", "SH-50"]);
+    expect(await codes({ actor: "ana" })).toEqual(["PW-50", "SH-5"]);
+  });
+
+  it("counts days in Madrid time", async () => {
+    await seedEvents();
+
+    // 22:30 UTC del 10 son las 23:30 del 10 en Madrid: entra el 10, no el 11.
+    expect(await codes({ from: "2026-11-10", to: "2026-11-10" })).toEqual(["SH-50"]);
+    expect(await codes({ from: "2026-11-11", to: "2026-11-11" })).toEqual(["PW-50"]);
+    expect(await codes({ from: "2026-11-12" })).toEqual(["SH-5"]);
+  });
+
+  it("sorts by the last field action, newest first and cables without one last", async () => {
+    await seedEvents();
+
+    const result = await codes({ sort: "activity" });
+    expect(result[0]).toBe("SH-5");
+  });
+});

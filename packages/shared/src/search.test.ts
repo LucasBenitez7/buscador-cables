@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cableSearchQuery, effectiveSort, hasActiveFilters, parseCableSearch } from "./search";
+import {
+  cableSearchQuery,
+  effectiveSort,
+  hasActiveFilters,
+  hasActivityFilters,
+  parseCableSearch,
+} from "./search";
 
 describe("parseCableSearch", () => {
   it("reads filters from the URL, accepting a decimal comma", () => {
@@ -29,6 +35,15 @@ describe("parseCableSearch", () => {
 
   it("keeps the first value of repeated keys", () => {
     expect(parseCableSearch({ type: ["a", "b"] })).toEqual({ type: "a" });
+  });
+
+  it("reads the who / what / when filters and ignores bad dates", () => {
+    expect(
+      parseCableSearch({ actor: "u1", action: "CONNECTED", from: "2026-11-01", to: "2026-11-31" }),
+    ).toEqual({ actor: "u1", action: "CONNECTED", from: "2026-11-01" });
+    expect(parseCableSearch({ action: "HACK", from: "ayer" })).toEqual({});
+    expect(hasActivityFilters(parseCableSearch({ action: "MOVED" }))).toBe(true);
+    expect(hasActivityFilters(parseCableSearch({ q: "sh50" }))).toBe(false);
   });
 });
 

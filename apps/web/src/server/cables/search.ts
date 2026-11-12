@@ -3,6 +3,7 @@ import { Prisma, prisma } from "@cables/db";
 import {
   SEARCH_PAGE_SIZE,
   effectiveSort,
+  hasActivityFilters,
   normalizeCableCode,
   type CableAction,
   type CableSearch,
@@ -122,6 +123,20 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
     if (max !== undefined) conditions.push(Prisma.sql`${column} <= ${max}`);
   }
 
+  if (hasActivityFilters(search)) {
+    // Todas las condiciones sobre el mismo evento: "cables que conectó Juan esta semana".
+    // Los días se cuentan en hora de Madrid, como los ve la gente en planta.
+    const event: Prisma.Sql[] = [Prisma.sql`e."cableId" = c."id"`];
+    if (search.actor) event.push(Prisma.sql`e."userId" = ${search.actor}`);
+    if (search.action) event.push(Prisma.sql`e."action" = ${search.action}::"CableAction"`);
+    const localDay = Prisma.sql`(e."createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Madrid')::date`;
+    if (search.from) event.push(Prisma.sql`${localDay} >= ${search.from}::date`);
+    if (search.to) event.push(Prisma.sql`${localDay} <= ${search.to}::date`);
+    conditions.push(
+      Prisma.sql`EXISTS (SELECT 1 FROM "cable_event" e WHERE ${Prisma.join(event, " AND ")})`,
+    );
+  }
+
   return conditions;
 }
 
@@ -138,6 +153,8 @@ function orderBy(search: CableSearch): Prisma.Sql {
     }
     case "updated":
       return Prisma.sql`c."updatedAt" ${direction}, ${natural}`;
+    case "activity":
+      return Prisma.sql`c."lastActionAt" ${direction} NULLS LAST, ${natural}`;
     case "length":
       return Prisma.sql`c."lengthM" ${direction} NULLS LAST, ${natural}`;
     case "section":
@@ -255,17 +272,21 @@ export type SearchOptions = {
   manufacturers: Option[];
   /** Including plants: filtering by a plant includes everything in it. */
   locations: LocationOption[];
+  /** Everybody can see who did what (phase 5 visibility rule). */
+  users: Option[];
 };
 
 export async function getSearchOptions(): Promise<SearchOptions> {
-  const [form, locations] = await Promise.all([
+  const [form, locations, users] = await Promise.all([
     getCableFormOptions(),
     listLocationOptions({ includePlants: true }),
+    prisma.user.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   return {
     cableTypes: form.cableTypes,
     colors: form.colors,
     manufacturers: form.manufacturers,
     locations,
+    users: users.map((user) => ({ id: user.id, label: user.name })),
   };
 }

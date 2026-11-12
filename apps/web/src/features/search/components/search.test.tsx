@@ -15,6 +15,7 @@ const options: SearchOptions = {
     { id: "p", label: "Norte", type: "PLANT" },
     { id: "a", label: "Norte › Calderas", type: "AREA" },
   ],
+  users: [{ id: "u1", label: "Juan Pérez" }],
 };
 
 describe("SearchFilters", () => {
@@ -42,6 +43,24 @@ describe("SearchFilters", () => {
     expect(screen.getByLabelText("Código o descripción")).toHaveValue("SH");
     expect(screen.getByLabelText("Sección (mm²): desde")).toHaveValue("2,5");
     expect(screen.getByText("Más filtros").closest("details")).toHaveAttribute("open");
+  });
+
+  it("filters by who did what and when", () => {
+    render(<SearchFilters search={{}} options={options} />);
+
+    fireEvent.change(screen.getByLabelText("Quién"), { target: { value: "u1" } });
+    fireEvent.change(screen.getByLabelText("Qué hizo"), { target: { value: "CONNECTED" } });
+    fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-11-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+
+    expect(push).toHaveBeenCalledWith("/cables?actor=u1&action=CONNECTED&from=2026-11-01");
+  });
+
+  it("opens 'Más filtros' when a who / what / when filter is active", () => {
+    render(<SearchFilters search={{ action: "MOVED" }} options={options} />);
+
+    expect(screen.getByText("Más filtros").closest("details")).toHaveAttribute("open");
+    expect(screen.getByLabelText("Qué hizo")).toHaveValue("MOVED");
   });
 
   it("clears every filter", () => {
