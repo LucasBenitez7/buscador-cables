@@ -7,6 +7,7 @@ import {
   normalizeCableCode,
   type CableAction,
   type CableSearch,
+  type CableState,
   type ConnectionStatus,
   type InstallationStatus,
 } from "@cables/shared";
@@ -21,6 +22,9 @@ import { findSubtreeIds } from "@/server/locations/service";
 export type CableSearchItem = {
   id: string;
   code: string;
+  /** For the row's action dialog (concurrency control and state machine). */
+  version: number;
+  state: CableState;
   description: string | null;
   type: string | null;
   color: { name: string; hex: string | null } | null;
@@ -220,6 +224,10 @@ export async function searchCables(
     select: {
       id: true,
       code: true,
+      version: true,
+      currentLocationId: true,
+      originId: true,
+      destinationId: true,
       description: true,
       conductors: true,
       crossSectionMm2: true,
@@ -246,6 +254,16 @@ export async function searchCables(
       {
         id: cable.id,
         code: cable.code,
+        version: cable.version,
+        state: {
+          installationStatus: cable.installationStatus,
+          connectionStatus: cable.connectionStatus,
+          currentLocationId: cable.currentLocationId,
+          originId: cable.originId,
+          destinationId: cable.destinationId,
+          // The search only returns active cables.
+          deleted: false,
+        },
         description: cable.description,
         type: cable.type?.name ?? null,
         color: cable.color,

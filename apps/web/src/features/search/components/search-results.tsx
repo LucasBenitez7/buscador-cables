@@ -1,14 +1,16 @@
 import Link from "next/link";
 import {
   CABLE_ACTION_LABELS,
-  CONNECTION_STATUS_LABELS,
-  INSTALLATION_STATUS_LABELS,
+  cableActionAvailability,
   cableSearchQuery,
   effectiveSort,
   formatDecimal,
   type CableSearch,
   type CableSort,
+  type Role,
 } from "@cables/shared";
+import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
+import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import type { CableSearchResult } from "@/server/cables/search";
 
 const dateFormat = new Intl.DateTimeFormat("es-ES", {
@@ -17,10 +19,15 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
 });
 
-type Props = { search: CableSearch; result: CableSearchResult };
+type Props = {
+  search: CableSearch;
+  result: CableSearchResult;
+  /** When set, each row gets an "Acción" button for what this role can do. */
+  actions?: { role: Role; locations: ActionOption[] };
+};
 
 /** Tabla de resultados. Ordenación y paginación son enlaces: todo vive en la URL. */
-export function SearchResults({ search, result }: Props) {
+export function SearchResults({ search, result, actions }: Props) {
   const { sort, dir } = effectiveSort(search);
 
   if (result.total === 0) {
@@ -82,6 +89,11 @@ export function SearchResults({ search, result }: Props) {
                 Estado
               </th>
               {header("Último movimiento", "activity", "hidden md:table-cell")}
+              {actions ? (
+                <th scope="col" className="px-3 py-2 font-medium">
+                  <span className="sr-only">Acción</span>
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -117,10 +129,10 @@ export function SearchResults({ search, result }: Props) {
                   {cable.origin ?? "—"} → {cable.destination ?? "—"}
                 </td>
                 <td className="px-3 py-2">
-                  {INSTALLATION_STATUS_LABELS[cable.installationStatus]}
-                  <span className="text-muted-foreground block text-xs">
-                    {CONNECTION_STATUS_LABELS[cable.connectionStatus]}
-                  </span>
+                  <CableStatusBadges
+                    installationStatus={cable.installationStatus}
+                    connectionStatus={cable.connectionStatus}
+                  />
                 </td>
                 <td className="hidden px-3 py-2 md:table-cell">
                   {cable.lastAction ? (
@@ -135,6 +147,19 @@ export function SearchResults({ search, result }: Props) {
                     <span className="text-muted-foreground">—</span>
                   )}
                 </td>
+                {actions ? (
+                  <td className="px-3 py-2">
+                    <CableActions
+                      compact
+                      cableId={cable.id}
+                      code={cable.code}
+                      version={cable.version}
+                      state={cable.state}
+                      availability={cableActionAvailability(actions.role, cable.state)}
+                      locations={actions.locations}
+                    />
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
