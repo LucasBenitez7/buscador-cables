@@ -6,10 +6,10 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
-## 2026-11-13 — Fase 6 (1): diseño responsive y tests E2E
+## 2026-11-13 — Fase 6: diseño responsive y tests E2E
 
-**Rama:** `feat/f6-e2e-import`, la única de la fase. La importación, exportación y panel
-seguirán en ella.
+**Rama:** `feat/f6-e2e-import` (#27), la única de la fase. La fase se cierra aquí por decisión
+del usuario: la exportación a PDF pasa a la fase 7 y la importación y el panel, a la 8.
 
 **Qué hay nuevo:**
 
@@ -18,7 +18,7 @@ seguirán en ella.
   táctil.
 - Estados hover, pulsado y foco revisados en toda la app.
 - 28 tests E2E (escritorio y móvil) de los flujos de las fases 1 a 5. El job `e2e` del CI
-  corre ya en cada PR.
+  corre ya en cada PR; en el #27 pasó en 1 min 36 s.
 
 **Encontrado al escribir los E2E:**
 
@@ -31,13 +31,13 @@ seguirán en ella.
 - La pantalla de "olvidé mi contraseña" muestra el mismo mensaje de éxito aunque la petición
   falle por otro motivo que no sea el 429. Es a propósito (no revela si la cuenta existe),
   pero un fallo real del servidor pasaría desapercibido para el usuario. Se revisará en la
-  fase 8 junto con el registro de errores.
+  fase 10 junto con el registro de errores.
 
 **Pendiente:**
 
 - Añadir `e2e` a los checks obligatorios del ruleset de `dev` y `main` cuando lleve unas
   cuantas ejecuciones en verde en el CI.
-- Riesgo ya anotado para la fase 8: el límite de intentos por IP se podría falsear con
+- Riesgo ya anotado para la fase 10 (antes 8): el límite de intentos por IP se podría falsear con
   `X-Forwarded-For` si la app no está detrás de un proxy de confianza.
 
 ## 2026-11-12 — Fase 5: acciones de usuario y trazabilidad

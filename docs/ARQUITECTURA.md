@@ -13,7 +13,7 @@
 | Autenticación      | Better Auth (email + contraseña)             | Sesiones, reset y verificación integrados           |
 | Email              | Mailpit (local) / Resend (producción)        |                                                     |
 | Tests              | Vitest + Testing Library + Playwright        | Unitarios, integración y E2E                        |
-| Offline (fase 7)   | Serwist (service worker) + Dexie (IndexedDB) |                                                     |
+| Offline (fase 9)   | Serwist (service worker) + Dexie (IndexedDB) |                                                     |
 | CI                 | GitHub Actions + CodeQL + Dependabot         | Gratis en repo público; activo desde la fase 4.5    |
 | Despliegue         | Vercel + Railway                             | Docker solo en local (y opcional en producción)     |
 
