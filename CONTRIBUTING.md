@@ -85,14 +85,26 @@ de `docs/PLAN.md` y `pnpm check` está en verde en `dev`. Cerrar una fase **no**
 `main` recibe `dev` únicamente al terminar el proyecto o cuando el responsable lo pida
 expresamente. Nadie (tampoco un agente) lo propone ni lo hace por su cuenta.
 
-Desde la fase 4.5 también es un PR (`dev` → `main`, merge commit) con el CI en verde. El tag
-lo crea el responsable:
+Desde la fase 4.5 también es un PR (`dev` → `main`, merge commit) con el CI en verde. Después
+se etiqueta el merge con la versión:
 
 ```bash
 gh pr create --base main --head dev --title "chore(release): vX.Y.Z"
 gh pr merge --merge
-git tag -a vX.Y.Z -m "…" && git push origin vX.Y.Z      # solo el responsable
+git tag -a vX.Y.Z <commit-del-merge> -m "Fase N: …"
+git push origin vX.Y.Z                                  # se publica con el OK del responsable
 ```
+
+### Tags de versión
+
+- Un tag anotado `vX.Y.Z` por cada merge de `dev` en `main` (la versión de cada fase está en
+  `docs/PLAN.md`). El mensaje dice qué fase cierra.
+- Un agente puede crearlos cuando el responsable se lo pida, pero **pide confirmación antes de
+  publicarlos**.
+- **Un tag publicado no se mueve ni se borra**: quien ya lo descargó tendría otra versión. Si
+  un tag es incorrecto, se publica una versión nueva.
+- Tags actuales: `v0.1.0` (fase 0) y `v0.2.0` (fase 1). Se rehicieron el 2026-11-11 sobre los
+  commits del historial reescrito, antes de publicarlos.
 
 ## Commits — Conventional Commits (en inglés)
 
