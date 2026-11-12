@@ -5,7 +5,7 @@
 ```
 main      ← producción. Solo recibe dev al terminar el proyecto o cuando lo decida el responsable.
  └─ dev   ← integración y rama por defecto en GitHub. Solo cambia por PR con el CI en verde.
-     ├─ feat/<fase>-<descripcion>    nueva funcionalidad   ej. feat/f1-password-reset
+     ├─ feat/f<fase>-<nombre>        una por fase          ej. feat/f5-traceability
      ├─ fix/<descripcion>            corrección            ej. fix/search-empty-filter
      ├─ chore/<descripcion>          tooling, deps, config ej. chore/ci-cache
      └─ docs/<descripcion>           solo documentación
@@ -13,7 +13,10 @@ hotfix/<descripcion>                 sale de main, se mergea a main Y a dev
 ```
 
 - Nunca se hace commit directo en `main` ni en `dev`.
-- Una rama = una funcionalidad pequeña y concreta (idealmente 1–3 días de trabajo).
+- **Una sola rama `feat/*` por fase** (decisión del 2026-11-12). Todo el trabajo de la fase
+  (lógica, servidor, interfaz, tests y documentación) va en ella como commits separados, y se
+  mergea en `dev` con un único PR al terminar la fase. Las ramas `fix/*`, `chore/*` y `docs/*`
+  quedan para cambios sueltos fuera de una fase.
 - Nombres de rama en inglés, en minúsculas y con guiones.
 
 ## Flujo con Pull Requests (desde la fase 4.5)
@@ -50,7 +53,9 @@ Reglas del flujo:
 - **Solo "merge commit"**: ni squash ni rebase. Se conserva la historia de cada rama, igual que
   con `--no-ff`.
 - **Sin force-push** en ramas con PR abierto. Para ponerse al día con `dev`, `git merge`.
-- Un PR = una rama = un cambio concreto. El título del PR sigue Conventional Commits.
+- Un PR por rama: una fase entera o un cambio suelto. El título del PR sigue Conventional
+  Commits. El PR de una fase se puede abrir pronto para ver el CI en cada push, pero solo se
+  mergea cuando la fase está terminada.
 - Los PR de Dependabot también van a `dev` y pasan el mismo CI.
 - Un agente de IA abre el PR por su cuenta, pero **pide confirmación antes de mergearlo**,
   igual que antes con `git merge`.

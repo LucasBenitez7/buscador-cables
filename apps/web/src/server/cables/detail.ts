@@ -1,14 +1,17 @@
 import "server-only";
 import { prisma } from "@cables/db";
 import {
+  CABLE_ACTION_LABELS,
   CABLE_FIELD_LABELS,
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUS_LABELS,
+  describeCableEvent,
   formatDecimal,
   isRole,
+  orderedChanges,
   type CableAction,
+  type CableState,
   type ConnectionStatus,
-  type FieldChange,
   type InstallationStatus,
 } from "@cables/shared";
 import { listLocationOptions } from "@/server/cables/service";
@@ -20,13 +23,21 @@ export type CableHistoryEntry = {
   action: CableAction;
   user: string;
   at: Date;
+  /** Predicate of the sentence after the user's name: "movió el cable de A a B". */
+  summary: string;
   notes: string | null;
   changes: ReadableChange[];
+  /** For corrections: the event they correct ("Tendido · 11/11/26 10:42"). */
+  corrects: string | null;
 };
 
 export type CableDetail = {
   id: string;
   code: string;
+  /** For the action dialogs: the version the user acts on (concurrency control). */
+  version: number;
+  /** Raw state for the action state machine (ids, not names). */
+  state: CableState;
   description: string | null;
   type: string | null;
   color: { name: string; hex: string | null } | null;
@@ -56,12 +67,38 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
 });
 
-type Lookups = {
+/** Names for the ids stored in events (locations by their full route). */
+export type Lookups = {
   locations: Map<string, string>;
   types: Map<string, string>;
   colors: Map<string, string>;
   manufacturers: Map<string, string>;
 };
+
+export async function loadLookups(): Promise<Lookups> {
+  const byName = { select: { id: true, name: true } } as const;
+  const [locations, types, colors, manufacturers] = await Promise.all([
+    listLocationOptions({ includePlants: true }),
+    prisma.cableType.findMany(byName),
+    prisma.color.findMany(byName),
+    prisma.manufacturer.findMany(byName),
+  ]);
+  const toMap = (items: { id: string; name?: string; label?: string }[]) =>
+    new Map(items.map((item) => [item.id, item.label ?? item.name ?? ""]));
+  return {
+    locations: toMap(locations),
+    types: toMap(types),
+    colors: toMap(colors),
+    manufacturers: toMap(manufacturers),
+  };
+}
+
+export const locationName = (lookups: Lookups, locationId: string | null) =>
+  locationId ? (lookups.locations.get(locationId) ?? "(ubicación eliminada)") : null;
+
+/** Users whose stored role is no longer valid are flagged instead of hidden. */
+export const userName = (user: { name: string; role: string }) =>
+  isRole(user.role) ? user.name : `${user.name} (rol desconocido)`;
 
 /** Turns a stored `{ from, to }` value into text: names instead of ids, labels, commas. */
 function readableValue(field: string, value: unknown, lookups: Lookups): string {
@@ -91,11 +128,8 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
   }
 }
 
-function readableChanges(changes: unknown, lookups: Lookups): ReadableChange[] {
-  if (typeof changes !== "object" || changes === null) {
-    return [];
-  }
-  return Object.entries(changes as Record<string, FieldChange>).map(([field, change]) => ({
+export function readableChanges(changes: unknown, lookups: Lookups): ReadableChange[] {
+  return orderedChanges(changes).map(([field, change]) => ({
     field: CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ?? field,
     from: readableValue(field, change?.from, lookups),
     to: readableValue(field, change?.to, lookups),
@@ -119,7 +153,10 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       events: {
         orderBy: { createdAt: "desc" },
         take: HISTORY_LIMIT,
-        include: { user: { select: { name: true, role: true } } },
+        include: {
+          user: { select: { name: true, role: true } },
+          correctsEvent: { select: { action: true, createdAt: true } },
+        },
       },
     },
   });
@@ -127,26 +164,8 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
     return null;
   }
 
-  const byName = { select: { id: true, name: true } } as const;
-  const [locations, types, colors, manufacturers] = await Promise.all([
-    listLocationOptions({ includePlants: true }),
-    prisma.cableType.findMany(byName),
-    prisma.color.findMany(byName),
-    prisma.manufacturer.findMany(byName),
-  ]);
-  const toMap = (items: { id: string; name?: string; label?: string }[]) =>
-    new Map(items.map((item) => [item.id, item.label ?? item.name ?? ""]));
-  const lookups: Lookups = {
-    locations: toMap(locations),
-    types: toMap(types),
-    colors: toMap(colors),
-    manufacturers: toMap(manufacturers),
-  };
-  const location = (locationId: string | null) =>
-    locationId ? (lookups.locations.get(locationId) ?? null) : null;
-
-  const userName = (user: { name: string; role: string }) =>
-    isRole(user.role) ? user.name : `${user.name} (rol desconocido)`;
+  const lookups = await loadLookups();
+  const location = (locationId: string | null) => locationName(lookups, locationId);
   const deletion = cable.deletedAt
     ? cable.events.find((event) => event.action === "DELETED")
     : undefined;
@@ -154,6 +173,15 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
   return {
     id: cable.id,
     code: cable.code,
+    version: cable.version,
+    state: {
+      installationStatus: cable.installationStatus,
+      connectionStatus: cable.connectionStatus,
+      currentLocationId: cable.currentLocationId,
+      originId: cable.originId,
+      destinationId: cable.destinationId,
+      deleted: cable.deletedAt !== null,
+    },
     description: cable.description,
     type: cable.type?.name ?? null,
     color: cable.color,
@@ -191,8 +219,17 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       action: event.action,
       user: userName(event.user),
       at: event.createdAt,
+      summary: describeCableEvent({
+        action: event.action,
+        changes: event.changes,
+        fromLocation: location(event.fromLocationId),
+        toLocation: location(event.toLocationId),
+      }),
       notes: event.notes,
       changes: readableChanges(event.changes, lookups),
+      corrects: event.correctsEvent
+        ? `${CABLE_ACTION_LABELS[event.correctsEvent.action]} · ${dateFormat.format(event.correctsEvent.createdAt)}`
+        : null,
     })),
   };
 }

@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@cables/db";
-import { createCableSchema, updateCableSchema } from "@cables/shared";
+import { cableActionSchema, createCableSchema, updateCableSchema } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getCableDetail } from "./detail";
+import { runCableAction } from "./field-actions";
 import { createCable, deleteCable, getCableForEdit, updateCable } from "./service";
 
 let actor: { id: string };
@@ -104,6 +105,47 @@ describe("getCableDetail", () => {
         { field: "Estado de instalación", from: "—", to: "Tendido" },
       ]),
     );
+  });
+
+  it("tells each field action as a sentence with its changes in a stable order", async () => {
+    const { id } = await newCable();
+    const supervisor = { id: actor.id, role: "ADMIN" as const };
+    const run = async (fields: Record<string, string>) => {
+      const { version } = await prisma.cable.findUniqueOrThrow({ where: { id } });
+      await runCableAction(
+        supervisor,
+        cableActionSchema.parse({ cableId: id, version: String(version), ...fields }),
+      );
+    };
+    await run({ action: "DISCONNECTED", end: "ORIGIN" });
+    await run({ action: "COILED", locationId: "c1" });
+    const coiled = await prisma.cableEvent.findFirstOrThrow({
+      where: { cableId: id, action: "COILED" },
+    });
+    await run({
+      action: "CORRECTION",
+      correctsEventId: coiled.id,
+      installationStatus: "COILED",
+      connectionStatus: "DISCONNECTED",
+      currentLocationId: "c2",
+      notes: "Era la caldera 2",
+    });
+
+    const [correction, coil, disconnection] = (await getCableDetail(id))?.history ?? [];
+
+    expect(disconnection?.summary).toBe("desconectó el extremo de origen");
+    expect(coil?.summary).toBe("enrolló el cable en Norte › Calderas › Caldera 1");
+    // Regresión: jsonb desordenaba los cambios; ahora siguen el orden del formulario.
+    expect(coil?.changes.map((change) => change.field)).toEqual([
+      "Estado de instalación",
+      "Estado de conexión",
+      "Ubicación actual",
+    ]);
+    expect(correction).toMatchObject({
+      summary: "corrigió un movimiento anterior",
+      corrects: expect.stringMatching(/^Enrollado · /),
+      notes: "Era la caldera 2",
+    });
   });
 
   it("keeps retired cables reachable with who, when and why", async () => {

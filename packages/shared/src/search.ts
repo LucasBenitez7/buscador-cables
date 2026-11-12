@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CONNECTION_STATUSES, INSTALLATION_STATUSES } from "./cables";
+import { CABLE_ACTIONS, CONNECTION_STATUSES, INSTALLATION_STATUSES } from "./cables";
 
 /**
  * Cable search filters as they travel in the URL (`/cables?q=sh50&type=…`).
@@ -7,13 +7,21 @@ import { CONNECTION_STATUSES, INSTALLATION_STATUSES } from "./cables";
  * URLs are shared and edited by hand, so an invalid value is ignored instead of
  * failing the whole search. Numbers accept a decimal comma ("2,5").
  */
-export const CABLE_SORTS = ["relevance", "code", "updated", "length", "section"] as const;
+export const CABLE_SORTS = [
+  "relevance",
+  "code",
+  "updated",
+  "activity",
+  "length",
+  "section",
+] as const;
 export type CableSort = (typeof CABLE_SORTS)[number];
 
 export const CABLE_SORT_LABELS: Record<CableSort, string> = {
   relevance: "Relevancia",
   code: "Código",
   updated: "Última modificación",
+  activity: "Último movimiento",
   length: "Longitud",
   section: "Sección",
 };
@@ -40,6 +48,19 @@ const decimal = z
   .optional()
   .catch(undefined);
 
+/** "2026-11-12" (what `<input type="date">` sends). Invalid dates are ignored. */
+const day = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  // `Date.parse` acepta "2026-11-31" y lo convierte en el 1 de diciembre: se exige ida y vuelta.
+  .refine((value) => {
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+  })
+  .optional()
+  .catch(undefined);
+
 export const cableSearchSchema = z.object({
   q: text(50),
   location: id,
@@ -54,6 +75,12 @@ export const cableSearchSchema = z.object({
   diameterMax: decimal,
   lengthMin: decimal,
   lengthMax: decimal,
+  // Movimientos: cables con algún evento de esa persona, de esa acción y en esas fechas
+  // ("cables que conectó Juan esta semana"). Se combinan sobre el mismo evento.
+  actor: id,
+  action: z.enum(CABLE_ACTIONS).optional().catch(undefined),
+  from: day,
+  to: day,
   sort: z.enum(CABLE_SORTS).optional().catch(undefined),
   dir: z.enum(["asc", "desc"]).optional().catch(undefined),
   page: z.coerce.number().int().min(1).max(10_000).optional().catch(undefined),
@@ -81,7 +108,7 @@ export function effectiveSort(search: CableSearch): { sort: CableSort; dir: "asc
   if (sort === "relevance" && !search.q) {
     return { sort: "code", dir: search.dir ?? "asc" };
   }
-  const defaultDir = sort === "updated" ? "desc" : "asc";
+  const defaultDir = sort === "updated" || sort === "activity" ? "desc" : "asc";
   return { sort, dir: search.dir ?? defaultDir };
 }
 
@@ -104,6 +131,11 @@ export function cableSearchQuery(
   }
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+/** True when any of the "who / what / when" filters is set. */
+export function hasActivityFilters(search: CableSearch): boolean {
+  return Boolean(search.actor || search.action || search.from || search.to);
 }
 
 /** True when any filter (not paging or sorting) is set. */

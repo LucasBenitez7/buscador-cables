@@ -9,6 +9,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
   const canManageUsers = hasPermission(user.role, "user:manage");
   const canManageCatalogs = hasPermission(user.role, "catalog:manage");
+  const canViewActivity = hasPermission(user.role, "activity:view");
 
   return (
     <div className="min-h-dvh">
@@ -24,6 +25,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link href="/locations" className="text-muted-foreground hover:text-foreground">
               Ubicaciones
             </Link>
+            <Link href="/activity/me" className="text-muted-foreground hover:text-foreground">
+              Mi actividad
+            </Link>
+            {canViewActivity ? (
+              <Link href="/activity" className="text-muted-foreground hover:text-foreground">
+                Actividad
+              </Link>
+            ) : null}
             {canManageCatalogs ? (
               <Link href="/catalogs" className="text-muted-foreground hover:text-foreground">
                 Catálogos

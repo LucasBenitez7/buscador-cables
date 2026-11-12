@@ -6,6 +6,55 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-12 — Fase 5: acciones de usuario y trazabilidad
+
+**Ramas:** la máquina de estados (#22) y el servicio de acciones (#23) entraron por separado.
+El resto va en `feat/f5-traceability` (#26), la primera rama única de una fase, según la regla
+del 2026-11-12. El #25 lo cerró GitHub al renombrar su rama y lo sustituye el #26.
+
+**Qué hay nuevo:**
+
+- Tender, enrollar, conectar, desconectar, mover, retirar y corregir. Cada acción guarda, en una
+  sola transacción, el estado, un evento inmutable y las columnas resumen.
+- Si dos personas actúan a la vez sobre el mismo cable, solo entra una.
+- Las acciones se registran desde la ficha (un botón por acción) y desde la tabla del buscador
+  (botón "Acción" con selector).
+- Cada rol ve solo sus acciones, y las desactivadas explican por qué.
+- Estados en colores: verde conectado, ámbar a medias, rojo retirado.
+- El historial de la ficha se lee como frases ("Juan conectó el extremo de origen").
+- El buscador filtra por quién, qué y cuándo en todo el historial.
+- Páginas nuevas: "Mi actividad", para todos, y "Actividad reciente", para supervisores
+  (permiso `activity:view`).
+
+**Encontrado y corregido:**
+
+| Problema                                                                                                                            | Corrección                                                         |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Postgres guarda los cambios de cada evento (`jsonb`) con otro orden de claves y la ficha los mostraba desordenados.                 | `orderedChanges` los ordena como el formulario. Test de regresión. |
+| `Date.parse("2026-11-31")` es válido en JavaScript (pasa al 1 de diciembre) y el filtro de fechas lo aceptaba.                      | Se exige que la fecha vuelva igual tras convertirla. Test.         |
+| El diálogo nuevo usaba `bg-black/60` para el fondo; el test del tema lo rechazó.                                                    | `bg-background/80` con desenfoque.                                 |
+| El permiso `activity:view` se añadió a los roles pero no al catálogo; el test del catálogo lo detectó.                              | Añadido a `PERMISSIONS`.                                           |
+| "Desconectar" decía "no está conectado por ese extremo" en un cable sin ningún extremo conectado.                                   | "El cable no está conectado."                                      |
+| Los tests de usuarios limpiaban con `deleteMany`, que falla si otro test deja eventos de esos usuarios (el historial usa RESTRICT). | `TRUNCATE … CASCADE` como el resto de tests de integración.        |
+
+**Verificación en la app** (admin del seed, cable CM-5):
+
+- Desde la ficha: tender, conectar el origen (estado en ámbar) y enrollar.
+- Desde la tabla: mover.
+- El historial, "Mi actividad" y "Actividad reciente" (filtrada por "Movido") muestran cada paso
+  con frases, quién, cuándo y los cambios ordenados.
+- A 375 px, el diálogo cabe y no hay desplazamiento lateral. Sin errores en la consola.
+- `pnpm check`: 401 tests en verde.
+
+**Pendiente:**
+
+- No se probó en el navegador con una cuenta de técnico. Que no vea "Actividad" ni pueda abrir
+  `/activity` lo cubren el permiso y sus tests, y `requirePermission` redirige al inicio.
+- Los cables del seed no tienen evento de alta (`CREATED`), porque se crean con `createMany`.
+  Su historial empieza en el primer movimiento.
+
+---
+
 ## 2026-11-11 — Fase 4.5: tema oscuro (rama `feat/f4.5-dark-theme`)
 
 **Qué hay nuevo:**

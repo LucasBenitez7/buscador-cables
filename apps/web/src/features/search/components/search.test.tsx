@@ -15,6 +15,7 @@ const options: SearchOptions = {
     { id: "p", label: "Norte", type: "PLANT" },
     { id: "a", label: "Norte › Calderas", type: "AREA" },
   ],
+  users: [{ id: "u1", label: "Juan Pérez" }],
 };
 
 describe("SearchFilters", () => {
@@ -44,6 +45,24 @@ describe("SearchFilters", () => {
     expect(screen.getByText("Más filtros").closest("details")).toHaveAttribute("open");
   });
 
+  it("filters by who did what and when", () => {
+    render(<SearchFilters search={{}} options={options} />);
+
+    fireEvent.change(screen.getByLabelText("Quién"), { target: { value: "u1" } });
+    fireEvent.change(screen.getByLabelText("Qué hizo"), { target: { value: "CONNECTED" } });
+    fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-11-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+
+    expect(push).toHaveBeenCalledWith("/cables?actor=u1&action=CONNECTED&from=2026-11-01");
+  });
+
+  it("opens 'Más filtros' when a who / what / when filter is active", () => {
+    render(<SearchFilters search={{ action: "MOVED" }} options={options} />);
+
+    expect(screen.getByText("Más filtros").closest("details")).toHaveAttribute("open");
+    expect(screen.getByLabelText("Qué hizo")).toHaveValue("MOVED");
+  });
+
   it("clears every filter", () => {
     render(<SearchFilters search={{ q: "SH" }} options={options} />);
 
@@ -56,6 +75,15 @@ describe("SearchFilters", () => {
 const item = {
   id: "c1",
   code: "SH-50",
+  version: 2,
+  state: {
+    installationStatus: "LAID",
+    connectionStatus: "CONNECTED",
+    currentLocationId: null,
+    originId: "o",
+    destinationId: "d",
+    deleted: false,
+  },
   description: null,
   type: "Control",
   color: { name: "Gris", hex: "#8E9196" },
@@ -122,6 +150,33 @@ describe("SearchResults", () => {
       "/cables?type=t1&page=3",
     );
     expect(screen.getByRole("status")).toHaveTextContent("60 cables · página 2 de 3");
+  });
+
+  it("shows the status as coloured badges", () => {
+    render(
+      <SearchResults search={{}} result={{ items: [item], total: 1, page: 1, pageCount: 1 }} />,
+    );
+
+    expect(screen.getByText("Conectado")).toHaveClass("text-success");
+  });
+
+  it("adds an action button per row only when the role can act", () => {
+    const result = { items: [item], total: 1, page: 1, pageCount: 1 };
+    const { rerender } = render(<SearchResults search={{}} result={result} />);
+    expect(screen.queryByRole("button", { name: "Acción" })).toBeNull();
+
+    rerender(
+      <SearchResults search={{}} result={result} actions={{ role: "TECHNICIAN", locations: [] }} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Acción" }));
+
+    // Picker with what a technician can do on a laid, connected cable (no corrections here).
+    expect(screen.getByRole("button", { name: "Desconectar" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Conectar" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Corregir" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Desconectar" }));
+    expect(screen.getByRole("heading", { name: /Desconectar · SH-50/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "← Otra acción" })).toBeInTheDocument();
   });
 
   it("warns when it shows similar codes instead of matches", () => {

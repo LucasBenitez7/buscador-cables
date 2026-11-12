@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { hasPermission, parseCableSearch } from "@cables/shared";
+import {
+  CABLE_FIELD_ACTIONS,
+  canRunCableAction,
+  hasPermission,
+  parseCableSearch,
+} from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import { SearchResults } from "@/features/search/components/search-results";
 import { getSearchOptions, searchCables } from "@/server/cables/search";
+import { listLocationOptions } from "@/server/cables/service";
 import { requireUser } from "@/server/session";
 
 export const metadata: Metadata = { title: "Cables" };
@@ -17,7 +23,13 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
   const params = await searchParams;
   const search = parseCableSearch(params);
   const deleted = typeof params.deleted === "string" ? params.deleted : undefined;
-  const [result, options] = await Promise.all([searchCables(search), getSearchOptions()]);
+  // Solo quien puede registrar alguna acción ve la columna "Acción" (los VIEWER, no).
+  const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user.role, action));
+  const [result, options, locations] = await Promise.all([
+    searchCables(search),
+    getSearchOptions(),
+    canAct ? listLocationOptions() : Promise.resolve([]),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -37,7 +49,11 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
       ) : null}
 
       <SearchFilters search={search} options={options} />
-      <SearchResults search={search} result={result} />
+      <SearchResults
+        search={search}
+        result={result}
+        actions={canAct ? { role: user.role, locations } : undefined}
+      />
     </div>
   );
 }

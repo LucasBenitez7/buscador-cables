@@ -34,8 +34,11 @@ async function insertSession(userId: string): Promise<void> {
 }
 
 beforeEach(async () => {
-  // Sesiones y cuentas se borran en cascada.
-  await prisma.user.deleteMany();
+  // Otros tests dejan cables y eventos que apuntan a usuarios (el historial usa RESTRICT):
+  // se vacía todo lo que depende de "user". Sesiones y cuentas caen en cascada.
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE "cable_event", "cable", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+  );
 });
 
 describe("createUser", () => {

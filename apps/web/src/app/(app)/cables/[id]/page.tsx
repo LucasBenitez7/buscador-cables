@@ -4,13 +4,16 @@ import { notFound } from "next/navigation";
 import { cache, type ReactNode } from "react";
 import {
   CABLE_ACTION_LABELS,
-  CONNECTION_STATUS_LABELS,
-  INSTALLATION_STATUS_LABELS,
+  cableActionAvailability,
+  canRunCableAction,
   formatDecimal,
   hasPermission,
 } from "@cables/shared";
 import { Button } from "@/components/ui/button";
+import { CableActions } from "@/features/cables/components/cable-actions";
+import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getCableDetail } from "@/server/cables/detail";
+import { listLocationOptions } from "@/server/cables/service";
 import { requireUser } from "@/server/session";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +46,15 @@ export default async function CablePage({ params }: { params: Params }) {
     notFound();
   }
   const canEdit = !cable.deleted && hasPermission(user.role, "cable:update");
+  // Dados de baja: sin acciones. El resto ve solo lo que su rol permite.
+  const availability = cable.deleted ? [] : cableActionAvailability(user.role, cable.state);
+  const locations = availability.length > 0 ? await listLocationOptions() : [];
+  const correctableEvents = canRunCableAction(user.role, "CORRECTION")
+    ? cable.history.map((entry) => ({
+        id: entry.id,
+        label: `${CABLE_ACTION_LABELS[entry.action]} · ${entry.user} · ${dateFormat.format(entry.at)}`,
+      }))
+    : [];
 
   return (
     <article className="space-y-8">
@@ -56,10 +68,10 @@ export default async function CablePage({ params }: { params: Params }) {
           </p>
           <h1 className="font-mono text-3xl font-semibold tracking-tight">{cable.code}</h1>
           {cable.description ? <p className="text-muted-foreground">{cable.description}</p> : null}
-          <div className="flex flex-wrap gap-2 text-sm">
-            <Badge>{INSTALLATION_STATUS_LABELS[cable.installationStatus]}</Badge>
-            <Badge>{CONNECTION_STATUS_LABELS[cable.connectionStatus]}</Badge>
-          </div>
+          <CableStatusBadges
+            installationStatus={cable.installationStatus}
+            connectionStatus={cable.connectionStatus}
+          />
         </div>
         {canEdit ? (
           <Button asChild variant="outline">
@@ -74,6 +86,16 @@ export default async function CablePage({ params }: { params: Params }) {
           {cable.deleted.reason ? `. Motivo: ${cable.deleted.reason}` : ""}.
         </p>
       ) : null}
+
+      <CableActions
+        cableId={cable.id}
+        code={cable.code}
+        version={cable.version}
+        state={cable.state}
+        availability={availability}
+        locations={locations}
+        events={correctableEvents}
+      />
 
       <Section title="Recorrido">
         <ol className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
@@ -140,20 +162,27 @@ export default async function CablePage({ params }: { params: Params }) {
         )}
       </Section>
 
-      <Section title="Historial">
+      <Section title="Historial (más reciente primero)">
         {cable.history.length === 0 ? (
           <p className="text-muted-foreground text-sm">Sin historial.</p>
         ) : (
-          <ol className="space-y-4 border-l pl-4">
+          <ol className="space-y-5 border-l pl-4">
             {cable.history.map((entry) => (
-              <li key={entry.id} className="space-y-1 text-sm">
+              <li key={entry.id} className="relative space-y-1 text-sm">
+                <span
+                  aria-hidden
+                  className="bg-border absolute top-1.5 -left-[1.3125rem] size-2 rounded-full"
+                />
+                <p className="text-muted-foreground text-xs">
+                  <time dateTime={entry.at.toISOString()}>{dateFormat.format(entry.at)}</time> ·{" "}
+                  {CABLE_ACTION_LABELS[entry.action]}
+                </p>
                 <p>
-                  <span className="font-medium">{CABLE_ACTION_LABELS[entry.action]}</span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · {entry.user} ·{" "}
-                    <time dateTime={entry.at.toISOString()}>{dateFormat.format(entry.at)}</time>
-                  </span>
+                  <span className="font-medium">{entry.user}</span> {entry.summary}
+                  {entry.corrects ? (
+                    <span className="text-muted-foreground"> ({entry.corrects})</span>
+                  ) : null}
+                  .
                 </p>
                 {entry.notes ? <p className="italic">“{entry.notes}”</p> : null}
                 {entry.changes.length > 0 ? (
@@ -191,8 +220,4 @@ function Item({ label, children }: { label: string; children: ReactNode }) {
       <dd>{children ?? "—"}</dd>
     </div>
   );
-}
-
-function Badge({ children }: { children: ReactNode }) {
-  return <span className="bg-muted rounded-full px-2.5 py-0.5">{children}</span>;
 }

@@ -293,7 +293,8 @@ describe("cableActionAvailability", () => {
     expect(actions.CONNECTED).toBeNull();
     expect(actions.COILED).toBeNull();
     expect(actions.LAID).toMatch(/ya está tendido/);
-    expect(actions.DISCONNECTED).toMatch(/no está conectado/);
+    // Sin ningún extremo conectado, el motivo no habla de "ese extremo".
+    expect(actions.DISCONNECTED).toBe("El cable no está conectado.");
     expect(actions.MOVED).toMatch(/primero enróllalo/);
   });
 

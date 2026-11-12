@@ -6,4 +6,6 @@ export * from "./locations";
 export * from "./catalogs";
 export * from "./cables";
 export * from "./cable-actions";
+export * from "./cable-history";
+export * from "./activity";
 export * from "./search";
