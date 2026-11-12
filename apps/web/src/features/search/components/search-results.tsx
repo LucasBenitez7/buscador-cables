@@ -9,6 +9,7 @@ import {
   type CableSort,
   type Role,
 } from "@cables/shared";
+import { Button } from "@/components/ui/button";
 import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import type { CableSearchResult } from "@/server/cables/search";
@@ -49,7 +50,7 @@ export function SearchResults({ search, result, actions }: Props) {
       >
         <Link
           href={`/cables${cableSearchQuery(search, { sort: key, dir: nextDir, page: undefined })}`}
-          className="hover:text-foreground inline-flex items-center gap-1"
+          className="hover:text-foreground focus-visible:ring-ring/50 inline-flex items-center gap-1 rounded-sm outline-none focus-visible:ring-3"
         >
           {label}
           <span aria-hidden className="text-xs">
@@ -72,7 +73,72 @@ export function SearchResults({ search, result, actions }: Props) {
         {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
       </p>
 
-      <div className="overflow-x-auto rounded-lg border">
+      {/* Móvil: tarjetas, más fáciles de leer y de pulsar que una tabla estrecha. */}
+      <ul className="space-y-3 md:hidden">
+        {result.items.map((cable) => (
+          <li key={cable.id} className="bg-card space-y-2 rounded-lg border p-3 text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <Link
+                href={`/cables/${cable.id}`}
+                className="hover:text-primary active:text-primary focus-visible:ring-ring/50 -m-1 rounded-md p-1 font-mono text-base font-semibold outline-none focus-visible:ring-3"
+              >
+                {cable.code}
+              </Link>
+              <CableStatusBadges
+                installationStatus={cable.installationStatus}
+                connectionStatus={cable.connectionStatus}
+              />
+            </div>
+            <p>
+              {cable.origin ?? "—"} → {cable.destination ?? "—"}
+            </p>
+            <p className="text-muted-foreground inline-flex items-center gap-1.5">
+              {cable.color ? (
+                <span
+                  aria-hidden
+                  className="border-foreground/40 size-3 shrink-0 rounded-full border"
+                  style={{ backgroundColor: cable.color.hex ?? "transparent" }}
+                />
+              ) : null}
+              {[
+                cable.type,
+                cable.crossSectionMm2 === null
+                  ? null
+                  : `${cable.conductors ? `${cable.conductors}×` : ""}${formatDecimal(cable.crossSectionMm2)} mm²`,
+                cable.lengthM === null ? null : `${formatDecimal(cable.lengthM)} m`,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "Sin datos técnicos"}
+            </p>
+            <div className="flex items-end justify-between gap-3 border-t pt-2">
+              <p className="text-muted-foreground text-xs">
+                {cable.lastAction ? (
+                  <>
+                    <span className="text-foreground">{CABLE_ACTION_LABELS[cable.lastAction]}</span>
+                    {cable.lastActionBy ? ` · ${cable.lastActionBy}` : ""}
+                    {cable.lastActionAt ? ` · ${dateFormat.format(cable.lastActionAt)}` : ""}
+                  </>
+                ) : (
+                  "Sin movimientos"
+                )}
+              </p>
+              {actions ? (
+                <CableActions
+                  compact
+                  cableId={cable.id}
+                  code={cable.code}
+                  version={cable.version}
+                  state={cable.state}
+                  availability={cableActionAvailability(actions.role, cable.state)}
+                  locations={actions.locations}
+                />
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-lg border md:block">
         <table className="w-full text-left text-sm">
           <thead className="bg-muted/50 text-muted-foreground">
             <tr>
@@ -98,9 +164,12 @@ export function SearchResults({ search, result, actions }: Props) {
           </thead>
           <tbody>
             {result.items.map((cable) => (
-              <tr key={cable.id} className="border-t align-top">
+              <tr key={cable.id} className="hover:bg-muted/40 border-t align-top transition-colors">
                 <td className="px-3 py-2 font-mono font-medium whitespace-nowrap">
-                  <Link href={`/cables/${cable.id}`} className="underline-offset-4 hover:underline">
+                  <Link
+                    href={`/cables/${cable.id}`}
+                    className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+                  >
                     {cable.code}
                   </Link>
                 </td>
@@ -169,9 +238,14 @@ export function SearchResults({ search, result, actions }: Props) {
       {result.pageCount > 1 ? (
         <nav aria-label="Paginación" className="flex items-center justify-between gap-3 text-sm">
           {result.page > 1 ? (
-            <Link href={`/cables${cableSearchQuery(search, { page: result.page - 1 })}`} rel="prev">
-              ← Anterior
-            </Link>
+            <Button asChild variant="outline">
+              <Link
+                href={`/cables${cableSearchQuery(search, { page: result.page - 1 })}`}
+                rel="prev"
+              >
+                ← Anterior
+              </Link>
+            </Button>
           ) : (
             <span />
           )}
@@ -179,9 +253,14 @@ export function SearchResults({ search, result, actions }: Props) {
             Página {result.page} de {result.pageCount}
           </span>
           {result.page < result.pageCount ? (
-            <Link href={`/cables${cableSearchQuery(search, { page: result.page + 1 })}`} rel="next">
-              Siguiente →
-            </Link>
+            <Button asChild variant="outline">
+              <Link
+                href={`/cables${cableSearchQuery(search, { page: result.page + 1 })}`}
+                rel="next"
+              >
+                Siguiente →
+              </Link>
+            </Button>
           ) : (
             <span />
           )}

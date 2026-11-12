@@ -1,7 +1,9 @@
 "use client";
 
+import { cn } from "cn";
+import { SlidersHorizontalIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { FormEvent, ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import {
   CABLE_ACTIONS,
   CABLE_ACTION_LABELS,
@@ -17,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { SearchOptions } from "@/server/cables/search";
 
 type Props = { search: CableSearch; options: SearchOptions };
@@ -34,6 +37,7 @@ const RANGES = [
  */
 export function SearchFilters({ search, options }: Props) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const advancedActive = Boolean(
     search.manufacturer ||
     search.color ||
@@ -55,6 +59,10 @@ export function SearchFilters({ search, options }: Props) {
   const text = (value: number | string | undefined) =>
     value === undefined ? "" : String(value).replace(".", ",");
 
+  // En el móvil solo se ve el cuadro de búsqueda; el resto se despliega con "Filtros".
+  const { q: _q, sort: _sort, dir: _dir, page: _page, ...filters } = search;
+  const activeCount = Object.values(filters).filter((value) => value !== undefined).length;
+
   return (
     // La clave reinicia los campos cuando cambia la URL (botón atrás, "Limpiar").
     <form
@@ -65,7 +73,7 @@ export function SearchFilters({ search, options }: Props) {
       className="space-y-4 rounded-lg border p-4"
     >
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-56 flex-1 space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-1.5 sm:min-w-56">
           <Label htmlFor="q">Código o descripción</Label>
           <Input
             id="q"
@@ -74,9 +82,24 @@ export function SearchFilters({ search, options }: Props) {
             defaultValue={search.q ?? ""}
             placeholder="sh50, SH 50, bomba…"
             autoComplete="off"
+            enterKeyHint="search"
           />
         </div>
-        <Filter label="Ubicación (incluye lo que contiene)" htmlFor="location" wide>
+        <Button
+          type="button"
+          variant="outline"
+          className="md:hidden"
+          aria-expanded={expanded}
+          aria-controls="cable-filters"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <SlidersHorizontalIcon />
+          Filtros{activeCount > 0 ? ` (${activeCount})` : ""}
+        </Button>
+      </div>
+
+      <div id="cable-filters" className={cn("space-y-4 md:block", expanded ? "block" : "hidden")}>
+        <Filter label="Ubicación (incluye lo que contiene)" htmlFor="location">
           <Select id="location" name="location" defaultValue={search.location}>
             {options.locations.map((location) => (
               <option key={location.id} value={location.id}>
@@ -85,117 +108,116 @@ export function SearchFilters({ search, options }: Props) {
             ))}
           </Select>
         </Filter>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Filter label="Tipo" htmlFor="type">
-          <Select id="type" name="type" defaultValue={search.type}>
-            {options.cableTypes.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </Select>
-        </Filter>
-        <Filter label="Instalación" htmlFor="installation">
-          <Select id="installation" name="installation" defaultValue={search.installation}>
-            {INSTALLATION_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {INSTALLATION_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </Select>
-        </Filter>
-        <Filter label="Conexión" htmlFor="connection">
-          <Select id="connection" name="connection" defaultValue={search.connection}>
-            {CONNECTION_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {CONNECTION_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </Select>
-        </Filter>
-      </div>
-
-      <details open={advancedActive} className="group">
-        <summary className="text-muted-foreground cursor-pointer text-sm select-none">
-          Más filtros
-        </summary>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Filter label="Color" htmlFor="color">
-            <Select id="color" name="color" defaultValue={search.color}>
-              {options.colors.map((item) => (
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+          <Filter label="Tipo" htmlFor="type">
+            <Select id="type" name="type" defaultValue={search.type}>
+              {options.cableTypes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.label}
                 </option>
               ))}
             </Select>
           </Filter>
-          <Filter label="Fabricante" htmlFor="manufacturer">
-            <Select id="manufacturer" name="manufacturer" defaultValue={search.manufacturer}>
-              {options.manufacturers.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
+          <Filter label="Instalación" htmlFor="installation">
+            <Select id="installation" name="installation" defaultValue={search.installation}>
+              {INSTALLATION_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {INSTALLATION_STATUS_LABELS[status]}
                 </option>
               ))}
             </Select>
           </Filter>
-          {RANGES.map(([name, label]) => (
-            <fieldset key={name} className="space-y-1.5">
-              <legend className="text-sm leading-none font-medium">{label}</legend>
-              <div className="flex items-center gap-2">
-                <Input
-                  name={`${name}Min`}
-                  aria-label={`${label}: desde`}
-                  placeholder="desde"
-                  inputMode="decimal"
-                  defaultValue={text(search[`${name}Min`])}
-                />
-                <span aria-hidden>–</span>
-                <Input
-                  name={`${name}Max`}
-                  aria-label={`${label}: hasta`}
-                  placeholder="hasta"
-                  inputMode="decimal"
-                  defaultValue={text(search[`${name}Max`])}
-                />
-              </div>
-            </fieldset>
-          ))}
+          <Filter label="Conexión" htmlFor="connection">
+            <Select id="connection" name="connection" defaultValue={search.connection}>
+              {CONNECTION_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {CONNECTION_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </Filter>
         </div>
-        <fieldset className="mt-4 space-y-3">
-          <legend className="text-sm font-medium">
-            Movimientos{" "}
-            <span className="text-muted-foreground font-normal">(quién, qué, cuándo)</span>
-          </legend>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Filter label="Quién" htmlFor="actor">
-              <Select id="actor" name="actor" defaultValue={search.actor}>
-                {options.users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.label}
+
+        <details open={advancedActive} className="group">
+          <summary className="text-muted-foreground cursor-pointer text-sm select-none">
+            Más filtros
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Filter label="Color" htmlFor="color">
+              <Select id="color" name="color" defaultValue={search.color}>
+                {options.colors.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
                   </option>
                 ))}
               </Select>
             </Filter>
-            <Filter label="Qué hizo" htmlFor="action">
-              <Select id="action" name="action" defaultValue={search.action}>
-                {CABLE_ACTIONS.map((action) => (
-                  <option key={action} value={action}>
-                    {CABLE_ACTION_LABELS[action]}
+            <Filter label="Fabricante" htmlFor="manufacturer">
+              <Select id="manufacturer" name="manufacturer" defaultValue={search.manufacturer}>
+                {options.manufacturers.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
                   </option>
                 ))}
               </Select>
             </Filter>
-            <Filter label="Desde" htmlFor="from">
-              <Input id="from" name="from" type="date" defaultValue={search.from ?? ""} />
-            </Filter>
-            <Filter label="Hasta" htmlFor="to">
-              <Input id="to" name="to" type="date" defaultValue={search.to ?? ""} />
-            </Filter>
+            {RANGES.map(([name, label]) => (
+              <fieldset key={name} className="space-y-1.5">
+                <legend className="text-sm leading-none font-medium">{label}</legend>
+                <div className="flex items-center gap-2">
+                  <Input
+                    name={`${name}Min`}
+                    aria-label={`${label}: desde`}
+                    placeholder="desde"
+                    inputMode="decimal"
+                    defaultValue={text(search[`${name}Min`])}
+                  />
+                  <span aria-hidden>–</span>
+                  <Input
+                    name={`${name}Max`}
+                    aria-label={`${label}: hasta`}
+                    placeholder="hasta"
+                    inputMode="decimal"
+                    defaultValue={text(search[`${name}Max`])}
+                  />
+                </div>
+              </fieldset>
+            ))}
           </div>
-        </fieldset>
-      </details>
+          <fieldset className="mt-4 space-y-3">
+            <legend className="text-sm font-medium">
+              Movimientos{" "}
+              <span className="text-muted-foreground font-normal">(quién, qué, cuándo)</span>
+            </legend>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Filter label="Quién" htmlFor="actor">
+                <Select id="actor" name="actor" defaultValue={search.actor}>
+                  {options.users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.label}
+                    </option>
+                  ))}
+                </Select>
+              </Filter>
+              <Filter label="Qué hizo" htmlFor="action">
+                <Select id="action" name="action" defaultValue={search.action}>
+                  {CABLE_ACTIONS.map((action) => (
+                    <option key={action} value={action}>
+                      {CABLE_ACTION_LABELS[action]}
+                    </option>
+                  ))}
+                </Select>
+              </Filter>
+              <Filter label="Desde" htmlFor="from">
+                <Input id="from" name="from" type="date" defaultValue={search.from ?? ""} />
+              </Filter>
+              <Filter label="Hasta" htmlFor="to">
+                <Input id="to" name="to" type="date" defaultValue={search.to ?? ""} />
+              </Filter>
+            </div>
+          </fieldset>
+        </details>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit">Buscar</Button>
@@ -228,13 +250,9 @@ function Filter({
 
 function Select({ children, defaultValue, ...props }: React.ComponentProps<"select">) {
   return (
-    <select
-      {...props}
-      defaultValue={defaultValue ?? ""}
-      className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
-    >
+    <NativeSelect {...props} defaultValue={defaultValue ?? ""}>
       <option value="">Todos</option>
       {children}
-    </select>
+    </NativeSelect>
   );
 }

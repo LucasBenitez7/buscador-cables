@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CableSearchResult, SearchOptions } from "@/server/cables/search";
 import { SearchFilters } from "./search-filters";
@@ -106,15 +106,31 @@ describe("SearchResults", () => {
     expect(screen.getByText("No hay cables que cumplan estos filtros.")).toBeInTheDocument();
   });
 
-  it("links each code to its record and shows readable values", () => {
+  // La tabla (tablet y escritorio) y las tarjetas (móvil) están en el DOM; el CSS elige una.
+  it("links each code to its record and shows readable values in the table", () => {
     render(
       <SearchResults search={{}} result={{ items: [item], total: 1, page: 1, pageCount: 1 }} />,
     );
+    const table = within(screen.getByRole("table"));
 
-    expect(screen.getByRole("link", { name: "SH-50" })).toHaveAttribute("href", "/cables/c1");
-    expect(screen.getByText("3×2,5 mm²")).toBeInTheDocument();
-    expect(screen.getByText("120,5 m")).toBeInTheDocument();
-    expect(screen.getByText(/Tomás · 11\/11\/26, 10:30/)).toBeInTheDocument();
+    expect(table.getByRole("link", { name: "SH-50" })).toHaveAttribute("href", "/cables/c1");
+    expect(table.getByText("3×2,5 mm²")).toBeInTheDocument();
+    expect(table.getByText("120,5 m")).toBeInTheDocument();
+    expect(table.getByText(/Tomás · 11\/11\/26, 10:30/)).toBeInTheDocument();
+  });
+
+  it("shows each cable as a card for phones", () => {
+    render(
+      <SearchResults search={{}} result={{ items: [item], total: 1, page: 1, pageCount: 1 }} />,
+    );
+    const card = within(screen.getByRole("listitem"));
+
+    expect(card.getByRole("link", { name: "SH-50" })).toHaveAttribute("href", "/cables/c1");
+    expect(card.getByText("Control · 3×2,5 mm² · 120,5 m")).toBeInTheDocument();
+    expect(
+      card.getByText("Caldera 1 › Bandeja norte → Caldera 2 › Armario local"),
+    ).toBeInTheDocument();
+    expect(card.getByText("Datos editados")).toBeInTheDocument();
   });
 
   it("marks the sorted column and toggles its direction", () => {
@@ -157,7 +173,7 @@ describe("SearchResults", () => {
       <SearchResults search={{}} result={{ items: [item], total: 1, page: 1, pageCount: 1 }} />,
     );
 
-    expect(screen.getByText("Conectado")).toHaveClass("text-success");
+    expect(within(screen.getByRole("table")).getByText("Conectado")).toHaveClass("text-success");
   });
 
   it("adds an action button per row only when the role can act", () => {
@@ -168,7 +184,7 @@ describe("SearchResults", () => {
     rerender(
       <SearchResults search={{}} result={result} actions={{ role: "TECHNICIAN", locations: [] }} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Acción" }));
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Acción" }));
 
     // Picker with what a technician can do on a laid, connected cable (no corrections here).
     expect(screen.getByRole("button", { name: "Desconectar" })).toBeEnabled();
