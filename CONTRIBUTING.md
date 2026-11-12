@@ -66,15 +66,15 @@ Reglas del flujo:
 
 ## CI (GitHub Actions)
 
-| Workflow / herramienta | Cuándo                      | Qué comprueba                                                                   |
-| ---------------------- | --------------------------- | ------------------------------------------------------------------------------- |
-| `ci.yml` → `check`     | PR y push a `dev`/`main`    | Formato, lint, typecheck, tests, cobertura ≥ 80 %, migraciones al día, build    |
-| `ci.yml` → commitlint  | PR                          | Que todos los commits del PR siguen Conventional Commits                        |
-| `ci.yml` → `e2e`       | Solo manual hasta la fase 6 | Playwright contra la app completa                                               |
-| CodeQL                 | PR a `dev` y semanal        | Análisis estático de seguridad (JavaScript/TypeScript)                          |
-| Dependency review      | PR                          | Que el PR no añade dependencias con vulnerabilidades altas o críticas conocidas |
-| Dependabot             | Semanal                     | PRs agrupados con actualizaciones de npm y de GitHub Actions, contra `dev`      |
-| Secret scanning        | Cada push                   | Bloquea el push si contiene un secreto reconocible (token, clave…)              |
+| Workflow / herramienta | Cuándo                   | Qué comprueba                                                                   |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| `ci.yml` → `check`     | PR y push a `dev`/`main` | Formato, lint, typecheck, tests, cobertura ≥ 80 %, migraciones al día, build    |
+| `ci.yml` → commitlint  | PR                       | Que todos los commits del PR siguen Conventional Commits                        |
+| `ci.yml` → `e2e`       | PR y push a `dev`/`main` | Playwright (escritorio y móvil) contra la app compilada, con Postgres y Mailpit |
+| CodeQL                 | PR a `dev` y semanal     | Análisis estático de seguridad (JavaScript/TypeScript)                          |
+| Dependency review      | PR                       | Que el PR no añade dependencias con vulnerabilidades altas o críticas conocidas |
+| Dependabot             | Semanal                  | PRs agrupados con actualizaciones de npm y de GitHub Actions, contra `dev`      |
+| Secret scanning        | Cada push                | Bloquea el push si contiene un secreto reconocible (token, clave…)              |
 
 Lo que está en la tabla y aún no existe se construye en la fase 4.5 (ver `docs/PLAN.md`).
 Todos los checks obligatorios deben estar en verde para mergear.
@@ -141,15 +141,26 @@ Los tests E2E son caros (levantan navegador + servidor + base de datos) y solo a
 valor cuando hay un flujo de usuario completo que romper. Por eso:
 
 - **Durante el día a día se trabaja con `pnpm check`** (unitarios, integración y componentes).
-- **Los E2E empiezan en la fase 6 (decisión del 2026-11-11).** Lo primero de esa fase es
-  escribir los E2E pendientes de las fases 1 a 5 y activar el job `e2e` del CI. Desde ahí,
-  cada fase cierra con los E2E de sus flujos en verde. La infraestructura está lista desde la
-  fase 0 (`pnpm test:e2e`).
-- Hasta entonces (fases 4.5 y 5), cada flujo nuevo se prueba a mano contra la app arrancada y
-  se anota en `docs/REVISIONES.md`.
+- **Los E2E empiezan en la fase 6 (decisión del 2026-11-11).** Desde el 2026-11-13 cubren los
+  flujos de las fases 1 a 5 y el job `e2e` corre en cada PR a `dev` y en cada push a
+  `dev`/`main`. Cada fase cierra con los E2E de sus flujos en verde.
 - Excepción: si un bug afecta a un flujo ya cubierto por un E2E, se reproduce con un E2E.
-- En CI, el job `e2e` solo se ejecuta a mano hasta la fase 6. Al activarlo se decide si corre
-  en cada PR a `dev` (recomendado) o solo tras el merge.
+
+### Cómo funcionan los E2E
+
+- `pnpm test:e2e` (con `docker compose up -d`) compila la app y la arranca con `next start`
+  en el puerto 3100, así que no choca con un `pnpm dev` abierto.
+- Usan su propia base, `cables_e2e`, que se crea al lado de la de `DATABASE_URL`. Antes de
+  cada ejecución `e2e/global-setup.ts` la migra, la vacía y carga datos conocidos
+  (`e2e/support/data.ts`): un usuario por rol, ubicaciones, catálogos y un cable por test que
+  lo modifica. Nunca toca la base de desarrollo ni la de integración.
+- `e2e/auth.setup.ts` entra una vez con cada rol y guarda la sesión; los tests la reutilizan
+  con `test.use({ storageState: storageStatePath("technician") })`.
+- Los correos (confirmación, recuperación) se leen de Mailpit (`MAILPIT_URL`).
+- Proyectos: `desktop` (Chrome, todos los specs menos `mobile.spec.ts`) y `mobile` (Pixel 7,
+  `mobile.spec.ts`). Un test que cierra sesión o cambia la contraseña usa su propio usuario o
+  su propia sesión, para no invalidar las guardadas.
+- `pnpm --filter @cables/web test:e2e:ui` abre el modo interactivo de Playwright.
 
 Reglas:
 

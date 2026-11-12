@@ -5,6 +5,7 @@ import { ROLES, ROLE_LABELS, canManageActor, type Role } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { createUserAction, type ActionResult } from "@/features/users/actions";
 
 const EMPTY = { name: "", email: "", role: "VIEWER", password: "" };
@@ -54,17 +55,13 @@ export function CreateUserForm({ currentRole }: { currentRole: Role }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="role">Rol</Label>
-        <select
-          id="role"
-          {...field("role")}
-          className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
-        >
+        <NativeSelect id="role" {...field("role")}>
           {assignable.map((role) => (
             <option key={role} value={role}>
               {ROLE_LABELS[role]}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Contraseña temporal</Label>

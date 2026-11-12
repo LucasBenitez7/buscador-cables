@@ -135,9 +135,6 @@ jobs:
     name: e2e
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Los E2E empiezan en la fase 6. Hasta entonces este job solo se lanza a mano
-    # (Actions → CI → Run workflow). Ver "Política de E2E" en CONTRIBUTING.md.
-    if: github.event_name == 'workflow_dispatch'
 
     services:
       postgres:
@@ -153,14 +150,22 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # Correo de pruebas: los E2E leen ahí los enlaces de confirmación y de recuperación.
+      mailpit:
+        image: axllent/mailpit:latest # la misma que docker-compose.yml
+        ports:
+          - 1025:1025
+          - 8025:8025
 
     env:
+      # Base "de arranque": la preparación de los E2E crea y usa `cables_e2e` a su lado.
       DATABASE_URL: postgresql://cables:cables@localhost:5432/cables?schema=public
-      DATABASE_URL_TEST: postgresql://cables:cables@localhost:5432/cables_test?schema=public
-      APP_URL: http://localhost:3000
       # Secreto solo para CI (no protege datos reales). Nunca reutilizar fuera de aquí.
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production-use
-      BETTER_AUTH_URL: http://localhost:3000
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      EMAIL_FROM: "Buscador de Cables <no-reply@cables.local>"
+      MAILPIT_URL: http://localhost:8025
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -172,10 +177,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - name: Preparar base de datos
-        run: |
-          export PGPASSWORD=cables
-          psql -h localhost -U cables -d cables -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+      - name: Caché de Next.js
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/web/.next/cache
+          key: next-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**') }}
+          restore-keys: next-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - run: pnpm install --frozen-lockfile
 
@@ -185,6 +192,7 @@ jobs:
       - name: Instalar navegadores
         run: pnpm --filter @cables/web exec playwright install --with-deps chromium
 
+      # Compila la app, prepara `cables_e2e` con datos conocidos y ejecuta escritorio y móvil.
       - name: Ejecutar tests E2E
         run: pnpm test:e2e
 

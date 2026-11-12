@@ -26,7 +26,10 @@ export function ResetPasswordForm({
         <p role="alert" className="text-destructive text-sm">
           El enlace no es válido o ha caducado. Pide uno nuevo.
         </p>
-        <Link href="/forgot-password" className="text-sm underline underline-offset-4">
+        <Link
+          href="/forgot-password"
+          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm text-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
+        >
           Solicitar un enlace nuevo
         </Link>
       </div>

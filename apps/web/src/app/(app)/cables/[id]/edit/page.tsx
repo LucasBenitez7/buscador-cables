@@ -33,7 +33,10 @@ export default async function EditCablePage({
         <h1 className="text-2xl font-semibold tracking-tight">
           Editar <span className="font-mono">{cable.code}</span>
         </h1>
-        <Link href={`/cables/${cable.id}`} className="text-sm underline underline-offset-4">
+        <Link
+          href={`/cables/${cable.id}`}
+          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm text-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
+        >
           Ver ficha
         </Link>
       </div>

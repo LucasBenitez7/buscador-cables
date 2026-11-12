@@ -59,7 +59,10 @@ export function RegisterForm() {
           Te hemos enviado un correo a <strong>{sentTo}</strong> para confirmar la cuenta. El enlace
           caduca en 24 horas.
         </p>
-        <Link href="/login" className="text-sm underline underline-offset-4">
+        <Link
+          href="/login"
+          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm text-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
+        >
           Volver al inicio de sesión
         </Link>
       </div>
@@ -111,7 +114,10 @@ export function RegisterForm() {
 
       <p className="text-center text-sm">
         ¿Ya tienes cuenta?{" "}
-        <Link href="/login" className="underline underline-offset-4">
+        <Link
+          href="/login"
+          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
+        >
           Inicia sesión
         </Link>
       </p>

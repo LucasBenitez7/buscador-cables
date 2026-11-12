@@ -41,7 +41,7 @@ export function ActivityList({ basePath, search, activity, showUser = true }: Pr
               {CABLE_ACTION_LABELS[entry.action]} ·{" "}
               <Link
                 href={`/cables/${entry.cable.id}`}
-                className="text-foreground font-mono underline-offset-4 hover:underline"
+                className="text-foreground hover:text-primary focus-visible:ring-ring/50 rounded-sm font-mono underline-offset-4 outline-none hover:underline focus-visible:ring-3"
               >
                 {entry.cable.code}
               </Link>

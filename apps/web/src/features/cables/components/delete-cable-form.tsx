@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { deleteCableAction, type CableFormResult } from "@/features/cables/actions";
 
 type Props = { id: string; code: string; version: number };
@@ -41,12 +42,11 @@ export function DeleteCableForm({ id, code, version }: Props) {
       </p>
       <div className="space-y-1.5">
         <Label htmlFor="delete-reason">Motivo de la baja</Label>
-        <textarea
+        <Textarea
           id="delete-reason"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           rows={2}
-          className="border-input bg-background w-full rounded-lg border px-2.5 py-1.5 text-sm"
           required
         />
       </div>

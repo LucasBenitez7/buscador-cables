@@ -16,6 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   createCableAction,
   updateCableAction,
@@ -252,11 +254,10 @@ export function CableForm(props: Props) {
 
       <Section title="Notas">
         <Field name="notes" label="Notas" error={errors.notes} wide>
-          <textarea
+          <Textarea
             {...field("notes")}
             onChange={(event) => set("notes", event.target.value)}
             rows={3}
-            className="border-input bg-background w-full rounded-lg border px-2.5 py-1.5 text-sm"
           />
         </Field>
       </Section>
@@ -313,15 +314,6 @@ function Field({
         </p>
       ) : null}
     </div>
-  );
-}
-
-function NativeSelect(props: React.ComponentProps<"select">) {
-  return (
-    <select
-      {...props}
-      className="border-input bg-background aria-invalid:border-destructive h-8 w-full rounded-lg border px-2.5 text-sm"
-    />
   );
 }
 

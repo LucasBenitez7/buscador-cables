@@ -30,6 +30,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import { runCableActionAction, type CableFormResult } from "@/features/cables/actions";
 
 export type ActionOption = { id: string; label: string };
@@ -264,7 +266,7 @@ export function CableActions({
       ) : null}
       {blocked.length > 0 ? (
         <details className="text-muted-foreground text-sm">
-          <summary className="cursor-pointer select-none">
+          <summary className="hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-sm transition-colors outline-none select-none focus-visible:ring-3">
             Por qué hay acciones desactivadas
           </summary>
           <ul className="mt-2 space-y-1 pl-4">
@@ -317,7 +319,10 @@ function ActionFields({
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Extremo</legend>
           {CABLE_ENDS.map((end) => (
-            <label key={end} className="flex items-center gap-2 text-sm">
+            <label
+              key={end}
+              className="hover:bg-accent/60 has-checked:bg-accent flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 text-sm transition-colors"
+            >
               <input
                 type="radio"
                 name="end"
@@ -402,13 +407,12 @@ function ActionFields({
 function NotesField({ required, error }: { required: boolean; error?: string }) {
   return (
     <Field id="action-notes" label={required ? "Motivo" : "Nota (opcional)"} error={error}>
-      <textarea
+      <Textarea
         id="action-notes"
         name="notes"
         rows={3}
         required={required}
         aria-invalid={error ? true : undefined}
-        className="border-input bg-background aria-invalid:border-destructive w-full rounded-lg border px-2.5 py-1.5 text-sm"
       />
     </Field>
   );
@@ -439,12 +443,7 @@ function ErrorText({ children }: { children: ReactNode }) {
 }
 
 function Select(props: ComponentProps<"select">) {
-  return (
-    <select
-      {...props}
-      className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
-    />
-  );
+  return <NativeSelect {...props} />;
 }
 
 function LocationSelect({

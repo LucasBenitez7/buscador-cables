@@ -6,6 +6,40 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-13 — Fase 6: diseño responsive y tests E2E
+
+**Rama:** `feat/f6-e2e-import` (#27), la única de la fase. La fase se cierra aquí por decisión
+del usuario: la exportación a PDF pasa a la fase 7 y la importación y el panel, a la 8.
+
+**Qué hay nuevo:**
+
+- Menú con la sección actual resaltada y, en móvil y tablet, un panel lateral.
+- Buscador y usuarios adaptados al móvil (tarjetas, filtros desplegables) y controles a tamaño
+  táctil.
+- Estados hover, pulsado y foco revisados en toda la app.
+- 28 tests E2E (escritorio y móvil) de los flujos de las fases 1 a 5. El job `e2e` del CI
+  corre ya en cada PR; en el #27 pasó en 1 min 36 s.
+
+**Encontrado al escribir los E2E:**
+
+- Varios selectores ambiguos que solo se ven con el navegador real: "Conectar" también
+  encuentra "Desconectar", y el anunciador de rutas de Next también es `role="alert"`. Los
+  tests buscan por nombre exacto y los avisos dentro de `main`.
+- Restablecer la contraseña cierra todas las sesiones del usuario
+  (`revokeSessionsOnPasswordReset`). El test usa su propio usuario para no invalidar las
+  sesiones guardadas de los demás.
+- La pantalla de "olvidé mi contraseña" muestra el mismo mensaje de éxito aunque la petición
+  falle por otro motivo que no sea el 429. Es a propósito (no revela si la cuenta existe),
+  pero un fallo real del servidor pasaría desapercibido para el usuario. Se revisará en la
+  fase 10 junto con el registro de errores.
+
+**Pendiente:**
+
+- Añadir `e2e` a los checks obligatorios del ruleset de `dev` y `main` cuando lleve unas
+  cuantas ejecuciones en verde en el CI.
+- Riesgo ya anotado para la fase 10 (antes 8): el límite de intentos por IP se podría falsear con
+  `X-Forwarded-For` si la app no está detrás de un proxy de confianza.
+
 ## 2026-11-12 — Fase 5: acciones de usuario y trazabilidad
 
 **Ramas:** la máquina de estados (#22) y el servicio de acciones (#23) entraron por separado.

@@ -23,12 +23,15 @@ hizo qué y cuándo.
 | 4    | Buscador y ficha del cable    | v0.5.0  | Búsqueda tolerante + filtros + ficha completa         |
 | 4.5  | CI, GitHub y Pull Requests    | v0.5.1  | Repo en GitHub, PRs a `dev` con CI, tema oscuro       |
 | 5    | Estados y trazabilidad        | v0.6.0  | Tendido/enrollado, conectado, historial por usuario   |
-| 6    | E2E, importación/exportación  | v0.7.0  | E2E de las fases 1-5, CSV/Excel masivo, dashboard     |
-| 7    | Modo sin conexión (PWA)       | v0.8.0  | Consulta offline + cola de cambios sincronizable      |
-| 8    | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
+| 6    | Diseño responsive y E2E       | v0.7.0  | Menú y vistas para móvil, E2E de las fases 1-5        |
+| 7    | Exportación a PDF             | v0.8.0  | Tres informes PDF completos descargables              |
+| 8    | Importación masiva y panel    | v0.9.0  | CSV/Excel masivo, dashboard                           |
+| 9    | Modo sin conexión (PWA)       | v0.10.0 | Consulta offline + cola de cambios sincronizable      |
+| 10   | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
 
-**Total: 10 fases (0 a 8, más la 4.5 añadida el 2026-11-11).** Al terminar la fase 8 se
-publica la **v1.0.0**.
+**Total: 12 fases (0 a 10, más la 4.5 añadida el 2026-11-11).** El 2026-11-13 la fase 6 se
+cerró con el diseño y los E2E; la exportación a PDF pasó a ser la fase 7 y la importación y el
+panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
 Cada fase termina con todos los tests en verde en `dev`. Desde la fase 4.5, todo llega a `dev`
 por Pull Request y con el CI en verde. Las versiones de la tabla son orientativas: `dev` → `main`
@@ -76,7 +79,7 @@ fase 0, pero nunca se ha ejecutado: se activa en la fase 4.5.)_
 - [x] Middleware de protección de rutas + comprobación de permisos en servidor.
 - [x] Rate limiting en login y recuperación de contraseña.
 - [x] Tests: unitarios de permisos y de integración del servicio de usuarios.
-- [ ] Tests E2E de registro, login, logout y recuperación de contraseña (aplazados a la fase 6).
+- [x] Tests E2E de registro, login, logout y recuperación de contraseña (escritos en la fase 6).
 
 ## Fase 2 — Modelo de datos y ubicaciones (v0.3.0)
 
@@ -103,7 +106,7 @@ El "apartado donde cargar el cable".
 - [x] Validación compartida cliente/servidor con Zod.
 - [x] Permisos: solo `TECHNICIAN`+ puede crear o editar.
 - [x] Tests: validaciones, Server Actions, servicio contra Postgres y formulario.
-- [ ] Tests E2E de alta/edición (aplazados a la fase 6).
+- [x] Tests E2E de alta/edición (escritos en la fase 6).
 
 ## Fase 4 — Buscador y ficha del cable (v0.5.0)
 
@@ -119,7 +122,7 @@ El "apartado donde cargar el cable".
       3-25 ms en base de datos y 35-90 ms la página completa).
 - [x] Diseño responsive (uso desde tablet/móvil en planta).
 - [x] Tests: consultas de búsqueda, filtros, ficha y componentes.
-- [ ] Tests E2E de búsqueda → ficha (aplazados a la fase 6).
+- [x] Tests E2E de búsqueda → ficha (escritos en la fase 6).
 
 ## Fase 4.5 — CI, GitHub y Pull Requests (v0.5.1)
 
@@ -379,34 +382,120 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
 
 **Fase 5 cerrada el 2026-11-12** (al mergear `feat/f5-traceability` en `dev`).
 
-## Fase 6 — E2E, importación / exportación y panel (v0.7.0)
+## Fase 6 — Diseño responsive y E2E (v0.7.0)
 
-### Primero: tests E2E (decisión del 2026-11-11)
+### Antes de los E2E: navegación, responsive y estados (2026-11-13)
+
+Pedido por el usuario al empezar la fase. Va en la misma rama de la fase, `feat/f6-e2e-import`.
+
+- [x] Menú: la sección actual resaltada (texto claro sobre fondo suave, `aria-current`) y el
+      resto en el color normal hasta pasar el ratón.
+- [x] Por debajo de 1280 px (móvil y tablet) el menú es un panel lateral con enlaces grandes,
+      el usuario y "Cerrar sesión"; se cierra al navegar. Cabecera fija arriba.
+- [x] Buscador en móvil: solo el campo de búsqueda y un botón "Filtros (n)" que despliega el
+      resto; los resultados son tarjetas con el botón "Acción". Tabla desde 768 px.
+- [x] Usuarios: la tabla se apila como tarjetas en móvil.
+- [x] Controles a tamaño táctil en móvil (40 px) y normales desde 768 px; selects y áreas de
+      texto con los mismos estilos que los campos.
+- [x] Estados hover, pulsado y foco en botones, enlaces, filas de tabla, desplegables y
+      opciones del diálogo de conectar.
+
+### Tests E2E (decisión del 2026-11-11)
 
 Los E2E empiezan aquí, con la app ya completa hasta la fase 5. A partir de esta fase, cada fase
-cierra con sus E2E escritos y en verde en el CI.
+cierra con sus E2E escritos y en verde en el CI. Cómo funcionan: `CONTRIBUTING.md`.
 
-- [ ] Flujos de la fase 1: registro, verificación de correo, login, logout y recuperación de
-      contraseña (correo leído desde Mailpit).
-- [ ] Flujos de la fase 3: alta, edición y baja de un cable, y el aviso de edición simultánea.
-- [ ] Flujos de la fase 4: buscar → filtrar → abrir la ficha, y que los filtros sobrevivan al
-      botón atrás.
-- [ ] Flujos de la fase 5: cada acción (tender, enrollar, conectar, mover, retirar, corrección)
-      y su reflejo en el historial.
-- [ ] Permisos: un `VIEWER` no ve ni puede usar las acciones de edición.
-- [ ] Activar el job `e2e` del CI. Recomendación: ejecutarlo en cada PR a `dev`. Como todo
-      entra por PR, ejecutarlo solo tras el merge avisaría tarde.
+- [x] Infraestructura: base propia `cables_e2e` con datos conocidos, app compilada en el puerto
+      3100, una sesión guardada por rol, correos leídos de Mailpit y proyectos escritorio y
+      móvil (Pixel 7).
+- [x] Flujos de la fase 1: registro, verificación de correo, cuenta sin confirmar, contraseña
+      incorrecta, logout y recuperación de contraseña.
+- [x] Flujos de la fase 3: alta, edición y baja de un cable, y el aviso de edición simultánea.
+- [x] Flujos de la fase 4: buscar → filtrar → abrir la ficha, que los filtros sobrevivan al
+      botón atrás, ordenar y limpiar.
+- [x] Flujos de la fase 5: tender, conectar los dos extremos, enrollar, mover, retirar y
+      corregir, su reflejo en el historial y en las páginas de actividad, y el aviso de dos
+      movimientos a la vez.
+- [x] Permisos: un `VIEWER` no ve ni puede usar las acciones de edición; un técnico no entra
+      en "Actividad"; las páginas sin permiso llevan al inicio.
+- [x] Móvil: menú, filtros desplegables, tarjetas y acción desde una tarjeta.
+- [x] Job `e2e` del CI activado en cada PR a `dev` y en cada push a `dev`/`main`, con Mailpit.
 
-### Importación / exportación y panel
+**Fase 6 cerrada el 2026-11-13** (al mergear `feat/f6-e2e-import` en `dev`, PR #27). Por
+decisión del usuario, la importación, la exportación y el panel salen de esta fase: la
+exportación a PDF es la fase 7 y lo demás, la fase 8.
+
+## Fase 7 — Exportación a PDF (v0.8.0)
+
+Fase añadida el 2026-11-13. Rama única: `feat/f7-pdf-export`. Objetivo: **tres informes PDF
+completos**, descargables desde la app, que sirvan para imprimir, archivar y enviar.
+
+### Decisiones al empezar la fase
+
+- [ ] Contenido exacto de los tres PDFs (propuesta abajo, a confirmar con el usuario).
+- [ ] Librería de generación. Propuesta: `@react-pdf/renderer`. Genera el PDF en el servidor
+      a partir de componentes React, sin navegador, y funciona en Vercel. La alternativa,
+      imprimir HTML con Chromium sin interfaz, pesa demasiado para un despliegue serverless.
+      Se justifica en `docs/ARQUITECTURA.md` antes de añadirla.
+- [ ] Colores del PDF. La UI es solo oscura (regla 12 de `AGENTS.md`), pero un PDF se
+      imprime: propuesta de fondo blanco y texto oscuro, con el azul de acento. Hay que dejar
+      la excepción escrita.
+
+### Propuesta de los tres PDFs
+
+1. **Ficha del cable**, desde la ficha:
+   - todos los datos técnicos;
+   - el recorrido (origen → destino) y la ubicación actual;
+   - el estado de instalación y de conexión;
+   - el historial completo, con los cambios campo a campo, las notas y las correcciones.
+2. **Listado de cables**, desde el buscador:
+   - todos los resultados de la búsqueda actual, no solo la página visible;
+   - una portada con los filtros aplicados;
+   - totales por estado de instalación, por estado de conexión y por ubicación;
+   - una tabla con los datos técnicos y el último movimiento de cada cable.
+3. **Informe de actividad**, desde "Actividad reciente" (supervisor o más):
+   - los movimientos de un periodo, con los mismos filtros de quién, qué y cuándo;
+   - un resumen por usuario y por tipo de acción;
+   - el detalle cronológico.
+
+### Tareas
+
+- [ ] Servicio de informes en `apps/web/src/server/reports`. Reutiliza las consultas de
+      búsqueda, ficha y actividad, y convierte los datos en un modelo del informe que no
+      depende de la librería.
+- [ ] Route Handlers de descarga:
+  - comprueban la sesión y el permiso (`export:run`; el de actividad pide además
+    `activity:view`);
+  - validan los parámetros con Zod;
+  - responden con `Content-Disposition` y un nombre de archivo con fecha.
+- [ ] Plantilla común:
+  - cabecera con el nombre de la app, el título y los filtros;
+  - fecha y hora de generación (hora de Madrid) y quién lo generó;
+  - pie con "Página X de Y";
+  - tablas que se parten bien entre páginas y repiten la cabecera.
+- [ ] Límite de volumen (propuesta: hasta 5.000 cables o 10.000 movimientos, con aviso si se
+      supera) y prueba de rendimiento con el volumen estimado.
+- [ ] Botón "Descargar PDF" en la ficha, en el buscador y en la actividad, con estado de
+      carga y su hover, pulsado y foco.
+- [ ] Tests:
+  - unitarios del modelo de cada informe;
+  - de integración de los Route Handlers (permisos, parámetros, cabeceras);
+  - E2E de la descarga de los tres PDFs (escritorio y móvil), comprobando el texto.
+- [ ] Documentación: `docs/ARQUITECTURA.md` (librería y estructura) y la entrada de
+      `docs/REVISIONES.md` al cerrar la fase.
+
+## Fase 8 — Importación masiva y panel (v0.9.0)
+
+Viene de la fase 6, de donde salió el 2026-11-13.
 
 - [ ] Importación masiva desde CSV/Excel con previsualización y validación fila a fila.
 - [ ] Informe de errores descargable.
-- [ ] Exportación de los resultados de búsqueda a CSV/Excel.
+- [ ] Exportación de los resultados de búsqueda a CSV/Excel (complementa los PDFs de la fase 7).
 - [ ] Dashboard: totales por estado, por ubicación, cables pendientes de conectar.
 - [ ] Generación de código QR por cable (para etiquetas en campo) — opcional.
-- [ ] Tests: parser de importación con ficheros de ejemplo.
+- [ ] Tests: parser de importación con ficheros de ejemplo, y E2E de importación y panel.
 
-## Fase 7 — Modo sin conexión (PWA) (v0.8.0)
+## Fase 9 — Modo sin conexión (PWA) (v0.10.0)
 
 - [ ] PWA instalable (Serwist / service worker).
 - [ ] Cacheo de la app y copia local de cables y ubicaciones en IndexedDB (Dexie).
@@ -416,7 +505,7 @@ cierra con sus E2E escritos y en verde en el CI.
 - [ ] Indicador visual de online/offline y de cambios pendientes.
 - [ ] Tests: E2E con red desactivada en Playwright.
 
-## Fase 8 — Producción y endurecimiento (v1.0.0)
+## Fase 10 — Producción y endurecimiento (v1.0.0)
 
 - [ ] Despliegue: **Vercel** (web) + **Railway** (PostgreSQL gestionado).
       Alternativa preparada: `Dockerfile` de producción por si se requiere servidor propio/intranet.

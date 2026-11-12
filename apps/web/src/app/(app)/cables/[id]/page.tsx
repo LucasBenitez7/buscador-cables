@@ -61,7 +61,10 @@ export default async function CablePage({ params }: { params: Params }) {
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <p className="text-muted-foreground text-sm">
-            <Link href="/cables" className="underline-offset-4 hover:underline">
+            <Link
+              href="/cables"
+              className="hover:text-foreground focus-visible:ring-ring/50 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+            >
               Cables
             </Link>{" "}
             ›
