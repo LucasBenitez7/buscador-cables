@@ -345,19 +345,39 @@ retirar hay que desconectar antes (o la propia acción lo hace y lo registra).
     corrige, y la nota.
   - Los estados se ven en colores: verde conectado, ámbar a medias, rojo retirado.
   - Probado en la app: tender → conectar origen → enrollar, también a 375 px.
-- [ ] Botones de acción también en la tabla del buscador (junto con las columnas de
-      quién/qué/cuándo).
-- [ ] Columnas y filtros de "quién/qué/cuándo" en el buscador.
-- [ ] Línea de tiempo del historial en la ficha. Pendiente detectado: Postgres guarda los
-      cambios de cada evento (`jsonb`) en otro orden, así que la ficha los muestra desordenados.
-      Hay que ordenarlos al mostrarlos.
-- [ ] Página "Mi actividad": acciones del usuario actual.
-- [ ] Página "Actividad reciente" (todas las acciones, filtrable) para supervisores.
+- [x] Botones de acción también en la tabla del buscador. Cada fila tiene un botón "Acción" que
+      abre un selector con lo que el rol puede hacer en ese cable y luego el mismo diálogo de la
+      ficha. Las correcciones se hacen en la ficha, donde se ve el historial. El estado sale en
+      colores también en la tabla.
+- [x] Columnas y filtros de "quién/qué/cuándo" en el buscador:
+  - La columna "Último movimiento" (acción, quién y cuándo) ordena por la fecha del último
+    movimiento.
+  - En "Más filtros", "Movimientos": quién, qué hizo, desde y hasta. Busca en todo el historial,
+    no solo el último movimiento, y las condiciones se cumplen en el mismo evento: "cables que
+    conectó Juan esta semana".
+  - Los días se cuentan en hora de Madrid.
+- [x] Línea de tiempo del historial en la ficha:
+  - Cada evento se lee como una frase ("Juan movió el cable de A a B", "conectó el extremo de
+    origen").
+  - Las correcciones dicen qué movimiento corrigen.
+  - Los cambios salen en el orden del formulario, porque `jsonb` no conserva el orden de las
+    claves.
+- [x] Página "Mi actividad" (`/activity/me`, para todos): lo que ha registrado el usuario, con
+      filtros de acción y fechas. La persona nunca se toma de la URL.
+- [x] Página "Actividad reciente" (`/activity`) para supervisores y administradores (permiso
+      nuevo `activity:view`): todas las acciones, con filtros de persona, acción y fechas. Las
+      dos páginas usan las mismas frases que la ficha.
 - [x] Control de concurrencia con `version`: si dos personas actúan a la vez, solo entra una y la
       otra recibe aviso para recargar. Probado con dos acciones simultáneas contra Postgres.
-- [x] Tests: máquina de estados (34), servicio contra Postgres real (12: cada acción, evento,
-      columnas resumen, conflicto, concurrencia, permisos, corrección) y Server Action (4). Los
-      E2E de cada acción se escriben al empezar la fase 6.
+- [x] Tests:
+  - máquina de estados y redacción del historial;
+  - servicio de acciones, búsqueda por quién/qué/cuándo y actividad contra Postgres real,
+    incluidos concurrencia y días en hora de Madrid en invierno y en verano;
+  - Server Action y componentes: diálogos, selector de la tabla, filtros y listas.
+  - Al cerrar la fase, `pnpm check` da 401 tests en verde.
+  - Los E2E de cada acción se escriben al empezar la fase 6.
+
+**Fase 5 cerrada el 2026-11-12** (al mergear `feat/f5-traceability` en `dev`).
 
 ## Fase 6 — E2E, importación / exportación y panel (v0.7.0)
 
