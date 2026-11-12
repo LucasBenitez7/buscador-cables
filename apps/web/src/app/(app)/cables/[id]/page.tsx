@@ -162,20 +162,27 @@ export default async function CablePage({ params }: { params: Params }) {
         )}
       </Section>
 
-      <Section title="Historial">
+      <Section title="Historial (más reciente primero)">
         {cable.history.length === 0 ? (
           <p className="text-muted-foreground text-sm">Sin historial.</p>
         ) : (
-          <ol className="space-y-4 border-l pl-4">
+          <ol className="space-y-5 border-l pl-4">
             {cable.history.map((entry) => (
-              <li key={entry.id} className="space-y-1 text-sm">
+              <li key={entry.id} className="relative space-y-1 text-sm">
+                <span
+                  aria-hidden
+                  className="bg-border absolute top-1.5 -left-[1.3125rem] size-2 rounded-full"
+                />
+                <p className="text-muted-foreground text-xs">
+                  <time dateTime={entry.at.toISOString()}>{dateFormat.format(entry.at)}</time> ·{" "}
+                  {CABLE_ACTION_LABELS[entry.action]}
+                </p>
                 <p>
-                  <span className="font-medium">{CABLE_ACTION_LABELS[entry.action]}</span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · {entry.user} ·{" "}
-                    <time dateTime={entry.at.toISOString()}>{dateFormat.format(entry.at)}</time>
-                  </span>
+                  <span className="font-medium">{entry.user}</span> {entry.summary}
+                  {entry.corrects ? (
+                    <span className="text-muted-foreground"> ({entry.corrects})</span>
+                  ) : null}
+                  .
                 </p>
                 {entry.notes ? <p className="italic">“{entry.notes}”</p> : null}
                 {entry.changes.length > 0 ? (
