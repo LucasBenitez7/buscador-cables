@@ -84,6 +84,10 @@ export type CableState = {
   /** Partially laid cable: which end is loose and the code of the tray where it waits. */
   looseEnd: CableEndSide | null;
   looseEndTray: string | null;
+  /**
+   * Whether each end is known: the location id or, for cables loaded from the project lists
+   * without a room, the equipment tag. The state machine only checks that they are not null.
+   */
   originId: string | null;
   destinationId: string | null;
   deleted: boolean;
@@ -283,6 +287,12 @@ function computeNext(
       return { next: { ...current, connectionStatus: STATUS_BY_BITS[bits & ~end]! } };
     }
     case "MOVED": {
+      if (status === "UNVERIFIED") {
+        return {
+          error:
+            "Nadie ha revisado aún este cable: registra primero cómo está (tendido, enrollado…).",
+        };
+      }
       if (isOnItsWay(status)) {
         return {
           error: "Un cable tendido no se mueve: primero enróllalo o desconéctalo y enróllalo.",

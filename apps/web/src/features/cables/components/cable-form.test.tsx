@@ -94,6 +94,9 @@ describe("CableForm (alta)", () => {
 
     expect(screen.queryByLabelText("Dónde está ahora")).toBeNull();
     expect(screen.queryByRole("option", { name: "Retirado" })).toBeNull();
+    type("Instalación", "UNVERIFIED");
+    expect(screen.queryByLabelText("Dónde está ahora")).toBeNull();
+
     // A partial laying needs the tray of the loose end: it is recorded with its action.
     expect(screen.queryByRole("option", { name: "Tendido parcial" })).toBeNull();
   });

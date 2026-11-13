@@ -81,6 +81,56 @@ describe("LAID (tender)", () => {
   });
 });
 
+describe("UNVERIFIED (sin revisar)", () => {
+  // Loaded from the project lists: nobody has checked it yet, and it has no physical location.
+  const unverified: CableState = {
+    ...inStock,
+    installationStatus: "UNVERIFIED",
+    currentLocationId: null,
+  };
+
+  it("is a coherent state without a location", () => {
+    expect(validateCableState(unverified)).toBeNull();
+    expect(validateCableState({ ...unverified, connectionStatus: "CONNECTED" })).toMatch(
+      /Solo un cable tendido/,
+    );
+  });
+
+  it("is registered as found: laid, partially laid, coiled or retired", () => {
+    expect(nextOf(unverified, { action: "LAID" }).changes.installationStatus).toEqual({
+      from: "UNVERIFIED",
+      to: "LAID",
+    });
+    expect(
+      nextOf(unverified, {
+        action: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        trayCode: "99UXA00L22036",
+      }).next.installationStatus,
+    ).toBe("PARTIALLY_LAID");
+    expect(nextOf(unverified, { action: "COILED", locationId: "site-a" }).next).toMatchObject({
+      installationStatus: "COILED",
+      currentLocationId: "site-a",
+    });
+    expect(nextOf(unverified, { action: "RETIRED" }).next.currentLocationId).toBeNull();
+  });
+
+  it("cannot be moved or connected before somebody checks it", () => {
+    expect(errorOf(unverified, { action: "MOVED", locationId: "site-a" })).toMatch(
+      /registra primero cómo está/,
+    );
+    expect(errorOf(unverified, { action: "CONNECTED", end: "ORIGIN" })).toMatch(
+      /Solo se puede conectar un cable tendido/,
+    );
+  });
+
+  it("can be laid when only the equipment of each end is known", () => {
+    // The server passes the equipment tag when the list gives no room.
+    const fromLists = { ...unverified, originId: "99BMA", destinationId: "99XAB10AP001" };
+    expect(nextOf(fromLists, { action: "LAID" }).next.installationStatus).toBe("LAID");
+  });
+});
+
 describe("PARTIALLY_LAID (tender a medias)", () => {
   const partial: CableState = {
     ...laid,

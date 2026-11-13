@@ -43,6 +43,8 @@ export async function runCableAction(
       currentLocationId: true,
       originId: true,
       destinationId: true,
+      originEquipment: true,
+      destinationEquipment: true,
       looseEnd: true,
       looseEndTray: { select: { code: true } },
     },
@@ -58,6 +60,9 @@ export async function runCableAction(
   const outcome = applyCableAction(
     {
       ...cable,
+      // Cables from the project lists may know the equipment but not the room.
+      originId: cable.originId ?? cable.originEquipment,
+      destinationId: cable.destinationId ?? cable.destinationEquipment,
       looseEndTray: cable.looseEndTray?.code ?? null,
       deleted: cable.deletedAt !== null,
     },

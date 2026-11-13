@@ -9,7 +9,8 @@
  */
 
 export type LocationType = "PLANT" | "AREA" | "UNIT" | "SITE";
-export type InstallationStatus = "IN_STOCK" | "COILED" | "PARTIALLY_LAID" | "LAID" | "RETIRED";
+export type InstallationStatus =
+  "UNVERIFIED" | "IN_STOCK" | "COILED" | "PARTIALLY_LAID" | "LAID" | "RETIRED";
 export type ConnectionStatus = "DISCONNECTED" | "ORIGIN_ONLY" | "DESTINATION_ONLY" | "CONNECTED";
 export type CableLevel = "L1" | "L2" | "L3" | "L4";
 export type TrayKind = "LADDER" | "GRID" | "SPECIAL" | "CONDUIT" | "DUCT" | "OTHER";
@@ -785,11 +786,13 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
     });
 
     const routeTrays = route.flatMap((step) => (step.tray ? [step.tray] : []));
+    // Like the real load: many cables nobody has checked yet, the rest as found in the field.
     const status = random.weighted<InstallationStatus>({
-      LAID: 45,
-      PARTIALLY_LAID: routeTrays.length > 0 ? 12 : 0,
-      COILED: 10,
-      IN_STOCK: 30,
+      UNVERIFIED: 30,
+      LAID: 35,
+      PARTIALLY_LAID: routeTrays.length > 0 ? 10 : 0,
+      COILED: 7,
+      IN_STOCK: 15,
       RETIRED: 3,
     });
     let connectionStatus: ConnectionStatus = "DISCONNECTED";

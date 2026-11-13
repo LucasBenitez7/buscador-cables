@@ -154,7 +154,9 @@ describe("generateSeedData", () => {
       }
     }
     const statuses = new Set(data.cables.map((cable) => cable.installationStatus));
-    expect(statuses).toEqual(new Set(["IN_STOCK", "COILED", "PARTIALLY_LAID", "LAID", "RETIRED"]));
+    expect(statuses).toEqual(
+      new Set(["UNVERIFIED", "IN_STOCK", "COILED", "PARTIALLY_LAID", "LAID", "RETIRED"]),
+    );
   });
 
   it("only references existing cable types, and the project types carry conductors", () => {

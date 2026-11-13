@@ -502,6 +502,10 @@ Orden de trabajo, todo en `feat/f7-project-data`:
       minuto y medio. Detalle en `docs/DATOS-PROYECTO.md`.
 - [x] Validación con Zod de cada cable y bandeja, con informe de errores y avisos por fichero,
       página y código (`report.md` y `report.json`).
+- [x] Estado _sin revisar_ (`UNVERIFIED`, migración `add_unverified_status`), decidido por el
+      usuario el 2026-11-13: los PDFs no dicen el estado en campo, así que los cables reales
+      entran sin revisar y el técnico registra lo que encuentra. No se mueve ni se conecta antes
+      de revisarlo. Si el listado no da la sala, el equipo de cada extremo basta para tender.
 - [ ] Carga idempotente `pnpm data:load`:
   - crea o actualiza por código (cables y bandejas);
   - rellena el árbol de ubicaciones desde los KKS (edificio → sala);

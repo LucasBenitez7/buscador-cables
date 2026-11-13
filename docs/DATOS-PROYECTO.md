@@ -201,3 +201,6 @@ Propuestas tras el análisis y aprobadas por el usuario el mismo día.
    (KKS, niveles, bandejas, recorridos y extremos) en lugar de los códigos `SH-50`.
 10. **No se carga** el detalle de hilos y bornas (interconexión): es mucho volumen y no ayuda a
     encontrar el cable. Se puede añadir más adelante.
+
+11. **Estado inicial**: los cables entran como _sin revisar_ (estado nuevo `UNVERIFIED`); el
+    técnico registra en campo cómo los encuentra. Decidido el 2026-11-13.

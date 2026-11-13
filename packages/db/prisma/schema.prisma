@@ -177,6 +177,7 @@ model Manufacturer {
 // ---------------------------------------------------------------------------
 
 enum InstallationStatus {
+  UNVERIFIED // sin revisar: viene de los listados y nadie ha comprobado aún cómo está
   IN_STOCK // en almacén
   COILED // enrollado
   PARTIALLY_LAID // tendido a medias: una punta espera en una bandeja

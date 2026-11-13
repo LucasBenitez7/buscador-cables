@@ -258,6 +258,33 @@ describe("runCableAction", () => {
   });
 });
 
+describe("runCableAction: cables loaded from the project lists", () => {
+  it("lays an unverified cable whose ends are only known by their equipment", async () => {
+    const cable = await prisma.cable.create({
+      data: {
+        code: "99XAT10W2005",
+        installationStatus: "UNVERIFIED",
+        originEquipment: "99BMA",
+        destinationEquipment: "99XAT10AP001",
+      },
+    });
+
+    await expect(
+      act(technician, cable.id, { action: "MOVED", locationId: places.yard }),
+    ).rejects.toThrow(/registra primero cómo está/);
+    await act(technician, cable.id, { action: "LAID" });
+
+    expect(await cableOf(cable.id)).toMatchObject({
+      installationStatus: "LAID",
+      originId: null,
+      destinationId: null,
+    });
+    expect((await lastEvent(cable.id)).changes).toEqual({
+      installationStatus: { from: "UNVERIFIED", to: "LAID" },
+    });
+  });
+});
+
 describe("runCableAction: partial laying", () => {
   async function routeThrough(cableId: string, codes: string[]) {
     for (const [index, code] of codes.entries()) {

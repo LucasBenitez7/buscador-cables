@@ -70,6 +70,16 @@ describe("createCableSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("registers a cable as not yet checked, without a location", () => {
+    const result = createCableSchema.safeParse({
+      ...base,
+      installationStatus: "UNVERIFIED",
+      currentLocationId: "",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("checks that the initial status is coherent", () => {
     const result = createCableSchema.safeParse({ ...base, connectionStatus: "CONNECTED" });
 

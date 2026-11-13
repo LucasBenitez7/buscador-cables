@@ -243,6 +243,8 @@ export async function searchCables(
       lastActionBy: { select: { name: true } },
       looseEnd: true,
       looseEndTray: { select: { code: true } },
+      originEquipment: true,
+      destinationEquipment: true,
     },
   });
   const byId = new Map(cables.map((cable) => [cable.id, cable]));
@@ -263,8 +265,9 @@ export async function searchCables(
           currentLocationId: cable.currentLocationId,
           looseEnd: cable.looseEnd,
           looseEndTray: cable.looseEndTray?.code ?? null,
-          originId: cable.originId,
-          destinationId: cable.destinationId,
+          // Cables from the project lists may know the equipment but not the room.
+          originId: cable.originId ?? cable.originEquipment,
+          destinationId: cable.destinationId ?? cable.destinationEquipment,
           // The search only returns active cables.
           deleted: false,
         },

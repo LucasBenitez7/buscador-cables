@@ -191,8 +191,9 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       currentLocationId: cable.currentLocationId,
       looseEnd: cable.looseEnd,
       looseEndTray: cable.looseEndTray?.code ?? null,
-      originId: cable.originId,
-      destinationId: cable.destinationId,
+      // Cables from the project lists may know the equipment but not the room.
+      originId: cable.originId ?? cable.originEquipment,
+      destinationId: cable.destinationId ?? cable.destinationEquipment,
       deleted: cable.deletedAt !== null,
     },
     route: cable.routeSteps.map((step) => ({

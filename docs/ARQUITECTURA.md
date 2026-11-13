@@ -224,6 +224,11 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - `CableRouteStep`: recorrido **ordenado** de cada cable (`position` ≥ 1). Cada paso guarda el
   texto del listado y, si es una bandeja conocida, la bandeja; en instrumentación, además, el
   tramo (`FIELD` campo / `ROOM` sala).
+- Estado `UNVERIFIED` (sin revisar): el estado con que entran los cables de los listados, que
+  nadie ha comprobado en campo. Sin ubicación física; no se mueve ni se conecta hasta que alguien
+  registra cómo está (tendido, tendido a medias, enrollado o retirado).
+- Si un cable de los listados no tiene sala, el equipo de cada extremo cuenta como extremo
+  conocido para poder tenderlo (`originId ?? originEquipment` al construir el estado).
 - Estado `PARTIALLY_LAID` (tendido parcial) y acción del mismo nombre. `Cable.looseEnd`
   (`ORIGIN`/`DESTINATION`) y `Cable.looseEndTrayId` dicen qué punta quedó suelta y en qué
   bandeja espera; la restricción `cable_loose_end_check` exige que solo un cable tendido a

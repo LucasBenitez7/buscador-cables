@@ -3,6 +3,7 @@ import { cableCodeSchema } from "./cable-code";
 
 /** The Prisma enums must list exactly the same members. */
 export const INSTALLATION_STATUSES = [
+  "UNVERIFIED",
   "IN_STOCK",
   "COILED",
   "PARTIALLY_LAID",
@@ -34,6 +35,7 @@ export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
 export type CableAction = (typeof CABLE_ACTIONS)[number];
 
 export const INSTALLATION_STATUS_LABELS: Record<InstallationStatus, string> = {
+  UNVERIFIED: "Sin revisar",
   IN_STOCK: "En almacén",
   COILED: "Enrollado",
   PARTIALLY_LAID: "Tendido parcial",
@@ -219,7 +221,10 @@ export function validateInitialStatus(input: {
   if (installationStatus !== "LAID" && connectionStatus !== "DISCONNECTED") {
     return "Solo un cable tendido puede estar conectado.";
   }
-  if (installationStatus !== "LAID" && !input.currentLocationId) {
+  if (
+    (installationStatus === "IN_STOCK" || installationStatus === "COILED") &&
+    !input.currentLocationId
+  ) {
     return "Indica dónde está el cable (almacén o lugar donde está enrollado).";
   }
   if (installationStatus === "LAID" && (!input.originId || !input.destinationId)) {
