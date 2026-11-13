@@ -460,12 +460,17 @@ El repositorio es público. Los datos reales **nunca** se suben:
 
 Orden de trabajo, todo en `feat/f7-project-data`:
 
-- [ ] Esquema y migración: `Tray`, `TrayDrawing`, `CableRouteStep`, datos de cada extremo,
-      campos nuevos del cable (nivel, nº alternativo, revisión, circuito, composición, esquema,
-      longitud pendiente, documento y página), código en `CableType`, y el estado _tendido
-      parcial_ con la bandeja de la punta suelta.
-- [ ] Máquina de estados y acciones: tender a medias (bandeja de la punta suelta, que debe
-      estar en el recorrido) y completar el tendido, con su reflejo en el historial.
+- [x] Esquema y migración `add_trays_routes_and_cable_ends`: `Tray`, `TrayDrawing`,
+      `CableRouteStep`, datos de cada extremo, campos nuevos del cable (nivel, nº alternativo,
+      revisión, circuito, composición, esquema, longitud pendiente, documento y página), código
+      en `CableType` y `looseEndTrayId` (bandeja de la punta suelta). Comprobaciones en la base
+      de datos (posición ≥ 1, nivel de tensión 1-4) e índices trigram para buscar por bandeja y
+      por equipo. `parseTrayCode` y `parseTraySize` en `packages/shared`, probados además contra
+      los ~2.500 códigos reales: solo falla uno con errata. Nuevo test que comprueba que los
+      enums de Prisma y las constantes compartidas coinciden.
+- [ ] Máquina de estados y acciones: estado _tendido parcial_ (con su migración), tender a
+      medias (bandeja de la punta suelta, que debe estar en el recorrido) y completar el
+      tendido, con su reflejo en el historial.
 - [ ] Seed y E2E con datos inventados de forma real (KKS, bandejas, recorridos, extremos) en
       lugar de los códigos `SH-50`.
 - [ ] Script de extracción repetible `pnpm data:extract` (TypeScript + `pdfjs-dist`), que lee

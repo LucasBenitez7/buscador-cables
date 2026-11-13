@@ -5,7 +5,7 @@ import { listActivity } from "./service";
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
   await prisma.user.createMany({
     data: [

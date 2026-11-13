@@ -10,7 +10,7 @@ let actor: { id: string };
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
   actor = await prisma.user.create({
     data: { id: randomUUID(), name: "Tomás Gil", email: "tomas@cables.test", role: "ADMIN" },

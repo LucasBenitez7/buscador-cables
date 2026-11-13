@@ -37,7 +37,7 @@ beforeEach(async () => {
   // Otros tests dejan cables y eventos que apuntan a usuarios (el historial usa RESTRICT):
   // se vacía todo lo que depende de "user". Sesiones y cuentas caen en cascada.
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
 });
 

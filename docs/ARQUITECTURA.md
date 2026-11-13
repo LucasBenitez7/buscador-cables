@@ -204,6 +204,27 @@ model CableEvent {
 }
 ```
 
+### Datos reales del proyecto (fase 7)
+
+Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructura en
+`docs/DATOS-PROYECTO.md`). Resumen; el detalle está en `schema.prisma`:
+
+- `Cable` gana el **nivel** (`CableLevel`: `L1` instrumentación, `L2` BT, `L3` BT unipolar,
+  `L4` MT), número alternativo, revisión, circuito, composición, esquema, longitud pendiente y
+  el documento y la página de donde se cargó.
+- **Extremos**: `originEquipment`, `originCubicle`, `originGland`, `originFunctionKks`,
+  `originInstallationKks` y `originRoom` (y lo mismo con `destination…`). `originId` y
+  `destinationId` siguen apuntando al árbol de ubicaciones (sala o edificio). Los equipos tienen
+  índice trigram para buscarlos por subcadena.
+- `Tray`: bandeja, tubo o canalización. Código único (`99UXA00L22036`), tipo (`TrayKind`),
+  nivel de tensión y cota sacados del código, área, edificio y tamaño. `TrayDrawing` dice en qué
+  hojas de plano aparece. El código se interpreta con `parseTrayCode` (`packages/shared`).
+- `CableRouteStep`: recorrido **ordenado** de cada cable (`position` ≥ 1). Cada paso guarda el
+  texto del listado y, si es una bandeja conocida, la bandeja; en instrumentación, además, el
+  tramo (`FIELD` campo / `ROOM` sala).
+- `Cable.looseEndTrayId`: bandeja donde espera la punta suelta de un cable tendido a medias.
+- `CableType.code`: código del tipo en el listado eléctrico (`C0802`).
+
 ## Seguridad
 
 - Contraseñas con hash (gestionado por Better Auth, scrypt/argon2).

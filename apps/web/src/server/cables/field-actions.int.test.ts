@@ -13,7 +13,7 @@ let places: { origin: string; destination: string; store: string; yard: string }
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
   const [tech, sup] = await Promise.all(
     [

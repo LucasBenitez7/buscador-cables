@@ -9,3 +9,4 @@ export * from "./cable-actions";
 export * from "./cable-history";
 export * from "./activity";
 export * from "./search";
+export * from "./trays";

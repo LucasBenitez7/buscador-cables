@@ -12,7 +12,7 @@ const prisma = createPrismaClient(url);
 async function reset() {
   // TRUNCATE no dispara los triggers por fila, así que también limpia cable_event.
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
 }
 
@@ -91,5 +91,86 @@ describe("cable code search index", () => {
       SELECT code FROM "cable" WHERE similarity(code, 'SH50') > 0.2`;
 
     expect(rows.map((row) => row.code)).toContain("SH-50");
+  });
+});
+
+describe("trays and routes", () => {
+  async function seedRoute() {
+    const tray = await prisma.tray.create({ data: { code: "99UXA00L22036", kind: "LADDER" } });
+    const cable = await prisma.cable.create({
+      data: {
+        code: "99XAT10W2005",
+        level: "L2",
+        originEquipment: "99XAT10GS600",
+        destinationEquipment: "99XAY10",
+        routeSteps: {
+          create: [
+            { position: 1, label: tray.code, trayId: tray.id },
+            { position: 2, label: "CONTIGUOUS PANEL" },
+          ],
+        },
+      },
+    });
+    return { tray, cable };
+  }
+
+  it("keeps the route steps in order and allows steps without a tray", async () => {
+    const { cable } = await seedRoute();
+
+    const steps = await prisma.cableRouteStep.findMany({
+      where: { cableId: cable.id },
+      orderBy: { position: "asc" },
+    });
+    expect(steps.map((step) => [step.position, step.label, step.trayId !== null])).toEqual([
+      [1, "99UXA00L22036", true],
+      [2, "CONTIGUOUS PANEL", false],
+    ]);
+  });
+
+  it("rejects two steps in the same position and positions below 1", async () => {
+    const { cable } = await seedRoute();
+
+    await expect(
+      prisma.cableRouteStep.create({ data: { cableId: cable.id, position: 2, label: "X" } }),
+    ).rejects.toThrow();
+    await expect(
+      prisma.cableRouteStep.create({ data: { cableId: cable.id, position: 0, label: "X" } }),
+    ).rejects.toThrow(/cable_route_step_position_check/);
+  });
+
+  it("does not delete a tray that a route or a loose end still uses", async () => {
+    const { tray, cable } = await seedRoute();
+    await expect(prisma.tray.delete({ where: { id: tray.id } })).rejects.toThrow();
+
+    await prisma.cableRouteStep.deleteMany({ where: { cableId: cable.id } });
+    await prisma.cable.update({ where: { id: cable.id }, data: { looseEndTrayId: tray.id } });
+    await expect(prisma.tray.delete({ where: { id: tray.id } })).rejects.toThrow();
+  });
+
+  it("rejects voltage levels outside 1-4", async () => {
+    await expect(
+      prisma.tray.create({ data: { code: "99UXA00L52036", kind: "LADDER", voltageLevel: 5 } }),
+    ).rejects.toThrow(/tray_voltage_level_check/);
+  });
+
+  it("lists each drawing sheet of a tray only once", async () => {
+    const { tray } = await seedRoute();
+    const sheet = { trayId: tray.id, drawing: "XXX-DRW-0001", sheet: "04" };
+    await prisma.trayDrawing.create({ data: sheet });
+
+    await expect(prisma.trayDrawing.create({ data: sheet })).rejects.toThrow();
+  });
+
+  it("indexes tray codes and cable equipment for substring search", async () => {
+    const rows = await prisma.$queryRaw<{ indexname: string; indexdef: string }[]>`
+      SELECT indexname, indexdef FROM pg_indexes
+      WHERE indexname IN (
+        'tray_code_trgm_idx',
+        'cable_origin_equipment_trgm_idx',
+        'cable_destination_equipment_trgm_idx'
+      )`;
+
+    expect(rows).toHaveLength(3);
+    for (const row of rows) expect(row.indexdef).toMatch(/USING gin .*gin_trgm_ops/);
   });
 });
