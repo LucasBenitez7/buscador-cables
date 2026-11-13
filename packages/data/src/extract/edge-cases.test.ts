@@ -109,6 +109,29 @@ describe("drawing sheets with other layouts", () => {
 });
 
 describe("formatReport", () => {
+  it("escapes backslashes and pipes so a message cannot break its table cell", () => {
+    const report = formatReport({
+      cables: [],
+      trays: [],
+      issues: [
+        {
+          severity: "error",
+          file: "a|b.pdf",
+          page: 1,
+          // Text: 99\X and "ends with a backslash \| and a pipe".
+          code: "99\\X",
+          message: "ends with a backslash \\| and a pipe",
+        },
+      ],
+      stats: { files: [], cablesByLevel: {}, traysInDrawings: 0, traysOnlyInRoutes: 0 },
+    });
+
+    // Backslashes doubled first, then each pipe escaped: no cell can close early.
+    expect(report).toContain(
+      "| a\\|b.pdf | 1 | 99\\\\X | ends with a backslash \\\\\\| and a pipe |",
+    );
+  });
+
   it("lists at most 200 issues per group and points to report.json for the rest", () => {
     const result: ExtractionResult = {
       cables: [],

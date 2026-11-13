@@ -42,6 +42,12 @@ describe("parseTrayCode", () => {
     expect(parseTrayCode("99UXN01T19996")?.kind).toBe("OTHER");
   });
 
+  it("parses long runs of '_' quickly (no backtracking)", () => {
+    const started = performance.now();
+    expect(parseTrayCode(`99U${"_".repeat(50_000)}`)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
   it("accepts four-digit order numbers", () => {
     expect(parseTrayCode("99UXA01L10061")?.orderNumber).toBe("061");
     expect(parseTrayCode("99UXA01L100610")?.orderNumber).toBe("0610");

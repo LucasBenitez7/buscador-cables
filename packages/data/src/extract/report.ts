@@ -2,6 +2,11 @@ import type { ExtractionResult } from "./schema";
 
 const LIMIT_PER_GROUP = 200;
 
+/** Text for a Markdown table cell: backslashes first, then the pipes that would split the cell. */
+function cell(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
+}
+
 /** Human-readable summary of an extraction, in Spanish, for `report.md`. */
 export function formatReport(result: ExtractionResult, generatedAt = new Date()): string {
   const { stats, issues } = result;
@@ -44,7 +49,7 @@ export function formatReport(result: ExtractionResult, generatedAt = new Date())
     );
     for (const issue of group.slice(0, LIMIT_PER_GROUP)) {
       lines.push(
-        `| ${issue.file} | ${issue.page ?? ""} | ${issue.code ?? ""} | ${issue.message.replace(/\|/g, "\\|")} |`,
+        `| ${cell(issue.file)} | ${issue.page ?? ""} | ${cell(issue.code ?? "")} | ${cell(issue.message)} |`,
       );
     }
     if (group.length > LIMIT_PER_GROUP) {

@@ -75,9 +75,16 @@ export function parseTrayCode(input: string): ParsedTrayCode | null {
     kind: KIND_BY_LETTER[letter!] ?? "OTHER",
     voltageLevel,
     elevationLevel: Number(elevation),
-    areaCode: `${unit}${area!.replace(/_+$/, "")}`,
+    areaCode: `${unit}${trimTrailingUnderscores(area!)}`,
     orderNumber: order!,
   };
+}
+
+/** "UX_" → "UX". Without a regular expression: no backtracking on long inputs. */
+function trimTrailingUnderscores(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "_") end -= 1;
+  return value.slice(0, end);
 }
 
 export function isTrayCode(input: string): boolean {
