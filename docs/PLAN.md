@@ -484,8 +484,17 @@ Orden de trabajo, todo en `feat/f7-project-data`:
     también fijan la punta suelta.
   - Tests de la máquina de estados, del servicio contra Postgres, de componentes y un E2E del
     flujo completo. El E2E encontró que la Server Action no leía los campos nuevos.
-- [ ] Seed y E2E con datos inventados de forma real (KKS, bandejas, recorridos, extremos) en
-      lugar de los códigos `SH-50`.
+- [x] Seed y E2E con datos inventados de forma real, en lugar de los códigos `SH-50`:
+  - `generateSeedData` crea ~4.500 cables L1-L4 de una central de ejemplo (unidad `99`): KKS de
+    cables, equipos y salas, ~500 bandejas codificadas como en los planos con su hoja de plano,
+    ~30.000 tramos de recorrido, extremos como en los listados y estados de campo variados
+    (también tendidos a medias con la punta en una bandeja del recorrido).
+  - Árbol de ubicaciones: Planta → grupo de edificios → edificio → sala.
+  - `parseCableSpec` (`packages/shared`) saca conductores, sección y tensión del texto del tipo
+    de cable; probado contra los ~120 tipos reales (lee 106; el resto son fibra, coaxial o AWG).
+  - Origen y destino pueden ser la misma sala.
+  - Probado en una base temporal: ~14 s, y una segunda ejecución no duplica nada.
+  - E2E con códigos KKS inventados; la búsqueda tolerante se prueba con `xab10t1w800`.
 - [ ] Script de extracción repetible `pnpm data:extract` (TypeScript + `pdfjs-dist`), que lee
       `private-data/source/*.pdf` y deja datos normalizados en `private-data/extracted/`.
 - [ ] Validación con Zod de cada fila, con un informe de errores por línea.

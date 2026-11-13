@@ -64,10 +64,10 @@ describe("createCableSchema", () => {
     expect(createCableSchema.safeParse({ ...base, [field]: value }).success).toBe(false);
   });
 
-  it("rejects the same origin and destination", () => {
+  it("accepts the same room at both ends (two pieces of equipment of one room)", () => {
     const result = createCableSchema.safeParse({ ...base, originId: "a", destinationId: "a" });
 
-    expect(issues(result)).toContain("El origen y el destino no pueden ser la misma ubicación");
+    expect(result.success).toBe(true);
   });
 
   it("checks that the initial status is coherent", () => {

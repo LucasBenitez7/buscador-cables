@@ -149,9 +149,13 @@ Propuestas tras el análisis y aprobadas por el usuario el mismo día.
    bandeja (qué cables pasan, cuáles esperan en ella, en qué planos está).
 7. **Extracción en TypeScript** (`pnpm data:extract`) con `pdfjs-dist`, para usar el mismo
    lenguaje, Zod y Vitest que el resto del proyecto. Carga idempotente con `pnpm data:load`.
-8. **Ubicaciones desde los KKS**: la carga rellena el árbol Planta → Área (edificio) → Sitio
-   (sala). El origen y el destino del cable apuntan a la sala o, si no hay sala, al edificio; el
-   equipo exacto va en los campos de cada extremo.
+8. **Ubicaciones desde los KKS**: la carga rellena el árbol, que es estricto (Planta → Área →
+   Unidad → Sitio), así: Planta = unidad de la planta (`99`); Área = grupo de edificios, las
+   dos primeras letras del KKS de edificio (`99UX`); Unidad = edificio (`99UXA`); Sitio = sala
+   (`99UXA16RA001`). El origen y el destino del cable apuntan a la sala o, si no hay sala, al
+   edificio; el equipo exacto va en los campos de cada extremo. Un cable puede tener los dos
+   extremos en la misma sala (muchos de instrumentación unen dos equipos de una sala), así que
+   desde el 2026-11-13 el formulario ya no lo prohíbe.
 9. **Datos de ejemplo**: el seed y los E2E pasan a generar datos inventados con la forma real
    (KKS, niveles, bandejas, recorridos y extremos) en lugar de los códigos `SH-50`.
 10. **No se carga** el detalle de hilos y bornas (interconexión): es mucho volumen y no ayuda a

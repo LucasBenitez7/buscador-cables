@@ -198,13 +198,6 @@ const cableFieldsSchema = z.object({
 
 export type CableFields = z.infer<typeof cableFieldsSchema>;
 
-const differentEnds = (data: { originId: string | null; destinationId: string | null }) =>
-  data.originId === null || data.originId !== data.destinationId;
-const differentEndsIssue = {
-  message: "El origen y el destino no pueden ser la misma ubicación",
-  path: ["destinationId"],
-};
-
 /**
  * Initial status of a cable being registered. Returns an error message in
  * Spanish, or null when the combination is coherent.
@@ -241,7 +234,8 @@ export const createCableSchema = cableFieldsSchema
     connectionStatus: z.enum(CONNECTION_STATUSES, { error: "Estado de conexión no válido" }),
     currentLocationId: optionalId,
   })
-  .refine(differentEnds, differentEndsIssue)
+  // Origin and destination may be the same room: many instrumentation cables join two
+  // pieces of equipment of the same room (docs/DATOS-PROYECTO.md).
   .superRefine((data, ctx) => {
     const error = validateInitialStatus(data);
     if (error) {
@@ -254,9 +248,10 @@ const versionSchema = z.coerce
   .int("Versión no válida")
   .min(1, "Versión no válida");
 
-export const updateCableSchema = cableFieldsSchema
-  .extend({ id: z.string().min(1), version: versionSchema })
-  .refine(differentEnds, differentEndsIssue);
+export const updateCableSchema = cableFieldsSchema.extend({
+  id: z.string().min(1),
+  version: versionSchema,
+});
 
 export const deleteCableSchema = z.object({
   id: z.string().min(1),

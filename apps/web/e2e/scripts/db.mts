@@ -120,6 +120,9 @@ async function prepare() {
     await db.cable.create({
       data: {
         code: cable.code,
+        level: cable.level,
+        originEquipment: cable.ends[0],
+        destinationEquipment: cable.ends[1],
         typeId: type.id,
         colorId: color.id,
         manufacturerId: manufacturer.id,
