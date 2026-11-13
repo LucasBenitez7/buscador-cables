@@ -97,7 +97,7 @@ Mismo esquema en los planos de instrumentación y en los eléctricos:
 ## Resultado del prototipo de extracción
 
 Prototipo hecho el 2026-11-13 (fuera del repo) leyendo el texto con posiciones de cada página:
-tarda ~1 minuto para los ~4.600 páginas.
+tarda ~1 minuto para las ~4.600 páginas. La extracción definitiva está en la sección siguiente.
 
 - Todos los cables tienen código, longitud, tipo, nivel y extremos. El código de la cabecera
   coincide siempre con el del pie de página (sirve de comprobación).
@@ -108,6 +108,47 @@ tarda ~1 minuto para los ~4.600 páginas.
   revisión más alta y lo anota en el informe.
 - Unos pocos cables eléctricos no tienen recorrido, y una treintena tienen la longitud
   pendiente (`PEND.`).
+
+## Extracción: `pnpm data:extract`
+
+Paquete `packages/data`, en TypeScript con `pdfjs-dist` (lee el texto de cada página con su
+posición; no dibuja nada).
+
+1. Copia los PDFs en `private-data/source/` (con cualquier nombre).
+2. Ejecuta `pnpm data:extract`. Cada página se reconoce por su contenido: ficha de
+   instrumentación, ficha eléctrica, hoja de plano o nada (portadas, índices, registro de
+   cambios). El orden y el nombre de los ficheros dan igual.
+3. Revisa `private-data/extracted/report.md`.
+
+Deja en `private-data/extracted/`:
+
+| Fichero       | Contenido                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| `cables.json` | Un cable por código, validado con Zod (`projectCableSchema`): datos, extremos y recorrido. |
+| `trays.json`  | Bandejas de los planos y de los recorridos, con tipo, tamaño y hojas de plano.             |
+| `report.json` | Estadísticas y todos los avisos y errores, con fichero, página y código.                   |
+| `report.md`   | El mismo informe, legible.                                                                 |
+
+Reglas de la extracción:
+
+- El código de la cabecera tiene que coincidir con el del pie de página; si no, la ficha se
+  descarta (error).
+- Nivel `S2`/`L2S` → `L2` (aviso). Longitud `0` o vacía → sin longitud (aviso); `(PEND.)` →
+  longitud pendiente.
+- Un cable repetido se queda con la revisión más alta (`3_RX00` > `3` > `2_RX01`), con aviso.
+- Recorrido: `FIELD_TRAY` y `ROOM_TRAY` no son pasos, marcan el tramo de los siguientes. Un
+  código de bandeja con una nota (`… (S)`) cuenta como bandeja. Lo demás se guarda como texto;
+  si parece una bandeja mal escrita, con aviso.
+- Bandejas: el tamaño que más se repite en los planos (aviso si hay varios); el título de la
+  hoja sale del índice de cada plano; las bandejas que solo están en recorridos se crean sin
+  plano (aviso con el total).
+- Conductores, sección y tensión salen del texto del tipo con `parseCableSpec`.
+
+Resultado con los PDFs reales (2026-11-13): ~4.460 cables, ~3.000 bandejas, ~37.000 tramos
+de recorrido, 0 errores y ~50 avisos, en menos de un minuto y medio.
+
+Los tests no usan los PDFs reales: generan en memoria PDFs inventados con la misma maquetación
+(`packages/data/src/testing`).
 
 ## Comparación con el modelo actual
 

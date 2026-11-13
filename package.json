@@ -21,6 +21,7 @@
     "db:check": "pnpm --filter @cables/db migrations:check",
     "db:seed": "pnpm --filter @cables/db seed",
     "db:studio": "pnpm --filter @cables/db studio",
+    "data:extract": "pnpm --filter @cables/data extract",
     "prepare": "husky"
   },
   "lint-staged": {

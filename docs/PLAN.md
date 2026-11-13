@@ -495,9 +495,13 @@ Orden de trabajo, todo en `feat/f7-project-data`:
   - Origen y destino pueden ser la misma sala.
   - Probado en una base temporal: ~14 s, y una segunda ejecución no duplica nada.
   - E2E con códigos KKS inventados; la búsqueda tolerante se prueba con `xab10t1w800`.
-- [ ] Script de extracción repetible `pnpm data:extract` (TypeScript + `pdfjs-dist`), que lee
-      `private-data/source/*.pdf` y deja datos normalizados en `private-data/extracted/`.
-- [ ] Validación con Zod de cada fila, con un informe de errores por línea.
+- [x] Script de extracción repetible `pnpm data:extract` (paquete `packages/data`, TypeScript
+      y `pdfjs-dist` 6.4): lee `private-data/source/*.pdf` y deja `cables.json`, `trays.json` e
+      informe en `private-data/extracted/`. Reconoce cada página por su contenido. Con los PDFs
+      reales: ~4.460 cables, ~3.000 bandejas y ~37.000 tramos, 0 errores, en menos de un
+      minuto y medio. Detalle en `docs/DATOS-PROYECTO.md`.
+- [x] Validación con Zod de cada cable y bandeja, con informe de errores y avisos por fichero,
+      página y código (`report.md` y `report.json`).
 - [ ] Carga idempotente `pnpm data:load`:
   - crea o actualiza por código (cables y bandejas);
   - rellena el árbol de ubicaciones desde los KKS (edificio → sala);
@@ -506,7 +510,7 @@ Orden de trabajo, todo en `feat/f7-project-data`:
 - [ ] Pantallas: ficha con extremos y recorrido (tendido / pendiente); búsqueda por bandeja y
       por equipo; ficha de bandeja (cables que pasan, cables que esperan en ella, planos).
 - [ ] Tests:
-  - extracción con PDFs inventados en `__fixtures__`;
+  - extracción con PDFs inventados (generados en memoria por los tests, no en `__fixtures__`): hecho;
   - validación;
   - carga contra Postgres;
   - E2E de las pantallas nuevas.

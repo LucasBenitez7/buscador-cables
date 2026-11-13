@@ -47,6 +47,7 @@ buscador-cables/
 ├── packages/
 │   ├── db/                       # Prisma: schema, migraciones, seed, cliente
 │   ├── shared/                   # Esquemas Zod, tipos, constantes, normalizadores
+│   ├── data/                     # Extracción (y carga) de los datos reales desde los PDFs
 │   └── config/                   # eslint, tsconfig, prettier compartidos
 ├── docs/
 ├── docker-compose.yml
@@ -55,6 +56,7 @@ buscador-cables/
 ```
 
 Regla de dependencias: `app` → `features` → `server` → `packages/db` y `packages/shared`.
+`packages/data` usa `packages/shared` (y `packages/db` para la carga); la app no lo importa.
 Nunca al revés. Los componentes cliente no acceden a la base de datos.
 
 ## Interfaz: tema oscuro
