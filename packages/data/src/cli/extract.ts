@@ -33,12 +33,11 @@ async function main() {
   console.warn(`Extracción: ${names.length} PDF en ${source}`);
 
   const started = Date.now();
-  const files = await Promise.all(
-    names.map(async (name) => ({
-      name,
-      data: new Uint8Array(await readFile(path.join(source, name))),
-    })),
-  );
+  // One file in memory at a time: the drawings are huge.
+  const files = names.map((name) => ({
+    name,
+    data: async () => new Uint8Array(await readFile(path.join(source, name))),
+  }));
   const result = await extractProjectData(files, (message) => console.warn(`  ${message}`));
 
   await mkdir(out, { recursive: true });

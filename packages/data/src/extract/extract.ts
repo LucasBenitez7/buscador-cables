@@ -17,7 +17,8 @@ import {
   type ProjectTray,
 } from "./schema";
 
-export type SourcePdf = { name: string; data: Uint8Array };
+/** A PDF to read. `data` may be a function so big files are loaded one at a time. */
+export type SourcePdf = { name: string; data: Uint8Array | (() => Promise<Uint8Array>) };
 
 type DrawingSheetOf = RawDrawingSheet & { file: string };
 
@@ -38,7 +39,8 @@ export async function extractProjectData(
   for (const file of files) {
     const fileStats = { name: file.name, pages: 0, cableSheets: 0, drawingSheets: 0 };
     stats.files.push(fileStats);
-    for await (const page of readPdfPages(file.data)) {
+    const data = typeof file.data === "function" ? await file.data() : file.data;
+    for await (const page of readPdfPages(data)) {
       fileStats.pages += 1;
       if (page.number % 250 === 0) onProgress(`${file.name}: página ${page.number}`);
 
@@ -83,20 +85,25 @@ export async function extractProjectData(
       return;
     }
     const where = (other: ProjectCable) => `${other.sourceFile} pág. ${other.sourcePage}`;
-    const newer = compareRevisions(cable.revision, existing.revision) > 0;
+    const order = compareRevisions(cable.revision, existing.revision);
+    const newer = order > 0;
     const same =
       JSON.stringify({ ...cable, sourcePage: 0, sourceFile: "", sourceDocument: "" }) ===
       JSON.stringify({ ...existing, sourcePage: 0, sourceFile: "", sourceDocument: "" });
+    // Same revision, different data: nothing says which sheet is the good one.
+    const tie = !same && order === 0;
     issues.push({
-      severity: "warning",
+      severity: tie ? "error" : "warning",
       file: cable.sourceFile,
       page: cable.sourcePage,
       code: cable.code,
       message: same
         ? `Repetido e idéntico al de ${where(existing)}.`
-        : newer
-          ? `Repetido: se usa esta revisión (${cable.revision}) en lugar de la de ${where(existing)} (${existing.revision}).`
-          : `Repetido: se usa la revisión de ${where(existing)} (${existing.revision}) y se descarta esta (${cable.revision}).`,
+        : tie
+          ? `Repetido con la misma revisión (${cable.revision ?? "sin revisión"}) y datos distintos a los de ${where(existing)}: se conserva aquella ficha. Revisa cuál es la buena.`
+          : newer
+            ? `Repetido: se usa esta revisión (${cable.revision}) en lugar de la de ${where(existing)} (${existing.revision}).`
+            : `Repetido: se usa la revisión de ${where(existing)} (${existing.revision}) y se descarta esta (${cable.revision}).`,
     });
     if (newer) cablesByCode.set(cable.code, cable);
   }
@@ -201,5 +208,19 @@ function buildTrays(
     });
   }
 
-  return [...trays.values()].filter((tray) => projectTraySchema.safeParse(tray).success);
+  // A tray that does not pass the schema is left out, and the report says why.
+  return [...trays.values()].filter((tray) => {
+    const parsed = projectTraySchema.safeParse(tray);
+    if (parsed.success) return true;
+    for (const issue of parsed.error.issues) {
+      issues.push({
+        severity: "error",
+        file: "planos",
+        page: tray.drawings[0]?.sourcePage ?? null,
+        code: tray.code,
+        message: `Bandeja descartada: ${issue.path.join(".") || "bandeja"}: ${issue.message}`,
+      });
+    }
+    return false;
+  });
 }
