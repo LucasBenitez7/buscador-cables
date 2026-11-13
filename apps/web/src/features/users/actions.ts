@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { changeRoleSchema, createUserSchema, setUserActiveSchema } from "@cables/shared";
 import { firstIssue, formValue, type ActionResult } from "@/lib/action-result";
+import { notifyAccountApproved } from "@/server/account-approval";
 import { authorize } from "@/server/session";
 import {
   UserServiceError,
@@ -89,8 +90,13 @@ export async function setUserActiveAction(formData: FormData): Promise<ActionRes
   }
 
   try {
-    await setUserActive(auth.user, parsed.data);
+    const { approved } = await setUserActive(auth.user, parsed.data);
     revalidatePath(USERS_PATH);
+    if (approved) {
+      // El correo no bloquea la aprobación: `sendEmail` registra el fallo y no lo propaga.
+      await notifyAccountApproved(approved);
+      return { ok: true, message: "Cuenta aprobada. Se ha avisado al usuario por correo." };
+    }
     return {
       ok: true,
       message: parsed.data.active ? "Usuario reactivado." : "Usuario desactivado.",

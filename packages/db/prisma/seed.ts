@@ -44,6 +44,7 @@ async function seedAdmin() {
       email,
       role: "ADMIN",
       emailVerified: true,
+      approvedAt: new Date(),
       accounts: {
         create: {
           id: randomUUID(),

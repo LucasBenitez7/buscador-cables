@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { signUpErrorMessage } from "@/lib/auth-errors";
 import { VERIFY_EMAIL_PATH } from "@/lib/route-access";
 
 export function RegisterForm() {
@@ -40,11 +41,7 @@ export function RegisterForm() {
     setPending(false);
 
     if (signUpError) {
-      setError(
-        signUpError.status === 429
-          ? "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
-          : (signUpError.message ?? "No se pudo crear la cuenta. Inténtalo de nuevo."),
-      );
+      setError(signUpErrorMessage(signUpError));
       return;
     }
 
@@ -58,6 +55,9 @@ export function RegisterForm() {
         <p role="status" className="text-sm">
           Te hemos enviado un correo a <strong>{sentTo}</strong> para confirmar la cuenta. El enlace
           caduca en 24 horas.
+        </p>
+        <p className="text-muted-foreground text-sm">
+          Después, un administrador tiene que aprobar la cuenta antes de que puedas entrar.
         </p>
         <Link
           href="/login"
@@ -108,8 +108,8 @@ export function RegisterForm() {
       </Button>
 
       <p className="text-muted-foreground text-center text-xs">
-        Las cuentas nuevas tienen acceso de solo consulta. Un administrador puede ampliar tus
-        permisos.
+        Un administrador tiene que aprobar cada cuenta nueva antes de que pueda entrar. Empieza con
+        acceso de solo consulta.
       </p>
 
       <p className="text-center text-sm">

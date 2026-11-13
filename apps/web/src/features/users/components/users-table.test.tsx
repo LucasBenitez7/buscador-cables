@@ -16,6 +16,7 @@ const technician: UserRow = {
   email: "ana@planta.example",
   role: "TECHNICIAN",
   active: true,
+  pending: false,
   createdAt: new Date("2026-11-01T00:00:00Z"),
 };
 
@@ -52,6 +53,38 @@ describe("UsersTable", () => {
 
     await screen.findByText("No tienes permiso.");
     await waitFor(() => expect(select.value).toBe("TECHNICIAN"));
+  });
+
+  // Revisión F0-F7 (A2): las cuentas registradas esperan a que un administrador las apruebe.
+  it("shows accounts waiting for approval and approves them", async () => {
+    setUserActiveAction.mockResolvedValue({ ok: true, message: "Cuenta aprobada." });
+    render(
+      <UsersTable
+        users={[{ ...technician, role: "VIEWER", active: false, pending: true }]}
+        currentUserId="u1"
+        currentRole="ADMIN"
+      />,
+    );
+
+    expect(screen.getByText("Pendiente de aprobación")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Aprobar" }));
+
+    await screen.findByText("Cuenta aprobada.");
+    const formData = setUserActiveAction.mock.calls[0]?.[0] as FormData;
+    expect(Object.fromEntries(formData)).toEqual({ userId: "u2", active: "true" });
+  });
+
+  it("offers to reactivate an account that was deactivated", () => {
+    render(
+      <UsersTable
+        users={[{ ...technician, active: false }]}
+        currentUserId="u1"
+        currentRole="ADMIN"
+      />,
+    );
+
+    expect(screen.getByText("Desactivado")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reactivar" })).toBeInTheDocument();
   });
 
   it("does not offer actions on your own account", () => {
