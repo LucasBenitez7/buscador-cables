@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TEXT_LINK, TEXT_LINK_SM } from "@/components/ui/text-link";
 import { useState, type FormEvent } from "react";
 import { signUpSchema } from "@cables/shared";
 import { Button } from "@/components/ui/button";
@@ -59,10 +60,7 @@ export function RegisterForm() {
         <p className="text-muted-foreground text-sm">
           Después, un administrador tiene que aprobar la cuenta antes de que puedas entrar.
         </p>
-        <Link
-          href="/login"
-          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm text-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
-        >
+        <Link href="/login" className={TEXT_LINK_SM}>
           Volver al inicio de sesión
         </Link>
       </div>
@@ -114,10 +112,7 @@ export function RegisterForm() {
 
       <p className="text-center text-sm">
         ¿Ya tienes cuenta?{" "}
-        <Link
-          href="/login"
-          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
-        >
+        <Link href="/login" className={TEXT_LINK}>
           Inicia sesión
         </Link>
       </p>

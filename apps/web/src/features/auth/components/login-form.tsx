@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TEXT_LINK } from "@/components/ui/text-link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -74,20 +75,14 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
       </Button>
 
       <p className="text-center text-sm">
-        <Link
-          href="/forgot-password"
-          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
-        >
+        <Link href="/forgot-password" className={TEXT_LINK}>
           He olvidado mi contraseña
         </Link>
       </p>
 
       <p className="text-center text-sm">
         ¿No tienes cuenta?{" "}
-        <Link
-          href="/register"
-          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
-        >
+        <Link href="/register" className={TEXT_LINK}>
           Crear cuenta
         </Link>
       </p>

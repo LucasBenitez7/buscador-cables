@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TEXT_LINK_SM } from "@/components/ui/text-link";
 import { notFound } from "next/navigation";
 import { hasPermission } from "@cables/shared";
 import { CableForm } from "@/features/cables/components/cable-form";
@@ -33,10 +34,7 @@ export default async function EditCablePage({
         <h1 className="text-2xl font-semibold tracking-tight">
           Editar <span className="font-mono">{cable.code}</span>
         </h1>
-        <Link
-          href={`/cables/${cable.id}`}
-          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm text-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
-        >
+        <Link href={`/cables/${cable.id}`} className={TEXT_LINK_SM}>
           Ver ficha
         </Link>
       </div>

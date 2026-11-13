@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CABLE_ACTIONS, CONNECTION_STATUSES, INSTALLATION_STATUSES } from "./cables";
 import { CABLE_LEVELS, normalizeTrayCode } from "./trays";
+import { daySchema as day, firstParams, pageSchema, type RawSearchParams } from "./url-params";
 
 /**
  * Cable search filters as they travel in the URL (`/cables?q=sh50&type=…`).
@@ -49,19 +50,6 @@ const decimal = z
   .optional()
   .catch(undefined);
 
-/** "2026-11-12" (what `<input type="date">` sends). Invalid dates are ignored. */
-const day = z
-  .string()
-  .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  // `Date.parse` acepta "2026-11-31" y lo convierte en el 1 de diciembre: se exige ida y vuelta.
-  .refine((value) => {
-    const date = new Date(`${value}T00:00:00Z`);
-    return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
-  })
-  .optional()
-  .catch(undefined);
-
 export const cableSearchSchema = z.object({
   q: text(50),
   location: id,
@@ -95,23 +83,14 @@ export const cableSearchSchema = z.object({
   to: day,
   sort: z.enum(CABLE_SORTS).optional().catch(undefined),
   dir: z.enum(["asc", "desc"]).optional().catch(undefined),
-  page: z.coerce.number().int().min(1).max(10_000).optional().catch(undefined),
+  page: pageSchema,
 });
 
 export type CableSearch = z.infer<typeof cableSearchSchema>;
 
-type RawParams = Record<string, string | string[] | undefined>;
-
 /** Parses Next.js `searchParams` (repeated keys keep the first value). */
-export function parseCableSearch(params: RawParams): CableSearch {
-  const first: Record<string, string> = {};
-  for (const [key, value] of Object.entries(params)) {
-    const single = Array.isArray(value) ? value[0] : value;
-    if (single !== undefined && single !== "") {
-      first[key] = single;
-    }
-  }
-  return cableSearchSchema.parse(first);
+export function parseCableSearch(params: RawSearchParams): CableSearch {
+  return cableSearchSchema.parse(firstParams(params));
 }
 
 /** Sort actually applied: relevance only makes sense with a text query. */

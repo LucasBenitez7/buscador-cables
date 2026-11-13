@@ -1,5 +1,6 @@
 import "server-only";
-import { Prisma, prisma } from "@cables/db";
+import type { Prisma } from "@cables/db";
+import { prisma } from "@cables/db";
 import {
   CABLE_EDITABLE_FIELDS,
   diffFields,
