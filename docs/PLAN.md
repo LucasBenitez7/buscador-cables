@@ -562,6 +562,16 @@ Rama `fix/review-f0-f7`. Lista de hallazgos y lo que se hizo con cada uno en
       búsqueda de bandejas y límite de intentos por cuenta.
 - [x] Hallazgos bajos corregidos; los que dependen del despliegue pasan a la fase 10.
 
+### Repaso de estilos (2026-11-13)
+
+Rama `feat/ui-style-review`.
+
+- [x] Paginación común en cables, bandejas y actividad, con «Página X de Y» abajo.
+- [x] Cursor de mano en todo lo que se pulsa y de «no permitido» en lo desactivado.
+- [x] Lectura más fácil: estados con un punto de color (tendido en azul), datos de la ficha en
+      tarjeta con etiquetas pequeñas y valores destacados, códigos enlazables en el color de
+      acento, tarjetas de bandeja pulsables enteras y «Eliminar» en rojo suave.
+
 ## Fase 8 — Importación masiva y panel (mejora futura)
 
 > **Pendiente, mejora futura** (decisión del 2026-11-13): no entra en la v1.0.0.

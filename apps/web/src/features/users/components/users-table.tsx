@@ -21,7 +21,7 @@ export function UsersTable({ users, currentUserId, currentRole }: Props) {
   return (
     <div className="rounded-lg border md:overflow-x-auto">
       <table className="block w-full text-left text-sm md:table">
-        <thead className="bg-muted/50 text-muted-foreground hidden md:table-header-group">
+        <thead className="bg-muted/50 text-muted-foreground hidden text-xs tracking-wide uppercase md:table-header-group">
           <tr>
             <th className="px-4 py-2 font-medium">Nombre</th>
             <th className="px-4 py-2 font-medium">Correo</th>
