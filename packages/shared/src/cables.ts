@@ -114,6 +114,33 @@ export const CABLE_FIELD_LABELS: Record<
   deletedAt: "Baja",
 };
 
+/** Fields that only the load of the project lists writes (`pnpm data:load`), for the history. */
+export const PROJECT_FIELD_LABELS: Record<string, string> = {
+  level: "Nivel",
+  altCode: "Nº alternativo",
+  revision: "Revisión",
+  lengthPending: "Longitud pendiente",
+  circuit: "Circuito",
+  cablesPerCircuit: "Cables por circuito",
+  composition: "Composición",
+  diagram: "Esquema",
+  originEquipment: "Equipo de origen",
+  originCubicle: "Cubículo de origen",
+  originGland: "Prensaestopas de origen",
+  originFunctionKks: "KKS de función de origen",
+  originInstallationKks: "KKS de instalación de origen",
+  originRoom: "Sala de origen",
+  destinationEquipment: "Equipo de destino",
+  destinationCubicle: "Cubículo de destino",
+  destinationGland: "Prensaestopas de destino",
+  destinationFunctionKks: "KKS de función de destino",
+  destinationInstallationKks: "KKS de instalación de destino",
+  destinationRoom: "Sala de destino",
+  sourceDocument: "Documento",
+  sourcePage: "Página",
+  route: "Recorrido",
+};
+
 // ---------------------------------------------------------------------------
 // Field schemas (inputs arrive as strings from a FormData)
 // ---------------------------------------------------------------------------

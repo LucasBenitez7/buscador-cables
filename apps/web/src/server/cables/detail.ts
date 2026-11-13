@@ -6,6 +6,7 @@ import {
   CABLE_FIELD_LABELS,
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUS_LABELS,
+  PROJECT_FIELD_LABELS,
   describeCableEvent,
   formatDecimal,
   isRole,
@@ -136,7 +137,10 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
 
 export function readableChanges(changes: unknown, lookups: Lookups): ReadableChange[] {
   return orderedChanges(changes).map(([field, change]) => ({
-    field: CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ?? field,
+    field:
+      CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
+      PROJECT_FIELD_LABELS[field] ??
+      field,
     from: readableValue(field, change?.from, lookups),
     to: readableValue(field, change?.to, lookups),
   }));

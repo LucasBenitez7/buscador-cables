@@ -150,6 +150,25 @@ de recorrido, 0 errores y ~50 avisos, en menos de un minuto y medio.
 Los tests no usan los PDFs reales: generan en memoria PDFs inventados con la misma maquetación
 (`packages/data/src/testing`).
 
+## Carga: `pnpm data:load`
+
+Lee `private-data/extracted/cables.json` y `trays.json` y los escribe en la base de datos de
+`DATABASE_URL`. Hay que indicar quién firma la carga (`--as <correo>`; por defecto
+`SEED_ADMIN_EMAIL`). Se ejecuta en local o en el entorno del cliente, nunca en CI.
+
+- **Idempotente**: crea o actualiza por código. Repetirla con los mismos listados no cambia
+  nada; con una revisión nueva, solo cambia lo que cambió.
+- **Ubicaciones**: Planta (`99`) → grupo de edificios (`99UX`) → edificio (`99UXA`) → sala
+  (`99UXA16RA001`), con el código como nombre (se pueden renombrar en "Ubicaciones": la carga
+  no vuelve a cambiar los nombres). Si un código ya existe en otro sitio del árbol, no se usa y
+  se avisa.
+- **Cables nuevos**: entran _sin revisar_, con el evento de alta firmado por quien carga.
+- **Cables que ya existen**: se actualizan solo los datos de ingeniería (los del listado), con
+  un evento de edición. **Nunca** se tocan estado, conexión, ubicación física, punta suelta,
+  notas ni "último movimiento". Los dados de baja no se tocan.
+- **Cables que ya no están en los listados**: se avisa, no se borran.
+- Bandejas: se actualizan tipo, niveles, edificio, tamaño y hojas de plano; sus notas no.
+
 ## Comparación con el modelo actual
 
 | Concepto real                                                  | Modelo actual                              | Qué hace falta                                       |

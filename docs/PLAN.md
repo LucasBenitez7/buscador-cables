@@ -506,11 +506,18 @@ Orden de trabajo, todo en `feat/f7-project-data`:
       usuario el 2026-11-13: los PDFs no dicen el estado en campo, así que los cables reales
       entran sin revisar y el técnico registra lo que encuentra. No se mueve ni se conecta antes
       de revisarlo. Si el listado no da la sala, el equipo de cada extremo basta para tender.
-- [ ] Carga idempotente `pnpm data:load`:
-  - crea o actualiza por código (cables y bandejas);
-  - rellena el árbol de ubicaciones desde los KKS (edificio → sala);
-  - se puede repetir sin duplicar y no pisa el estado registrado en campo;
-  - registra el evento de alta de cada cable.
+- [x] Carga idempotente `pnpm data:load` (`packages/data/src/load`), firmada por un usuario
+      (`--as <correo>`, por defecto `SEED_ADMIN_EMAIL`):
+  - crea o actualiza por código cables, bandejas (con sus hojas de plano) y tipos de cable;
+  - rellena el árbol de ubicaciones desde los KKS: Planta → grupo de edificios → edificio →
+    sala (`parseRoomCode`/`parseBuildingCode` en `packages/shared`);
+  - los cables nuevos entran _sin revisar_ con su evento de alta; los cambios de ingeniería
+    (longitud, revisión, recorrido…) dejan un evento de edición;
+  - nunca toca lo registrado en campo: estado, conexión, ubicación, punta suelta, notas ni
+    "último movimiento"; los cables dados de baja no se tocan;
+  - avisa de los cables cargados antes que ya no están en los listados (no los borra).
+  - Probada con los datos reales en una base temporal: 4.459 cables, 3.017 bandejas, 328
+    ubicaciones y 37.435 tramos en 12 s; la segunda ejecución no cambia nada (1 s).
 - [ ] Pantallas: ficha con extremos y recorrido (tendido / pendiente); búsqueda por bandeja y
       por equipo; ficha de bandeja (cables que pasan, cables que esperan en ella, planos).
 - [ ] Tests:

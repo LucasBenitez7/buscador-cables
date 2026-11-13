@@ -39,6 +39,10 @@
     "test": {
       "dependsOn": ["^generate", "^test"],
       "outputs": ["coverage/**"]
+    },
+    "@cables/data#test": {
+      "dependsOn": ["^generate", "^test", "@cables/web#test"],
+      "outputs": ["coverage/**"]
     }
   }
 }
