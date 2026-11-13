@@ -384,3 +384,201 @@ describe("loadProjectData: conflicts", () => {
     expect(await db.cable.count()).toBe(0);
   });
 });
+
+// Revisión F0-F7 (M3): la carga pisaba en silencio lo que alguien había corregido en la app.
+describe("loadProjectData: values corrected in the app", () => {
+  /** What the edit form does: change the cable and leave an UPDATED event written by a person. */
+  async function editInApp(code: string, data: Record<string, unknown>, changes: object) {
+    const cable = await db.cable.findUniqueOrThrow({ where: { code } });
+    await db.cable.update({ where: { id: cable.id }, data });
+    await db.cableEvent.create({
+      data: {
+        cableId: cable.id,
+        userId,
+        action: "UPDATED",
+        changes,
+        createdAt: new Date("2026-11-13T11:00:00Z"),
+      },
+    });
+    return cable.id;
+  }
+
+  it("keeps a length measured in the field and says so", async () => {
+    await load([powerCable()]);
+    const id = await editInApp(
+      "99XAT10W2005",
+      { lengthM: 150 },
+      { lengthM: { from: 142, to: 150 } },
+    );
+
+    const summary = await load([powerCable({ revision: "3" })]);
+
+    const cable = await db.cable.findUniqueOrThrow({ where: { id } });
+    expect(cable.lengthM?.toNumber()).toBe(150);
+    expect(cable.revision).toBe("3");
+    expect(summary.cables).toMatchObject({ updated: 1 });
+    expect(summary.issues).toContain(
+      "99XAT10W2005: Longitud (m) corregido en la app (150); el listado dice 142. No se cambia.",
+    );
+    const event = await db.cableEvent.findFirstOrThrow({
+      where: { cableId: id, source: "PROJECT_LOAD", action: "UPDATED" },
+    });
+    expect(event.changes).toEqual({ revision: { from: "2", to: "3" } });
+  });
+
+  it("writes nothing when the only difference is a value corrected in the app", async () => {
+    await load([powerCable()]);
+    const id = await editInApp(
+      "99XAT10W2005",
+      { lengthM: 150 },
+      { lengthM: { from: 142, to: 150 } },
+    );
+
+    const summary = await load([powerCable()]);
+
+    expect(summary.cables).toMatchObject({ updated: 0, unchanged: 1 });
+    expect(await db.cableEvent.count({ where: { cableId: id, source: "PROJECT_LOAD" } })).toBe(1);
+    expect((await db.cable.findUniqueOrThrow({ where: { id } })).version).toBe(1);
+  });
+
+  it("lets a later load change a field again after a load wrote it last", async () => {
+    await load([powerCable()]);
+    const id = await editInApp(
+      "99XAT10W2005",
+      { lengthM: 150 },
+      { lengthM: { from: 142, to: 150 } },
+    );
+    // A load event newer than the hand edit: the field belongs to the lists again.
+    await db.cableEvent.create({
+      data: {
+        cableId: id,
+        userId,
+        action: "UPDATED",
+        source: "PROJECT_LOAD",
+        changes: { lengthM: { from: 150, to: 150 } },
+        createdAt: new Date("2026-11-13T12:00:00Z"),
+      },
+    });
+
+    const summary = await load([powerCable({ lengthM: 160 })]);
+
+    expect((await db.cable.findUniqueOrThrow({ where: { id } })).lengthM?.toNumber()).toBe(160);
+    expect(summary.issues).toEqual([]);
+  });
+
+  it("does not remove the room somebody chose for an end the lists leave without room", async () => {
+    await load([instrumentCable(), powerCable()]);
+    const room = await db.location.findUniqueOrThrow({ where: { code: "99UXB23RA052" } });
+    const id = await editInApp(
+      "99XAT10W2005",
+      { destinationId: room.id },
+      { destinationId: { from: null, to: room.id } },
+    );
+
+    const summary = await load([instrumentCable(), powerCable()]);
+
+    expect((await db.cable.findUniqueOrThrow({ where: { id } })).destinationId).toBe(room.id);
+    expect(summary.cables).toMatchObject({ updated: 0, unchanged: 2 });
+    expect(summary.issues).toEqual([]);
+  });
+
+  it("warns when a new route no longer has the tray where a loose end waits", async () => {
+    await load([powerCable()]);
+    const tray = await db.tray.findUniqueOrThrow({ where: { code: "99UXA00L22036" } });
+    const cable = await db.cable.update({
+      where: { code: "99XAT10W2005" },
+      data: {
+        installationStatus: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        looseEndTrayId: tray.id,
+      },
+    });
+
+    const summary = await load([
+      powerCable({
+        route: [{ label: "99UXB01L10030", trayCode: "99UXB01L10030", section: null }],
+      }),
+    ]);
+
+    expect(summary.issues).toContain(
+      "99XAT10W2005: la punta suelta espera en la bandeja 99UXA00L22036, que ya no está en su recorrido nuevo. Revísalo en campo.",
+    );
+    // What the field recorded stays as it was.
+    const after = await db.cable.findUniqueOrThrow({ where: { id: cable.id } });
+    expect(after).toMatchObject({ installationStatus: "PARTIALLY_LAID", looseEndTrayId: tray.id });
+  });
+});
+
+describe("loadProjectData: cable types", () => {
+  // Revisión F0-F7 (M4): renombrar un tipo en Catálogos lo duplicaba en la carga siguiente.
+  it("recognises a type renamed in the app by its code", async () => {
+    await load([powerCable()]);
+    const type = await db.cableType.findUniqueOrThrow({ where: { code: "Q0825" } });
+    await db.cableType.update({ where: { id: type.id }, data: { name: "Fuerza 8 x 2,5" } });
+
+    const summary = await load([powerCable()]);
+
+    expect(summary.cableTypes.created).toBe(0);
+    expect(summary.cables).toMatchObject({ updated: 0, unchanged: 1 });
+    expect(summary.issues).toEqual([]);
+    expect(await db.cableType.count()).toBe(1);
+    expect((await db.cableType.findUniqueOrThrow({ where: { id: type.id } })).name).toBe(
+      "Fuerza 8 x 2,5",
+    );
+  });
+
+  it("matches type names ignoring case and repeated spaces", async () => {
+    await db.cableType.create({ data: { name: "0,6/1 kv  8x2.5 mm2 cu" } });
+
+    const summary = await load([powerCable()]);
+
+    expect(summary.cableTypes.created).toBe(0);
+    const type = await db.cableType.findFirstOrThrow();
+    expect(type).toMatchObject({ name: "0,6/1 kv  8x2.5 mm2 cu", code: "Q0825" });
+  });
+});
+
+describe("loadProjectData: warnings and dry run", () => {
+  // Revisión F0-F7 (B11): el tramo quedaba sin enlazar y nadie lo decía.
+  it("reports route trays that are not loaded", async () => {
+    const summary = await load([powerCable()], []);
+
+    expect(summary.issues).toContain(
+      "Los recorridos nombran 1 bandejas que no están cargadas (99UXA00L22036): esos tramos quedan sin enlazar.",
+    );
+    const step = await db.cableRouteStep.findFirstOrThrow();
+    expect(step).toMatchObject({ label: "99UXA00L22036", trayId: null });
+  });
+
+  // Revisión F0-F7 (B13): `--dry-run` enseña el resumen sin escribir nada.
+  it("writes nothing in a dry run and still returns the summary", async () => {
+    const summary = await loadProjectData(
+      db,
+      { cables: [instrumentCable(), powerCable()], trays },
+      { userId, dryRun: true },
+    );
+
+    expect(summary).toMatchObject({
+      cableTypes: { created: 2 },
+      trays: { created: 3 },
+      cables: { created: 2 },
+    });
+    expect(summary.locations.created).toBeGreaterThan(0);
+    expect(await db.cable.count()).toBe(0);
+    expect(await db.tray.count()).toBe(0);
+    expect(await db.location.count()).toBe(0);
+    expect(await db.cableType.count()).toBe(0);
+    expect(await db.cableEvent.count()).toBe(0);
+  });
+
+  it("marks its events as written by the load", async () => {
+    await load([powerCable()]);
+    await load([powerCable({ revision: "3" })]);
+
+    const events = await db.cableEvent.findMany({ orderBy: { action: "asc" } });
+    expect(events.map((event) => [event.action, event.source])).toEqual([
+      ["CREATED", "PROJECT_LOAD"],
+      ["UPDATED", "PROJECT_LOAD"],
+    ]);
+  });
+});
