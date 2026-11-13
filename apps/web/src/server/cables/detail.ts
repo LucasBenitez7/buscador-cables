@@ -13,9 +13,11 @@ import {
   orderedChanges,
   type CableAction,
   type CableEndSide,
+  type CableLevel,
   type CableState,
   type ConnectionStatus,
   type InstallationStatus,
+  type RouteSection,
 } from "@cables/shared";
 import { listLocationOptions } from "@/server/cables/service";
 
@@ -34,6 +36,17 @@ export type CableHistoryEntry = {
   corrects: string | null;
 };
 
+export type CableEndDetail = {
+  equipment: string | null;
+  cubicle: string | null;
+  gland: string | null;
+  functionKks: string | null;
+  installationKks: string | null;
+  room: string | null;
+  /** Full route of the location in the tree ("99 › 99UX › 99UXA › 99UXA16RA001"). */
+  location: string | null;
+};
+
 export type CableDetail = {
   id: string;
   code: string;
@@ -42,7 +55,24 @@ export type CableDetail = {
   /** Raw state for the action state machine (ids, not names). */
   state: CableState;
   /** Planned route, in order: the list text and, if it is a known tray, its code. */
-  route: { position: number; label: string; trayCode: string | null }[];
+  route: {
+    position: number;
+    label: string;
+    trayCode: string | null;
+    section: RouteSection | null;
+  }[];
+  level: CableLevel | null;
+  altCode: string | null;
+  revision: string | null;
+  circuit: string | null;
+  cablesPerCircuit: number | null;
+  composition: string | null;
+  diagram: string | null;
+  lengthPending: boolean;
+  /** Where the data comes from in the project lists, to check it on paper. */
+  source: { document: string | null; page: number | null } | null;
+  /** Both ends as the lists give them, plus the location in the tree. */
+  ends: { origin: CableEndDetail; destination: CableEndDetail };
   description: string | null;
   type: string | null;
   color: { name: string; hex: string | null } | null;
@@ -163,7 +193,12 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       looseEndTray: { select: { code: true } },
       routeSteps: {
         orderBy: { position: "asc" },
-        select: { position: true, label: true, tray: { select: { code: true } } },
+        select: {
+          position: true,
+          label: true,
+          section: true,
+          tray: { select: { code: true } },
+        },
       },
       events: {
         orderBy: { createdAt: "desc" },
@@ -204,7 +239,40 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       position: step.position,
       label: step.label,
       trayCode: step.tray?.code ?? null,
+      section: step.section,
     })),
+    level: cable.level,
+    altCode: cable.altCode,
+    revision: cable.revision,
+    circuit: cable.circuit,
+    cablesPerCircuit: cable.cablesPerCircuit,
+    composition: cable.composition,
+    diagram: cable.diagram,
+    lengthPending: cable.lengthPending,
+    source:
+      cable.sourceDocument || cable.sourcePage
+        ? { document: cable.sourceDocument, page: cable.sourcePage }
+        : null,
+    ends: {
+      origin: {
+        equipment: cable.originEquipment,
+        cubicle: cable.originCubicle,
+        gland: cable.originGland,
+        functionKks: cable.originFunctionKks,
+        installationKks: cable.originInstallationKks,
+        room: cable.originRoom,
+        location: location(cable.originId),
+      },
+      destination: {
+        equipment: cable.destinationEquipment,
+        cubicle: cable.destinationCubicle,
+        gland: cable.destinationGland,
+        functionKks: cable.destinationFunctionKks,
+        installationKks: cable.destinationInstallationKks,
+        room: cable.destinationRoom,
+        location: location(cable.destinationId),
+      },
+    },
     description: cable.description,
     type: cable.type?.name ?? null,
     color: cable.color,

@@ -7,6 +7,8 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import {
   CABLE_ACTIONS,
   CABLE_ACTION_LABELS,
+  CABLE_LEVELS,
+  CABLE_LEVEL_LABELS,
   CONNECTION_STATUSES,
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUSES,
@@ -74,13 +76,13 @@ export function SearchFilters({ search, options }: Props) {
     >
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1 space-y-1.5 sm:min-w-56">
-          <Label htmlFor="q">Código o descripción</Label>
+          <Label htmlFor="q">Código, equipo o descripción</Label>
           <Input
             id="q"
             name="q"
             type="search"
             defaultValue={search.q ?? ""}
-            placeholder="sh50, SH 50, bomba…"
+            placeholder="99xat10w2005, 99BMA, bomba…"
             autoComplete="off"
             enterKeyHint="search"
           />
@@ -118,6 +120,15 @@ export function SearchFilters({ search, options }: Props) {
               ))}
             </Select>
           </Filter>
+          <Filter label="Nivel" htmlFor="level">
+            <Select id="level" name="level" defaultValue={search.level}>
+              {CABLE_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {CABLE_LEVEL_LABELS[level]}
+                </option>
+              ))}
+            </Select>
+          </Filter>
           <Filter label="Instalación" htmlFor="installation">
             <Select id="installation" name="installation" defaultValue={search.installation}>
               {INSTALLATION_STATUSES.map((status) => (
@@ -136,6 +147,27 @@ export function SearchFilters({ search, options }: Props) {
               ))}
             </Select>
           </Filter>
+          <Filter label="Bandeja (código)" htmlFor="tray">
+            <Input
+              id="tray"
+              name="tray"
+              defaultValue={search.tray ?? ""}
+              placeholder="99UXA00L22036"
+              autoComplete="off"
+              spellCheck={false}
+              className="font-mono uppercase"
+            />
+          </Filter>
+          <label className="flex min-h-10 cursor-pointer items-center gap-2 self-end text-sm">
+            <input
+              type="checkbox"
+              name="loose"
+              value="1"
+              defaultChecked={search.loose === "1"}
+              className="accent-primary size-4"
+            />
+            Solo con la punta suelta (en esa bandeja, si la indicas)
+          </label>
         </div>
 
         <details open={advancedActive} className="group">

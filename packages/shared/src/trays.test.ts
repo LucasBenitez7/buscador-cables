@@ -4,7 +4,9 @@ import {
   CABLE_LEVEL_LABELS,
   TRAY_KINDS,
   TRAY_KIND_LABELS,
+  formatTraySize,
   isTrayCode,
+  parseTraySearch,
   normalizeTrayCode,
   parseTrayCode,
   parseTraySize,
@@ -94,5 +96,26 @@ describe("labels", () => {
   it("has a Spanish label for every level and kind", () => {
     for (const level of CABLE_LEVELS) expect(CABLE_LEVEL_LABELS[level]).toBeTruthy();
     for (const kind of TRAY_KINDS) expect(TRAY_KIND_LABELS[kind]).toBeTruthy();
+  });
+});
+
+describe("formatTraySize", () => {
+  const none = { widthMm: null, flangeHeightMm: null, bendRadiusMm: null, diameterMm: null };
+
+  it("describes trays, grids and conduits", () => {
+    expect(formatTraySize({ ...none, widthMm: 600, flangeHeightMm: 100, bendRadiusMm: 300 })).toBe(
+      "600 × 100 mm, radio 300 mm",
+    );
+    expect(formatTraySize({ ...none, widthMm: 300 })).toBe("300 mm de ancho");
+    expect(formatTraySize({ ...none, diameterMm: 25 })).toBe("Ø 25 mm");
+    expect(formatTraySize(none)).toBeNull();
+  });
+});
+
+describe("parseTraySearch", () => {
+  it("normalizes the code and ignores invalid values", () => {
+    expect(parseTraySearch({ q: " 99uxa ", page: "2" })).toEqual({ q: "99UXA", page: 2 });
+    expect(parseTraySearch({ q: ["99uxb", "x"], page: "0" })).toEqual({ q: "99UXB" });
+    expect(parseTraySearch({ q: "x".repeat(60), page: "abc" })).toEqual({});
   });
 });

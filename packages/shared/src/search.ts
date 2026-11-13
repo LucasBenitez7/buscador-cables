@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CABLE_ACTIONS, CONNECTION_STATUSES, INSTALLATION_STATUSES } from "./cables";
+import { CABLE_LEVELS, normalizeTrayCode } from "./trays";
 
 /**
  * Cable search filters as they travel in the URL (`/cables?q=sh50&type=…`).
@@ -69,6 +70,17 @@ export const cableSearchSchema = z.object({
   manufacturer: id,
   installation: z.enum(INSTALLATION_STATUSES).optional().catch(undefined),
   connection: z.enum(CONNECTION_STATUSES).optional().catch(undefined),
+  level: z.enum(CABLE_LEVELS).optional().catch(undefined),
+  /** Cables whose route goes through this tray (or, with `loose`, waiting in it). */
+  tray: z
+    .string()
+    .trim()
+    .max(50)
+    .transform((value) => (value === "" ? undefined : normalizeTrayCode(value)))
+    .optional()
+    .catch(undefined),
+  /** "1": only cables with a loose end (in `tray`, if given). */
+  loose: z.literal("1").optional().catch(undefined),
   sectionMin: decimal,
   sectionMax: decimal,
   diameterMin: decimal,

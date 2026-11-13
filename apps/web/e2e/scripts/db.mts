@@ -117,12 +117,17 @@ async function prepare() {
   const now = new Date();
   for (const cable of Object.values(CABLES)) {
     const route: readonly string[] = "route" in cable ? cable.route : [];
+    const loose =
+      "looseTray" in cable
+        ? { looseEnd: cable.looseEnd, looseEndTrayId: trayIds.get(cable.looseTray)! }
+        : {};
     await db.cable.create({
       data: {
         code: cable.code,
         level: cable.level,
         originEquipment: cable.ends[0],
         destinationEquipment: cable.ends[1],
+        ...loose,
         typeId: type.id,
         colorId: color.id,
         manufacturerId: manufacturer.id,

@@ -11,8 +11,9 @@ import {
 } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
+import { trayHref } from "@/features/cables/components/cable-route";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
-import type { CableSearchResult } from "@/server/cables/search";
+import type { CableSearchItem, CableSearchResult } from "@/server/cables/search";
 
 const dateFormat = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "short",
@@ -89,9 +90,8 @@ export function SearchResults({ search, result, actions }: Props) {
                 connectionStatus={cable.connectionStatus}
               />
             </div>
-            <p>
-              {cable.origin ?? "—"} → {cable.destination ?? "—"}
-            </p>
+            <Ends cable={cable} />
+            <LooseEnd cable={cable} />
             <p className="text-muted-foreground inline-flex items-center gap-1.5">
               {cable.color ? (
                 <span
@@ -195,13 +195,14 @@ export function SearchResults({ search, result, actions }: Props) {
                   {cable.lengthM === null ? "—" : `${formatDecimal(cable.lengthM)} m`}
                 </td>
                 <td className="px-3 py-2">
-                  {cable.origin ?? "—"} → {cable.destination ?? "—"}
+                  <Ends cable={cable} />
                 </td>
                 <td className="px-3 py-2">
                   <CableStatusBadges
                     installationStatus={cable.installationStatus}
                     connectionStatus={cable.connectionStatus}
                   />
+                  <LooseEnd cable={cable} />
                 </td>
                 <td className="hidden px-3 py-2 md:table-cell">
                   {cable.lastAction ? (
@@ -267,5 +268,45 @@ export function SearchResults({ search, result, actions }: Props) {
         </nav>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Origin → destination: the equipment when the project lists give it (what people look for
+ * in the field), with the room or location below; otherwise the location.
+ */
+function Ends({ cable }: { cable: CableSearchItem }) {
+  const end = (equipment: string | null, location: string | null) =>
+    equipment ? (
+      <span>
+        <span className="font-mono">{equipment}</span>
+        {location ? <span className="text-muted-foreground block text-xs">{location}</span> : null}
+      </span>
+    ) : (
+      <span>{location ?? "—"}</span>
+    );
+  return (
+    <p className="flex flex-wrap items-start gap-x-2">
+      {end(cable.originEquipment, cable.origin)}
+      <span aria-hidden className="text-muted-foreground">
+        →
+      </span>
+      <span className="sr-only">a</span>
+      {end(cable.destinationEquipment, cable.destination)}
+    </p>
+  );
+}
+
+/** Where the loose end of a partially laid cable waits. */
+function LooseEnd({ cable }: { cable: CableSearchItem }) {
+  const { looseEnd, looseEndTray } = cable.state;
+  if (!looseEnd || !looseEndTray) return null;
+  return (
+    <p className="text-warning mt-1 text-xs">
+      Punta de {looseEnd === "ORIGIN" ? "origen" : "destino"} en{" "}
+      <Link href={trayHref(looseEndTray)} className="font-mono underline-offset-2 hover:underline">
+        {looseEndTray}
+      </Link>
+    </p>
   );
 }

@@ -24,7 +24,9 @@ describe("SearchFilters", () => {
   it("navigates to a clean, shareable URL keeping the current order", () => {
     render(<SearchFilters search={{ sort: "length", dir: "desc", page: 4 }} options={options} />);
 
-    fireEvent.change(screen.getByLabelText("Código o descripción"), { target: { value: "sh50" } });
+    fireEvent.change(screen.getByLabelText("Código, equipo o descripción"), {
+      target: { value: "sh50" },
+    });
     fireEvent.change(screen.getByLabelText("Ubicación (incluye lo que contiene)"), {
       target: { value: "a" },
     });
@@ -40,7 +42,7 @@ describe("SearchFilters", () => {
   it("shows the current filters and opens 'Más filtros' when one of them is active", () => {
     render(<SearchFilters search={{ q: "SH", color: "c1", sectionMin: 2.5 }} options={options} />);
 
-    expect(screen.getByLabelText("Código o descripción")).toHaveValue("SH");
+    expect(screen.getByLabelText("Código, equipo o descripción")).toHaveValue("SH");
     expect(screen.getByLabelText("Sección (mm²): desde")).toHaveValue("2,5");
     expect(screen.getByText("Más filtros").closest("details")).toHaveAttribute("open");
   });
@@ -61,6 +63,19 @@ describe("SearchFilters", () => {
 
     expect(screen.getByText("Más filtros").closest("details")).toHaveAttribute("open");
     expect(screen.getByLabelText("Qué hizo")).toHaveValue("MOVED");
+  });
+
+  it("filters by level, by tray and by the loose ends waiting in it", () => {
+    render(<SearchFilters search={{}} options={options} />);
+
+    fireEvent.change(screen.getByLabelText("Nivel"), { target: { value: "L1" } });
+    fireEvent.change(screen.getByLabelText("Bandeja (código)"), {
+      target: { value: "99uxa00l22036" },
+    });
+    fireEvent.click(screen.getByLabelText(/Solo con la punta suelta/));
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+
+    expect(push).toHaveBeenCalledWith("/cables?level=L1&tray=99UXA00L22036&loose=1");
   });
 
   it("clears every filter", () => {
@@ -94,6 +109,9 @@ const item = {
   lengthM: 120.5,
   installationStatus: "LAID",
   connectionStatus: "CONNECTED",
+  level: null,
+  originEquipment: null,
+  destinationEquipment: null,
   origin: "Caldera 1 › Bandeja norte",
   destination: "Caldera 2 › Armario local",
   lastAction: "UPDATED",
@@ -129,10 +147,45 @@ describe("SearchResults", () => {
 
     expect(card.getByRole("link", { name: "SH-50" })).toHaveAttribute("href", "/cables/c1");
     expect(card.getByText("Control · 3×2,5 mm² · 120,5 m")).toBeInTheDocument();
-    expect(
-      card.getByText("Caldera 1 › Bandeja norte → Caldera 2 › Armario local"),
-    ).toBeInTheDocument();
+    expect(card.getByText("Caldera 1 › Bandeja norte")).toBeInTheDocument();
+    expect(card.getByText("Caldera 2 › Armario local")).toBeInTheDocument();
     expect(card.getByText("Datos editados")).toBeInTheDocument();
+  });
+
+  it("shows the equipment of each end and where a loose end waits", () => {
+    const fromLists = {
+      ...item,
+      code: "99XAT10W2005",
+      level: "L2" as const,
+      originEquipment: "99BMA",
+      destinationEquipment: "99XAT10AP001",
+      origin: null,
+      installationStatus: "PARTIALLY_LAID" as const,
+      connectionStatus: "ORIGIN_ONLY" as const,
+      state: {
+        ...item.state,
+        installationStatus: "PARTIALLY_LAID" as const,
+        connectionStatus: "ORIGIN_ONLY" as const,
+        looseEnd: "DESTINATION" as const,
+        looseEndTray: "99UXA00L22036",
+      },
+    };
+    render(
+      <SearchResults
+        search={{}}
+        result={{ items: [fromLists], total: 1, page: 1, pageCount: 1 }}
+      />,
+    );
+    const table = within(screen.getByRole("table"));
+
+    expect(table.getByText("99BMA")).toBeInTheDocument();
+    expect(table.getByText("99XAT10AP001")).toBeInTheDocument();
+    expect(table.getByText("Caldera 2 › Armario local")).toBeInTheDocument();
+    expect(table.getByText(/Punta de destino en/)).toBeInTheDocument();
+    expect(table.getByRole("link", { name: "99UXA00L22036" })).toHaveAttribute(
+      "href",
+      "/trays/99UXA00L22036",
+    );
   });
 
   it("marks the sorted column and toggles its direction", () => {

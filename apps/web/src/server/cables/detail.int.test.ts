@@ -197,8 +197,8 @@ describe("getCableDetail: route and loose end", () => {
     const detail = await getCableDetail(created.id);
 
     expect(detail?.route).toEqual([
-      { position: 1, label: "99UXA00L22036", trayCode: "99UXA00L22036" },
-      { position: 2, label: "CONTIGUOUS PANEL", trayCode: null },
+      { position: 1, label: "99UXA00L22036", trayCode: "99UXA00L22036", section: null },
+      { position: 2, label: "CONTIGUOUS PANEL", trayCode: null, section: null },
     ]);
     expect(detail?.state).toMatchObject({
       installationStatus: "PARTIALLY_LAID",
@@ -212,5 +212,62 @@ describe("getCableDetail: route and loose end", () => {
         { field: "Bandeja de la punta suelta", from: "—", to: "99UXA00L22036" },
       ]),
     );
+  });
+});
+
+describe("getCableDetail: data from the project lists", () => {
+  it("returns the level, both ends and where the data comes from", async () => {
+    const cable = await prisma.cable.create({
+      data: {
+        code: "99XAB10T1-W8001",
+        installationStatus: "UNVERIFIED",
+        level: "L1",
+        altCode: "99 CBLM-0112",
+        revision: "2",
+        lengthM: 137,
+        lengthPending: true,
+        circuit: "1 de 2",
+        cablesPerCircuit: 3,
+        diagram: "EJ-ICO-DIA-0100_010",
+        sourceDocument: "EJ-ICO-LST-0100",
+        sourcePage: 8,
+        originEquipment: "99XAB10CT001",
+        originGland: "M-20ARM",
+        originRoom: "99UYC14RA001",
+        destinationEquipment: "99CXJ11",
+        destinationRoom: "99UXB23RA052",
+        destinationId: "c2",
+      },
+    });
+
+    const detail = await getCableDetail(cable.id);
+
+    expect(detail).toMatchObject({
+      level: "L1",
+      altCode: "99 CBLM-0112",
+      revision: "2",
+      lengthM: 137,
+      lengthPending: true,
+      circuit: "1 de 2",
+      cablesPerCircuit: 3,
+      diagram: "EJ-ICO-DIA-0100_010",
+      source: { document: "EJ-ICO-LST-0100", page: 8 },
+      ends: {
+        origin: {
+          equipment: "99XAB10CT001",
+          gland: "M-20ARM",
+          room: "99UYC14RA001",
+          location: null,
+        },
+        destination: {
+          equipment: "99CXJ11",
+          room: "99UXB23RA052",
+          location: "Norte › Calderas › Caldera 2",
+        },
+      },
+      // Without a room in the tree, the equipment is the known end of the state machine.
+      state: { originId: "99XAB10CT001", destinationId: "c2" },
+      route: [],
+    });
   });
 });

@@ -518,13 +518,27 @@ Orden de trabajo, todo en `feat/f7-project-data`:
   - avisa de los cables cargados antes que ya no están en los listados (no los borra).
   - Probada con los datos reales en una base temporal: 4.459 cables, 3.017 bandejas, 328
     ubicaciones y 37.435 tramos en 12 s; la segunda ejecución no cambia nada (1 s).
-- [ ] Pantallas: ficha con extremos y recorrido (tendido / pendiente); búsqueda por bandeja y
-      por equipo; ficha de bandeja (cables que pasan, cables que esperan en ella, planos).
-- [ ] Tests:
-  - extracción con PDFs inventados (generados en memoria por los tests, no en `__fixtures__`): hecho;
-  - validación;
-  - carga contra Postgres;
-  - E2E de las pantallas nuevas.
+- [x] Pantallas:
+  - Ficha del cable: nivel y nº alternativo; tarjetas de origen y destino con equipo,
+    cubículo/prensaestopas, KKS y sala; recorrido tramo a tramo (campo / sala) con lo tendido en
+    verde, la bandeja donde espera la punta suelta y lo que falta (`routeProgress` en
+    `packages/shared`); revisión, circuito, composición, esquema y listado y página de origen.
+  - Buscador: el cuadro busca también por equipo de cualquier extremo y por nº alternativo;
+    filtros de nivel, bandeja (cables que pasan) y "solo con la punta suelta" (en esa bandeja).
+    Cada resultado enseña el equipo de los extremos y dónde espera la punta suelta.
+  - Bandejas (`/trays`, en el menú): listado por código con tipo, nivel, tamaño, edificio,
+    cables y cuántos esperan; ficha con planos y hojas, cables que esperan en ella y cables que
+    pasan, con enlace al buscador filtrado.
+  - Repasado en el navegador con el seed nuevo (escritorio y 375 px, sin desplazamiento
+    lateral ni errores en consola).
+- [x] Tests:
+  - extracción con PDFs inventados (generados en memoria por los tests, no en `__fixtures__`);
+  - validación con Zod y normalización;
+  - carga contra Postgres (primera carga, recarga sin cambios, actualización sin pisar el campo,
+    conflictos);
+  - servicios de bandejas y filtros del buscador contra Postgres; ficha y recorrido;
+  - E2E de las pantallas nuevas (`e2e/trays.spec.ts`): ficha con extremos y punta suelta, de
+    la ficha a la bandeja y al buscador, listado de bandejas y búsqueda por equipo y nivel.
 - [ ] Documentación: estructura de los datos y uso de los scripts. Al cerrar la fase,
       entrada en `docs/REVISIONES.md`.
 

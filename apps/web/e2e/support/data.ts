@@ -87,6 +87,17 @@ export const CABLES = {
     ends: ["99BMB", "99XLB10AA101"],
     route: ["99UXA00L22036", "99UXA00L22051"],
   },
+  // Already partially laid: the destination end waits in a tray of its route.
+  waiting: {
+    code: "99XLB20W2001",
+    level: "L2",
+    status: "PARTIALLY_LAID",
+    connection: "ORIGIN_ONLY",
+    ends: ["99BMB", "99XLB20AA101"],
+    route: ["99UXA00L22036", "99UXB00L22001"],
+    looseEnd: "DESTINATION",
+    looseTray: "99UXB00L22001",
+  },
 } as const;
 
 /** Lo que escribiría alguien en planta para encontrar `search` y `searchSibling`: sin guion y en minúsculas. */

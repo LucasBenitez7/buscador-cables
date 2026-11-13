@@ -8,7 +8,7 @@ test("buscar, filtrar, abrir la ficha y volver con los filtros puestos", async (
   await page.goto("/cables");
 
   // Como lo escribiría alguien en planta: sin guion y en minúsculas.
-  await page.getByLabel("Código o descripción").fill(SEARCH_QUERY);
+  await page.getByLabel("Código, equipo o descripción").fill(SEARCH_QUERY);
   await page.getByRole("button", { name: "Buscar" }).click();
   await expect(page).toHaveURL(new RegExp(`q=${SEARCH_QUERY}`));
   const table = page.getByRole("table");
@@ -27,7 +27,7 @@ test("buscar, filtrar, abrir la ficha y volver con los filtros puestos", async (
   await page.goBack();
   await expect(page).toHaveURL(new RegExp(`q=${SEARCH_QUERY}`));
   await expect(page).toHaveURL(/installation=LAID/);
-  await expect(page.getByLabel("Código o descripción")).toHaveValue(SEARCH_QUERY);
+  await expect(page.getByLabel("Código, equipo o descripción")).toHaveValue(SEARCH_QUERY);
   await expect(page.getByLabel("Instalación")).toHaveValue("LAID");
   await expect(page.getByText("1 cable", { exact: true })).toBeVisible();
 });
@@ -52,5 +52,5 @@ test("limpiar quita todos los filtros", async ({ page }) => {
   await page.getByRole("button", { name: "Limpiar filtros" }).click();
 
   await expect(page).toHaveURL(/\/cables$/);
-  await expect(page.getByLabel("Código o descripción")).toHaveValue("");
+  await expect(page.getByLabel("Código, equipo o descripción")).toHaveValue("");
 });

@@ -24,7 +24,7 @@ test("los filtros se despliegan y los resultados son tarjetas", async ({ page })
   await page.getByRole("button", { name: /^Filtros/ }).click();
   await expect(page.getByLabel("Tipo")).toBeVisible();
 
-  await page.getByLabel("Código o descripción").fill(CABLES.mobile.code);
+  await page.getByLabel("Código, equipo o descripción").fill(CABLES.mobile.code);
   await page.getByRole("button", { name: "Buscar" }).click();
 
   await expect(page.getByRole("table")).toBeHidden();

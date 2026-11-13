@@ -169,6 +169,16 @@ Lee `private-data/extracted/cables.json` y `trays.json` y los escribe en la base
 - **Cables que ya no están en los listados**: se avisa, no se borran.
 - Bandejas: se actualizan tipo, niveles, edificio, tamaño y hojas de plano; sus notas no.
 
+## Dónde se ve en la app
+
+- **Ficha del cable**: extremos (equipo, cubículo o prensaestopas, KKS, sala) y recorrido
+  tramo a tramo. En un cable tendido a medias se ve lo tendido, la bandeja donde espera la punta
+  suelta y lo que falta.
+- **Buscador**: por código, equipo o nº alternativo; filtros de nivel, bandeja y "solo con la
+  punta suelta".
+- **Bandejas** (`/trays`): listado y ficha de cada bandeja, con sus planos, los cables que
+  pasan y los que esperan en ella.
+
 ## Comparación con el modelo actual
 
 | Concepto real                                                  | Modelo actual                              | Qué hace falta                                       |

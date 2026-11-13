@@ -109,3 +109,34 @@ export function parseTraySize(input: string): TraySize | null {
   if (tube) return { diameterMm: Number(tube[1]) };
   return null;
 }
+
+/** "600 × 100 mm, radio 300 mm" for trays, "Ø 25 mm" for conduits and ducts, null if unknown. */
+export function formatTraySize(size: {
+  widthMm: number | null;
+  flangeHeightMm: number | null;
+  bendRadiusMm: number | null;
+  diameterMm: number | null;
+}): string | null {
+  if (size.diameterMm) return `Ø ${size.diameterMm} mm`;
+  if (!size.widthMm) return null;
+  const section = size.flangeHeightMm
+    ? `${size.widthMm} × ${size.flangeHeightMm} mm`
+    : `${size.widthMm} mm de ancho`;
+  return size.bendRadiusMm ? `${section}, radio ${size.bendRadiusMm} mm` : section;
+}
+
+export const TRAY_PAGE_SIZE = 60;
+
+/** `/trays?q=…&page=…`: invalid values are ignored, like the cable search. */
+export function parseTraySearch(params: Record<string, string | string[] | undefined>): {
+  q?: string;
+  page?: number;
+} {
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  const q = first(params.q)?.trim();
+  const page = Number(first(params.page));
+  return {
+    ...(q && q.length <= 50 ? { q: normalizeTrayCode(q) } : {}),
+    ...(Number.isInteger(page) && page >= 1 && page <= 10_000 ? { page } : {}),
+  };
+}
