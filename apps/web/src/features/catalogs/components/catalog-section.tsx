@@ -13,11 +13,15 @@ import type { ActionResult } from "@/lib/action-result";
 
 type Props = { kind: CatalogKind; items: CatalogItem[] };
 
-/** One catalog: list with inline edit/delete and an add form. */
+/** From this many items the list gets a search box. */
+const FILTER_FROM = 8;
+
+/** One catalog: the add form first, then a searchable list with inline edit/delete. */
 export function CatalogSection({ kind, items }: Props) {
   const labels = CATALOG_LABELS[kind];
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState<ActionResult | null>(null);
+  const [filter, setFilter] = useState("");
   const [pending, startTransition] = useTransition();
 
   function run(
@@ -43,80 +47,127 @@ export function CatalogSection({ kind, items }: Props) {
     }
   }
 
+  const needle = filter.trim().toLowerCase();
+  const visible = needle ? items.filter((item) => item.name.toLowerCase().includes(needle)) : items;
+
   return (
-    <section className="space-y-3 rounded-lg border p-4" aria-labelledby={`catalog-${kind}`}>
-      <h2 id={`catalog-${kind}`} className="text-base font-medium">
+    <section className="space-y-4" aria-labelledby={`catalog-${kind}`}>
+      {/* La pestaña ya lo dice a la vista; el título queda para los lectores de pantalla. */}
+      <h2 id={`catalog-${kind}`} className="sr-only">
         {labels.plural} <span className="text-muted-foreground text-sm">({items.length})</span>
       </h2>
+
+      {/* El alta va arriba: con cientos de elementos no hay que bajar hasta el final. */}
+      <div className="bg-card space-y-2 rounded-lg border p-3">
+        <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Añadir {labels.singular.toLowerCase()}
+        </h3>
+        <ItemForm
+          kind={kind}
+          submitLabel="Añadir"
+          pending={pending}
+          onSubmit={async (values) => (await run(createCatalogItemAction, values)).ok}
+        />
+        {message ? (
+          <p
+            role="status"
+            className={message.ok ? "text-success text-sm" : "text-destructive text-sm"}
+          >
+            {message.message}
+          </p>
+        ) : null}
+      </div>
 
       {items.length === 0 ? (
         <p className="text-muted-foreground text-sm">Todavía no hay ninguno.</p>
       ) : (
-        <ul className="divide-y">
-          {items.map((item) =>
-            editingId === item.id ? (
-              <li key={item.id} className="py-2">
-                <ItemForm
-                  kind={kind}
-                  initial={item}
-                  submitLabel="Guardar"
-                  pending={pending}
-                  onSubmit={async (values) => {
-                    const result = await run(updateCatalogItemAction, { id: item.id, ...values });
-                    if (result.ok) {
-                      setEditingId(null);
-                    }
-                    return result.ok;
-                  }}
-                  onCancel={() => setEditingId(null)}
-                />
-              </li>
-            ) : (
-              <li key={item.id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
-                {kind === "color" ? (
-                  <span
-                    aria-hidden
-                    className="border-foreground/40 size-4 rounded-full border"
-                    style={{ backgroundColor: item.hex ?? "transparent" }}
-                  />
-                ) : null}
-                <span className="font-medium">{item.name}</span>
+        <div className="space-y-2">
+          {items.length > FILTER_FROM ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                type="search"
+                aria-label={`Buscar en ${labels.plural.toLowerCase()}`}
+                placeholder={`Buscar en ${labels.plural.toLowerCase()}…`}
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                className="sm:max-w-sm"
+              />
+              {needle ? (
                 <span className="text-muted-foreground text-xs">
-                  {item.cableCount} {item.cableCount === 1 ? "cable" : "cables"}
+                  {visible.length} de {items.length}
                 </span>
-                <span className="ml-auto flex gap-1">
-                  <Button size="xs" variant="ghost" onClick={() => setEditingId(item.id)}>
-                    Editar
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    className="text-destructive hover:bg-destructive/15 hover:text-destructive dark:hover:bg-destructive/15"
-                    onClick={() => remove(item)}
-                    disabled={pending}
-                    aria-label={`Eliminar ${item.name}`}
+              ) : null}
+            </div>
+          ) : null}
+          {visible.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Ninguno contiene «{filter.trim()}».</p>
+          ) : (
+            <ul className="bg-card divide-y rounded-lg border">
+              {visible.map((item) =>
+                editingId === item.id ? (
+                  <li key={item.id} className="px-3 py-2">
+                    <ItemForm
+                      kind={kind}
+                      initial={item}
+                      submitLabel="Guardar"
+                      pending={pending}
+                      onSubmit={async (values) => {
+                        const result = await run(updateCatalogItemAction, {
+                          id: item.id,
+                          ...values,
+                        });
+                        if (result.ok) {
+                          setEditingId(null);
+                        }
+                        return result.ok;
+                      }}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  </li>
+                ) : (
+                  <li
+                    key={item.id}
+                    className="hover:bg-muted/40 flex flex-wrap items-center gap-3 px-3 py-2 text-sm transition-colors"
                   >
-                    Eliminar
-                  </Button>
-                </span>
-              </li>
-            ),
+                    {kind === "color" ? (
+                      <span
+                        aria-hidden
+                        className="border-foreground/40 size-4 rounded-full border"
+                        style={{ backgroundColor: item.hex ?? "transparent" }}
+                      />
+                    ) : null}
+                    <span className="font-medium">{item.name}</span>
+                    <span
+                      className={
+                        item.cableCount > 0
+                          ? "text-muted-foreground text-xs"
+                          : "text-muted-foreground/60 text-xs"
+                      }
+                    >
+                      {item.cableCount} {item.cableCount === 1 ? "cable" : "cables"}
+                    </span>
+                    <span className="ml-auto flex gap-1">
+                      <Button size="xs" variant="ghost" onClick={() => setEditingId(item.id)}>
+                        Editar
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/15 hover:text-destructive dark:hover:bg-destructive/15"
+                        onClick={() => remove(item)}
+                        disabled={pending}
+                        aria-label={`Eliminar ${item.name}`}
+                      >
+                        Eliminar
+                      </Button>
+                    </span>
+                  </li>
+                ),
+              )}
+            </ul>
           )}
-        </ul>
+        </div>
       )}
-
-      <ItemForm
-        kind={kind}
-        submitLabel="Añadir"
-        pending={pending}
-        onSubmit={async (values) => (await run(createCatalogItemAction, values)).ok}
-      />
-
-      {message ? (
-        <p role="status" className={message.ok ? "text-sm" : "text-destructive text-sm"}>
-          {message.message}
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -153,7 +204,7 @@ function ItemForm({ kind, initial, submitLabel, pending, onSubmit, onCancel }: F
         placeholder={initial ? undefined : `Nuevo: ${label.toLowerCase()}`}
         value={name}
         onChange={(event) => setName(event.target.value)}
-        className="w-56"
+        className="min-w-0 flex-1 sm:max-w-sm"
         required
       />
       {kind === "color" ? (
@@ -165,11 +216,11 @@ function ItemForm({ kind, initial, submitLabel, pending, onSubmit, onCancel }: F
           className="w-28 font-mono uppercase"
         />
       ) : null}
-      <Button type="submit" size="sm" disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {submitLabel}
       </Button>
       {onCancel ? (
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           Cancelar
         </Button>
       ) : null}

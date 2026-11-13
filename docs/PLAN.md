@@ -575,6 +575,18 @@ Rama `feat/ui-style-review`.
       (50/100/200), en la URL (`?size=`) y validado; al cambiarlo se recalcula la página para
       seguir viendo los mismos elementos.
 
+### Catálogos, bandejas e inicio (2026-11-13)
+
+Rama `feat/ui-catalogs-dashboard`.
+
+- [x] Catálogos en pestañas, con el formulario de alta arriba y un buscador en las listas
+      largas: ya no hay que bajar hasta el final (ni en el móvil) para añadir o encontrar algo.
+- [x] Ficha de bandeja: «Ver y filtrar en el buscador» arriba a la derecha de la lista.
+- [x] Inicio como panel según el rol. Todos: búsqueda rápida de cable y bandeja y avance de la
+      obra (tendidos y conectados). Técnicos: su actividad reciente. Supervisores: desglose por
+      estado enlazado al buscador y actividad del equipo. Administradores: cuentas pendientes de
+      aprobar, usuarios activos por rol y estado del sistema. Lo que un rol no ve no se consulta.
+
 ## Fase 8 — Importación masiva y panel (mejora futura)
 
 > **Pendiente, mejora futura** (decisión del 2026-11-13): no entra en la v1.0.0.
