@@ -9,7 +9,8 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 ## 2026-11-13 — Fase 6: diseño responsive y tests E2E
 
 **Rama:** `feat/f6-e2e-import` (#27), la única de la fase. La fase se cierra aquí por decisión
-del usuario: la exportación a PDF pasa a la fase 7 y la importación y el panel, a la 8.
+del usuario: la carga de los datos reales del proyecto pasa a la fase 7 y la importación
+masiva y el panel, a la 8.
 
 **Qué hay nuevo:**
 

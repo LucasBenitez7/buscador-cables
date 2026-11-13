@@ -24,14 +24,14 @@ hizo qué y cuándo.
 | 4.5  | CI, GitHub y Pull Requests    | v0.5.1  | Repo en GitHub, PRs a `dev` con CI, tema oscuro       |
 | 5    | Estados y trazabilidad        | v0.6.0  | Tendido/enrollado, conectado, historial por usuario   |
 | 6    | Diseño responsive y E2E       | v0.7.0  | Menú y vistas para móvil, E2E de las fases 1-5        |
-| 7    | Exportación a PDF             | v0.8.0  | Tres informes PDF completos descargables              |
+| 7    | Datos reales del proyecto     | v0.8.0  | Cables, bandejas y estado cargados desde los PDFs     |
 | 8    | Importación masiva y panel    | v0.9.0  | CSV/Excel masivo, dashboard                           |
 | 9    | Modo sin conexión (PWA)       | v0.10.0 | Consulta offline + cola de cambios sincronizable      |
 | 10   | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
 
 **Total: 12 fases (0 a 10, más la 4.5 añadida el 2026-11-11).** El 2026-11-13 la fase 6 se
-cerró con el diseño y los E2E; la exportación a PDF pasó a ser la fase 7 y la importación y el
-panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
+cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
+la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
 Cada fase termina con todos los tests en verde en `dev`. Desde la fase 4.5, todo llega a `dev`
 por Pull Request y con el CI en verde. Las versiones de la tabla son orientativas: `dev` → `main`
@@ -422,67 +422,57 @@ cierra con sus E2E escritos y en verde en el CI. Cómo funcionan: `CONTRIBUTING.
 - [x] Job `e2e` del CI activado en cada PR a `dev` y en cada push a `dev`/`main`, con Mailpit.
 
 **Fase 6 cerrada el 2026-11-13** (al mergear `feat/f6-e2e-import` en `dev`, PR #27). Por
-decisión del usuario, la importación, la exportación y el panel salen de esta fase: la
-exportación a PDF es la fase 7 y lo demás, la fase 8.
+decisión del usuario, la importación, la exportación y el panel salen de esta fase: la carga
+de los datos reales es la fase 7 y lo demás, la fase 8.
 
-## Fase 7 — Exportación a PDF (v0.8.0)
+## Fase 7 — Datos reales del proyecto (v0.8.0)
 
-Fase añadida el 2026-11-13. Rama única: `feat/f7-pdf-export`. Objetivo: **tres informes PDF
-completos**, descargables desde la app, que sirvan para imprimir, archivar y enviar.
+Fase añadida el 2026-11-13. Rama única: `feat/f7-project-data`. El usuario pasa **tres PDFs
+del proyecto real**, con los cables, las bandejas y el estado del proyecto. Objetivo: que la
+app trabaje con esos datos y se adapte a lo que el proyecto necesita de verdad.
 
-### Decisiones al empezar la fase
+### Confidencialidad (obligatorio)
 
-- [ ] Contenido exacto de los tres PDFs (propuesta abajo, a confirmar con el usuario).
-- [ ] Librería de generación. Propuesta: `@react-pdf/renderer`. Genera el PDF en el servidor
-      a partir de componentes React, sin navegador, y funciona en Vercel. La alternativa,
-      imprimir HTML con Chromium sin interfaz, pesa demasiado para un despliegue serverless.
-      Se justifica en `docs/ARQUITECTURA.md` antes de añadirla.
-- [ ] Colores del PDF. La UI es solo oscura (regla 12 de `AGENTS.md`), pero un PDF se
-      imprime: propuesta de fondo blanco y texto oscuro, con el azul de acento. Hay que dejar
-      la excepción escrita.
+El repositorio es público. Los datos reales **nunca** se suben:
 
-### Propuesta de los tres PDFs
+- Los PDFs y todo lo que se extrae de ellos viven en `private-data/`, ignorada por git; solo
+  se versiona su `README.md`. `.gitignore` bloquea además cualquier `.pdf`, `.xlsx`, `.xls`
+  o `.csv` fuera de las carpetas `__fixtures__`.
+- El nombre del cliente no aparece en el código, los tests, la documentación ni los commits.
+- Los tests usan datos inventados con la misma forma que los reales.
+- La carga en una base de datos se hace en local o en el entorno del cliente, nunca en CI.
 
-1. **Ficha del cable**, desde la ficha:
-   - todos los datos técnicos;
-   - el recorrido (origen → destino) y la ubicación actual;
-   - el estado de instalación y de conexión;
-   - el historial completo, con los cambios campo a campo, las notas y las correcciones.
-2. **Listado de cables**, desde el buscador:
-   - todos los resultados de la búsqueda actual, no solo la página visible;
-   - una portada con los filtros aplicados;
-   - totales por estado de instalación, por estado de conexión y por ubicación;
-   - una tabla con los datos técnicos y el último movimiento de cada cable.
-3. **Informe de actividad**, desde "Actividad reciente" (supervisor o más):
-   - los movimientos de un periodo, con los mismos filtros de quién, qué y cuándo;
-   - un resumen por usuario y por tipo de acción;
-   - el detalle cronológico.
+### Primero: analizar los PDFs
 
-### Tareas
+- [ ] Leer los tres PDFs y documentar su estructura, sin datos reales: qué tablas hay, qué
+      columnas, qué unidades y qué códigos.
+- [ ] Comparar con el modelo actual:
+  - qué campos ya existen;
+  - qué falta (por ejemplo, las **bandejas** y el recorrido de cada cable por ellas, o el
+    estado del proyecto);
+  - qué hay que cambiar.
+- [ ] Proponer al usuario los cambios de modelo y de pantallas antes de programarlos.
 
-- [ ] Servicio de informes en `apps/web/src/server/reports`. Reutiliza las consultas de
-      búsqueda, ficha y actividad, y convierte los datos en un modelo del informe que no
-      depende de la librería.
-- [ ] Route Handlers de descarga:
-  - comprueban la sesión y el permiso (`export:run`; el de actividad pide además
-    `activity:view`);
-  - validan los parámetros con Zod;
-  - responden con `Content-Disposition` y un nombre de archivo con fecha.
-- [ ] Plantilla común:
-  - cabecera con el nombre de la app, el título y los filtros;
-  - fecha y hora de generación (hora de Madrid) y quién lo generó;
-  - pie con "Página X de Y";
-  - tablas que se parten bien entre páginas y repiten la cabecera.
-- [ ] Límite de volumen (propuesta: hasta 5.000 cables o 10.000 movimientos, con aviso si se
-      supera) y prueba de rendimiento con el volumen estimado.
-- [ ] Botón "Descargar PDF" en la ficha, en el buscador y en la actividad, con estado de
-      carga y su hover, pulsado y foco.
+### Después: carga y adaptación
+
+- [ ] Cambios en `schema.prisma` y su migración (previsiblemente bandejas y la relación
+      cable–bandeja).
+- [ ] Script de extracción repetible `pnpm data:extract`, que lee
+      `private-data/source/*.pdf` y deja datos normalizados en `private-data/extracted/`.
+- [ ] Validación con Zod de cada fila, con un informe de errores por línea.
+- [ ] Carga idempotente `pnpm data:load`:
+  - crea o actualiza por código;
+  - se puede repetir sin duplicar;
+  - registra el evento de alta de cada cable.
+- [ ] Pantallas que hagan falta para los datos nuevos (bandejas en la ficha, búsqueda por
+      bandeja, estado del proyecto…), con sus E2E.
 - [ ] Tests:
-  - unitarios del modelo de cada informe;
-  - de integración de los Route Handlers (permisos, parámetros, cabeceras);
-  - E2E de la descarga de los tres PDFs (escritorio y móvil), comprobando el texto.
-- [ ] Documentación: `docs/ARQUITECTURA.md` (librería y estructura) y la entrada de
-      `docs/REVISIONES.md` al cerrar la fase.
+  - extracción con PDFs inventados en `__fixtures__`;
+  - validación;
+  - carga contra Postgres;
+  - E2E de las pantallas nuevas.
+- [ ] Documentación: estructura de los datos y uso de los scripts. Al cerrar la fase,
+      entrada en `docs/REVISIONES.md`.
 
 ## Fase 8 — Importación masiva y panel (v0.9.0)
 
@@ -490,7 +480,7 @@ Viene de la fase 6, de donde salió el 2026-11-13.
 
 - [ ] Importación masiva desde CSV/Excel con previsualización y validación fila a fila.
 - [ ] Informe de errores descargable.
-- [ ] Exportación de los resultados de búsqueda a CSV/Excel (complementa los PDFs de la fase 7).
+- [ ] Exportación de los resultados de búsqueda a CSV/Excel y a PDF.
 - [ ] Dashboard: totales por estado, por ubicación, cables pendientes de conectar.
 - [ ] Generación de código QR por cable (para etiquetas en campo) — opcional.
 - [ ] Tests: parser de importación con ficheros de ejemplo, y E2E de importación y panel.

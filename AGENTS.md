@@ -15,6 +15,9 @@ Lee antes de trabajar: `docs/PLAN.md`, `docs/ARQUITECTURA.md` y `CONTRIBUTING.md
 9. Valida siempre la entrada con Zod y comprueba sesión y rol en el servidor.
 10. No añadas dependencias nuevas sin justificarlo.
 11. No metas secretos en el código; usa `.env` y actualiza `.env.example`. El repo es público.
+    Los datos reales del cliente (PDFs, Excel, lo que se extrae de ellos) van solo en
+    `private-data/`, que git ignora: nunca en el código, los tests, la documentación ni los
+    commits, y tampoco el nombre del cliente. Los tests usan datos inventados.
 12. La UI es solo oscura: usa los tokens del tema (`bg-background`, `bg-card`, `text-foreground`, `bg-primary`, `text-success`…). Nunca fondos blancos ni colores fijos de Tailwind (`bg-white`, `text-black`, `text-emerald-600`). Paleta en `docs/ARQUITECTURA.md`.
 13. Al terminar una tarea, marca su casilla en `docs/PLAN.md`.
 
