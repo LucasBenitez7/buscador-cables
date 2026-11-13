@@ -268,6 +268,30 @@ describe("moveLocation", () => {
     );
   });
 
+  // Revisión F0-F7 (B12): la ruta se leía antes de abrir la transacción; renombrar y mover
+  // la misma rama a la vez dejaba a los descendientes con el prefijo antiguo.
+  it("keeps every path coherent when a branch is renamed and moved at the same time", async () => {
+    const { sibling, unit } = await seedTree();
+
+    for (let round = 0; round < 5; round += 1) {
+      await Promise.all([
+        updateLocation({ id: unit.id, name: "Reactor X", code: `R-X${round}` }),
+        moveLocation({
+          id: unit.id,
+          parentId:
+            round % 2 === 0
+              ? sibling.id
+              : (await prisma.location.findUniqueOrThrow({ where: { code: "A1" } })).id,
+        }),
+      ]);
+    }
+
+    const locations = await prisma.location.findMany({ include: { parent: true } });
+    for (const location of locations) {
+      expect(location.path).toBe(`${location.parent?.path ?? ""}/${location.code}`);
+    }
+  });
+
   it("does nothing when the parent does not change", async () => {
     const { plant, area } = await seedTree();
     const before = await prisma.location.findUniqueOrThrow({ where: { id: area.id } });

@@ -43,6 +43,30 @@ describe("catalog service", () => {
     ).resolves.toMatchObject({ name: "Rojo" });
   });
 
+  // Revisión F0-F7 (B7): la unicidad sin distinguir mayúsculas era solo una lectura previa
+  // y dos altas simultáneas ("Rojo" y "rojo") entraban las dos.
+  it("keeps one item when the same name is created twice at once in different case", async () => {
+    const results = await Promise.allSettled([
+      createCatalogItem({ kind: "color", name: "Rojo", hex: null }),
+      createCatalogItem({ kind: "color", name: "rojo", hex: null }),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((result) => result.status === "rejected");
+    expect((rejected as PromiseRejectedResult | undefined)?.reason).toEqual(
+      new CatalogServiceError("Ya existe un elemento con ese nombre en colores."),
+    );
+    expect(await prisma.color.count()).toBe(1);
+  });
+
+  it("the database itself refuses a name that only differs in case", async () => {
+    await prisma.manufacturer.create({ data: { name: "Prysmian" } });
+
+    await expect(prisma.manufacturer.create({ data: { name: "PRYSMIAN" } })).rejects.toMatchObject({
+      code: "P2002",
+    });
+  });
+
   it("renames an item, allowing a change of case but not a clash with another", async () => {
     const blue = await createCatalogItem({ kind: "color", name: "azul", hex: null });
     await createCatalogItem({ kind: "color", name: "Verde", hex: null });
