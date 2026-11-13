@@ -47,6 +47,7 @@ buscador-cables/
 ├── packages/
 │   ├── db/                       # Prisma: schema, migraciones, seed, cliente
 │   ├── shared/                   # Esquemas Zod, tipos, constantes, normalizadores
+│   ├── data/                     # Extracción (y carga) de los datos reales desde los PDFs
 │   └── config/                   # eslint, tsconfig, prettier compartidos
 ├── docs/
 ├── docker-compose.yml
@@ -55,6 +56,7 @@ buscador-cables/
 ```
 
 Regla de dependencias: `app` → `features` → `server` → `packages/db` y `packages/shared`.
+`packages/data` usa `packages/shared` (y `packages/db` para la carga); la app no lo importa.
 Nunca al revés. Los componentes cliente no acceden a la base de datos.
 
 ## Interfaz: tema oscuro
@@ -203,6 +205,35 @@ model CableEvent {
   @@index([action, createdAt])
 }
 ```
+
+### Datos reales del proyecto (fase 7)
+
+Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructura en
+`docs/DATOS-PROYECTO.md`). Resumen; el detalle está en `schema.prisma`:
+
+- `Cable` gana el **nivel** (`CableLevel`: `L1` instrumentación, `L2` BT, `L3` BT unipolar,
+  `L4` MT), número alternativo, revisión, circuito, composición, esquema, longitud pendiente y
+  el documento y la página de donde se cargó.
+- **Extremos**: `originEquipment`, `originCubicle`, `originGland`, `originFunctionKks`,
+  `originInstallationKks` y `originRoom` (y lo mismo con `destination…`). `originId` y
+  `destinationId` siguen apuntando al árbol de ubicaciones (sala o edificio). Los equipos tienen
+  índice trigram para buscarlos por subcadena.
+- `Tray`: bandeja, tubo o canalización. Código único (`99UXA00L22036`), tipo (`TrayKind`),
+  nivel de tensión y cota sacados del código, área, edificio y tamaño. `TrayDrawing` dice en qué
+  hojas de plano aparece. El código se interpreta con `parseTrayCode` (`packages/shared`).
+- `CableRouteStep`: recorrido **ordenado** de cada cable (`position` ≥ 1). Cada paso guarda el
+  texto del listado y, si es una bandeja conocida, la bandeja; en instrumentación, además, el
+  tramo (`FIELD` campo / `ROOM` sala).
+- Estado `UNVERIFIED` (sin revisar): el estado con que entran los cables de los listados, que
+  nadie ha comprobado en campo. Sin ubicación física; no se mueve ni se conecta hasta que alguien
+  registra cómo está (tendido, tendido a medias, enrollado o retirado).
+- Si un cable de los listados no tiene sala, el equipo de cada extremo cuenta como extremo
+  conocido para poder tenderlo (`originId ?? originEquipment` al construir el estado).
+- Estado `PARTIALLY_LAID` (tendido parcial) y acción del mismo nombre. `Cable.looseEnd`
+  (`ORIGIN`/`DESTINATION`) y `Cable.looseEndTrayId` dicen qué punta quedó suelta y en qué
+  bandeja espera; la restricción `cable_loose_end_check` exige que solo un cable tendido a
+  medias los tenga. El historial guarda el código de la bandeja, no su id.
+- `CableType.code`: código del tipo en el listado eléctrico (`C0802`).
 
 ## Seguridad
 

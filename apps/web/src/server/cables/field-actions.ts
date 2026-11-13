@@ -43,6 +43,10 @@ export async function runCableAction(
       currentLocationId: true,
       originId: true,
       destinationId: true,
+      originEquipment: true,
+      destinationEquipment: true,
+      looseEnd: true,
+      looseEndTray: { select: { code: true } },
     },
   });
   if (!cable) {
@@ -53,10 +57,26 @@ export async function runCableAction(
   }
 
   const input = toCableActionInput(request);
-  const outcome = applyCableAction({ ...cable, deleted: cable.deletedAt !== null }, input);
+  const outcome = applyCableAction(
+    {
+      ...cable,
+      // Cables from the project lists may know the equipment but not the room.
+      originId: cable.originId ?? cable.originEquipment,
+      destinationId: cable.destinationId ?? cable.destinationEquipment,
+      looseEndTray: cable.looseEndTray?.code ?? null,
+      deleted: cable.deletedAt !== null,
+    },
+    input,
+  );
   if (!outcome.ok) {
     throw new CableServiceError(outcome.error);
   }
+  const { looseEndTray: looseEndTrayCode, ...nextValues } = outcome.next;
+  const looseEndTrayId = await resolveLooseEndTray(
+    cable.id,
+    looseEndTrayCode,
+    cable.looseEndTray?.code ?? null,
+  );
 
   const newLocationId = outcome.next.currentLocationId;
   if (newLocationId && newLocationId !== cable.currentLocationId) {
@@ -80,12 +100,15 @@ export async function runCableAction(
     const { count } = await tx.cable.updateMany({
       where: { id: cable.id, version: request.version, deletedAt: null },
       data: {
-        ...outcome.next,
+        ...nextValues,
+        looseEndTrayId,
         version: { increment: 1 },
         lastAction: request.action,
         lastActionById: actor.id,
         lastActionAt: now,
-        ...(request.action === "LAID" ? { installedById: actor.id, installedAt: now } : {}),
+        ...(request.action === "LAID" || request.action === "PARTIALLY_LAID"
+          ? { installedById: actor.id, installedAt: now }
+          : {}),
         ...(request.action === "CONNECTED" ? { connectedById: actor.id, connectedAt: now } : {}),
       },
     });
@@ -111,4 +134,29 @@ export async function runCableAction(
     cableId: cable.id,
     message: `Movimiento registrado en ${cable.code}: ${CABLE_ACTION_LABELS[request.action].toLowerCase()}.`,
   };
+}
+
+/**
+ * The id of the tray where the loose end waits. A new tray must exist and, when the cable
+ * has a planned route through known trays, be one of them: the loose end waits along the way.
+ */
+async function resolveLooseEndTray(
+  cableId: string,
+  code: string | null,
+  currentCode: string | null,
+): Promise<string | null> {
+  if (code === null) return null;
+  const tray = await prisma.tray.findUnique({ where: { code }, select: { id: true } });
+  if (!tray) {
+    throw new CableServiceError(`La bandeja ${code} no existe.`);
+  }
+  if (code === currentCode) return tray.id;
+  const routeTrays = await prisma.cableRouteStep.findMany({
+    where: { cableId, trayId: { not: null } },
+    select: { trayId: true },
+  });
+  if (routeTrays.length > 0 && !routeTrays.some((step) => step.trayId === tray.id)) {
+    throw new CableServiceError(`La bandeja ${code} no está en el recorrido del cable.`);
+  }
+  return tray.id;
 }

@@ -15,6 +15,9 @@ Lee antes de trabajar: `docs/PLAN.md`, `docs/ARQUITECTURA.md` y `CONTRIBUTING.md
 9. Valida siempre la entrada con Zod y comprueba sesión y rol en el servidor.
 10. No añadas dependencias nuevas sin justificarlo.
 11. No metas secretos en el código; usa `.env` y actualiza `.env.example`. El repo es público.
+    Los datos reales del cliente (PDFs, Excel, lo que se extrae de ellos) van solo en
+    `private-data/`, que git ignora: nunca en el código, los tests, la documentación ni los
+    commits, y tampoco el nombre del cliente. Los tests usan datos inventados.
 12. La UI es solo oscura: usa los tokens del tema (`bg-background`, `bg-card`, `text-foreground`, `bg-primary`, `text-success`…). Nunca fondos blancos ni colores fijos de Tailwind (`bg-white`, `text-black`, `text-emerald-600`). Paleta en `docs/ARQUITECTURA.md`.
 13. Al terminar una tarea, marca su casilla en `docs/PLAN.md`.
 
@@ -32,5 +35,7 @@ En Windows PowerShell usa `pnpm.cmd` / `npm.cmd` si la política de ejecución b
 | `pnpm db:seed`            | Carga datos de ejemplo                                        |
 | `pnpm db:studio`          | Abre Prisma Studio                                            |
 | `pnpm db:check`           | Falla si `schema.prisma` no coincide con las migraciones      |
+| `pnpm data:extract`       | Lee los PDFs de `private-data/source/` (datos reales, fase 7) |
+| `pnpm data:load`          | Carga lo extraído en la base de datos (`--as <correo>`)       |
 | `gh pr create --base dev` | Abre el PR de la rama actual contra `dev` (desde la fase 4.5) |
 | `gh pr checks --watch`    | Sigue el CI del PR hasta que termina                          |

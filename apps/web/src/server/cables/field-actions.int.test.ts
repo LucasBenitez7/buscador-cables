@@ -13,7 +13,7 @@ let places: { origin: string; destination: string; store: string; yard: string }
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
   const [tech, sup] = await Promise.all(
     [
@@ -255,5 +255,144 @@ describe("runCableAction", () => {
         cableActionSchema.parse({ cableId: "missing", version: "1", action: "LAID" }),
       ),
     ).rejects.toThrow("El cable no existe.");
+  });
+});
+
+describe("runCableAction: cables loaded from the project lists", () => {
+  it("lays an unverified cable whose ends are only known by their equipment", async () => {
+    const cable = await prisma.cable.create({
+      data: {
+        code: "99XAT10W2005",
+        installationStatus: "UNVERIFIED",
+        originEquipment: "99BMA",
+        destinationEquipment: "99XAT10AP001",
+      },
+    });
+
+    await expect(
+      act(technician, cable.id, { action: "MOVED", locationId: places.yard }),
+    ).rejects.toThrow(/registra primero cómo está/);
+    await act(technician, cable.id, { action: "LAID" });
+
+    expect(await cableOf(cable.id)).toMatchObject({
+      installationStatus: "LAID",
+      originId: null,
+      destinationId: null,
+    });
+    expect((await lastEvent(cable.id)).changes).toEqual({
+      installationStatus: { from: "UNVERIFIED", to: "LAID" },
+    });
+  });
+});
+
+describe("runCableAction: partial laying", () => {
+  async function routeThrough(cableId: string, codes: string[]) {
+    for (const [index, code] of codes.entries()) {
+      const tray = await prisma.tray.upsert({
+        where: { code },
+        create: { code, kind: "LADDER" },
+        update: {},
+      });
+      await prisma.cableRouteStep.create({
+        data: { cableId, position: index + 1, label: code, trayId: tray.id },
+      });
+    }
+  }
+
+  it("leaves the destination end waiting in a tray of the route", async () => {
+    const { id } = await newCable();
+    await routeThrough(id, ["99UXA00L22036", "99UXA00L22051"]);
+
+    const result = await act(technician, id, {
+      action: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      trayCode: "99uxa00l22051",
+    });
+
+    expect(result.message).toBe("Movimiento registrado en SH-50: tendido parcial.");
+    const cable = await prisma.cable.findUniqueOrThrow({
+      where: { id },
+      include: { looseEndTray: { select: { code: true } } },
+    });
+    expect(cable).toMatchObject({
+      installationStatus: "PARTIALLY_LAID",
+      currentLocationId: null,
+      looseEnd: "DESTINATION",
+      looseEndTray: { code: "99UXA00L22051" },
+      installedById: technician.id,
+      lastAction: "PARTIALLY_LAID",
+    });
+    // The history stores the tray code, readable without a lookup.
+    expect((await lastEvent(id)).changes).toMatchObject({
+      installationStatus: { from: "IN_STOCK", to: "PARTIALLY_LAID" },
+      looseEnd: { from: null, to: "DESTINATION" },
+      looseEndTray: { from: null, to: "99UXA00L22051" },
+    });
+  });
+
+  it("connects the end that arrived and then completes the laying", async () => {
+    const { id } = await newCable();
+    await routeThrough(id, ["99UXA00L22036"]);
+    await act(technician, id, {
+      action: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      trayCode: "99UXA00L22036",
+    });
+    await act(technician, id, { action: "CONNECTED", end: "ORIGIN" });
+
+    await expect(act(technician, id, { action: "CONNECTED", end: "DESTINATION" })).rejects.toThrow(
+      /sigue suelta en la bandeja 99UXA00L22036/,
+    );
+
+    await act(technician, id, { action: "LAID" });
+    expect(await cableOf(id)).toMatchObject({
+      installationStatus: "LAID",
+      connectionStatus: "ORIGIN_ONLY",
+      looseEnd: null,
+      looseEndTrayId: null,
+    });
+  });
+
+  it("rejects a tray that does not exist or is not on the route", async () => {
+    const { id } = await newCable();
+    await routeThrough(id, ["99UXA00L22036"]);
+    await prisma.tray.create({ data: { code: "99UXB00L22001", kind: "LADDER" } });
+
+    await expect(
+      act(technician, id, { action: "PARTIALLY_LAID", looseEnd: "ORIGIN", trayCode: "99UXZ" }),
+    ).rejects.toThrow("La bandeja 99UXZ no existe.");
+    await expect(
+      act(technician, id, {
+        action: "PARTIALLY_LAID",
+        looseEnd: "ORIGIN",
+        trayCode: "99UXB00L22001",
+      }),
+    ).rejects.toThrow("La bandeja 99UXB00L22001 no está en el recorrido del cable.");
+    expect((await cableOf(id)).installationStatus).toBe("IN_STOCK");
+  });
+
+  it("accepts any existing tray when the cable has no route", async () => {
+    const { id } = await newCable();
+    await prisma.tray.create({ data: { code: "99UXB00L22001", kind: "LADDER" } });
+
+    await act(technician, id, {
+      action: "PARTIALLY_LAID",
+      looseEnd: "ORIGIN",
+      trayCode: "99UXB00L22001",
+    });
+
+    expect((await cableOf(id)).looseEnd).toBe("ORIGIN");
+  });
+
+  it("is guarded by the database: a loose end needs the partial status", async () => {
+    const { id } = await newCable();
+    const tray = await prisma.tray.create({ data: { code: "99UXB00L22001", kind: "LADDER" } });
+
+    await expect(
+      prisma.cable.update({
+        where: { id },
+        data: { looseEnd: "ORIGIN", looseEndTrayId: tray.id },
+      }),
+    ).rejects.toThrow(/cable_loose_end_check/);
   });
 });

@@ -171,6 +171,53 @@ describe("runCableActionAction", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/cables/c1");
   });
 
+  it("passes the loose end and the tray of a partial laying to the service", async () => {
+    mocks.runCableAction.mockResolvedValue({ cableId: "c1", message: "Movimiento registrado." });
+
+    await runCableActionAction(
+      form({
+        cableId: "c1",
+        version: "2",
+        action: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        trayCode: "99uxa00l22036",
+      }),
+    );
+
+    expect(mocks.runCableAction).toHaveBeenCalledWith(technician.user, {
+      cableId: "c1",
+      version: 2,
+      action: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      trayCode: "99UXA00L22036",
+      notes: null,
+    });
+  });
+
+  it("passes the loose end of a correction to the service", async () => {
+    mocks.authorize.mockResolvedValue(technician);
+    mocks.runCableAction.mockResolvedValue({ cableId: "c1", message: "Movimiento registrado." });
+
+    await runCableActionAction(
+      form({
+        cableId: "c1",
+        version: "2",
+        action: "CORRECTION",
+        correctsEventId: "e1",
+        installationStatus: "PARTIALLY_LAID",
+        connectionStatus: "DISCONNECTED",
+        looseEnd: "ORIGIN",
+        looseEndTray: "99UXA00L22036",
+        notes: "La punta no llegó",
+      }),
+    );
+
+    expect(mocks.runCableAction.mock.calls[0]?.[1]).toMatchObject({
+      looseEnd: "ORIGIN",
+      looseEndTray: "99UXA00L22036",
+    });
+  });
+
   it("requires a reason to retire and shows service errors", async () => {
     const withoutReason = await runCableActionAction(
       form({ cableId: "c1", version: "1", action: "RETIRED", notes: "" }),

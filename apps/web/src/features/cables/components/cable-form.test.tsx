@@ -73,7 +73,7 @@ describe("CableForm (alta)", () => {
     type("Código", "sh50");
     type("Sección (mm²)", "2,555");
     type("Origen", "s1");
-    type("Destino", "s1");
+    type("Instalación", "LAID");
     fireEvent.click(screen.getByRole("button", { name: "Dar de alta" }));
 
     expect(await screen.findByText(/2 decimales/)).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe("CableForm (alta)", () => {
     // Las reglas entre campos se comprueban cuando cada campo es válido.
     type("Sección (mm²)", "2,5");
     fireEvent.click(screen.getByRole("button", { name: "Dar de alta" }));
-    expect(await screen.findByText(/origen y el destino no pueden/)).toBeInTheDocument();
+    expect(await screen.findByText(/tendido necesita origen y destino/)).toBeInTheDocument();
     expect(screen.queryByText(/2 decimales/)).toBeNull();
     expect(mocks.createCableAction).not.toHaveBeenCalled();
   });
@@ -94,6 +94,11 @@ describe("CableForm (alta)", () => {
 
     expect(screen.queryByLabelText("Dónde está ahora")).toBeNull();
     expect(screen.queryByRole("option", { name: "Retirado" })).toBeNull();
+    type("Instalación", "UNVERIFIED");
+    expect(screen.queryByLabelText("Dónde está ahora")).toBeNull();
+
+    // A partial laying needs the tray of the loose end: it is recorded with its action.
+    expect(screen.queryByRole("option", { name: "Tendido parcial" })).toBeNull();
   });
 
   it("sends the form and opens the new cable", async () => {

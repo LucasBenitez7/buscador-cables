@@ -2,7 +2,14 @@ import { z } from "zod";
 import { cableCodeSchema } from "./cable-code";
 
 /** The Prisma enums must list exactly the same members. */
-export const INSTALLATION_STATUSES = ["IN_STOCK", "COILED", "LAID", "RETIRED"] as const;
+export const INSTALLATION_STATUSES = [
+  "UNVERIFIED",
+  "IN_STOCK",
+  "COILED",
+  "PARTIALLY_LAID",
+  "LAID",
+  "RETIRED",
+] as const;
 export const CONNECTION_STATUSES = [
   "DISCONNECTED",
   "ORIGIN_ONLY",
@@ -13,6 +20,7 @@ export const CABLE_ACTIONS = [
   "CREATED",
   "UPDATED",
   "LAID",
+  "PARTIALLY_LAID",
   "COILED",
   "CONNECTED",
   "DISCONNECTED",
@@ -27,8 +35,10 @@ export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
 export type CableAction = (typeof CABLE_ACTIONS)[number];
 
 export const INSTALLATION_STATUS_LABELS: Record<InstallationStatus, string> = {
+  UNVERIFIED: "Sin revisar",
   IN_STOCK: "En almacén",
   COILED: "Enrollado",
+  PARTIALLY_LAID: "Tendido parcial",
   LAID: "Tendido",
   RETIRED: "Retirado",
 };
@@ -44,6 +54,7 @@ export const CABLE_ACTION_LABELS: Record<CableAction, string> = {
   CREATED: "Alta",
   UPDATED: "Datos editados",
   LAID: "Tendido",
+  PARTIALLY_LAID: "Tendido parcial",
   COILED: "Enrollado",
   CONNECTED: "Conectado",
   DISCONNECTED: "Desconectado",
@@ -77,6 +88,8 @@ export const CABLE_FIELD_LABELS: Record<
   | "installationStatus"
   | "connectionStatus"
   | "currentLocationId"
+  | "looseEnd"
+  | "looseEndTray"
   | "deletedAt",
   string
 > = {
@@ -96,7 +109,36 @@ export const CABLE_FIELD_LABELS: Record<
   installationStatus: "Estado de instalación",
   connectionStatus: "Estado de conexión",
   currentLocationId: "Ubicación actual",
+  looseEnd: "Punta suelta",
+  looseEndTray: "Bandeja de la punta suelta",
   deletedAt: "Baja",
+};
+
+/** Fields that only the load of the project lists writes (`pnpm data:load`), for the history. */
+export const PROJECT_FIELD_LABELS: Record<string, string> = {
+  level: "Nivel",
+  altCode: "Nº alternativo",
+  revision: "Revisión",
+  lengthPending: "Longitud pendiente",
+  circuit: "Circuito",
+  cablesPerCircuit: "Cables por circuito",
+  composition: "Composición",
+  diagram: "Esquema",
+  originEquipment: "Equipo de origen",
+  originCubicle: "Cubículo de origen",
+  originGland: "Prensaestopas de origen",
+  originFunctionKks: "KKS de función de origen",
+  originInstallationKks: "KKS de instalación de origen",
+  originRoom: "Sala de origen",
+  destinationEquipment: "Equipo de destino",
+  destinationCubicle: "Cubículo de destino",
+  destinationGland: "Prensaestopas de destino",
+  destinationFunctionKks: "KKS de función de destino",
+  destinationInstallationKks: "KKS de instalación de destino",
+  destinationRoom: "Sala de destino",
+  sourceDocument: "Documento",
+  sourcePage: "Página",
+  route: "Recorrido",
 };
 
 // ---------------------------------------------------------------------------
@@ -185,13 +227,6 @@ const cableFieldsSchema = z.object({
 
 export type CableFields = z.infer<typeof cableFieldsSchema>;
 
-const differentEnds = (data: { originId: string | null; destinationId: string | null }) =>
-  data.originId === null || data.originId !== data.destinationId;
-const differentEndsIssue = {
-  message: "El origen y el destino no pueden ser la misma ubicación",
-  path: ["destinationId"],
-};
-
 /**
  * Initial status of a cable being registered. Returns an error message in
  * Spanish, or null when the combination is coherent.
@@ -207,10 +242,16 @@ export function validateInitialStatus(input: {
   if (installationStatus === "RETIRED") {
     return "Un cable no se puede dar de alta como retirado.";
   }
+  if (installationStatus === "PARTIALLY_LAID") {
+    return "Da de alta el cable y regístralo después con la acción «Tender a medias».";
+  }
   if (installationStatus !== "LAID" && connectionStatus !== "DISCONNECTED") {
     return "Solo un cable tendido puede estar conectado.";
   }
-  if (installationStatus !== "LAID" && !input.currentLocationId) {
+  if (
+    (installationStatus === "IN_STOCK" || installationStatus === "COILED") &&
+    !input.currentLocationId
+  ) {
     return "Indica dónde está el cable (almacén o lugar donde está enrollado).";
   }
   if (installationStatus === "LAID" && (!input.originId || !input.destinationId)) {
@@ -225,7 +266,8 @@ export const createCableSchema = cableFieldsSchema
     connectionStatus: z.enum(CONNECTION_STATUSES, { error: "Estado de conexión no válido" }),
     currentLocationId: optionalId,
   })
-  .refine(differentEnds, differentEndsIssue)
+  // Origin and destination may be the same room: many instrumentation cables join two
+  // pieces of equipment of the same room (docs/DATOS-PROYECTO.md).
   .superRefine((data, ctx) => {
     const error = validateInitialStatus(data);
     if (error) {
@@ -238,9 +280,10 @@ const versionSchema = z.coerce
   .int("Versión no válida")
   .min(1, "Versión no válida");
 
-export const updateCableSchema = cableFieldsSchema
-  .extend({ id: z.string().min(1), version: versionSchema })
-  .refine(differentEnds, differentEndsIssue);
+export const updateCableSchema = cableFieldsSchema.extend({
+  id: z.string().min(1),
+  version: versionSchema,
+});
 
 export const deleteCableSchema = z.object({
   id: z.string().min(1),

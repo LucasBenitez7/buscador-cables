@@ -49,6 +49,7 @@ test.describe("administrador", () => {
     await expect(links).toHaveText([
       "Inicio",
       "Cables",
+      "Bandejas",
       "Ubicaciones",
       "Mi actividad",
       "Actividad",

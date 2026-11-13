@@ -7,6 +7,20 @@ import {
   parseCableSearch,
 } from "./search";
 
+describe("project data filters", () => {
+  it("reads the level, the tray (normalized) and the loose-end flag", () => {
+    expect(parseCableSearch({ level: "L2", tray: " 99uxa00l22036 ", loose: "1" })).toMatchObject({
+      level: "L2",
+      tray: "99UXA00L22036",
+      loose: "1",
+    });
+  });
+
+  it("ignores values that are not valid", () => {
+    expect(parseCableSearch({ level: "L9", tray: "x".repeat(60), loose: "yes" })).toEqual({});
+  });
+});
+
 describe("parseCableSearch", () => {
   it("reads filters from the URL, accepting a decimal comma", () => {
     expect(

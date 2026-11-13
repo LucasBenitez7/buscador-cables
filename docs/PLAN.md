@@ -24,14 +24,14 @@ hizo qué y cuándo.
 | 4.5  | CI, GitHub y Pull Requests    | v0.5.1  | Repo en GitHub, PRs a `dev` con CI, tema oscuro       |
 | 5    | Estados y trazabilidad        | v0.6.0  | Tendido/enrollado, conectado, historial por usuario   |
 | 6    | Diseño responsive y E2E       | v0.7.0  | Menú y vistas para móvil, E2E de las fases 1-5        |
-| 7    | Exportación a PDF             | v0.8.0  | Tres informes PDF completos descargables              |
+| 7    | Datos reales del proyecto     | v0.8.0  | Cables, bandejas y estado cargados desde los PDFs     |
 | 8    | Importación masiva y panel    | v0.9.0  | CSV/Excel masivo, dashboard                           |
 | 9    | Modo sin conexión (PWA)       | v0.10.0 | Consulta offline + cola de cambios sincronizable      |
 | 10   | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
 
 **Total: 12 fases (0 a 10, más la 4.5 añadida el 2026-11-11).** El 2026-11-13 la fase 6 se
-cerró con el diseño y los E2E; la exportación a PDF pasó a ser la fase 7 y la importación y el
-panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
+cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
+la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
 Cada fase termina con todos los tests en verde en `dev`. Desde la fase 4.5, todo llega a `dev`
 por Pull Request y con el CI en verde. Las versiones de la tabla son orientativas: `dev` → `main`
@@ -422,67 +422,129 @@ cierra con sus E2E escritos y en verde en el CI. Cómo funcionan: `CONTRIBUTING.
 - [x] Job `e2e` del CI activado en cada PR a `dev` y en cada push a `dev`/`main`, con Mailpit.
 
 **Fase 6 cerrada el 2026-11-13** (al mergear `feat/f6-e2e-import` en `dev`, PR #27). Por
-decisión del usuario, la importación, la exportación y el panel salen de esta fase: la
-exportación a PDF es la fase 7 y lo demás, la fase 8.
+decisión del usuario, la importación, la exportación y el panel salen de esta fase: la carga
+de los datos reales es la fase 7 y lo demás, la fase 8.
 
-## Fase 7 — Exportación a PDF (v0.8.0)
+## Fase 7 — Datos reales del proyecto (v0.8.0)
 
-Fase añadida el 2026-11-13. Rama única: `feat/f7-pdf-export`. Objetivo: **tres informes PDF
-completos**, descargables desde la app, que sirvan para imprimir, archivar y enviar.
+Fase añadida el 2026-11-13. Rama única: `feat/f7-project-data`. El usuario pasa **tres PDFs
+del proyecto real**, con los cables, las bandejas y el estado del proyecto. Objetivo: que la
+app trabaje con esos datos y se adapte a lo que el proyecto necesita de verdad.
 
-### Decisiones al empezar la fase
+### Confidencialidad (obligatorio)
 
-- [ ] Contenido exacto de los tres PDFs (propuesta abajo, a confirmar con el usuario).
-- [ ] Librería de generación. Propuesta: `@react-pdf/renderer`. Genera el PDF en el servidor
-      a partir de componentes React, sin navegador, y funciona en Vercel. La alternativa,
-      imprimir HTML con Chromium sin interfaz, pesa demasiado para un despliegue serverless.
-      Se justifica en `docs/ARQUITECTURA.md` antes de añadirla.
-- [ ] Colores del PDF. La UI es solo oscura (regla 12 de `AGENTS.md`), pero un PDF se
-      imprime: propuesta de fondo blanco y texto oscuro, con el azul de acento. Hay que dejar
-      la excepción escrita.
+El repositorio es público. Los datos reales **nunca** se suben:
 
-### Propuesta de los tres PDFs
+- Los PDFs y todo lo que se extrae de ellos viven en `private-data/`, ignorada por git; solo
+  se versiona su `README.md`. `.gitignore` bloquea además cualquier `.pdf`, `.xlsx`, `.xls`
+  o `.csv` fuera de las carpetas `__fixtures__`.
+- El nombre del cliente no aparece en el código, los tests, la documentación ni los commits.
+- Los tests usan datos inventados con la misma forma que los reales.
+- La carga en una base de datos se hace en local o en el entorno del cliente, nunca en CI.
 
-1. **Ficha del cable**, desde la ficha:
-   - todos los datos técnicos;
-   - el recorrido (origen → destino) y la ubicación actual;
-   - el estado de instalación y de conexión;
-   - el historial completo, con los cambios campo a campo, las notas y las correcciones.
-2. **Listado de cables**, desde el buscador:
-   - todos los resultados de la búsqueda actual, no solo la página visible;
-   - una portada con los filtros aplicados;
-   - totales por estado de instalación, por estado de conexión y por ubicación;
-   - una tabla con los datos técnicos y el último movimiento de cada cable.
-3. **Informe de actividad**, desde "Actividad reciente" (supervisor o más):
-   - los movimientos de un periodo, con los mismos filtros de quién, qué y cuándo;
-   - un resumen por usuario y por tipo de acción;
-   - el detalle cronológico.
+### Primero: analizar los PDFs
 
-### Tareas
+- [x] Leer los tres PDFs y documentar su estructura, sin datos reales: qué tablas hay, qué
+      columnas, qué unidades y qué códigos. En `docs/DATOS-PROYECTO.md`: dos listados de
+      cables (instrumentación L1; eléctricos L2-L4), una página por cable, ~4.460 cables; y los
+      planos de bandejas, tubos y canalizaciones con el código de cada tramo.
+- [x] Comparar con el modelo actual (tabla en `docs/DATOS-PROYECTO.md`). Faltan las bandejas,
+      el recorrido ordenado de cada cable, los datos de cada extremo (equipo, cubículo, KKS,
+      sala), el nivel L1-L4 y saber hasta dónde llegó un cable tendido a medias. Los PDFs no
+      traen el estado en campo: lo registra la app.
+- [x] Proponer al usuario los cambios de modelo y de pantallas. Aprobados el 2026-11-13: ver
+      "Decisiones" en `docs/DATOS-PROYECTO.md`. Prototipo de extracción probado sobre los PDFs
+      reales (fuera del repo): ~1 minuto para todas las páginas.
 
-- [ ] Servicio de informes en `apps/web/src/server/reports`. Reutiliza las consultas de
-      búsqueda, ficha y actividad, y convierte los datos en un modelo del informe que no
-      depende de la librería.
-- [ ] Route Handlers de descarga:
-  - comprueban la sesión y el permiso (`export:run`; el de actividad pide además
-    `activity:view`);
-  - validan los parámetros con Zod;
-  - responden con `Content-Disposition` y un nombre de archivo con fecha.
-- [ ] Plantilla común:
-  - cabecera con el nombre de la app, el título y los filtros;
-  - fecha y hora de generación (hora de Madrid) y quién lo generó;
-  - pie con "Página X de Y";
-  - tablas que se parten bien entre páginas y repiten la cabecera.
-- [ ] Límite de volumen (propuesta: hasta 5.000 cables o 10.000 movimientos, con aviso si se
-      supera) y prueba de rendimiento con el volumen estimado.
-- [ ] Botón "Descargar PDF" en la ficha, en el buscador y en la actividad, con estado de
-      carga y su hover, pulsado y foco.
-- [ ] Tests:
-  - unitarios del modelo de cada informe;
-  - de integración de los Route Handlers (permisos, parámetros, cabeceras);
-  - E2E de la descarga de los tres PDFs (escritorio y móvil), comprobando el texto.
-- [ ] Documentación: `docs/ARQUITECTURA.md` (librería y estructura) y la entrada de
-      `docs/REVISIONES.md` al cerrar la fase.
+### Después: carga y adaptación
+
+Orden de trabajo, todo en `feat/f7-project-data`:
+
+- [x] Esquema y migración `add_trays_routes_and_cable_ends`: `Tray`, `TrayDrawing`,
+      `CableRouteStep`, datos de cada extremo, campos nuevos del cable (nivel, nº alternativo,
+      revisión, circuito, composición, esquema, longitud pendiente, documento y página), código
+      en `CableType` y `looseEndTrayId` (bandeja de la punta suelta). Comprobaciones en la base
+      de datos (posición ≥ 1, nivel de tensión 1-4) e índices trigram para buscar por bandeja y
+      por equipo. `parseTrayCode` y `parseTraySize` en `packages/shared`, probados además contra
+      los ~2.500 códigos reales: solo falla uno con errata. Nuevo test que comprueba que los
+      enums de Prisma y las constantes compartidas coinciden.
+- [x] Estado _tendido parcial_ y acción "Tender a medias" (migración
+      `add_partially_laid_status`). Reglas acordadas:
+  - Se puede tender a medias desde almacén, enrollado o tendido. Pide qué punta queda suelta y
+    la bandeja donde espera, que tiene que existir y, si el cable tiene recorrido, estar en él.
+  - La punta suelta no puede estar conectada; solo se conecta la que llegó.
+  - Volver a "Tender a medias" con otra bandeja lleva la punta más adelante.
+  - "Tender" termina el tendido y conserva lo que ya estaba conectado; enrollar o retirar
+    quitan la punta suelta.
+  - La base de datos lo garantiza con una comprobación: solo un cable tendido a medias tiene
+    punta suelta y bandeja.
+  - Historial: "tendió el cable a medias: la punta de destino espera en la bandeja X", "llevó
+    la punta suelta de la bandeja X a la Y", "terminó de tender el cable". Insignia ámbar.
+  - El diálogo sugiere las bandejas del recorrido y admite escribir el código. Las correcciones
+    también fijan la punta suelta.
+  - Tests de la máquina de estados, del servicio contra Postgres, de componentes y un E2E del
+    flujo completo. El E2E encontró que la Server Action no leía los campos nuevos.
+- [x] Seed y E2E con datos inventados de forma real, en lugar de los códigos `SH-50`:
+  - `generateSeedData` crea ~4.500 cables L1-L4 de una central de ejemplo (unidad `99`): KKS de
+    cables, equipos y salas, ~500 bandejas codificadas como en los planos con su hoja de plano,
+    ~30.000 tramos de recorrido, extremos como en los listados y estados de campo variados
+    (también tendidos a medias con la punta en una bandeja del recorrido).
+  - Árbol de ubicaciones: Planta → grupo de edificios → edificio → sala.
+  - `parseCableSpec` (`packages/shared`) saca conductores, sección y tensión del texto del tipo
+    de cable; probado contra los ~120 tipos reales (lee 106; el resto son fibra, coaxial o AWG).
+  - Origen y destino pueden ser la misma sala.
+  - Probado en una base temporal: ~14 s, y una segunda ejecución no duplica nada.
+  - E2E con códigos KKS inventados; la búsqueda tolerante se prueba con `xab10t1w800`.
+- [x] Script de extracción repetible `pnpm data:extract` (paquete `packages/data`, TypeScript
+      y `pdfjs-dist` 6.4): lee `private-data/source/*.pdf` y deja `cables.json`, `trays.json` e
+      informe en `private-data/extracted/`. Reconoce cada página por su contenido. Con los PDFs
+      reales: ~4.460 cables, ~3.000 bandejas y ~37.000 tramos, 0 errores, en menos de un
+      minuto y medio. Detalle en `docs/DATOS-PROYECTO.md`.
+- [x] Validación con Zod de cada cable y bandeja, con informe de errores y avisos por fichero,
+      página y código (`report.md` y `report.json`).
+- [x] Estado _sin revisar_ (`UNVERIFIED`, migración `add_unverified_status`), decidido por el
+      usuario el 2026-11-13: los PDFs no dicen el estado en campo, así que los cables reales
+      entran sin revisar y el técnico registra lo que encuentra. No se mueve ni se conecta antes
+      de revisarlo. Si el listado no da la sala, el equipo de cada extremo basta para tender.
+- [x] Carga idempotente `pnpm data:load` (`packages/data/src/load`), firmada por un usuario
+      (`--as <correo>`, por defecto `SEED_ADMIN_EMAIL`):
+  - crea o actualiza por código cables, bandejas (con sus hojas de plano) y tipos de cable;
+  - rellena el árbol de ubicaciones desde los KKS: Planta → grupo de edificios → edificio →
+    sala (`parseRoomCode`/`parseBuildingCode` en `packages/shared`);
+  - los cables nuevos entran _sin revisar_ con su evento de alta; los cambios de ingeniería
+    (longitud, revisión, recorrido…) dejan un evento de edición;
+  - nunca toca lo registrado en campo: estado, conexión, ubicación, punta suelta, notas ni
+    "último movimiento"; los cables dados de baja no se tocan;
+  - avisa de los cables cargados antes que ya no están en los listados (no los borra).
+  - Probada con los datos reales en una base temporal: 4.459 cables, 3.017 bandejas, 328
+    ubicaciones y 37.435 tramos en 12 s; la segunda ejecución no cambia nada (1 s).
+- [x] Pantallas:
+  - Ficha del cable: nivel y nº alternativo; tarjetas de origen y destino con equipo,
+    cubículo/prensaestopas, KKS y sala; recorrido tramo a tramo (campo / sala) con lo tendido en
+    verde, la bandeja donde espera la punta suelta y lo que falta (`routeProgress` en
+    `packages/shared`); revisión, circuito, composición, esquema y listado y página de origen.
+  - Buscador: el cuadro busca también por equipo de cualquier extremo y por nº alternativo;
+    filtros de nivel, bandeja (cables que pasan) y "solo con la punta suelta" (en esa bandeja).
+    Cada resultado enseña el equipo de los extremos y dónde espera la punta suelta.
+  - Bandejas (`/trays`, en el menú): listado por código con tipo, nivel, tamaño, edificio,
+    cables y cuántos esperan; ficha con planos y hojas, cables que esperan en ella y cables que
+    pasan, con enlace al buscador filtrado.
+  - Repasado en el navegador con el seed nuevo (escritorio y 375 px, sin desplazamiento
+    lateral ni errores en consola).
+- [x] Tests:
+  - extracción con PDFs inventados (generados en memoria por los tests, no en `__fixtures__`);
+  - validación con Zod y normalización;
+  - carga contra Postgres (primera carga, recarga sin cambios, actualización sin pisar el campo,
+    conflictos);
+  - servicios de bandejas y filtros del buscador contra Postgres; ficha y recorrido;
+  - E2E de las pantallas nuevas (`e2e/trays.spec.ts`): ficha con extremos y punta suelta, de
+    la ficha a la bandeja y al buscador, listado de bandejas y búsqueda por equipo y nivel.
+- [x] Documentación: estructura de los datos y uso de los scripts en `docs/DATOS-PROYECTO.md`;
+      modelo en `docs/ARQUITECTURA.md`; entrada en `docs/REVISIONES.md`.
+
+**Fase 7 cerrada el 2026-11-13** (al mergear `feat/f7-project-data` en `dev`). Los datos reales
+no están cargados en ninguna base: se cargan con `pnpm data:load` en local o en el entorno del
+cliente cuando se decida.
 
 ## Fase 8 — Importación masiva y panel (v0.9.0)
 
@@ -490,7 +552,7 @@ Viene de la fase 6, de donde salió el 2026-11-13.
 
 - [ ] Importación masiva desde CSV/Excel con previsualización y validación fila a fila.
 - [ ] Informe de errores descargable.
-- [ ] Exportación de los resultados de búsqueda a CSV/Excel (complementa los PDFs de la fase 7).
+- [ ] Exportación de los resultados de búsqueda a CSV/Excel y a PDF.
 - [ ] Dashboard: totales por estado, por ubicación, cables pendientes de conectar.
 - [ ] Generación de código QR por cable (para etiquetas en campo) — opcional.
 - [ ] Tests: parser de importación con ficheros de ejemplo, y E2E de importación y panel.

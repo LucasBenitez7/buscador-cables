@@ -11,7 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPrismaClient } from "@cables/db";
 import { hashPassword } from "better-auth/crypto";
-import { CABLES, LOCATIONS, PASSWORD, RECOVERY_USER, USERS } from "../support/data";
+import { CABLES, LOCATIONS, PASSWORD, RECOVERY_USER, TRAYS, USERS } from "../support/data";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dbPackage = path.resolve(here, "../../../../packages/db");
@@ -20,6 +20,7 @@ const prismaCli = path.join(dbPackage, "node_modules", "prisma", "build", "index
 const TABLES = [
   "cable_event",
   "cable",
+  "tray",
   "location",
   "cable_type",
   "color",
@@ -107,11 +108,26 @@ async function prepare() {
     db.manufacturer.create({ data: { name: "Prysmian" } }),
   ]);
 
+  const trayIds = new Map<string, string>();
+  for (const code of TRAYS) {
+    const tray = await db.tray.create({ data: { code, kind: "LADDER", voltageLevel: 2 } });
+    trayIds.set(code, tray.id);
+  }
+
   const now = new Date();
   for (const cable of Object.values(CABLES)) {
+    const route: readonly string[] = "route" in cable ? cable.route : [];
+    const loose =
+      "looseTray" in cable
+        ? { looseEnd: cable.looseEnd, looseEndTrayId: trayIds.get(cable.looseTray)! }
+        : {};
     await db.cable.create({
       data: {
         code: cable.code,
+        level: cable.level,
+        originEquipment: cable.ends[0],
+        destinationEquipment: cable.ends[1],
+        ...loose,
         typeId: type.id,
         colorId: color.id,
         manufacturerId: manufacturer.id,
@@ -127,6 +143,13 @@ async function prepare() {
         lastAction: "CREATED",
         lastActionById: userIds.admin!,
         lastActionAt: now,
+        routeSteps: {
+          create: route.map((code, index) => ({
+            position: index + 1,
+            label: code,
+            trayId: trayIds.get(code)!,
+          })),
+        },
         events: {
           create: {
             userId: userIds.admin!,

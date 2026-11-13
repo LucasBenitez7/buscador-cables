@@ -128,6 +128,9 @@ const ACTION_FIELDS = [
   "installationStatus",
   "connectionStatus",
   "currentLocationId",
+  "looseEnd",
+  "trayCode",
+  "looseEndTray",
 ] as const;
 
 function isFieldAction(value: string): value is CableFieldAction {

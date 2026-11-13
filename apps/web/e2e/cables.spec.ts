@@ -38,7 +38,7 @@ test("alta, edición y baja de un cable", async ({ page }) => {
   await page.getByRole("link", { name: "Ver ficha" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "NB-77" })).toBeVisible();
   await expect(page.getByText("85,5 m")).toBeVisible();
-  await expect(page.getByText(ORIGIN, { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Origen" })).toContainText(ORIGIN);
   const history = page.getByRole("listitem").filter({ hasText: "Ada Admin" });
   await expect(history).toHaveCount(2);
   await expect(history.first()).toContainText("Datos editados");
@@ -54,7 +54,7 @@ test("alta, edición y baja de un cable", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/cables\?deleted=NB-77/);
   await expect(page.getByText("Cable NB-77 dado de baja.")).toBeVisible();
-  await page.getByLabel("Código o descripción").fill("NB-77");
+  await page.getByLabel("Código, equipo o descripción").fill("NB-77");
   await page.getByRole("button", { name: "Buscar" }).click();
   await expect(page.getByRole("link", { name: "NB-77", exact: true })).toHaveCount(0);
 });

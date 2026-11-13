@@ -2,17 +2,22 @@ import "server-only";
 import { prisma } from "@cables/db";
 import {
   CABLE_ACTION_LABELS,
+  CABLE_END_SIDE_LABELS,
   CABLE_FIELD_LABELS,
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUS_LABELS,
+  PROJECT_FIELD_LABELS,
   describeCableEvent,
   formatDecimal,
   isRole,
   orderedChanges,
   type CableAction,
+  type CableEndSide,
+  type CableLevel,
   type CableState,
   type ConnectionStatus,
   type InstallationStatus,
+  type RouteSection,
 } from "@cables/shared";
 import { listLocationOptions } from "@/server/cables/service";
 
@@ -31,6 +36,17 @@ export type CableHistoryEntry = {
   corrects: string | null;
 };
 
+export type CableEndDetail = {
+  equipment: string | null;
+  cubicle: string | null;
+  gland: string | null;
+  functionKks: string | null;
+  installationKks: string | null;
+  room: string | null;
+  /** Full route of the location in the tree ("99 › 99UX › 99UXA › 99UXA16RA001"). */
+  location: string | null;
+};
+
 export type CableDetail = {
   id: string;
   code: string;
@@ -38,6 +54,25 @@ export type CableDetail = {
   version: number;
   /** Raw state for the action state machine (ids, not names). */
   state: CableState;
+  /** Planned route, in order: the list text and, if it is a known tray, its code. */
+  route: {
+    position: number;
+    label: string;
+    trayCode: string | null;
+    section: RouteSection | null;
+  }[];
+  level: CableLevel | null;
+  altCode: string | null;
+  revision: string | null;
+  circuit: string | null;
+  cablesPerCircuit: number | null;
+  composition: string | null;
+  diagram: string | null;
+  lengthPending: boolean;
+  /** Where the data comes from in the project lists, to check it on paper. */
+  source: { document: string | null; page: number | null } | null;
+  /** Both ends as the lists give them, plus the location in the tree. */
+  ends: { origin: CableEndDetail; destination: CableEndDetail };
   description: string | null;
   type: string | null;
   color: { name: string; hex: string | null } | null;
@@ -119,6 +154,8 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
       return lookups.manufacturers.get(text) ?? "(fabricante eliminado)";
     case "installationStatus":
       return INSTALLATION_STATUS_LABELS[text as InstallationStatus] ?? text;
+    case "looseEnd":
+      return CABLE_END_SIDE_LABELS[text as CableEndSide] ?? text;
     case "connectionStatus":
       return CONNECTION_STATUS_LABELS[text as ConnectionStatus] ?? text;
     case "deletedAt":
@@ -130,7 +167,10 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
 
 export function readableChanges(changes: unknown, lookups: Lookups): ReadableChange[] {
   return orderedChanges(changes).map(([field, change]) => ({
-    field: CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ?? field,
+    field:
+      CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
+      PROJECT_FIELD_LABELS[field] ??
+      field,
     from: readableValue(field, change?.from, lookups),
     to: readableValue(field, change?.to, lookups),
   }));
@@ -150,6 +190,16 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       color: { select: { name: true, hex: true } },
       manufacturer: { select: { name: true } },
       lastActionBy: { select: { name: true } },
+      looseEndTray: { select: { code: true } },
+      routeSteps: {
+        orderBy: { position: "asc" },
+        select: {
+          position: true,
+          label: true,
+          section: true,
+          tray: { select: { code: true } },
+        },
+      },
       events: {
         orderBy: { createdAt: "desc" },
         take: HISTORY_LIMIT,
@@ -178,9 +228,50 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       installationStatus: cable.installationStatus,
       connectionStatus: cable.connectionStatus,
       currentLocationId: cable.currentLocationId,
-      originId: cable.originId,
-      destinationId: cable.destinationId,
+      looseEnd: cable.looseEnd,
+      looseEndTray: cable.looseEndTray?.code ?? null,
+      // Cables from the project lists may know the equipment but not the room.
+      originId: cable.originId ?? cable.originEquipment,
+      destinationId: cable.destinationId ?? cable.destinationEquipment,
       deleted: cable.deletedAt !== null,
+    },
+    route: cable.routeSteps.map((step) => ({
+      position: step.position,
+      label: step.label,
+      trayCode: step.tray?.code ?? null,
+      section: step.section,
+    })),
+    level: cable.level,
+    altCode: cable.altCode,
+    revision: cable.revision,
+    circuit: cable.circuit,
+    cablesPerCircuit: cable.cablesPerCircuit,
+    composition: cable.composition,
+    diagram: cable.diagram,
+    lengthPending: cable.lengthPending,
+    source:
+      cable.sourceDocument || cable.sourcePage
+        ? { document: cable.sourceDocument, page: cable.sourcePage }
+        : null,
+    ends: {
+      origin: {
+        equipment: cable.originEquipment,
+        cubicle: cable.originCubicle,
+        gland: cable.originGland,
+        functionKks: cable.originFunctionKks,
+        installationKks: cable.originInstallationKks,
+        room: cable.originRoom,
+        location: location(cable.originId),
+      },
+      destination: {
+        equipment: cable.destinationEquipment,
+        cubicle: cable.destinationCubicle,
+        gland: cable.destinationGland,
+        functionKks: cable.destinationFunctionKks,
+        installationKks: cable.destinationInstallationKks,
+        room: cable.destinationRoom,
+        location: location(cable.destinationId),
+      },
     },
     description: cable.description,
     type: cable.type?.name ?? null,

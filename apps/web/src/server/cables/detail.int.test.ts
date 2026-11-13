@@ -10,7 +10,7 @@ let actor: { id: string };
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
   actor = await prisma.user.create({
     data: { id: randomUUID(), name: "Tomás Gil", email: "tomas@cables.test", role: "ADMIN" },
@@ -160,5 +160,114 @@ describe("getCableDetail", () => {
 
   it("returns null for unknown cables", async () => {
     expect(await getCableDetail("missing")).toBeNull();
+  });
+});
+
+describe("getCableDetail: route and loose end", () => {
+  it("returns the planned route in order and the loose end, readable in the history", async () => {
+    const created = await createCable(
+      actor,
+      createCableSchema.parse({
+        code: "99XAT10W2005",
+        originId: "c1",
+        destinationId: "c2",
+        installationStatus: "IN_STOCK",
+        connectionStatus: "DISCONNECTED",
+        currentLocationId: "cal",
+      }),
+    );
+    const tray = await prisma.tray.create({ data: { code: "99UXA00L22036", kind: "LADDER" } });
+    await prisma.cableRouteStep.createMany({
+      data: [
+        { cableId: created.id, position: 2, label: "CONTIGUOUS PANEL" },
+        { cableId: created.id, position: 1, label: tray.code, trayId: tray.id },
+      ],
+    });
+    await runCableAction(
+      { id: actor.id, role: "ADMIN" },
+      cableActionSchema.parse({
+        cableId: created.id,
+        version: "1",
+        action: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        trayCode: tray.code,
+      }),
+    );
+
+    const detail = await getCableDetail(created.id);
+
+    expect(detail?.route).toEqual([
+      { position: 1, label: "99UXA00L22036", trayCode: "99UXA00L22036", section: null },
+      { position: 2, label: "CONTIGUOUS PANEL", trayCode: null, section: null },
+    ]);
+    expect(detail?.state).toMatchObject({
+      installationStatus: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      looseEndTray: "99UXA00L22036",
+    });
+    const [event] = detail!.history;
+    expect(event?.changes).toEqual(
+      expect.arrayContaining([
+        { field: "Punta suelta", from: "—", to: "Destino" },
+        { field: "Bandeja de la punta suelta", from: "—", to: "99UXA00L22036" },
+      ]),
+    );
+  });
+});
+
+describe("getCableDetail: data from the project lists", () => {
+  it("returns the level, both ends and where the data comes from", async () => {
+    const cable = await prisma.cable.create({
+      data: {
+        code: "99XAB10T1-W8001",
+        installationStatus: "UNVERIFIED",
+        level: "L1",
+        altCode: "99 CBLM-0112",
+        revision: "2",
+        lengthM: 137,
+        lengthPending: true,
+        circuit: "1 de 2",
+        cablesPerCircuit: 3,
+        diagram: "EJ-ICO-DIA-0100_010",
+        sourceDocument: "EJ-ICO-LST-0100",
+        sourcePage: 8,
+        originEquipment: "99XAB10CT001",
+        originGland: "M-20ARM",
+        originRoom: "99UYC14RA001",
+        destinationEquipment: "99CXJ11",
+        destinationRoom: "99UXB23RA052",
+        destinationId: "c2",
+      },
+    });
+
+    const detail = await getCableDetail(cable.id);
+
+    expect(detail).toMatchObject({
+      level: "L1",
+      altCode: "99 CBLM-0112",
+      revision: "2",
+      lengthM: 137,
+      lengthPending: true,
+      circuit: "1 de 2",
+      cablesPerCircuit: 3,
+      diagram: "EJ-ICO-DIA-0100_010",
+      source: { document: "EJ-ICO-LST-0100", page: 8 },
+      ends: {
+        origin: {
+          equipment: "99XAB10CT001",
+          gland: "M-20ARM",
+          room: "99UYC14RA001",
+          location: null,
+        },
+        destination: {
+          equipment: "99CXJ11",
+          room: "99UXB23RA052",
+          location: "Norte › Calderas › Caldera 2",
+        },
+      },
+      // Without a room in the tree, the equipment is the known end of the state machine.
+      state: { originId: "99XAB10CT001", destinationId: "c2" },
+      route: [],
+    });
   });
 });

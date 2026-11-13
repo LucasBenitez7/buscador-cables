@@ -4,7 +4,13 @@ import { prisma } from "../src/client";
 import { generateSeedData } from "./seed-data";
 
 const PASSWORD_MIN_LENGTH = 10;
-const CABLE_BATCH_SIZE = 1000;
+const BATCH_SIZE = 1000;
+
+async function inBatches<T>(rows: T[], write: (batch: T[]) => Promise<unknown>) {
+  for (let index = 0; index < rows.length; index += BATCH_SIZE) {
+    await write(rows.slice(index, index + BATCH_SIZE));
+  }
+}
 
 /**
  * Crea el administrador inicial si no existe. Las credenciales vienen de
@@ -52,18 +58,23 @@ async function seedAdmin() {
 }
 
 /**
- * Datos de ejemplo para desarrollo: dos plantas con su árbol de ubicaciones,
- * los catálogos y ~5.000 cables. Nunca en producción, y solo sobre una base sin
- * ubicaciones ni cables, para no mezclarlos con datos reales.
+ * Datos de ejemplo para desarrollo, inventados pero con la forma de los datos reales del
+ * proyecto: árbol de ubicaciones por KKS, tipos de cable, bandejas con sus planos, ~4.500
+ * cables L1-L4 con extremos y recorrido, y estados de campo variados. Nunca en producción, y
+ * solo sobre una base sin ubicaciones, bandejas ni cables, para no mezclarlos con los reales.
  */
 async function seedSampleData() {
   if (process.env.NODE_ENV === "production") {
     console.warn("Seed: datos de ejemplo omitidos en producción.");
     return;
   }
-  const [locations, cables] = await Promise.all([prisma.location.count(), prisma.cable.count()]);
-  if (locations > 0 || cables > 0) {
-    console.warn("Seed: ya hay ubicaciones o cables; no se cargan datos de ejemplo.");
+  const counts = await Promise.all([
+    prisma.location.count(),
+    prisma.tray.count(),
+    prisma.cable.count(),
+  ]);
+  if (counts.some((count) => count > 0)) {
+    console.warn("Seed: ya hay ubicaciones, bandejas o cables; no se cargan datos de ejemplo.");
     return;
   }
 
@@ -76,15 +87,17 @@ async function seedSampleData() {
       await tx.cableType.createMany({ data: data.cableTypes });
       await tx.color.createMany({ data: data.colors });
       await tx.manufacturer.createMany({ data: data.manufacturers });
-      for (let index = 0; index < data.cables.length; index += CABLE_BATCH_SIZE) {
-        await tx.cable.createMany({ data: data.cables.slice(index, index + CABLE_BATCH_SIZE) });
-      }
+      await tx.tray.createMany({ data: data.trays });
+      await tx.trayDrawing.createMany({ data: data.trayDrawings });
+      // Las bandejas van antes que los cables (punta suelta) y los cables antes que su recorrido.
+      await inBatches(data.cables, (batch) => tx.cable.createMany({ data: batch }));
+      await inBatches(data.routeSteps, (batch) => tx.cableRouteStep.createMany({ data: batch }));
     },
     { timeout: 120_000 },
   );
 
   console.warn(
-    `Seed: ${data.locations.length} ubicaciones y ${data.cables.length} cables de ejemplo creados en ${Date.now() - started} ms.`,
+    `Seed: ${data.locations.length} ubicaciones, ${data.trays.length} bandejas y ${data.cables.length} cables de ejemplo (${data.routeSteps.length} tramos de recorrido) creados en ${Date.now() - started} ms.`,
   );
 }
 

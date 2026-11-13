@@ -12,12 +12,15 @@ import {
   ACTIONS_REQUIRING_REASON,
   CABLE_ENDS,
   CABLE_END_LABELS,
+  CABLE_END_SIDES,
+  CABLE_END_SIDE_LABELS,
   CONNECTION_STATUSES,
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUSES,
   INSTALLATION_STATUS_LABELS,
   type CableActionAvailability,
   type CableEnd,
+  type CableEndSide,
   type CableFieldAction,
   type CableState,
 } from "@cables/shared";
@@ -29,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +50,8 @@ type Props = {
   locations: ActionOption[];
   /** History entries a supervisor can correct, newest first. */
   events?: ActionOption[];
+  /** Codes of the trays on the cable's planned route, suggested for the loose end. */
+  routeTrays?: string[];
   /**
    * Table rows: one "Acción" button that opens a picker instead of a row of buttons.
    * Corrections stay on the cable record, where the history is visible.
@@ -55,6 +61,8 @@ type Props = {
 
 const DESCRIPTIONS: Record<CableFieldAction, string> = {
   LAID: "El cable queda tendido entre su origen y su destino, todavía sin conectar.",
+  PARTIALLY_LAID:
+    "Una punta llega a su equipo y la otra queda esperando en una bandeja del recorrido (por ejemplo, porque el equipo aún no está montado).",
   COILED: "El cable queda enrollado y desconectado en el sitio que indiques.",
   CONNECTED: "Indica qué extremo has conectado.",
   DISCONNECTED: "Indica qué extremo has desconectado.",
@@ -64,9 +72,20 @@ const DESCRIPTIONS: Record<CableFieldAction, string> = {
     "Corrige un movimiento registrado por error. Indica cuál, cómo debe quedar el cable y por qué.",
 };
 
+function describe(action: CableFieldAction, state: CableState) {
+  if (action === "LAID" && state.installationStatus === "PARTIALLY_LAID") {
+    return "La punta suelta llega a su extremo y el cable queda tendido entero. Lo que ya estaba conectado sigue conectado.";
+  }
+  return DESCRIPTIONS[action];
+}
+
 /** The end a technician most likely wants, given what is already connected. */
 function defaultEnd(action: "CONNECTED" | "DISCONNECTED", state: CableState): CableEnd {
   const { connectionStatus } = state;
+  if (action === "CONNECTED" && state.looseEnd) {
+    // Only the end that arrived can be connected.
+    return state.looseEnd === "ORIGIN" ? "DESTINATION" : "ORIGIN";
+  }
   if (action === "CONNECTED") {
     if (connectionStatus === "ORIGIN_ONLY") return "DESTINATION";
     if (connectionStatus === "DESTINATION_ONLY") return "ORIGIN";
@@ -75,6 +94,12 @@ function defaultEnd(action: "CONNECTED" | "DISCONNECTED", state: CableState): Ca
   if (connectionStatus === "ORIGIN_ONLY") return "ORIGIN";
   if (connectionStatus === "DESTINATION_ONLY") return "DESTINATION";
   return "BOTH";
+}
+
+/** The end left loose: the current one, or the end that is not connected. */
+function defaultLooseEnd(state: CableState): CableEndSide {
+  if (state.looseEnd) return state.looseEnd;
+  return state.connectionStatus === "DESTINATION_ONLY" ? "ORIGIN" : "DESTINATION";
 }
 
 /**
@@ -90,6 +115,7 @@ export function CableActions({
   availability,
   locations,
   events = [],
+  routeTrays = [],
   compact = false,
 }: Props) {
   const router = useRouter();
@@ -147,7 +173,7 @@ export function CableActions({
             <DialogTitle>
               {current.label} · <span className="font-mono">{code}</span>
             </DialogTitle>
-            <DialogDescription>{DESCRIPTIONS[open]}</DialogDescription>
+            <DialogDescription>{describe(open, state)}</DialogDescription>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4" noValidate>
             <ActionFields
@@ -155,6 +181,7 @@ export function CableActions({
               state={state}
               locations={locations}
               events={events}
+              routeTrays={routeTrays}
               errors={fieldErrors}
             />
             <NotesField
@@ -288,15 +315,30 @@ function ActionFields({
   state,
   locations,
   events,
+  routeTrays,
   errors,
 }: {
   action: CableFieldAction;
   state: CableState;
   locations: ActionOption[];
   events: ActionOption[];
+  routeTrays: string[];
   errors: Record<string, string>;
 }) {
   switch (action) {
+    case "PARTIALLY_LAID":
+      return (
+        <>
+          <LooseEndChoice defaultValue={defaultLooseEnd(state)} error={errors.looseEnd} />
+          <TrayField
+            name="trayCode"
+            label="Bandeja donde espera la punta"
+            defaultValue={state.looseEndTray ?? ""}
+            routeTrays={routeTrays}
+            error={errors.trayCode}
+          />
+        </>
+      );
     case "COILED":
       return (
         <Field id="action-location" label="Dónde queda enrollado" error={errors.locationId}>
@@ -397,11 +439,99 @@ function ActionFields({
               emptyLabel="Sin ubicación física"
             />
           </Field>
+          <Field
+            id="action-loose-end"
+            label="Punta suelta (si está tendido a medias)"
+            error={errors.looseEnd}
+          >
+            <Select id="action-loose-end" name="looseEnd" defaultValue={state.looseEnd ?? ""}>
+              <option value="">Ninguna</option>
+              {CABLE_END_SIDES.map((side) => (
+                <option key={side} value={side}>
+                  {CABLE_END_SIDE_LABELS[side]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <TrayField
+            name="looseEndTray"
+            label="Bandeja de la punta suelta"
+            defaultValue={state.looseEndTray ?? ""}
+            routeTrays={routeTrays}
+            error={errors.looseEndTray}
+          />
         </>
       );
     default:
       return null;
   }
+}
+
+function LooseEndChoice({ defaultValue, error }: { defaultValue: CableEndSide; error?: string }) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium">Punta que queda suelta</legend>
+      {CABLE_END_SIDES.map((side) => (
+        <label
+          key={side}
+          className="hover:bg-accent/60 has-checked:bg-accent flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 text-sm transition-colors"
+        >
+          <input
+            type="radio"
+            name="looseEnd"
+            value={side}
+            defaultChecked={side === defaultValue}
+            className="accent-primary"
+          />
+          {CABLE_END_SIDE_LABELS[side]}
+        </label>
+      ))}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+    </fieldset>
+  );
+}
+
+/** Free text with the route trays as suggestions: a cable without a loaded route still works. */
+function TrayField({
+  name,
+  label,
+  defaultValue,
+  routeTrays,
+  error,
+}: {
+  name: string;
+  label: string;
+  defaultValue: string;
+  routeTrays: string[];
+  error?: string;
+}) {
+  const id = `action-${name}`;
+  return (
+    <Field id={id} label={label} error={error}>
+      <Input
+        id={id}
+        name={name}
+        defaultValue={defaultValue}
+        list={routeTrays.length > 0 ? `${id}-route` : undefined}
+        autoComplete="off"
+        spellCheck={false}
+        className="font-mono uppercase"
+        aria-invalid={error ? true : undefined}
+      />
+      {routeTrays.length > 0 ? (
+        <>
+          <datalist id={`${id}-route`}>
+            {routeTrays.map((code) => (
+              <option key={code} value={code} />
+            ))}
+          </datalist>
+          <p className="text-muted-foreground text-xs">
+            Escribe el código o elige una bandeja del recorrido.
+          </p>
+        </>
+      ) : null}
+    </Field>
+  );
 }
 
 function NotesField({ required, error }: { required: boolean; error?: string }) {

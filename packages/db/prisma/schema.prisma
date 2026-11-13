@@ -1,5 +1,6 @@
 // Esquema de la base de datos.
-// Modelos de autenticación (fase 1) + cables y ubicaciones (fase 2).
+// Modelos de autenticación (fase 1), cables y ubicaciones (fase 2), trazabilidad
+// (fase 5) y bandejas y recorridos de los datos reales (fase 7).
 // Ver docs/ARQUITECTURA.md.
 
 generator client {
@@ -126,6 +127,7 @@ model Location {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
+  trays      Tray[]
   cablesFrom Cable[]      @relation("CableOrigin")
   cablesTo   Cable[]      @relation("CableDestination")
   cablesAt   Cable[]      @relation("CableCurrent")
@@ -136,10 +138,12 @@ model Location {
   @@map("location")
 }
 
-/// "Potencia", "Control", "Instrumentación"...
+/// Tipo de cable del proyecto: "0,6/1 KV 8X2.5 MM2 CU", "JE-Y(St)Y 4 x 2 x 0,8mm"...
 model CableType {
   id        String   @id @default(cuid())
   name      String   @unique
+  /// Código del tipo en el listado eléctrico ("C0802"). Los de instrumentación no tienen.
+  code      String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   cables    Cable[]
@@ -173,8 +177,10 @@ model Manufacturer {
 // ---------------------------------------------------------------------------
 
 enum InstallationStatus {
+  UNVERIFIED // sin revisar: viene de los listados y nadie ha comprobado aún cómo está
   IN_STOCK // en almacén
   COILED // enrollado
+  PARTIALLY_LAID // tendido a medias: una punta espera en una bandeja
   LAID // tendido
   RETIRED // retirado
 }
@@ -190,6 +196,7 @@ enum CableAction {
   CREATED
   UPDATED
   LAID
+  PARTIALLY_LAID
   COILED
   CONNECTED
   DISCONNECTED
@@ -199,26 +206,84 @@ enum CableAction {
   DELETED // baja lógica (deletedAt)
 }
 
+/// Nivel del cable en los listados del proyecto (ver docs/DATOS-PROYECTO.md).
+enum CableLevel {
+  L1 // instrumentación (< 60 V)
+  L2 // baja tensión, fuerza y control
+  L3 // baja tensión, unipolares
+  L4 // media tensión
+}
+
+/// Un extremo del cable.
+enum CableEndSide {
+  ORIGIN
+  DESTINATION
+}
+
 model Cable {
-  id                 String             @id @default(cuid())
-  /// Normalizado con `normalizeCableCode`: "SH-50".
-  code               String             @unique
-  description        String?
-  typeId             String?
-  type               CableType?         @relation(fields: [typeId], references: [id], onDelete: Restrict)
-  colorId            String?
-  color              Color?             @relation(fields: [colorId], references: [id], onDelete: Restrict)
-  manufacturerId     String?
-  manufacturer       Manufacturer?      @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
-  conductors         Int?
-  crossSectionMm2    Decimal?           @db.Decimal(8, 2)
-  outerDiameterMm    Decimal?           @db.Decimal(8, 2)
-  lengthM            Decimal?           @db.Decimal(10, 2)
-  voltageRating      String?
-  originId           String?
-  origin             Location?          @relation("CableOrigin", fields: [originId], references: [id], onDelete: Restrict)
-  destinationId      String?
-  destination        Location?          @relation("CableDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+  id               String        @id @default(cuid())
+  /// Normalizado con `normalizeCableCode`: "SH-50", "99XAT10W2005".
+  code             String        @unique
+  /// Servicio: para qué sirve el cable.
+  description      String?
+  level            CableLevel?
+  /// Número de marcado alternativo ("99 CBLC-0001").
+  altCode          String?
+  /// Revisión del cable en su listado ("3", "2_RX00").
+  revision         String?
+  /// Circuitos con varios cables en paralelo: "1 de 2".
+  circuit          String?
+  cablesPerCircuit Int?
+  /// "CONTROL", "3PH+N+PE", "DC"...
+  composition      String?
+  /// Esquema donde aparece (listado de instrumentación).
+  diagram          String?
+  /// La longitud del listado está pendiente de confirmar.
+  lengthPending    Boolean       @default(false)
+  /// Documento y página de donde se cargó, para ir al PDF a comprobar.
+  sourceDocument   String?
+  sourcePage       Int?
+  typeId           String?
+  type             CableType?    @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  colorId          String?
+  color            Color?        @relation(fields: [colorId], references: [id], onDelete: Restrict)
+  manufacturerId   String?
+  manufacturer     Manufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  conductors       Int?
+  crossSectionMm2  Decimal?      @db.Decimal(8, 2)
+  outerDiameterMm  Decimal?      @db.Decimal(8, 2)
+  lengthM          Decimal?      @db.Decimal(10, 2)
+  voltageRating    String?
+  originId         String?
+  origin           Location?     @relation("CableOrigin", fields: [originId], references: [id], onDelete: Restrict)
+  destinationId    String?
+  destination      Location?     @relation("CableDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+
+  // Extremos tal y como vienen en los listados. `originId`/`destinationId` apuntan a la sala
+  // o al edificio; aquí va el equipo exacto.
+  originEquipment            String?
+  /// Celda o cubículo del cuadro (listado eléctrico).
+  originCubicle              String?
+  /// Prensaestopas (listado de instrumentación).
+  originGland                String?
+  originFunctionKks          String?
+  originInstallationKks      String?
+  /// Sala tal y como viene en el listado ("99UXB16RA001").
+  originRoom                 String?
+  destinationEquipment       String?
+  destinationCubicle         String?
+  destinationGland           String?
+  destinationFunctionKks     String?
+  destinationInstallationKks String?
+  destinationRoom            String?
+
+  /// Recorrido previsto, en orden.
+  routeSteps     CableRouteStep[]
+  /// Cable tendido a medias: qué punta quedó suelta y en qué bandeja espera.
+  looseEnd       CableEndSide?
+  looseEndTrayId String?
+  looseEndTray   Tray?            @relation("CableLooseEndTray", fields: [looseEndTrayId], references: [id], onDelete: Restrict)
+
   /// Dónde está físicamente (si está enrollado o en almacén).
   currentLocationId  String?
   currentLocation    Location?          @relation("CableCurrent", fields: [currentLocationId], references: [id], onDelete: Restrict)
@@ -255,9 +320,106 @@ model Cable {
   @@index([colorId])
   @@index([manufacturerId])
   @@index([lastActionById, lastActionAt])
+  @@index([level])
+  @@index([looseEndTrayId])
   // Búsqueda tolerante a errores por código (fase 4).
   @@index([code(ops: raw("gin_trgm_ops"))], type: Gin, map: "cable_code_trgm_idx")
+  // Búsqueda por equipo ("todos los cables del cuadro X"), por subcadena.
+  @@index([originEquipment(ops: raw("gin_trgm_ops"))], type: Gin, map: "cable_origin_equipment_trgm_idx")
+  @@index([destinationEquipment(ops: raw("gin_trgm_ops"))], type: Gin, map: "cable_destination_equipment_trgm_idx")
   @@map("cable")
+}
+
+// ---------------------------------------------------------------------------
+// Bandejas y recorridos (fase 7)
+// ---------------------------------------------------------------------------
+
+/// Tipo de tramo según la letra de su código (ver docs/DATOS-PROYECTO.md).
+enum TrayKind {
+  LADDER // L: bandeja de escalera
+  GRID // W: bandeja de rejilla
+  SPECIAL // S: bandeja especial
+  CONDUIT // C: tubo
+  DUCT // D: canalización enterrada
+  OTHER // otra letra
+}
+
+/// Bandeja, tubo o canalización por la que pasan los cables.
+model Tray {
+  id             String    @id @default(cuid())
+  /// "99UXA00L22036".
+  code           String    @unique
+  kind           TrayKind
+  /// Nivel de tensión de los cables que lleva (1-4), según el código.
+  voltageLevel   Int?
+  /// Cota de la bandeja dentro de su nivel de tensión (0-3), según el código.
+  elevationLevel Int?
+  /// Área o edificio del código ("99UXA").
+  areaCode       String?
+  /// Edificio en el árbol de ubicaciones, si existe.
+  locationId     String?
+  location       Location? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  /// Tamaño, cuando el plano lo da: "L600100300" → ancho 600, ala 100, radio 300.
+  widthMm        Int?
+  flangeHeightMm Int?
+  bendRadiusMm   Int?
+  /// Tubos y canalizaciones: "C025" → 25 mm.
+  diameterMm     Int?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  drawings       TrayDrawing[]
+  routeSteps     CableRouteStep[]
+  looseEndCables Cable[]          @relation("CableLooseEndTray")
+
+  @@index([areaCode])
+  @@index([locationId])
+  @@index([code(ops: raw("gin_trgm_ops"))], type: Gin, map: "tray_code_trgm_idx")
+  @@map("tray")
+}
+
+/// Hoja de plano donde aparece una bandeja.
+model TrayDrawing {
+  id         String  @id @default(cuid())
+  trayId     String
+  tray       Tray    @relation(fields: [trayId], references: [id], onDelete: Restrict)
+  /// Número del plano.
+  drawing    String
+  /// Hoja dentro del plano ("04").
+  sheet      String
+  /// Área y cotas o planta que muestra la hoja.
+  title      String?
+  /// Página del PDF de planos.
+  sourcePage Int?
+
+  @@unique([trayId, drawing, sheet])
+  @@map("tray_drawing")
+}
+
+/// Tramo del recorrido en los listados de instrumentación.
+enum RouteSection {
+  FIELD // FIELD_TRAY: bandejas de campo
+  ROOM // ROOM_TRAY: bandejas de la sala
+}
+
+/// Paso del recorrido previsto de un cable. Si el paso no es una bandeja conocida
+/// ("CONTIGUOUS PANEL", "TRAM. VERTICAL"), `trayId` es null y queda el texto.
+model CableRouteStep {
+  id       String        @id @default(cuid())
+  cableId  String
+  cable    Cable         @relation(fields: [cableId], references: [id], onDelete: Restrict)
+  /// 1, 2, 3... en el orden del listado.
+  position Int
+  /// Texto tal y como viene en el listado.
+  label    String
+  trayId   String?
+  tray     Tray?         @relation(fields: [trayId], references: [id], onDelete: Restrict)
+  section  RouteSection?
+
+  @@unique([cableId, position])
+  @@index([trayId])
+  @@map("cable_route_step")
 }
 
 /// Registro INMUTABLE de lo que hace cada usuario sobre un cable. Nunca se edita

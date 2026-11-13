@@ -6,6 +6,7 @@ import {
   hasActivityFilters,
   normalizeCableCode,
   type CableAction,
+  type CableLevel,
   type CableSearch,
   type CableState,
   type ConnectionStatus,
@@ -33,6 +34,10 @@ export type CableSearchItem = {
   lengthM: number | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
+  level: CableLevel | null;
+  /** Equipment of each end (cables from the project lists). */
+  originEquipment: string | null;
+  destinationEquipment: string | null;
   origin: string | null;
   destination: string | null;
   lastAction: CableAction | null;
@@ -88,6 +93,15 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
       if (compact) {
         matches.push(Prisma.sql`replace(c."code", '-', '') ILIKE ${likeContains(compact)}`);
       }
+      // Equipment of either end ("todos los cables del cuadro 99BMA") and the marking number.
+      const equipment = search.q.trim().toUpperCase();
+      if (equipment) {
+        matches.push(
+          Prisma.sql`c."originEquipment" ILIKE ${likeContains(equipment)}`,
+          Prisma.sql`c."destinationEquipment" ILIKE ${likeContains(equipment)}`,
+          Prisma.sql`c."altCode" ILIKE ${likeContains(equipment)}`,
+        );
+      }
       conditions.push(Prisma.sql`(${Prisma.join(matches, " OR ")})`);
     }
   }
@@ -115,6 +129,23 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
   }
   if (search.connection) {
     conditions.push(Prisma.sql`c."connectionStatus" = ${search.connection}::"ConnectionStatus"`);
+  }
+  if (search.level) {
+    conditions.push(Prisma.sql`c."level" = ${search.level}::"CableLevel"`);
+  }
+  if (search.tray && search.loose) {
+    // Cables whose loose end waits in that tray.
+    conditions.push(
+      Prisma.sql`c."looseEndTrayId" = (SELECT t."id" FROM "tray" t WHERE t."code" = ${search.tray})`,
+    );
+  } else if (search.tray) {
+    // Cables whose planned route goes through that tray.
+    conditions.push(Prisma.sql`EXISTS (
+      SELECT 1 FROM "cable_route_step" s JOIN "tray" t ON t."id" = s."trayId"
+      WHERE s."cableId" = c."id" AND t."code" = ${search.tray}
+    )`);
+  } else if (search.loose) {
+    conditions.push(Prisma.sql`c."looseEndTrayId" IS NOT NULL`);
   }
 
   const ranges: [number | undefined, number | undefined, Prisma.Sql][] = [
@@ -241,6 +272,11 @@ export async function searchCables(
       origin: { select: { name: true, parent: { select: { name: true } } } },
       destination: { select: { name: true, parent: { select: { name: true } } } },
       lastActionBy: { select: { name: true } },
+      looseEnd: true,
+      looseEndTray: { select: { code: true } },
+      level: true,
+      originEquipment: true,
+      destinationEquipment: true,
     },
   });
   const byId = new Map(cables.map((cable) => [cable.id, cable]));
@@ -259,8 +295,11 @@ export async function searchCables(
           installationStatus: cable.installationStatus,
           connectionStatus: cable.connectionStatus,
           currentLocationId: cable.currentLocationId,
-          originId: cable.originId,
-          destinationId: cable.destinationId,
+          looseEnd: cable.looseEnd,
+          looseEndTray: cable.looseEndTray?.code ?? null,
+          // Cables from the project lists may know the equipment but not the room.
+          originId: cable.originId ?? cable.originEquipment,
+          destinationId: cable.destinationId ?? cable.destinationEquipment,
           // The search only returns active cables.
           deleted: false,
         },
@@ -272,6 +311,9 @@ export async function searchCables(
         lengthM: cable.lengthM?.toNumber() ?? null,
         installationStatus: cable.installationStatus,
         connectionStatus: cable.connectionStatus,
+        level: cable.level,
+        originEquipment: cable.originEquipment,
+        destinationEquipment: cable.destinationEquipment,
         origin: locationLabel(cable.origin),
         destination: locationLabel(cable.destination),
         lastAction: cable.lastAction,

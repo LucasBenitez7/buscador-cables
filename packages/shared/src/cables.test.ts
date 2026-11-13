@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CABLE_ACTIONS,
   CABLE_ACTION_LABELS,
+  CABLE_FIELD_LABELS,
+  PROJECT_FIELD_LABELS,
   createCableSchema,
   deleteCableSchema,
   diffFields,
@@ -20,6 +22,15 @@ const base = {
 function issues(result: { success: boolean; error?: { issues: { message: string }[] } }) {
   return result.error?.issues.map((issue) => issue.message) ?? [];
 }
+
+describe("PROJECT_FIELD_LABELS", () => {
+  it("names every field the load of the lists can change, without clashing with the form", () => {
+    for (const label of Object.values(PROJECT_FIELD_LABELS)) expect(label).toBeTruthy();
+    for (const field of Object.keys(PROJECT_FIELD_LABELS)) {
+      expect(Object.keys(CABLE_FIELD_LABELS)).not.toContain(field);
+    }
+  });
+});
 
 describe("createCableSchema", () => {
   it("normalizes the code and turns empty fields into null", () => {
@@ -64,10 +75,20 @@ describe("createCableSchema", () => {
     expect(createCableSchema.safeParse({ ...base, [field]: value }).success).toBe(false);
   });
 
-  it("rejects the same origin and destination", () => {
+  it("accepts the same room at both ends (two pieces of equipment of one room)", () => {
     const result = createCableSchema.safeParse({ ...base, originId: "a", destinationId: "a" });
 
-    expect(issues(result)).toContain("El origen y el destino no pueden ser la misma ubicación");
+    expect(result.success).toBe(true);
+  });
+
+  it("registers a cable as not yet checked, without a location", () => {
+    const result = createCableSchema.safeParse({
+      ...base,
+      installationStatus: "UNVERIFIED",
+      currentLocationId: "",
+    });
+
+    expect(result.success).toBe(true);
   });
 
   it("checks that the initial status is coherent", () => {

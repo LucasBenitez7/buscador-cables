@@ -32,12 +32,76 @@ export const LOCATIONS = {
   yard: { id: "e2e-yard", name: "Patio", code: "E2E-PAT" },
 } as const;
 
-/** Cables de partida. Cada test que modifica uno usa el suyo para no depender del orden. */
+/**
+ * Cables de partida, con códigos KKS inventados (unidad 99) como los del proyecto. Cada test
+ * que modifica uno usa el suyo para no depender del orden.
+ */
 export const CABLES = {
-  search: { code: "SH-50", status: "LAID", connection: "CONNECTED" },
-  searchSibling: { code: "SH-500", status: "IN_STOCK", connection: "DISCONNECTED" },
-  actions: { code: "AC-1", status: "IN_STOCK", connection: "DISCONNECTED" },
-  supervisor: { code: "AC-2", status: "LAID", connection: "CONNECTED" },
-  mobile: { code: "MV-1", status: "COILED", connection: "DISCONNECTED" },
-  concurrency: { code: "CC-1", status: "IN_STOCK", connection: "DISCONNECTED" },
+  search: {
+    code: "99XAB10T1-W8001",
+    level: "L1",
+    status: "LAID",
+    connection: "CONNECTED",
+    ends: ["99XAB10CT001", "99CXJ11"],
+  },
+  searchSibling: {
+    code: "99XAB10T1-W8002",
+    level: "L1",
+    status: "IN_STOCK",
+    connection: "DISCONNECTED",
+    ends: ["99XAB10CT002", "99CXJ11"],
+  },
+  actions: {
+    code: "99XAC10W2001",
+    level: "L2",
+    status: "IN_STOCK",
+    connection: "DISCONNECTED",
+    ends: ["99BMA", "99XAC10AP001"],
+  },
+  supervisor: {
+    code: "99XAC10W2002",
+    level: "L2",
+    status: "LAID",
+    connection: "CONNECTED",
+    ends: ["99BMA", "99XAC10AP002"],
+  },
+  mobile: {
+    code: "99XHA10P1-W8001",
+    level: "L1",
+    status: "COILED",
+    connection: "DISCONNECTED",
+    ends: ["99XHA10CP001", "99CXJ12"],
+  },
+  concurrency: {
+    code: "99XHA20W2001",
+    level: "L2",
+    status: "IN_STOCK",
+    connection: "DISCONNECTED",
+    ends: ["99BMB", "99XHA20AP001"],
+  },
+  partial: {
+    code: "99XLB10W2001",
+    level: "L2",
+    status: "IN_STOCK",
+    connection: "DISCONNECTED",
+    ends: ["99BMB", "99XLB10AA101"],
+    route: ["99UXA00L22036", "99UXA00L22051"],
+  },
+  // Already partially laid: the destination end waits in a tray of its route.
+  waiting: {
+    code: "99XLB20W2001",
+    level: "L2",
+    status: "PARTIALLY_LAID",
+    connection: "ORIGIN_ONLY",
+    ends: ["99BMB", "99XLB20AA101"],
+    route: ["99UXA00L22036", "99UXB00L22001"],
+    looseEnd: "DESTINATION",
+    looseTray: "99UXB00L22001",
+  },
 } as const;
+
+/** Lo que escribiría alguien en planta para encontrar `search` y `searchSibling`: sin guion y en minúsculas. */
+export const SEARCH_QUERY = "xab10t1w800";
+
+/** Bandejas inventadas para los recorridos. */
+export const TRAYS = ["99UXA00L22036", "99UXA00L22051", "99UXB00L22001"] as const;

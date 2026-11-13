@@ -12,6 +12,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const items: NavItem[] = [
     { href: "/", label: "Inicio", match: "exact" },
     { href: "/cables", label: "Cables", match: "prefix" },
+    { href: "/trays", label: "Bandejas", match: "prefix" },
     { href: "/locations", label: "Ubicaciones", match: "prefix" },
     { href: "/activity/me", label: "Mi actividad", match: "prefix" },
     ...(hasPermission(user.role, "activity:view")

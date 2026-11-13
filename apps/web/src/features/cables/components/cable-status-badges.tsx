@@ -10,8 +10,10 @@ type BadgeVariant = "default" | "outline" | "success" | "warning" | "destructive
 
 /** Verde: conectado. Ámbar: a medias. Rojo: retirado. El resto, neutro. */
 const INSTALLATION_VARIANT: Record<InstallationStatus, BadgeVariant> = {
+  UNVERIFIED: "outline",
   IN_STOCK: "outline",
   COILED: "default",
+  PARTIALLY_LAID: "warning",
   LAID: "default",
   RETIRED: "destructive",
 };

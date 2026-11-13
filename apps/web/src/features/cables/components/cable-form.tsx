@@ -213,7 +213,9 @@ export function CableForm(props: Props) {
               {...field("installationStatus")}
               onChange={(event) => set("installationStatus", event.target.value)}
             >
-              {INSTALLATION_STATUSES.filter((status) => status !== "RETIRED").map((status) => (
+              {INSTALLATION_STATUSES.filter(
+                (status) => status !== "RETIRED" && status !== "PARTIALLY_LAID",
+              ).map((status) => (
                 <option key={status} value={status}>
                   {INSTALLATION_STATUS_LABELS[status]}
                 </option>
@@ -232,7 +234,9 @@ export function CableForm(props: Props) {
               ))}
             </NativeSelect>
           </Field>
-          {value("installationStatus") !== "LAID" ? (
+          {/* Only a cable in stock or coiled has a place apart from its route. */}
+          {value("installationStatus") === "IN_STOCK" ||
+          value("installationStatus") === "COILED" ? (
             <SelectField
               name="currentLocationId"
               label="Dónde está ahora"

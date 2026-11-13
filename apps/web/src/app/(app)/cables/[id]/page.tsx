@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { cache, type ReactNode } from "react";
 import {
   CABLE_ACTION_LABELS,
+  CABLE_LEVEL_LABELS,
   cableActionAvailability,
   canRunCableAction,
   formatDecimal,
@@ -11,6 +12,7 @@ import {
 } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
+import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getCableDetail } from "@/server/cables/detail";
 import { listLocationOptions } from "@/server/cables/service";
@@ -70,6 +72,13 @@ export default async function CablePage({ params }: { params: Params }) {
             ›
           </p>
           <h1 className="font-mono text-3xl font-semibold tracking-tight">{cable.code}</h1>
+          {cable.level || cable.altCode ? (
+            <p className="text-muted-foreground text-sm">
+              {[cable.level ? CABLE_LEVEL_LABELS[cable.level] : null, cable.altCode]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          ) : null}
           {cable.description ? <p className="text-muted-foreground">{cable.description}</p> : null}
           <CableStatusBadges
             installationStatus={cable.installationStatus}
@@ -98,29 +107,23 @@ export default async function CablePage({ params }: { params: Params }) {
         availability={availability}
         locations={locations}
         events={correctableEvents}
+        routeTrays={cable.route.flatMap((step) => (step.trayCode ? [step.trayCode] : []))}
       />
 
-      <Section title="Recorrido">
-        <ol className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <li className="rounded-lg border px-3 py-2">
-            <span className="text-muted-foreground block text-xs">Origen</span>
-            {cable.origin ?? "Sin indicar"}
-          </li>
-          <li aria-hidden className="text-muted-foreground text-center">
-            <span className="sm:hidden">↓</span>
-            <span className="hidden sm:inline">→</span>
-          </li>
-          <li className="rounded-lg border px-3 py-2">
-            <span className="text-muted-foreground block text-xs">Destino</span>
-            {cable.destination ?? "Sin indicar"}
-          </li>
-        </ol>
+      <Section title="Extremos">
+        <CableEnds ends={cable.ends} state={cable.state} />
         {cable.currentLocation ? (
           <p className="text-sm">
             <span className="text-muted-foreground">Ahora está en: </span>
             {cable.currentLocation}
           </p>
         ) : null}
+      </Section>
+
+      <Section
+        title={`Recorrido por bandejas${cable.route.length > 0 ? ` (${cable.route.length} tramos)` : ""}`}
+      >
+        <CableRoute route={cable.route} state={cable.state} />
       </Section>
 
       <Section title="Datos">
@@ -142,8 +145,27 @@ export default async function CablePage({ params }: { params: Params }) {
           <Item label="Nº de conductores">{cable.conductors}</Item>
           <Item label="Sección">{withUnit(cable.crossSectionMm2, "mm²")}</Item>
           <Item label="Diámetro exterior">{withUnit(cable.outerDiameterMm, "mm")}</Item>
-          <Item label="Longitud">{withUnit(cable.lengthM, "m")}</Item>
+          <Item label="Longitud">
+            {cable.lengthM === null && !cable.lengthPending
+              ? null
+              : `${withUnit(cable.lengthM, "m") ?? "Sin longitud"}${cable.lengthPending ? " (pendiente)" : ""}`}
+          </Item>
           <Item label="Tensión nominal">{cable.voltageRating}</Item>
+          <Item label="Composición">{cable.composition}</Item>
+          <Item label="Circuito">
+            {cable.circuit
+              ? `${cable.circuit}${cable.cablesPerCircuit ? ` · ${cable.cablesPerCircuit} cables por circuito` : ""}`
+              : null}
+          </Item>
+          <Item label="Esquema">{cable.diagram}</Item>
+          <Item label="Revisión">{cable.revision}</Item>
+          <Item label="Listado de origen">
+            {cable.source
+              ? [cable.source.document, cable.source.page ? `pág. ${cable.source.page}` : null]
+                  .filter(Boolean)
+                  .join(" · ")
+              : null}
+          </Item>
           <Item label="Alta">{dateFormat.format(cable.createdAt)}</Item>
         </dl>
         {cable.notes ? (

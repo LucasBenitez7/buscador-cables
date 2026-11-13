@@ -49,6 +49,50 @@ describe("describeCableEvent", () => {
   });
 });
 
+describe("partial laying", () => {
+  it("says which end waits in which tray", () => {
+    expect(
+      event("PARTIALLY_LAID", {
+        changes: {
+          installationStatus: { from: "COILED", to: "PARTIALLY_LAID" },
+          looseEnd: { from: null, to: "DESTINATION" },
+          looseEndTray: { from: null, to: "99UXA00L22036" },
+        },
+      }),
+    ).toBe("tendió el cable a medias: la punta de destino espera en la bandeja 99UXA00L22036");
+  });
+
+  it("says where the loose end was taken", () => {
+    expect(
+      event("PARTIALLY_LAID", {
+        changes: { looseEndTray: { from: "99UXA00L22036", to: "99UXA00L22051" } },
+      }),
+    ).toBe("llevó la punta suelta de la bandeja 99UXA00L22036 a la 99UXA00L22051");
+  });
+
+  it("falls back to a generic sentence without the tray", () => {
+    expect(event("PARTIALLY_LAID")).toBe("tendió el cable a medias");
+  });
+
+  it("tells completing a partial laying from a plain laying", () => {
+    expect(
+      event("LAID", {
+        changes: { installationStatus: { from: "PARTIALLY_LAID", to: "LAID" } },
+      }),
+    ).toBe("terminó de tender el cable");
+    expect(event("LAID")).toBe("tendió el cable");
+  });
+
+  it("shows the loose end after the location", () => {
+    const fields = orderedChanges({
+      looseEndTray: { from: null, to: "T" },
+      currentLocationId: { from: "a", to: null },
+      looseEnd: { from: null, to: "ORIGIN" },
+    }).map(([field]) => field);
+    expect(fields).toEqual(["currentLocationId", "looseEnd", "looseEndTray"]);
+  });
+});
+
 describe("orderedChanges", () => {
   // Regresión: Postgres guarda `jsonb` con otro orden de claves y la ficha los mostraba desordenados.
   it("orders the fields like the cable form, then the states", () => {
