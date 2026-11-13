@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { prisma } from "../src/client";
+import { seedAdminProblem } from "./seed-admin";
 import { generateSeedData } from "./seed-data";
 
-const PASSWORD_MIN_LENGTH = 10;
 const BATCH_SIZE = 1000;
 
 async function inBatches<T>(rows: T[], write: (batch: T[]) => Promise<unknown>) {
@@ -27,8 +27,13 @@ async function seedAdmin() {
     );
     return;
   }
-  if (password.length < PASSWORD_MIN_LENGTH) {
-    throw new Error(`SEED_ADMIN_PASSWORD debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`);
+  const problem = seedAdminProblem({
+    email,
+    password,
+    production: process.env.NODE_ENV === "production",
+  });
+  if (problem) {
+    throw new Error(problem);
   }
 
   if (await prisma.user.findUnique({ where: { email } })) {
