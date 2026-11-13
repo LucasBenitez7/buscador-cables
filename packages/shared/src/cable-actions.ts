@@ -11,6 +11,7 @@ import {
   CONNECTION_STATUSES,
   INSTALLATION_STATUSES,
   diffFields,
+  versionSchema,
   type CableAction,
   type ConnectionStatus,
   type FieldChange,
@@ -172,6 +173,9 @@ export function validateCableState(
   }
   if (isOnItsWay(installationStatus) && (!state.originId || !state.destinationId)) {
     return "Un cable tendido necesita origen y destino.";
+  }
+  if (installationStatus === "UNVERIFIED" && currentLocationId !== null) {
+    return "Un cable sin revisar no tiene ubicación: si sabes dónde está, indica también su estado.";
   }
   if (isOnItsWay(installationStatus) && currentLocationId !== null) {
     return "Un cable tendido no tiene ubicación física aparte de su recorrido.";
@@ -432,11 +436,6 @@ function probe(state: CableState, action: CableFieldAction): string | null {
 
 const requiredId = (message: string) => z.string({ error: message }).trim().min(1, message);
 
-const versionField = z.coerce
-  .number({ error: "Versión no válida" })
-  .int("Versión no válida")
-  .min(1, "Versión no válida");
-
 const optionalNotes = z
   .string()
   .optional()
@@ -450,7 +449,7 @@ const reasonNotes = z
   .min(3, "Indica el motivo")
   .max(2000, "El motivo no puede superar 2000 caracteres");
 
-const common = { cableId: requiredId("Cable no válido"), version: versionField };
+const common = { cableId: requiredId("Cable no válido"), version: versionSchema };
 const endField = z.enum(CABLE_ENDS, { error: "Elige qué extremo" });
 const locationField = requiredId("Elige una ubicación");
 const looseEndField = z.enum(CABLE_END_SIDES, { error: "Elige qué punta queda suelta" });

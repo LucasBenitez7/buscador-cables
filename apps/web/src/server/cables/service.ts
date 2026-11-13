@@ -138,7 +138,11 @@ export async function createCable(
   actor: Actor,
   input: CreateCableInput,
 ): Promise<{ id: string; code: string }> {
-  const currentLocationId = input.installationStatus === "LAID" ? null : input.currentLocationId;
+  // Only a cable in stock or coiled has a place of its own: the form may still send the
+  // one chosen before switching to "tendido" or "sin revisar".
+  const hasOwnPlace =
+    input.installationStatus === "IN_STOCK" || input.installationStatus === "COILED";
+  const currentLocationId = hasOwnPlace ? input.currentLocationId : null;
   await assertCodeAvailable(prisma, input.code);
   await assertReferences(prisma, {
     typeId: input.typeId,

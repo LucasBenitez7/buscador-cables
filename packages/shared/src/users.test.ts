@@ -25,6 +25,13 @@ describe("createUserSchema", () => {
     expect(parsed.name).toBe("Ana Pérez");
   });
 
+  // Revisión F0-F7 (B5): el formato se comprobaba antes de quitar los espacios.
+  it("accepts an email pasted with spaces around it", () => {
+    const parsed = createUserSchema.parse({ ...validUser, email: "  Ana.Perez@Planta.example " });
+
+    expect(parsed.email).toBe("ana.perez@planta.example");
+  });
+
   it("rejects a short password", () => {
     expect(createUserSchema.safeParse({ ...validUser, password: "corta" }).success).toBe(false);
   });

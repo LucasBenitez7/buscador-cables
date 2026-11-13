@@ -112,6 +112,15 @@ describe("createCable", () => {
     expect((await prisma.cable.findUniqueOrThrow({ where: { id } })).currentLocationId).toBeNull();
   });
 
+  // Revisión F0-F7 (B15): un cable sin revisar no tiene ubicación física.
+  it("does not keep a current location for a cable nobody has checked", async () => {
+    const { id } = await createCable(actor, createInput({ installationStatus: "UNVERIFIED" }));
+
+    const cable = await prisma.cable.findUniqueOrThrow({ where: { id } });
+    expect(cable.installationStatus).toBe("UNVERIFIED");
+    expect(cable.currentLocationId).toBeNull();
+  });
+
   it("rejects duplicate codes, also from retired cables", async () => {
     await createCable(actor, createInput());
     await expect(createCable(actor, createInput({ code: "SH 50" }))).rejects.toThrow(

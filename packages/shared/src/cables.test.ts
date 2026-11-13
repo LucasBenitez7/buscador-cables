@@ -3,6 +3,7 @@ import {
   CABLE_ACTIONS,
   CABLE_ACTION_LABELS,
   CABLE_FIELD_LABELS,
+  CABLE_TEXT_LIMITS,
   PROJECT_FIELD_LABELS,
   createCableSchema,
   deleteCableSchema,
@@ -95,6 +96,42 @@ describe("createCableSchema", () => {
     const result = createCableSchema.safeParse({ ...base, connectionStatus: "CONNECTED" });
 
     expect(issues(result)).toContain("Solo un cable tendido puede estar conectado.");
+  });
+
+  // Revisión F0-F7 (B4): `Number("1e2")` es 100 y `Number("0x10")` es 16.
+  it.each(["1e2", "0x10", "1.0", "-3", "3 hilos"])(
+    "rejects %j as a number of conductors",
+    (conductors) => {
+      const result = createCableSchema.safeParse({ ...base, conductors });
+
+      expect(issues(result)).toContain("Nº de conductores: un número entero entre 1 y 500");
+    },
+  );
+
+  it("accepts a plain number of conductors, with spaces around", () => {
+    expect(createCableSchema.parse({ ...base, conductors: " 12 " }).conductors).toBe(12);
+  });
+
+  it("says that 0 is not a valid measure", () => {
+    const result = createCableSchema.safeParse({ ...base, lengthM: "0" });
+
+    expect(issues(result)).toContain("Longitud: debe ser mayor que 0 y como máximo 100000");
+  });
+
+  // Revisión F0-F7 (M5): el formulario admitía 200 y la carga de los listados, 500; un
+  // cable cargado con una descripción larga no se podía volver a guardar.
+  it("accepts texts as long as the limits shared with the load of the lists", () => {
+    const longest = {
+      ...base,
+      description: "d".repeat(CABLE_TEXT_LIMITS.description),
+      voltageRating: "v".repeat(CABLE_TEXT_LIMITS.voltageRating),
+      notes: "n".repeat(CABLE_TEXT_LIMITS.notes),
+    };
+
+    expect(createCableSchema.safeParse(longest).success).toBe(true);
+    expect(
+      issues(createCableSchema.safeParse({ ...longest, description: `${longest.description}d` })),
+    ).toContain(`Descripción: máximo ${CABLE_TEXT_LIMITS.description} caracteres`);
   });
 
   it("rejects invalid codes", () => {
