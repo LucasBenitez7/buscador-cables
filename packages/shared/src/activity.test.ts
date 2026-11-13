@@ -25,6 +25,10 @@ describe("activityQuery", () => {
     expect(activityQuery({ action: "LAID", page: 3 }, { page: 1 })).toBe("?action=LAID");
     expect(activityQuery({}, {})).toBe("");
     expect(activityQuery({ from: "2026-11-01" }, { page: 2 })).toBe("?from=2026-11-01&page=2");
+    expect(activityQuery({ size: 200 }, { page: 2 })).toBe("?page=2&size=200");
+    expect(activityQuery({ size: 50 })).toBe("");
+    expect(parseActivitySearch({ size: "100" }).size).toBe(100);
+    expect(parseActivitySearch({ size: "99999" }).size).toBeUndefined();
   });
 });
 

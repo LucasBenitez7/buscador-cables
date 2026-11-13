@@ -21,6 +21,27 @@ export const daySchema = z
 /** Page number of a paginated list. */
 export const pageSchema = z.coerce.number().int().min(1).max(10_000).optional().catch(undefined);
 
+/**
+ * Page size of a paginated list (`?size=100`). Only the sizes the list offers are accepted, so
+ * a hand-edited URL cannot ask the server for thousands of rows at once.
+ */
+export function pageSizeSchema(sizes: readonly number[]) {
+  return z.coerce
+    .number()
+    .int()
+    .refine((value) => sizes.includes(value))
+    .optional()
+    .catch(undefined);
+}
+
+/**
+ * The page that, cut in pages of `newSize`, holds the first item of `page` cut in pages of
+ * `oldSize`: changing the page size keeps what the user was looking at on screen.
+ */
+export function repage(page: number, oldSize: number, newSize: number): number {
+  return Math.floor(((page - 1) * oldSize) / newSize) + 1;
+}
+
 export type RawSearchParams = Record<string, string | string[] | undefined>;
 
 /** Next.js `searchParams` as plain strings: repeated keys keep the first value, empty ones go. */

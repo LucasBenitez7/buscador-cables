@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { TRAY_KIND_LABELS, formatTraySize, parseTraySearch } from "@cables/shared";
+import {
+  TRAY_KIND_LABELS,
+  TRAY_PAGE_SIZES,
+  formatTraySize,
+  parseTraySearch,
+  trayQuery,
+} from "@cables/shared";
+import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +25,7 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
   await requireUser();
   const search = parseTraySearch(await searchParams);
   const result = await searchTrays(search);
-  const pageLink = (page: number) =>
-    `/trays?${new URLSearchParams({ ...(search.q ? { q: search.q } : {}), page: String(page) })}`;
+  const pageLink = (page: number) => `/trays${trayQuery(search, { page })}`;
 
   return (
     <div className="space-y-6">
@@ -50,14 +56,28 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
             className="font-mono uppercase"
           />
         </div>
+        {/* El tamaño de página se conserva al buscar. */}
+        {search.size ? <input type="hidden" name="size" value={search.size} /> : null}
         <Button type="submit">Buscar</Button>
       </form>
 
-      <p role="status" className="text-muted-foreground text-sm">
-        <span className="text-foreground font-medium">{result.total.toLocaleString("es-ES")}</span>{" "}
-        {result.total === 1 ? "bandeja" : "bandejas"}
-        {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p role="status" className="text-muted-foreground text-sm">
+          <span className="text-foreground font-medium">
+            {result.total.toLocaleString("es-ES")}
+          </span>{" "}
+          {result.total === 1 ? "bandeja" : "bandejas"}
+          {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
+        </p>
+        {result.total > TRAY_PAGE_SIZES[0] ? (
+          <PageSizePicker
+            sizes={TRAY_PAGE_SIZES}
+            size={search.size}
+            page={result.page}
+            href={(size, page) => `/trays${trayQuery(search, { size, page })}`}
+          />
+        ) : null}
+      </div>
 
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {result.items.map((tray) => {

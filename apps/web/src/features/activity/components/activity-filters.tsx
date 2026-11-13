@@ -30,7 +30,9 @@ export function ActivityFilters({ basePath, search, users }: Props) {
     const values = Object.fromEntries(
       [...new FormData(event.currentTarget)].map(([key, value]) => [key, String(value)]),
     );
-    router.push(`${basePath}${activityQuery(parseActivitySearch(values))}`);
+    // El tamaño de página no es un filtro: se conserva al filtrar.
+    const size = search.size === undefined ? {} : { size: String(search.size) };
+    router.push(`${basePath}${activityQuery(parseActivitySearch({ ...values, ...size }))}`);
   }
 
   return (

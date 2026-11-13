@@ -54,7 +54,12 @@ export function SearchFilters({ search, options }: Props) {
     const values = Object.fromEntries(
       [...new FormData(event.currentTarget)].map(([key, value]) => [key, String(value)]),
     );
-    const next = parseCableSearch({ ...values, sort: search.sort, dir: search.dir });
+    const next = parseCableSearch({
+      ...values,
+      sort: search.sort,
+      dir: search.dir,
+      size: search.size === undefined ? undefined : String(search.size),
+    });
     router.push(`/cables${cableSearchQuery(next)}`);
   }
 
@@ -62,7 +67,7 @@ export function SearchFilters({ search, options }: Props) {
     value === undefined ? "" : String(value).replace(".", ",");
 
   // En el móvil solo se ve el cuadro de búsqueda; el resto se despliega con "Filtros".
-  const { q: _q, sort: _sort, dir: _dir, page: _page, ...filters } = search;
+  const { q: _q, sort: _sort, dir: _dir, page: _page, size: _size, ...filters } = search;
   const activeCount = Object.values(filters).filter((value) => value !== undefined).length;
 
   return (

@@ -133,17 +133,31 @@ export function formatTraySize(size: {
 }
 
 export const TRAY_PAGE_SIZE = 60;
+/** Page sizes the tray list offers (multiples of 3, it is a three-column grid). */
+export const TRAY_PAGE_SIZES = [TRAY_PAGE_SIZE, 120, 240] as const;
 
-/** `/trays?q=…&page=…`: invalid values are ignored, like the cable search. */
-export function parseTraySearch(params: Record<string, string | string[] | undefined>): {
-  q?: string;
-  page?: number;
-} {
+export type TraySearch = { q?: string; page?: number; size?: number };
+
+/** `/trays?q=…&page=…&size=…`: invalid values are ignored, like the cable search. */
+export function parseTraySearch(params: Record<string, string | string[] | undefined>): TraySearch {
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
   const q = first(params.q)?.trim();
   const page = Number(first(params.page));
+  const size = Number(first(params.size));
   return {
     ...(q && q.length <= 50 ? { q: normalizeTrayCode(q) } : {}),
     ...(Number.isInteger(page) && page >= 1 && page <= 10_000 ? { page } : {}),
+    ...((TRAY_PAGE_SIZES as readonly number[]).includes(size) ? { size } : {}),
   };
+}
+
+/** Query string for tray list links, without empty values, page 1 or the default size. */
+export function trayQuery(search: TraySearch, overrides: Partial<TraySearch> = {}): string {
+  const { q, page, size } = { ...search, ...overrides };
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (page && page > 1) params.set("page", String(page));
+  if (size && size !== TRAY_PAGE_SIZE) params.set("size", String(size));
+  const query = params.toString();
+  return query ? `?${query}` : "";
 }

@@ -10,6 +10,7 @@ import {
   normalizeTrayCode,
   parseTrayCode,
   parseTraySize,
+  trayQuery,
 } from "./trays";
 
 describe("parseTrayCode", () => {
@@ -123,5 +124,19 @@ describe("parseTraySearch", () => {
     expect(parseTraySearch({ q: " 99uxa ", page: "2" })).toEqual({ q: "99UXA", page: 2 });
     expect(parseTraySearch({ q: ["99uxb", "x"], page: "0" })).toEqual({ q: "99UXB" });
     expect(parseTraySearch({ q: "x".repeat(60), page: "abc" })).toEqual({});
+  });
+
+  it("accepts only the page sizes on offer", () => {
+    expect(parseTraySearch({ size: "120" })).toEqual({ size: 120 });
+    expect(parseTraySearch({ size: "100000" })).toEqual({});
+    expect(parseTraySearch({ size: "7" })).toEqual({});
+  });
+});
+
+describe("trayQuery", () => {
+  it("leaves out page 1 and the default size, and keeps the rest", () => {
+    expect(trayQuery({})).toBe("");
+    expect(trayQuery({ q: "99UXA", page: 1, size: 60 })).toBe("?q=99UXA");
+    expect(trayQuery({ q: "99UXA", size: 120 }, { page: 3 })).toBe("?q=99UXA&page=3&size=120");
   });
 });

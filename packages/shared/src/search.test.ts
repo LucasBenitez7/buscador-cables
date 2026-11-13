@@ -87,6 +87,13 @@ describe("cableSearchQuery", () => {
     );
   });
 
+  it("keeps a page size other than the default and drops the default one", () => {
+    expect(cableSearchQuery({ q: "sh", size: 100 }, { page: 2 })).toBe("?q=sh&page=2&size=100");
+    expect(cableSearchQuery({ q: "sh", size: 25 })).toBe("?q=sh");
+    expect(parseCableSearch({ size: "50" }).size).toBe(50);
+    expect(parseCableSearch({ size: "5000" }).size).toBeUndefined();
+  });
+
   it("round-trips through the parser", () => {
     const search = parseCableSearch({ q: "SH 5", color: "c1", sectionMax: "16", dir: "desc" });
 
@@ -98,7 +105,7 @@ describe("cableSearchQuery", () => {
 
 describe("hasActiveFilters", () => {
   it("ignores paging and sorting", () => {
-    expect(hasActiveFilters({ page: 2, sort: "code" })).toBe(false);
+    expect(hasActiveFilters({ page: 2, sort: "code", size: 100 })).toBe(false);
     expect(hasActiveFilters({ location: "l1" })).toBe(true);
   });
 });

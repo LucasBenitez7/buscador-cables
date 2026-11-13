@@ -571,6 +571,9 @@ Rama `feat/ui-style-review`.
 - [x] Lectura más fácil: estados con un punto de color (tendido en azul), datos de la ficha en
       tarjeta con etiquetas pequeñas y valores destacados, códigos enlazables en el color de
       acento, tarjetas de bandeja pulsables enteras y «Eliminar» en rojo suave.
+- [x] Selector «Por página» en cables (25/50/100), bandejas (60/120/240) y actividad
+      (50/100/200), en la URL (`?size=`) y validado; al cambiarlo se recalcula la página para
+      seguir viendo los mismos elementos.
 
 ## Fase 8 — Importación masiva y panel (mejora futura)
 

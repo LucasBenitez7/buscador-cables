@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { CABLE_ACTION_LABELS, activityQuery, type ActivitySearch } from "@cables/shared";
+import {
+  ACTIVITY_PAGE_SIZES,
+  CABLE_ACTION_LABELS,
+  activityQuery,
+  type ActivitySearch,
+} from "@cables/shared";
+import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
 import { CODE_LINK } from "@/components/ui/text-link";
 import type { ActivityPage } from "@/server/activity/service";
@@ -30,13 +36,23 @@ export function ActivityList({ basePath, search, activity, showUser = true }: Pr
 
   return (
     <div className="space-y-3">
-      <p role="status" className="text-muted-foreground text-sm">
-        <span className="text-foreground font-medium">
-          {activity.total.toLocaleString("es-ES")}
-        </span>{" "}
-        {activity.total === 1 ? "movimiento" : "movimientos"}
-        {activity.pageCount > 1 ? ` · página ${activity.page} de ${activity.pageCount}` : ""}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p role="status" className="text-muted-foreground text-sm">
+          <span className="text-foreground font-medium">
+            {activity.total.toLocaleString("es-ES")}
+          </span>{" "}
+          {activity.total === 1 ? "movimiento" : "movimientos"}
+          {activity.pageCount > 1 ? ` · página ${activity.page} de ${activity.pageCount}` : ""}
+        </p>
+        {activity.total > ACTIVITY_PAGE_SIZES[0] ? (
+          <PageSizePicker
+            sizes={ACTIVITY_PAGE_SIZES}
+            size={search.size}
+            page={activity.page}
+            href={(size, page) => `${basePath}${activityQuery(search, { size, page })}`}
+          />
+        ) : null}
+      </div>
       <ol className="bg-card divide-y rounded-lg border">
         {activity.entries.map((entry) => (
           <li key={entry.id} className="space-y-1 px-4 py-3 text-sm">

@@ -5,10 +5,12 @@ import {
   cableSearchQuery,
   effectiveSort,
   formatDecimal,
+  SEARCH_PAGE_SIZES,
   type CableSearch,
   type CableSort,
   type Role,
 } from "@cables/shared";
+import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
@@ -70,11 +72,23 @@ export function SearchResults({ search, result, actions }: Props) {
           Ningún código contiene «{search.q}». Se muestran los códigos más parecidos.
         </p>
       ) : null}
-      <p role="status" className="text-muted-foreground text-sm">
-        <span className="text-foreground font-medium">{result.total.toLocaleString("es-ES")}</span>{" "}
-        {result.total === 1 ? "cable" : "cables"}
-        {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p role="status" className="text-muted-foreground text-sm">
+          <span className="text-foreground font-medium">
+            {result.total.toLocaleString("es-ES")}
+          </span>{" "}
+          {result.total === 1 ? "cable" : "cables"}
+          {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
+        </p>
+        {result.total > SEARCH_PAGE_SIZES[0] ? (
+          <PageSizePicker
+            sizes={SEARCH_PAGE_SIZES}
+            size={search.size}
+            page={result.page}
+            href={(size, page) => `/cables${cableSearchQuery(search, { size, page })}`}
+          />
+        ) : null}
+      </div>
 
       {/* Móvil: tarjetas, más fáciles de leer y de pulsar que una tabla estrecha. */}
       <ul className="space-y-3 md:hidden">

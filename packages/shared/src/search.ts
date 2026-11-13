@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { CABLE_ACTIONS, CONNECTION_STATUSES, INSTALLATION_STATUSES } from "./cables";
 import { CABLE_LEVELS, normalizeTrayCode } from "./trays";
-import { daySchema as day, firstParams, pageSchema, type RawSearchParams } from "./url-params";
+import {
+  daySchema as day,
+  firstParams,
+  pageSchema,
+  pageSizeSchema,
+  type RawSearchParams,
+} from "./url-params";
 
 /**
  * Cable search filters as they travel in the URL (`/cables?q=sh50&type=…`).
@@ -29,6 +35,8 @@ export const CABLE_SORT_LABELS: Record<CableSort, string> = {
 };
 
 export const SEARCH_PAGE_SIZE = 25;
+/** Page sizes the cable search offers; the first one is the default. */
+export const SEARCH_PAGE_SIZES = [SEARCH_PAGE_SIZE, 50, 100] as const;
 
 const text = (max: number) =>
   z
@@ -84,6 +92,7 @@ export const cableSearchSchema = z.object({
   sort: z.enum(CABLE_SORTS).optional().catch(undefined),
   dir: z.enum(["asc", "desc"]).optional().catch(undefined),
   page: pageSchema,
+  size: pageSizeSchema(SEARCH_PAGE_SIZES),
 });
 
 export type CableSearch = z.infer<typeof cableSearchSchema>;
@@ -115,7 +124,7 @@ export function cableSearchQuery(
     if (value === undefined || value === null || value === "") {
       continue;
     }
-    if (key === "page" && value === 1) {
+    if ((key === "page" && value === 1) || (key === "size" && value === SEARCH_PAGE_SIZE)) {
       continue;
     }
     params.set(key, String(value));
@@ -131,6 +140,6 @@ export function hasActivityFilters(search: CableSearch): boolean {
 
 /** True when any filter (not paging or sorting) is set. */
 export function hasActiveFilters(search: CableSearch): boolean {
-  const { sort: _sort, dir: _dir, page: _page, ...filters } = search;
+  const { sort: _sort, dir: _dir, page: _page, size: _size, ...filters } = search;
   return Object.values(filters).some((value) => value !== undefined);
 }
