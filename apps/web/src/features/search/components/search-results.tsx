@@ -9,7 +9,8 @@ import {
   type CableSort,
   type Role,
 } from "@cables/shared";
-import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/pagination";
+import { CODE_LINK } from "@/components/ui/text-link";
 import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
 import { trayHref } from "@/features/cables/components/cable-route";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
@@ -70,7 +71,8 @@ export function SearchResults({ search, result, actions }: Props) {
         </p>
       ) : null}
       <p role="status" className="text-muted-foreground text-sm">
-        {result.total.toLocaleString("es-ES")} {result.total === 1 ? "cable" : "cables"}
+        <span className="text-foreground font-medium">{result.total.toLocaleString("es-ES")}</span>{" "}
+        {result.total === 1 ? "cable" : "cables"}
         {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
       </p>
 
@@ -81,7 +83,7 @@ export function SearchResults({ search, result, actions }: Props) {
             <div className="flex items-start justify-between gap-3">
               <Link
                 href={`/cables/${cable.id}`}
-                className="hover:text-primary active:text-primary focus-visible:ring-ring/50 -m-1 rounded-md p-1 font-mono text-base font-semibold outline-none focus-visible:ring-3"
+                className={`${CODE_LINK} -m-1 rounded-md p-1 text-base font-semibold`}
               >
                 {cable.code}
               </Link>
@@ -140,7 +142,7 @@ export function SearchResults({ search, result, actions }: Props) {
 
       <div className="hidden overflow-x-auto rounded-lg border md:block">
         <table className="w-full text-left text-sm">
-          <thead className="bg-muted/50 text-muted-foreground">
+          <thead className="bg-muted/50 text-muted-foreground text-xs tracking-wide uppercase">
             <tr>
               {header("Código", "code")}
               <th scope="col" className="hidden px-3 py-2 font-medium md:table-cell">
@@ -166,10 +168,7 @@ export function SearchResults({ search, result, actions }: Props) {
             {result.items.map((cable) => (
               <tr key={cable.id} className="hover:bg-muted/40 border-t align-top transition-colors">
                 <td className="px-3 py-2 font-mono font-medium whitespace-nowrap">
-                  <Link
-                    href={`/cables/${cable.id}`}
-                    className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3"
-                  >
+                  <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
                     {cable.code}
                   </Link>
                 </td>
@@ -236,37 +235,11 @@ export function SearchResults({ search, result, actions }: Props) {
         </table>
       </div>
 
-      {result.pageCount > 1 ? (
-        <nav aria-label="Paginación" className="flex items-center justify-between gap-3 text-sm">
-          {result.page > 1 ? (
-            <Button asChild variant="outline">
-              <Link
-                href={`/cables${cableSearchQuery(search, { page: result.page - 1 })}`}
-                rel="prev"
-              >
-                ← Anterior
-              </Link>
-            </Button>
-          ) : (
-            <span />
-          )}
-          <span className="text-muted-foreground">
-            Página {result.page} de {result.pageCount}
-          </span>
-          {result.page < result.pageCount ? (
-            <Button asChild variant="outline">
-              <Link
-                href={`/cables${cableSearchQuery(search, { page: result.page + 1 })}`}
-                rel="next"
-              >
-                Siguiente →
-              </Link>
-            </Button>
-          ) : (
-            <span />
-          )}
-        </nav>
-      ) : null}
+      <Pagination
+        page={result.page}
+        pageCount={result.pageCount}
+        href={(page) => `/cables${cableSearchQuery(search, { page })}`}
+      />
     </div>
   );
 }
@@ -304,7 +277,7 @@ function LooseEnd({ cable }: { cable: CableSearchItem }) {
   return (
     <p className="text-warning mt-1 text-xs">
       Punta de {looseEnd === "ORIGIN" ? "origen" : "destino"} en{" "}
-      <Link href={trayHref(looseEndTray)} className="font-mono underline-offset-2 hover:underline">
+      <Link href={trayHref(looseEndTray)} className="font-mono underline underline-offset-2">
         {looseEndTray}
       </Link>
     </p>

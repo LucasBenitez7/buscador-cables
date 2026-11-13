@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRAY_KIND_LABELS, formatTraySize, parseTraySearch } from "@cables/shared";
+import { Pagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,7 +54,8 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
       </form>
 
       <p role="status" className="text-muted-foreground text-sm">
-        {result.total.toLocaleString("es-ES")} {result.total === 1 ? "bandeja" : "bandejas"}
+        <span className="text-foreground font-medium">{result.total.toLocaleString("es-ES")}</span>{" "}
+        {result.total === 1 ? "bandeja" : "bandejas"}
         {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
       </p>
 
@@ -61,10 +63,14 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
         {result.items.map((tray) => {
           const size = formatTraySize(tray.size);
           return (
-            <li key={tray.code} className="bg-card space-y-1 rounded-lg border p-3 text-sm">
+            <li
+              key={tray.code}
+              className="bg-card hover:border-primary/50 hover:bg-muted/40 has-focus-visible:ring-ring/50 relative space-y-1 rounded-lg border p-3 text-sm transition-colors has-focus-visible:ring-3"
+            >
+              {/* La tarjeta entera abre la bandeja: el enlace la cubre con su ::after. */}
               <Link
                 href={trayHref(tray.code)}
-                className="hover:text-primary focus-visible:ring-ring/50 -m-1 rounded-md p-1 font-mono text-base font-semibold outline-none focus-visible:ring-3"
+                className="text-primary font-mono text-base font-semibold outline-none after:absolute after:inset-0 after:rounded-lg"
               >
                 {tray.code}
               </Link>
@@ -78,7 +84,7 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
                   .join(" · ")}
               </p>
               {tray.building ? <p className="text-muted-foreground">{tray.building}</p> : null}
-              <p>
+              <p className={tray.cables > 0 ? "font-medium" : "text-muted-foreground"}>
                 {tray.cables} {tray.cables === 1 ? "cable" : "cables"}
                 {tray.waiting > 0 ? (
                   <span className="text-warning">
@@ -92,22 +98,7 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
         })}
       </ul>
 
-      {result.pageCount > 1 ? (
-        <nav aria-label="Páginas" className="flex items-center justify-between gap-3">
-          {result.page > 1 ? (
-            <Button asChild variant="outline">
-              <Link href={pageLink(result.page - 1)}>← Anterior</Link>
-            </Button>
-          ) : (
-            <span />
-          )}
-          {result.page < result.pageCount ? (
-            <Button asChild variant="outline">
-              <Link href={pageLink(result.page + 1)}>Siguiente →</Link>
-            </Button>
-          ) : null}
-        </nav>
-      ) : null}
+      <Pagination page={result.page} pageCount={result.pageCount} href={pageLink} />
     </div>
   );
 }
