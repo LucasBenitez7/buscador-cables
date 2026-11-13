@@ -30,6 +30,27 @@ describe("routeProgress", () => {
     });
   });
 
+  // Revisión F0-F7 (B10): con la bandeja repetida se tomaba siempre la primera aparición, y
+  // con la punta de origen suelta eso daba por tendido un tramo que quizá no lo está.
+  it("takes the nearest appearance of a tray the route goes through twice", () => {
+    const twice = [
+      { trayCode: "99UXA00L22036" },
+      { trayCode: "99UXA00L22051" },
+      { trayCode: "99UZA00L22001" },
+      { trayCode: "99UXA00L22051" },
+      { trayCode: "99UZA00L22002" },
+    ];
+
+    expect(routeProgress(twice, state())).toEqual({
+      steps: ["laid", "laid", "pending", "pending", "pending"],
+      looseIndex: 1,
+    });
+    expect(routeProgress(twice, state({ looseEnd: "ORIGIN" }))).toEqual({
+      steps: ["pending", "pending", "pending", "laid", "laid"],
+      looseIndex: 3,
+    });
+  });
+
   it("marks every step laid on a laid cable", () => {
     expect(routeProgress(route, state({ installationStatus: "LAID", looseEnd: null }))).toEqual({
       steps: ["laid", "laid", "laid", "laid"],
