@@ -444,28 +444,40 @@ El repositorio es público. Los datos reales **nunca** se suben:
 
 ### Primero: analizar los PDFs
 
-- [ ] Leer los tres PDFs y documentar su estructura, sin datos reales: qué tablas hay, qué
-      columnas, qué unidades y qué códigos.
-- [ ] Comparar con el modelo actual:
-  - qué campos ya existen;
-  - qué falta (por ejemplo, las **bandejas** y el recorrido de cada cable por ellas, o el
-    estado del proyecto);
-  - qué hay que cambiar.
-- [ ] Proponer al usuario los cambios de modelo y de pantallas antes de programarlos.
+- [x] Leer los tres PDFs y documentar su estructura, sin datos reales: qué tablas hay, qué
+      columnas, qué unidades y qué códigos. En `docs/DATOS-PROYECTO.md`: dos listados de
+      cables (instrumentación L1; eléctricos L2-L4), una página por cable, ~4.460 cables; y los
+      planos de bandejas, tubos y canalizaciones con el código de cada tramo.
+- [x] Comparar con el modelo actual (tabla en `docs/DATOS-PROYECTO.md`). Faltan las bandejas,
+      el recorrido ordenado de cada cable, los datos de cada extremo (equipo, cubículo, KKS,
+      sala), el nivel L1-L4 y saber hasta dónde llegó un cable tendido a medias. Los PDFs no
+      traen el estado en campo: lo registra la app.
+- [x] Proponer al usuario los cambios de modelo y de pantallas. Aprobados el 2026-11-13: ver
+      "Decisiones" en `docs/DATOS-PROYECTO.md`. Prototipo de extracción probado sobre los PDFs
+      reales (fuera del repo): ~1 minuto para todas las páginas.
 
 ### Después: carga y adaptación
 
-- [ ] Cambios en `schema.prisma` y su migración (previsiblemente bandejas y la relación
-      cable–bandeja).
-- [ ] Script de extracción repetible `pnpm data:extract`, que lee
+Orden de trabajo, todo en `feat/f7-project-data`:
+
+- [ ] Esquema y migración: `Tray`, `TrayDrawing`, `CableRouteStep`, datos de cada extremo,
+      campos nuevos del cable (nivel, nº alternativo, revisión, circuito, composición, esquema,
+      longitud pendiente, documento y página), código en `CableType`, y el estado _tendido
+      parcial_ con la bandeja de la punta suelta.
+- [ ] Máquina de estados y acciones: tender a medias (bandeja de la punta suelta, que debe
+      estar en el recorrido) y completar el tendido, con su reflejo en el historial.
+- [ ] Seed y E2E con datos inventados de forma real (KKS, bandejas, recorridos, extremos) en
+      lugar de los códigos `SH-50`.
+- [ ] Script de extracción repetible `pnpm data:extract` (TypeScript + `pdfjs-dist`), que lee
       `private-data/source/*.pdf` y deja datos normalizados en `private-data/extracted/`.
 - [ ] Validación con Zod de cada fila, con un informe de errores por línea.
 - [ ] Carga idempotente `pnpm data:load`:
-  - crea o actualiza por código;
-  - se puede repetir sin duplicar;
+  - crea o actualiza por código (cables y bandejas);
+  - rellena el árbol de ubicaciones desde los KKS (edificio → sala);
+  - se puede repetir sin duplicar y no pisa el estado registrado en campo;
   - registra el evento de alta de cada cable.
-- [ ] Pantallas que hagan falta para los datos nuevos (bandejas en la ficha, búsqueda por
-      bandeja, estado del proyecto…), con sus E2E.
+- [ ] Pantallas: ficha con extremos y recorrido (tendido / pendiente); búsqueda por bandeja y
+      por equipo; ficha de bandeja (cables que pasan, cables que esperan en ella, planos).
 - [ ] Tests:
   - extracción con PDFs inventados en `__fixtures__`;
   - validación;
