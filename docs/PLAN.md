@@ -539,8 +539,12 @@ Orden de trabajo, todo en `feat/f7-project-data`:
   - servicios de bandejas y filtros del buscador contra Postgres; ficha y recorrido;
   - E2E de las pantallas nuevas (`e2e/trays.spec.ts`): ficha con extremos y punta suelta, de
     la ficha a la bandeja y al buscador, listado de bandejas y búsqueda por equipo y nivel.
-- [ ] Documentación: estructura de los datos y uso de los scripts. Al cerrar la fase,
-      entrada en `docs/REVISIONES.md`.
+- [x] Documentación: estructura de los datos y uso de los scripts en `docs/DATOS-PROYECTO.md`;
+      modelo en `docs/ARQUITECTURA.md`; entrada en `docs/REVISIONES.md`.
+
+**Fase 7 cerrada el 2026-11-13** (al mergear `feat/f7-project-data` en `dev`). Los datos reales
+no están cargados en ninguna base: se cargan con `pnpm data:load` en local o en el entorno del
+cliente cuando se decida.
 
 ## Fase 8 — Importación masiva y panel (v0.9.0)
 

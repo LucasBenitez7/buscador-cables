@@ -6,6 +6,57 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-13 — Fase 7: datos reales del proyecto
+
+**Rama:** `feat/f7-project-data`, la única de la fase. Los tres PDFs del cliente (listado de
+instrumentación, listado eléctrico y planos de bandejas) viven en `private-data/`, que git
+ignora; en el repo solo hay su estructura, con ejemplos inventados (`docs/DATOS-PROYECTO.md`).
+
+**Qué hay nuevo:**
+
+- Modelo: bandejas con sus hojas de plano, recorrido ordenado de cada cable, datos de cada
+  extremo (equipo, cubículo o prensaestopas, KKS, sala), nivel L1-L4 y datos del listado.
+- Estados nuevos: _tendido parcial_ (con la punta suelta esperando en una bandeja del
+  recorrido) y _sin revisar_ (cómo entran los cables de los listados hasta que alguien los
+  comprueba en campo). Los dos los decidió el usuario.
+- `pnpm data:extract` (paquete `packages/data`, `pdfjs-dist`): lee los PDFs y deja los datos
+  normalizados y un informe. Con los reales: 4.459 cables, 3.017 bandejas y 37.435 tramos, sin
+  errores, en menos de un minuto y medio.
+- `pnpm data:load`: carga idempotente que nunca pisa lo registrado en campo. Probada con los
+  datos reales en una base temporal: 12 s la primera vez, 1 s (sin cambios) la segunda.
+- Seed y E2E con datos inventados de forma real (KKS de la unidad `99`) en lugar de `SH-50`.
+- Pantallas: ficha con extremos y recorrido (lo tendido, dónde espera la punta y lo que falta),
+  buscador por equipo, nivel y bandeja, y la sección Bandejas.
+
+**Encontrado y corregido durante la fase:**
+
+| Problema                                                                                                                            | Corrección                                                                                     |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| La Server Action de las acciones solo lee una lista fija de campos y no recibía los del tendido parcial.                            | Campos añadidos. Lo encontró el E2E (los tests unitarios simulan esa capa); test de regresión. |
+| El formulario prohibía origen y destino en la misma ubicación; ~40 % de los cables de instrumentación unen dos equipos de una sala. | Regla quitada; test que lo acepta.                                                             |
+| Los cables eléctricos no traen sala y no se podían tender (la regla pide origen y destino).                                         | El equipo de cada extremo cuenta como extremo conocido.                                        |
+| Al extraer, un tipo de cable largo se colaba bajo la cabecera de la columna de al lado ("nº de circuitos").                         | Las cabeceras solo toman texto que empieza bajo ellas. Test con una ficha inventada.           |
+| Una longitud de 0 descartaba la ficha entera.                                                                                       | Se carga sin longitud y con aviso.                                                             |
+| Los tests de la carga y los de la web usan la misma base de test y Turborepo podía lanzarlos a la vez.                              | `@cables/data#test` va después de `@cables/web#test` en `turbo.json`.                          |
+| En la ficha, "Punta suelta en" y el código de la bandeja salían pegados, también para lectores de pantalla.                         | Espacio no separable (`&nbsp;`) dentro del badge.                                              |
+| Los enums de Prisma y las constantes compartidas podían desincronizarse sin que nada lo detectara.                                  | Test nuevo que los compara.                                                                    |
+
+**Revisado y correcto:**
+
+- Ningún dato real, código real ni nombre del cliente en el código, los tests, la documentación
+  ni los commits (comprobado en cada commit). Los PDFs y lo extraído siguen ignorados por git.
+- Pantallas nuevas repasadas en el navegador a 375 px y en escritorio: sin desplazamiento
+  lateral ni errores en consola.
+
+**Pendiente:**
+
+- Cargar los datos reales en la base local o del cliente (`pnpm data:load`) cuando el usuario
+  lo decida: la base de desarrollo sigue con los datos de ejemplo.
+- 275 bandejas de los recorridos no aparecen en los planos y 4 salas no siguen el KKS: se
+  cargan igual, pero conviene revisarlas con quien hizo los planos.
+- Las bandejas de los planos de instrumentación no traen tamaño fiable (el texto del plano sale
+  mezclado): quedan sin tamaño.
+
 ## 2026-11-13 — Fase 6: diseño responsive y tests E2E
 
 **Rama:** `feat/f6-e2e-import` (#27), la única de la fase. La fase se cierra aquí por decisión
