@@ -82,4 +82,15 @@ describe("dark theme", () => {
 
     expect(layout).toMatch(/<html[^>]*className="dark"/);
   });
+
+  // Tailwind 4 quitó `cursor: pointer` a los botones: sin esta regla no se ve la mano.
+  it("gives every clickable control the pointer cursor and disabled ones not-allowed", () => {
+    const pointerRule = GLOBALS_CSS.match(/([^{}]+)\{\s*cursor: pointer;\s*\}/)?.[1] ?? "";
+    for (const selector of ["button:not(:disabled)", '[role="button"]', "summary", "select"]) {
+      expect(pointerRule).toContain(selector);
+    }
+    expect(GLOBALS_CSS).toMatch(
+      /:disabled,\s*\[aria-disabled="true"\]\s*\{\s*cursor: not-allowed;/,
+    );
+  });
 });
