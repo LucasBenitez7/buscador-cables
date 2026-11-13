@@ -114,4 +114,30 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /*
+   * Tailwind 4 deja los botones con el cursor por defecto. Todo lo que se pulsa lleva la mano;
+   * lo desactivado, el cursor de "no permitido" (los botones desactivados además ignoran el
+   * puntero, así que en ellos se ve el del elemento de debajo).
+   */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="menuitem"],
+  [role="option"],
+  [role="tab"],
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  label:has(> input[type="radio"]:not(:disabled)) {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }

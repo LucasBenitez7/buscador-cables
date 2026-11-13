@@ -60,7 +60,7 @@ function nextDay(day: string): string {
  */
 export async function listActivity(
   search: ActivitySearch,
-  pageSize = ACTIVITY_PAGE_SIZE,
+  pageSize = search.size ?? ACTIVITY_PAGE_SIZE,
 ): Promise<ActivityPage> {
   const where: Prisma.CableEventWhereInput = {
     ...(search.actor ? { userId: search.actor } : {}),

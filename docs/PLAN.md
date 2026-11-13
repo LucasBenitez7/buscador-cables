@@ -25,13 +25,17 @@ hizo qué y cuándo.
 | 5    | Estados y trazabilidad        | v0.6.0  | Tendido/enrollado, conectado, historial por usuario   |
 | 6    | Diseño responsive y E2E       | v0.7.0  | Menú y vistas para móvil, E2E de las fases 1-5        |
 | 7    | Datos reales del proyecto     | v0.8.0  | Cables, bandejas y estado cargados desde los PDFs     |
-| 8    | Importación masiva y panel    | v0.9.0  | CSV/Excel masivo, dashboard                           |
-| 9    | Modo sin conexión (PWA)       | v0.10.0 | Consulta offline + cola de cambios sincronizable      |
+| 8    | Importación masiva y panel    | —       | _Mejora futura_: CSV/Excel masivo, dashboard          |
+| 9    | Modo sin conexión (PWA)       | —       | _Mejora futura_: consulta offline + cola de cambios   |
 | 10   | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
 
 **Total: 12 fases (0 a 10, más la 4.5 añadida el 2026-11-11).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
+
+**Fases 8 y 9 aplazadas (2026-11-13):** la importación masiva con panel y el modo sin conexión
+quedan pendientes como mejoras futuras del proyecto, fuera de la v1.0.0. Se pasa directamente a
+la fase 10; sus casillas se conservan abajo para retomarlas cuando se decida.
 
 Cada fase termina con todos los tests en verde en `dev`. Desde la fase 4.5, todo llega a `dev`
 por Pull Request y con el CI en verde. Las versiones de la tabla son orientativas: `dev` → `main`
@@ -558,7 +562,22 @@ Rama `fix/review-f0-f7`. Lista de hallazgos y lo que se hizo con cada uno en
       búsqueda de bandejas y límite de intentos por cuenta.
 - [x] Hallazgos bajos corregidos; los que dependen del despliegue pasan a la fase 10.
 
-## Fase 8 — Importación masiva y panel (v0.9.0)
+### Repaso de estilos (2026-11-13)
+
+Rama `feat/ui-style-review`.
+
+- [x] Paginación común en cables, bandejas y actividad, con «Página X de Y» abajo.
+- [x] Cursor de mano en todo lo que se pulsa y de «no permitido» en lo desactivado.
+- [x] Lectura más fácil: estados con un punto de color (tendido en azul), datos de la ficha en
+      tarjeta con etiquetas pequeñas y valores destacados, códigos enlazables en el color de
+      acento, tarjetas de bandeja pulsables enteras y «Eliminar» en rojo suave.
+- [x] Selector «Por página» en cables (25/50/100), bandejas (60/120/240) y actividad
+      (50/100/200), en la URL (`?size=`) y validado; al cambiarlo se recalcula la página para
+      seguir viendo los mismos elementos.
+
+## Fase 8 — Importación masiva y panel (mejora futura)
+
+> **Pendiente, mejora futura** (decisión del 2026-11-13): no entra en la v1.0.0.
 
 Viene de la fase 6, de donde salió el 2026-11-13.
 
@@ -569,7 +588,9 @@ Viene de la fase 6, de donde salió el 2026-11-13.
 - [ ] Generación de código QR por cable (para etiquetas en campo) — opcional.
 - [ ] Tests: parser de importación con ficheros de ejemplo, y E2E de importación y panel.
 
-## Fase 9 — Modo sin conexión (PWA) (v0.10.0)
+## Fase 9 — Modo sin conexión (PWA) (mejora futura)
+
+> **Pendiente, mejora futura** (decisión del 2026-11-13): no entra en la v1.0.0.
 
 - [ ] PWA instalable (Serwist / service worker).
 - [ ] Cacheo de la app y copia local de cables y ubicaciones en IndexedDB (Dexie).

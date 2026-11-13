@@ -6,15 +6,18 @@ import {
 } from "@cables/shared";
 import { Badge } from "@/components/ui/badge";
 
-type BadgeVariant = "default" | "outline" | "success" | "warning" | "destructive";
+type BadgeVariant = "default" | "outline" | "info" | "success" | "warning" | "destructive";
 
-/** Verde: conectado. Ámbar: a medias. Rojo: retirado. El resto, neutro. */
+/**
+ * Verde: conectado. Azul: tendido. Ámbar: a medias. Rojo: retirado. El resto, neutro.
+ * Cada badge lleva un punto del mismo color para distinguir los estados de un vistazo.
+ */
 const INSTALLATION_VARIANT: Record<InstallationStatus, BadgeVariant> = {
   UNVERIFIED: "outline",
   IN_STOCK: "outline",
   COILED: "default",
   PARTIALLY_LAID: "warning",
-  LAID: "default",
+  LAID: "info",
   RETIRED: "destructive",
 };
 
@@ -34,10 +37,14 @@ export function CableStatusBadges({
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <Badge variant={INSTALLATION_VARIANT[installationStatus]} data-status={installationStatus}>
+      <Badge
+        dot
+        variant={INSTALLATION_VARIANT[installationStatus]}
+        data-status={installationStatus}
+      >
         {INSTALLATION_STATUS_LABELS[installationStatus]}
       </Badge>
-      <Badge variant={CONNECTION_VARIANT[connectionStatus]} data-status={connectionStatus}>
+      <Badge dot variant={CONNECTION_VARIANT[connectionStatus]} data-status={connectionStatus}>
         {CONNECTION_STATUS_LABELS[connectionStatus]}
       </Badge>
     </div>

@@ -13,3 +13,4 @@ export * from "./trays";
 export * from "./cable-specs";
 export * from "./kks";
 export * from "./route";
+export { repage } from "./url-params";

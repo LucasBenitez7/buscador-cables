@@ -7,6 +7,7 @@ import {
   type ConnectionStatus,
   type InstallationStatus,
   type TrayKind,
+  type TraySearch,
 } from "@cables/shared";
 import { escapeLike } from "@/server/like";
 
@@ -71,8 +72,8 @@ const sizeOf = (tray: TraySize): TraySize => ({
 
 /** Trays by code (substring), with how many cables go through and wait in each one. */
 export async function searchTrays(
-  search: { q?: string; page?: number },
-  pageSize = TRAY_PAGE_SIZE,
+  search: TraySearch,
+  pageSize = search.size ?? TRAY_PAGE_SIZE,
 ): Promise<{ items: TrayListItem[]; total: number; page: number; pageCount: number }> {
   // Prisma does not escape LIKE wildcards in `contains`, and "_" is part of tray codes.
   const where = search.q

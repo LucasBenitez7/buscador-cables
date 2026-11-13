@@ -10,7 +10,7 @@ import {
   formatDecimal,
   hasPermission,
 } from "@cables/shared";
-import { Item, Section } from "@/components/detail";
+import { DataList, Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
@@ -132,7 +132,7 @@ export default async function CablePage({ params }: { params: Params }) {
       </Section>
 
       <Section title="Datos">
-        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <DataList>
           <Item label="Tipo">{cable.type}</Item>
           <Item label="Color">
             {cable.color ? (
@@ -172,7 +172,7 @@ export default async function CablePage({ params }: { params: Params }) {
               : null}
           </Item>
           <Item label="Alta">{dateFormat.format(cable.createdAt)}</Item>
-        </dl>
+        </DataList>
         {cable.notes ? (
           <div className="space-y-1 text-sm">
             <h3 className="text-muted-foreground">Notas</h3>
@@ -203,15 +203,17 @@ export default async function CablePage({ params }: { params: Params }) {
           <p className="text-muted-foreground text-sm">Sin historial.</p>
         ) : (
           <ol className="space-y-5 border-l pl-4">
-            {cable.history.map((entry) => (
+            {cable.history.map((entry, index) => (
               <li key={entry.id} className="relative space-y-1 text-sm">
                 <span
                   aria-hidden
-                  className="bg-border absolute top-1.5 -left-[1.3125rem] size-2 rounded-full"
+                  className={`absolute top-1.5 -left-[1.3125rem] size-2 rounded-full ${index === 0 ? "bg-primary" : "bg-border"}`}
                 />
                 <p className="text-muted-foreground text-xs">
                   <time dateTime={entry.at.toISOString()}>{dateFormat.format(entry.at)}</time> ·{" "}
-                  {CABLE_ACTION_LABELS[entry.action]}
+                  <span className="text-foreground font-medium">
+                    {CABLE_ACTION_LABELS[entry.action]}
+                  </span>
                 </p>
                 <p>
                   <span className="font-medium">{entry.user}</span> {entry.summary}

@@ -4,18 +4,33 @@ import type { ReactNode } from "react";
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-medium">{title}</h2>
+      <h2 className="border-b pb-2 text-base font-semibold">{title}</h2>
       {children}
     </section>
   );
 }
 
-/** One labelled value of a record's data list; shows a dash when there is no value. */
-export function Item({ label, children }: { label: string; children: ReactNode }) {
+/** The grid of labelled values of a record, on a card so it reads as one block. */
+export function DataList({ children }: { children: ReactNode }) {
   return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd>{children ?? "—"}</dd>
+    <dl className="bg-card grid gap-x-6 gap-y-4 rounded-lg border p-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+      {children}
+    </dl>
+  );
+}
+
+/**
+ * One labelled value of a record's data list. The label is small and muted, the value stands
+ * out; a missing value shows a faint dash so the filled ones are easy to spot.
+ */
+export function Item({ label, children }: { label: string; children: ReactNode }) {
+  const empty = children === null || children === undefined || children === "";
+  return (
+    <div className="space-y-0.5">
+      <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</dt>
+      <dd className={empty ? "text-muted-foreground/60" : "font-medium break-words"}>
+        {empty ? "—" : children}
+      </dd>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
 } from "@cables/shared";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
+import { CODE_LINK } from "@/components/ui/text-link";
 import type { CableDetail, CableEndDetail } from "@/server/cables/detail";
 
 export const trayHref = (code: string) => `/trays/${encodeURIComponent(code)}`;
@@ -54,7 +55,9 @@ function EndCard({
       className={cn("space-y-2 rounded-lg border p-3", looseTray && "border-warning/50")}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-muted-foreground text-xs">{CABLE_END_SIDE_LABELS[side]}</h3>
+        <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          {CABLE_END_SIDE_LABELS[side]}
+        </h3>
         {looseTray ? (
           <Badge variant="warning">
             {/* A non-breaking space: the badge is a flex box, where a plain space is dropped. */}
@@ -144,10 +147,7 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
                   )}
                 />
                 {step.trayCode ? (
-                  <Link
-                    href={trayHref(step.trayCode)}
-                    className="hover:text-primary focus-visible:ring-ring/50 rounded-sm font-mono underline-offset-4 outline-none hover:underline focus-visible:ring-3"
-                  >
+                  <Link href={trayHref(step.trayCode)} className={CODE_LINK}>
                     {step.label}
                   </Link>
                 ) : (

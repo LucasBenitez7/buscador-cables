@@ -9,8 +9,9 @@ import {
   formatTraySize,
   normalizeTrayCode,
 } from "@cables/shared";
-import { Item, Section } from "@/components/detail";
+import { DataList, Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
+import { CODE_LINK } from "@/components/ui/text-link";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getTrayDetail, type TrayCable } from "@/server/trays/service";
 import { decodeRouteParam } from "@/lib/route-params";
@@ -63,11 +64,11 @@ export default async function TrayPage({ params }: { params: Params }) {
       </header>
 
       <Section title="Datos">
-        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <DataList>
           <Item label="Tamaño">{size}</Item>
           <Item label="Edificio">{tray.building}</Item>
           <Item label="Cables que pasan">{tray.cables}</Item>
-        </dl>
+        </DataList>
         {tray.notes ? <p className="text-sm whitespace-pre-line">{tray.notes}</p> : null}
       </Section>
 
@@ -123,10 +124,7 @@ function CableList({ cables }: { cables: TrayCable[] }) {
           className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
         >
           <div className="min-w-0 space-y-0.5">
-            <Link
-              href={`/cables/${cable.id}`}
-              className="hover:text-primary focus-visible:ring-ring/50 rounded-sm font-mono font-medium outline-none focus-visible:ring-3"
-            >
+            <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
               {cable.code}
             </Link>
             <p className="text-muted-foreground text-xs">

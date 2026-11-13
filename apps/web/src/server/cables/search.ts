@@ -213,7 +213,7 @@ const locationLabel = (location: { name: string; parent: { name: string } | null
  */
 export async function searchCables(
   search: CableSearch,
-  pageSize = SEARCH_PAGE_SIZE,
+  pageSize = search.size ?? SEARCH_PAGE_SIZE,
 ): Promise<CableSearchResult> {
   const countWhere = async (fuzzy: boolean) => {
     const conditions = await buildConditions(search, fuzzy);

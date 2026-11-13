@@ -91,6 +91,7 @@ export function CatalogSection({ kind, items }: Props) {
                   <Button
                     size="xs"
                     variant="ghost"
+                    className="text-destructive hover:bg-destructive/15 hover:text-destructive dark:hover:bg-destructive/15"
                     onClick={() => remove(item)}
                     disabled={pending}
                     aria-label={`Eliminar ${item.name}`}

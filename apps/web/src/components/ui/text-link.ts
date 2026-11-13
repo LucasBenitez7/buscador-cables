@@ -7,3 +7,10 @@ export const TEXT_LINK =
 
 /** The same link on its own line, at the size of the secondary text. */
 export const TEXT_LINK_SM = `${TEXT_LINK} text-sm`;
+
+/**
+ * A record code that opens its page (cable, tray): monospace in the accent colour, so what can
+ * be opened stands out from plain text. Underlined on hover.
+ */
+export const CODE_LINK =
+  "text-primary hover:text-primary/80 focus-visible:ring-ring/50 rounded-sm font-mono font-medium underline-offset-4 transition-colors outline-none hover:underline focus-visible:ring-3";

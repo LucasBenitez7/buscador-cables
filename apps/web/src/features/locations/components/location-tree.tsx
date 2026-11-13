@@ -156,7 +156,13 @@ function TreeItem({ node, tree, canManage, open, setOpen, close }: ItemProps) {
                   Mover
                 </Button>
               ) : null}
-              <Button size="xs" variant="ghost" onClick={remove} disabled={pending}>
+              <Button
+                size="xs"
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/15 hover:text-destructive dark:hover:bg-destructive/15"
+                onClick={remove}
+                disabled={pending}
+              >
                 Eliminar
               </Button>
             </span>
