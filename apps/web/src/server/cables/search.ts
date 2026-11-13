@@ -341,7 +341,12 @@ export async function getSearchOptions(): Promise<SearchOptions> {
   const [form, locations, users] = await Promise.all([
     getCableFormOptions(),
     listLocationOptions({ includePlants: true }),
-    prisma.user.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    // Only who appears in the history: the filter is not a list of every account.
+    prisma.user.findMany({
+      where: { cableEvents: { some: {} } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
   ]);
   return {
     cableTypes: form.cableTypes,

@@ -16,7 +16,7 @@ import { CableEnds, CableRoute } from "@/features/cables/components/cable-route"
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getCableDetail } from "@/server/cables/detail";
 import { listLocationOptions } from "@/server/cables/service";
-import { requireUser } from "@/server/session";
+import { requireUser, whenSignedIn } from "@/server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +28,9 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
 });
 
-// generateMetadata y la página piden el mismo cable: una sola consulta por petición.
-const loadCable = cache(getCableDetail);
+// generateMetadata y la página piden el mismo cable: una sola consulta por petición, y
+// ninguna sin sesión (generateMetadata se ejecuta aparte de la comprobación de la página).
+const loadCable = cache((id: string) => whenSignedIn(() => getCableDetail(id)));
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params;
@@ -107,7 +108,10 @@ export default async function CablePage({ params }: { params: Params }) {
         availability={availability}
         locations={locations}
         events={correctableEvents}
-        routeTrays={cable.route.flatMap((step) => (step.trayCode ? [step.trayCode] : []))}
+        // Un recorrido puede nombrar dos veces la misma bandeja: se sugiere una sola vez.
+        routeTrays={[
+          ...new Set(cable.route.flatMap((step) => (step.trayCode ? [step.trayCode] : []))),
+        ]}
       />
 
       <Section title="Extremos">
@@ -188,6 +192,12 @@ export default async function CablePage({ params }: { params: Params }) {
       </Section>
 
       <Section title="Historial (más reciente primero)">
+        {cable.historyTotal > cable.history.length ? (
+          <p role="note" className="text-muted-foreground text-sm">
+            Se muestran los {cable.history.length} movimientos más recientes de {cable.historyTotal}
+            . Los anteriores siguen guardados.
+          </p>
+        ) : null}
         {cable.history.length === 0 ? (
           <p className="text-muted-foreground text-sm">Sin historial.</p>
         ) : (

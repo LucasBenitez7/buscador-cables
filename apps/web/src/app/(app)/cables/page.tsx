@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import { SearchResults } from "@/features/search/components/search-results";
+import { deletedCableCode } from "@/lib/route-params";
 import { getSearchOptions, searchCables } from "@/server/cables/search";
 import { listLocationOptions } from "@/server/cables/service";
 import { requireUser } from "@/server/session";
@@ -22,7 +23,8 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
   const user = await requireUser();
   const params = await searchParams;
   const search = parseCableSearch(params);
-  const deleted = typeof params.deleted === "string" ? params.deleted : undefined;
+  // Solo un código de cable: cualquier otro texto de la URL saldría dentro de un aviso.
+  const deleted = deletedCableCode(params.deleted);
   // Solo quien puede registrar alguna acción ve la columna "Acción" (los VIEWER, no).
   const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user.role, action));
   const [result, options, locations] = await Promise.all([

@@ -33,6 +33,15 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return { id: user.id, name: user.name, email: user.email, role: user.role };
 });
 
+/**
+ * For data loaders shared by `generateMetadata` and the page: nothing is read without a
+ * valid session. `generateMetadata` runs on its own, and the proxy only checks that a
+ * session cookie exists, not that it is valid.
+ */
+export async function whenSignedIn<T>(load: () => Promise<T>): Promise<T | null> {
+  return (await getCurrentUser()) ? load() : null;
+}
+
 /** For pages: sends anonymous users to the login screen. */
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();

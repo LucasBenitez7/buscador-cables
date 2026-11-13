@@ -12,15 +12,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getTrayDetail, type TrayCable } from "@/server/trays/service";
-import { requireUser } from "@/server/session";
+import { decodeRouteParam } from "@/lib/route-params";
+import { requireUser, whenSignedIn } from "@/server/session";
 
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ code: string }>;
 
-const loadTray = cache((code: string) =>
-  getTrayDetail(normalizeTrayCode(decodeURIComponent(code))),
-);
+// Una sola consulta para generateMetadata y la página, y ninguna sin sesión. Un código mal
+// codificado en la URL es una bandeja que no existe, no un error.
+const loadTray = cache(async (code: string) => {
+  const decoded = decodeRouteParam(code);
+  return decoded === null ? null : whenSignedIn(() => getTrayDetail(normalizeTrayCode(decoded)));
+});
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const tray = await loadTray((await params).code);
