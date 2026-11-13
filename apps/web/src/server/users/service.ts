@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { Prisma, prisma } from "@cables/db";
+import { prisma, type Prisma } from "@cables/db";
 import { hashPassword } from "better-auth/crypto";
 import {
   validateActiveChange,
@@ -11,6 +11,7 @@ import {
   type Role,
   type SetUserActiveInput,
 } from "@cables/shared";
+import { isUniqueViolation } from "@/server/prisma-errors";
 import type { CurrentUser } from "@/server/session";
 
 export type UserRow = {
@@ -19,6 +20,8 @@ export type UserRow = {
   email: string;
   role: Role;
   active: boolean;
+  /** Self-registered and waiting for an administrator: never approved yet. */
+  pending: boolean;
   createdAt: Date;
 };
 
@@ -26,31 +29,53 @@ export class UserServiceError extends Error {}
 
 const DUPLICATE_EMAIL = "Ya existe un usuario con ese correo.";
 
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
-}
-
 const USER_SELECT = {
   id: true,
   name: true,
   email: true,
   role: true,
   active: true,
+  approvedAt: true,
   createdAt: true,
 } as const;
 
+type SelectedUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  approvedAt: Date | null;
+  createdAt: Date;
+};
+
+const toRow = ({ approvedAt, ...user }: SelectedUser): UserRow => ({
+  ...user,
+  role: user.role as Role,
+  pending: !user.active && approvedAt === null,
+});
+
+/** Accounts waiting for approval first (they need an answer), then active ones, by name. */
 export async function listUsers(): Promise<UserRow[]> {
   const users = await prisma.user.findMany({
     select: USER_SELECT,
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
-  return users.map((user) => ({ ...user, role: user.role as Role }));
+  const rows = users.map(toRow);
+  return [...rows.filter((user) => user.pending), ...rows.filter((user) => !user.pending)];
 }
 
-async function countOtherActiveAdmins(excludeUserId: string): Promise<number> {
-  return prisma.user.count({
-    where: { role: "ADMIN", active: true, NOT: { id: excludeUserId } },
-  });
+type Transaction = Prisma.TransactionClient;
+
+/**
+ * Active administrators other than `excludeUserId`, with their rows locked until the
+ * transaction ends. Without the lock, two administrators demoting or deactivating each
+ * other at the same time would both see "one administrator left" and leave none.
+ */
+async function countOtherActiveAdmins(tx: Transaction, excludeUserId: string): Promise<number> {
+  const admins = await tx.$queryRaw<{ id: string }[]>`
+    SELECT "id" FROM "user" WHERE "role" = 'ADMIN' AND "active" ORDER BY "id" FOR UPDATE`;
+  return admins.filter((admin) => admin.id !== excludeUserId).length;
 }
 
 /**
@@ -80,6 +105,8 @@ export async function createUser(actor: CurrentUser, input: CreateUserInput): Pr
         email: input.email,
         role: input.role,
         emailVerified: true,
+        // Un alta hecha por un administrador ya está aprobada.
+        approvedAt: new Date(),
         accounts: {
           create: {
             id: randomUUID(),
@@ -99,60 +126,76 @@ export async function createUser(actor: CurrentUser, input: CreateUserInput): Pr
       throw error;
     });
 
-  return { ...user, role: user.role as Role };
+  return toRow(user);
 }
 
 export async function changeUserRole(actor: CurrentUser, input: ChangeRoleInput): Promise<void> {
-  const target = await prisma.user.findUnique({
-    where: { id: input.userId },
-    select: { id: true, role: true },
-  });
-  if (!target) {
-    throw new UserServiceError("El usuario no existe.");
-  }
+  await prisma.$transaction(async (tx) => {
+    const otherActiveAdmins = await countOtherActiveAdmins(tx, input.userId);
+    const target = await tx.user.findUnique({
+      where: { id: input.userId },
+      select: { id: true, role: true },
+    });
+    if (!target) {
+      throw new UserServiceError("El usuario no existe.");
+    }
 
-  const error = validateRoleChange({
-    actorId: actor.id,
-    actorRole: actor.role,
-    targetId: target.id,
-    targetRole: target.role as Role,
-    newRole: input.role,
-    otherActiveAdmins: await countOtherActiveAdmins(target.id),
-  });
-  if (error) {
-    throw new UserServiceError(error);
-  }
+    const error = validateRoleChange({
+      actorId: actor.id,
+      actorRole: actor.role,
+      targetId: target.id,
+      targetRole: target.role as Role,
+      newRole: input.role,
+      otherActiveAdmins,
+    });
+    if (error) {
+      throw new UserServiceError(error);
+    }
 
-  await prisma.user.update({ where: { id: target.id }, data: { role: input.role } });
-  // Las sesiones existentes siguen válidas, pero el rol se relee en cada petición.
+    await tx.user.update({ where: { id: target.id }, data: { role: input.role } });
+    // Las sesiones existentes siguen válidas, pero el rol se relee en cada petición.
+  });
 }
 
-export async function setUserActive(actor: CurrentUser, input: SetUserActiveInput): Promise<void> {
-  const target = await prisma.user.findUnique({
-    where: { id: input.userId },
-    select: { id: true, role: true },
-  });
-  if (!target) {
-    throw new UserServiceError("El usuario no existe.");
-  }
+/**
+ * Activates or deactivates an account. The first activation of a self-registered account
+ * is its approval: `approved` tells the caller whom to notify.
+ */
+export async function setUserActive(
+  actor: CurrentUser,
+  input: SetUserActiveInput,
+): Promise<{ approved: { name: string; email: string } | null }> {
+  return prisma.$transaction(async (tx) => {
+    const otherActiveAdmins = await countOtherActiveAdmins(tx, input.userId);
+    const target = await tx.user.findUnique({
+      where: { id: input.userId },
+      select: { id: true, role: true, name: true, email: true, approvedAt: true },
+    });
+    if (!target) {
+      throw new UserServiceError("El usuario no existe.");
+    }
 
-  const error = validateActiveChange({
-    actorId: actor.id,
-    actorRole: actor.role,
-    targetId: target.id,
-    targetRole: target.role as Role,
-    active: input.active,
-    otherActiveAdmins: await countOtherActiveAdmins(target.id),
-  });
-  if (error) {
-    throw new UserServiceError(error);
-  }
+    const error = validateActiveChange({
+      actorId: actor.id,
+      actorRole: actor.role,
+      targetId: target.id,
+      targetRole: target.role as Role,
+      active: input.active,
+      otherActiveAdmins,
+    });
+    if (error) {
+      throw new UserServiceError(error);
+    }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: target.id }, data: { active: input.active } });
+    const approving = input.active && target.approvedAt === null;
+    await tx.user.update({
+      where: { id: target.id },
+      data: { active: input.active, ...(approving ? { approvedAt: new Date() } : {}) },
+    });
     if (!input.active) {
       // Al desactivar se cierran todas sus sesiones.
       await tx.session.deleteMany({ where: { userId: target.id } });
     }
+    return { approved: approving ? { name: target.name, email: target.email } : null };
   });
 }

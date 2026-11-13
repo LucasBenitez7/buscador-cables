@@ -86,12 +86,32 @@ describe("searchTrays", () => {
         elevationLevel: 2,
         building: "99UXA · Edificio eléctrico",
         size: { widthMm: 600, flangeHeightMm: 100, bendRadiusMm: 300, diameterMm: null },
-        // Route steps of active cables: the deleted cable does not count.
-        cables: 3,
+        // Active cables, each once: one names the tray twice and the deleted one is out.
+        cables: 2,
         waiting: 1,
       },
       expect.objectContaining({ code: "99UXA00L22051", cables: 1, waiting: 0, building: null }),
     ]);
+  });
+
+  // Revisión F0-F7 (B8): el listado contaba tramos y la ficha, cables.
+  it("counts the same cables as the tray record", async () => {
+    const [listed] = (await searchTrays({ q: "99UXA00L22036" })).items;
+    const detail = await getTrayDetail("99UXA00L22036");
+
+    expect(listed?.cables).toBe(detail?.cables);
+  });
+
+  // Revisión F0-F7 (M6): Prisma no escapa los comodines de LIKE y "_" es parte de los códigos.
+  it("matches _ and % literally", async () => {
+    await prisma.tray.create({ data: { code: "99UM_00L22037", kind: "LADDER" } });
+
+    expect((await searchTrays({ q: "UM_" })).items.map((tray) => tray.code)).toEqual([
+      "99UM_00L22037",
+    ]);
+    expect((await searchTrays({ q: "_" })).total).toBe(1);
+    expect((await searchTrays({ q: "%" })).total).toBe(0);
+    expect((await searchTrays({ q: "UX_" })).total).toBe(0);
   });
 
   it("pages the list and clamps a page past the end", async () => {

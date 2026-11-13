@@ -4,12 +4,16 @@
  * Idempotent: it creates or updates by code and can run again with a new revision of the
  * lists without duplicating anything. It only writes **engineering** data (what the lists
  * say). What the field records with the app — status, connection, location, loose end,
- * notes, history — is never overwritten. Every new cable gets its CREATED event and every
- * change an UPDATED event, signed by the user who runs the load.
+ * notes, history — is never overwritten, and neither is a value somebody corrected by hand
+ * in the edit form (a measured length, the room of an end): the load keeps it and says so.
+ * Every new cable gets its CREATED event and every change an UPDATED event, signed by the
+ * user who runs the load and marked as written by the load.
  */
-import type { PrismaClient } from "@cables/db";
+import type { Prisma, PrismaClient } from "@cables/db";
 import {
+  CABLE_FIELD_LABELS,
   diffFields,
+  formatDecimal,
   parseBuildingCode,
   parseRoomCode,
   type FieldChange,
@@ -29,7 +33,14 @@ export type LoadOptions = {
   userId: string;
   now?: Date;
   onProgress?: (message: string) => void;
+  /** Runs the whole load in one transaction and rolls it back: only the summary is kept. */
+  dryRun?: boolean;
 };
+
+/** What the load needs from the database: the client itself or one open transaction. */
+type Db = Prisma.TransactionClient;
+/** Runs a group of writes atomically. In a dry run everything already shares one transaction. */
+type Within = <T>(run: (tx: Db) => Promise<T>) => Promise<T>;
 
 export type LoadSummary = {
   locations: { created: number };
@@ -99,14 +110,43 @@ const chunks = <T>(items: readonly T[], size = BATCH) =>
     items.slice(index * size, (index + 1) * size),
   );
 
+const ROLLBACK = Symbol("dry run");
+
 export async function loadProjectData(
-  db: PrismaClient,
+  client: PrismaClient,
   input: { cables: unknown; trays: unknown },
-  { userId, now = new Date(), onProgress = () => {} }: LoadOptions,
+  { userId, now = new Date(), onProgress = () => {}, dryRun = false }: LoadOptions,
 ): Promise<LoadSummary> {
   // The files come from disk: validate them again before writing anything.
   const cables = z.array(projectCableSchema).parse(input.cables);
   const trays = z.array(projectTraySchema).parse(input.trays);
+  const run = (db: Db, within: Within) =>
+    loadValidated(db, within, { cables, trays }, { userId, now, onProgress });
+
+  if (!dryRun) {
+    return run(client, (write) => client.$transaction(write));
+  }
+  let summary: LoadSummary | undefined;
+  await client
+    .$transaction(
+      async (tx) => {
+        summary = await run(tx, (write) => write(tx));
+        throw ROLLBACK;
+      },
+      { timeout: 10 * 60 * 1000, maxWait: 30 * 1000 },
+    )
+    .catch((error: unknown) => {
+      if (error !== ROLLBACK) throw error;
+    });
+  return summary!;
+}
+
+async function loadValidated(
+  db: Db,
+  within: Within,
+  { cables, trays }: { cables: ProjectCable[]; trays: ProjectTray[] },
+  { userId, now, onProgress }: Required<Pick<LoadOptions, "userId" | "now" | "onProgress">>,
+): Promise<LoadSummary> {
   const summary: LoadSummary = {
     locations: { created: 0 },
     cableTypes: { created: 0 },
@@ -120,9 +160,16 @@ export async function loadProjectData(
   onProgress(`Ubicaciones: ${summary.locations.created} nuevas`);
   const typeIds = await ensureCableTypes(db, cables, summary);
   onProgress(`Tipos de cable: ${summary.cableTypes.created} nuevos`);
-  const trayIds = await loadTrays(db, trays, locations, summary);
+  const trayIds = await loadTrays(db, within, trays, locations, summary);
   onProgress(`Bandejas: ${summary.trays.created} nuevas, ${summary.trays.updated} actualizadas`);
-  await loadCables(db, cables, { locations, typeIds, trayIds, userId, now }, summary, onProgress);
+  await loadCables(
+    db,
+    within,
+    cables,
+    { locations, typeIds, trayIds, userId, now },
+    summary,
+    onProgress,
+  );
   return summary;
 }
 
@@ -141,7 +188,7 @@ type Node = {
 const roomOf = (room: string | null) => (room ? parseRoomCode(room) : null);
 
 async function ensureLocations(
-  db: PrismaClient,
+  db: Db,
   cables: readonly ProjectCable[],
   trays: readonly ProjectTray[],
   summary: LoadSummary,
@@ -221,8 +268,16 @@ async function ensureLocations(
 // Cable types
 // ---------------------------------------------------------------------------
 
+/** Names compared as the catalog does: ignoring case and repeated spaces. */
+const typeKey = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * The id of the cable type of every name in the lists. A type is the same one when its name
+ * matches (ignoring case and spacing) or, if it was renamed in the app, when it still has
+ * the code the lists give it: the load never renames a type nor duplicates a renamed one.
+ */
 async function ensureCableTypes(
-  db: PrismaClient,
+  db: Db,
   cables: readonly ProjectCable[],
   summary: LoadSummary,
 ): Promise<Map<string, string>> {
@@ -232,9 +287,11 @@ async function ensureCableTypes(
       wanted.set(cable.typeName, cable.typeCode);
     }
   }
+  const wantedKeys = new Set([...wanted.keys()].map(typeKey));
   const existing = await db.cableType.findMany({ select: { id: true, name: true, code: true } });
-  const ids = new Map(existing.map((type) => [type.name, type.id]));
-  const usedCodes = new Set(existing.flatMap((type) => (type.code ? [type.code] : [])));
+  const byKey = new Map(existing.map((type) => [typeKey(type.name), type]));
+  const byCode = new Map(existing.flatMap((type) => (type.code ? [[type.code, type]] : [])));
+  const usedCodes = new Set(byCode.keys());
   const codeOf = (name: string, code: string | null) => {
     if (!code) return null;
     if (usedCodes.has(code)) {
@@ -247,20 +304,29 @@ async function ensureCableTypes(
     return code;
   };
 
-  for (const type of existing) {
-    const code = wanted.get(type.name);
-    if (!type.code && code) {
-      const free = codeOf(type.name, code);
-      if (free) await db.cableType.update({ where: { id: type.id }, data: { code: free } });
-    }
-  }
+  const ids = new Map<string, string>();
   for (const [name, code] of wanted) {
-    if (ids.has(name)) continue;
+    const sameName = byKey.get(typeKey(name));
+    if (sameName) {
+      ids.set(name, sameName.id);
+      if (!sameName.code && code) {
+        const free = codeOf(sameName.name, code);
+        if (free) await db.cableType.update({ where: { id: sameName.id }, data: { code: free } });
+      }
+      continue;
+    }
+    // Renamed in the app: it keeps the code, and no type of the lists has its new name.
+    const sameCode = code ? byCode.get(code) : undefined;
+    if (sameCode && !wantedKeys.has(typeKey(sameCode.name))) {
+      ids.set(name, sameCode.id);
+      continue;
+    }
     const created = await db.cableType.create({
       data: { name, code: codeOf(name, code) },
-      select: { id: true },
+      select: { id: true, name: true, code: true },
     });
     ids.set(name, created.id);
+    byKey.set(typeKey(name), created);
     summary.cableTypes.created += 1;
   }
   return ids;
@@ -271,7 +337,8 @@ async function ensureCableTypes(
 // ---------------------------------------------------------------------------
 
 async function loadTrays(
-  db: PrismaClient,
+  db: Db,
+  within: Within,
   trays: readonly ProjectTray[],
   locations: Map<string, LocationRef>,
   summary: LoadSummary,
@@ -333,7 +400,7 @@ async function loadTrays(
       continue;
     }
     // Trays hold no field data (only their notes, which the load never touches).
-    await db.$transaction(async (tx) => {
+    await within(async (tx) => {
       if (changed) await tx.tray.update({ where: { id: current.id }, data: values });
       if (sheetsChanged) {
         await tx.trayDrawing.deleteMany({ where: { trayId: current.id } });
@@ -425,8 +492,69 @@ function routeRows(route: readonly ProjectRouteStep[], trayIds: Map<string, stri
   }));
 }
 
+/**
+ * Engineering fields a person can also change in the edit form. If the last one to change
+ * one of them was a person (not an earlier load), the load keeps their value.
+ */
+const HAND_EDITABLE_FIELDS = [
+  "description",
+  "typeId",
+  "conductors",
+  "crossSectionMm2",
+  "voltageRating",
+  "lengthM",
+  "originId",
+  "destinationId",
+] as const satisfies readonly EngineeringField[];
+
+type HandEditableField = (typeof HAND_EDITABLE_FIELDS)[number];
+
+const isHandEditable = (field: string): field is HandEditableField =>
+  (HAND_EDITABLE_FIELDS as readonly string[]).includes(field);
+
+/**
+ * For each cable, the fields whose latest change in the history was made by a person in
+ * the app. A later load that changed the field again takes it back.
+ */
+async function handEditedFields(db: Db, cableIds: readonly string[]) {
+  const edited = new Map<string, Set<string>>();
+  for (const batch of chunks(cableIds)) {
+    const events = await db.cableEvent.findMany({
+      where: { cableId: { in: batch }, action: "UPDATED" },
+      select: { cableId: true, changes: true, source: true },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    for (const event of events) {
+      const fields = edited.get(event.cableId) ?? new Set<string>();
+      edited.set(event.cableId, fields);
+      const changed =
+        event.changes && typeof event.changes === "object" && !Array.isArray(event.changes)
+          ? Object.keys(event.changes)
+          : [];
+      for (const field of changed) {
+        if (event.source === "APP") fields.add(field);
+        else fields.delete(field);
+      }
+    }
+  }
+  return edited;
+}
+
+/** "Longitud (m) corregida en la app (150); el listado dice 142": why a field was kept. */
+function keptEditMessage(code: string, field: HandEditableField, change: FieldChange): string {
+  const label = CABLE_FIELD_LABELS[field];
+  // Locations and types are ids: their names are in the app, not here.
+  if (field === "typeId" || field === "originId" || field === "destinationId") {
+    return `${code}: ${label} cambiado en la app; no se sustituye por el del listado.`;
+  }
+  const text = (value: FieldValue) =>
+    value === null ? "sin dato" : typeof value === "number" ? formatDecimal(value) : value;
+  return `${code}: ${label} corregido en la app (${text(change.from)}); el listado dice ${text(change.to)}. No se cambia.`;
+}
+
 async function loadCables(
-  db: PrismaClient,
+  db: Db,
+  within: Within,
   cables: readonly ProjectCable[],
   context: CableContext,
   summary: LoadSummary,
@@ -445,10 +573,25 @@ async function loadCables(
     .map((cable) => cable.code)
     .sort();
 
+  // A route step whose tray is unknown keeps its text but loses the link: say so.
+  const unknownTrays = new Set(
+    cables.flatMap((cable) =>
+      cable.route.flatMap((step) =>
+        step.trayCode && !context.trayIds.has(step.trayCode) ? [step.trayCode] : [],
+      ),
+    ),
+  );
+  if (unknownTrays.size > 0) {
+    const codes = [...unknownTrays].sort();
+    summary.issues.push(
+      `Los recorridos nombran ${codes.length} bandejas que no están cargadas (${codes.slice(0, 10).join(", ")}${codes.length > 10 ? "…" : ""}): esos tramos quedan sin enlazar.`,
+    );
+  }
+
   // New cables, in batches: they come in "unverified" until somebody checks them.
   const toCreate = cables.filter((cable) => !byCode.has(cable.code));
   for (const batch of chunks(toCreate)) {
-    const created = await db.$transaction(async (tx) => {
+    const created = await within(async (tx) => {
       const rows = await tx.cable.createManyAndReturn({
         data: batch.map((cable) => ({
           code: cable.code,
@@ -468,6 +611,7 @@ async function loadCables(
           cableId: idOf.get(cable.code)!,
           userId: context.userId,
           action: "CREATED" as const,
+          source: "PROJECT_LOAD" as const,
           changes: { installationStatus: { from: null, to: "UNVERIFIED" } },
           notes: `Cargado de los listados del proyecto (${cable.sourceDocument ?? cable.sourceFile}, pág. ${cable.sourcePage}).`,
           createdAt: context.now,
@@ -489,6 +633,16 @@ async function loadCables(
   }
 
   // Cables already in the database: only what the lists say, and only if it changed.
+  type Pending = {
+    cable: ProjectCable;
+    current: (typeof existing)[number];
+    after: EngineeringValues;
+    changes: Record<string, FieldChange>;
+    route: StoredStep[];
+    currentRoute: StoredStep[];
+    routeChanged: boolean;
+  };
+  const pending: Pending[] = [];
   for (const cable of cables) {
     const current = byCode.get(cable.code);
     if (!current) continue;
@@ -509,6 +663,10 @@ async function loadCables(
       lengthPending: current.lengthPending ? "sí" : "no",
     };
     const after = engineeringValues(cable, context);
+    // The power lists give no room: a room somebody chose in the app is not "removed".
+    for (const field of ["originId", "destinationId"] as const) {
+      if (after[field] === null && before[field] !== null) after[field] = before[field];
+    }
     const changes: Record<string, FieldChange> = diffFields(ENGINEERING_FIELDS, before, after);
 
     const route = routeRows(cable.route, context.trayIds);
@@ -519,8 +677,40 @@ async function loadCables(
       section,
     }));
     const routeChanged = JSON.stringify(route) !== JSON.stringify(currentRoute);
+    if (Object.keys(changes).length === 0 && !routeChanged) {
+      summary.cables.unchanged += 1;
+      continue;
+    }
+    pending.push({ cable, current, after, changes, route, currentRoute, routeChanged });
+  }
+
+  // Values a person corrected in the app win over the lists: keep them and say so.
+  const edited = await handEditedFields(
+    db,
+    pending
+      .filter(({ changes }) => Object.keys(changes).some(isHandEditable))
+      .map(({ current }) => current.id),
+  );
+  const trayCodes = new Map([...context.trayIds].map(([code, id]) => [id, code]));
+
+  for (const { cable, current, after, changes, route, currentRoute, routeChanged } of pending) {
+    const kept = edited.get(current.id);
+    for (const field of Object.keys(changes)) {
+      if (kept?.has(field) && isHandEditable(field)) {
+        summary.issues.push(keptEditMessage(cable.code, field, changes[field]!));
+        delete changes[field];
+      }
+    }
     if (routeChanged) {
       changes.route = { from: `${currentRoute.length} tramos`, to: `${route.length} tramos` };
+      // A partially laid cable waits in a tray of its route: the new route may not have it.
+      const looseTrayId = current.looseEndTrayId;
+      const routeTrays = route.flatMap((step) => (step.trayId ? [step.trayId] : []));
+      if (looseTrayId && routeTrays.length > 0 && !routeTrays.includes(looseTrayId)) {
+        summary.issues.push(
+          `${cable.code}: la punta suelta espera en la bandeja ${trayCodes.get(looseTrayId) ?? "?"}, que ya no está en su recorrido nuevo. Revísalo en campo.`,
+        );
+      }
     }
     if (Object.keys(changes).length === 0) {
       summary.cables.unchanged += 1;
@@ -532,7 +722,7 @@ async function loadCables(
         .filter((field) => field !== "route")
         .map((field) => [field, after[field as EngineeringField]]),
     ) as Partial<EngineeringValues>;
-    await db.$transaction(async (tx) => {
+    await within(async (tx) => {
       // The summary columns ("último movimiento") stay with the field actions.
       await tx.cable.update({
         where: { id: current.id },
@@ -553,6 +743,7 @@ async function loadCables(
           cableId: current.id,
           userId: context.userId,
           action: "UPDATED",
+          source: "PROJECT_LOAD",
           changes,
           notes: `Actualizado desde los listados del proyecto (revisión ${cable.revision ?? "?"}).`,
           createdAt: context.now,

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache, type ReactNode } from "react";
+import { cache } from "react";
 import {
   CABLE_ACTION_LABELS,
   CABLE_LEVEL_LABELS,
@@ -10,13 +10,14 @@ import {
   formatDecimal,
   hasPermission,
 } from "@cables/shared";
+import { Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getCableDetail } from "@/server/cables/detail";
 import { listLocationOptions } from "@/server/cables/service";
-import { requireUser } from "@/server/session";
+import { requireUser, whenSignedIn } from "@/server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,9 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
 });
 
-// generateMetadata y la página piden el mismo cable: una sola consulta por petición.
-const loadCable = cache(getCableDetail);
+// generateMetadata y la página piden el mismo cable: una sola consulta por petición, y
+// ninguna sin sesión (generateMetadata se ejecuta aparte de la comprobación de la página).
+const loadCable = cache((id: string) => whenSignedIn(() => getCableDetail(id)));
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params;
@@ -107,7 +109,10 @@ export default async function CablePage({ params }: { params: Params }) {
         availability={availability}
         locations={locations}
         events={correctableEvents}
-        routeTrays={cable.route.flatMap((step) => (step.trayCode ? [step.trayCode] : []))}
+        // Un recorrido puede nombrar dos veces la misma bandeja: se sugiere una sola vez.
+        routeTrays={[
+          ...new Set(cable.route.flatMap((step) => (step.trayCode ? [step.trayCode] : []))),
+        ]}
       />
 
       <Section title="Extremos">
@@ -188,6 +193,12 @@ export default async function CablePage({ params }: { params: Params }) {
       </Section>
 
       <Section title="Historial (más reciente primero)">
+        {cable.historyTotal > cable.history.length ? (
+          <p role="note" className="text-muted-foreground text-sm">
+            Se muestran los {cable.history.length} movimientos más recientes de {cable.historyTotal}
+            . Los anteriores siguen guardados.
+          </p>
+        ) : null}
         {cable.history.length === 0 ? (
           <p className="text-muted-foreground text-sm">Sin historial.</p>
         ) : (
@@ -226,23 +237,5 @@ export default async function CablePage({ params }: { params: Params }) {
         )}
       </Section>
     </article>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <h2 className="text-base font-medium">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function Item({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd>{children ?? "—"}</dd>
-    </div>
   );
 }

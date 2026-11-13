@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache, type ReactNode } from "react";
+import { cache } from "react";
 import {
   CABLE_END_SIDE_LABELS,
   CABLE_LEVEL_LABELS,
@@ -9,18 +9,23 @@ import {
   formatTraySize,
   normalizeTrayCode,
 } from "@cables/shared";
+import { Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getTrayDetail, type TrayCable } from "@/server/trays/service";
-import { requireUser } from "@/server/session";
+import { decodeRouteParam } from "@/lib/route-params";
+import { requireUser, whenSignedIn } from "@/server/session";
 
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ code: string }>;
 
-const loadTray = cache((code: string) =>
-  getTrayDetail(normalizeTrayCode(decodeURIComponent(code))),
-);
+// Una sola consulta para generateMetadata y la página, y ninguna sin sesión. Un código mal
+// codificado en la URL es una bandeja que no existe, no un error.
+const loadTray = cache(async (code: string) => {
+  const decoded = decodeRouteParam(code);
+  return decoded === null ? null : whenSignedIn(() => getTrayDetail(normalizeTrayCode(decoded)));
+});
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const tray = await loadTray((await params).code);
@@ -147,23 +152,5 @@ function CableList({ cables }: { cables: TrayCable[] }) {
         </li>
       ))}
     </ul>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <h2 className="text-base font-medium">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function Item({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd>{children ?? "—"}</dd>
-    </div>
   );
 }

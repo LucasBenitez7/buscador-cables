@@ -92,10 +92,12 @@ export type CableDetail = {
   createdAt: Date;
   updatedAt: Date;
   deleted: { at: Date; user: string; reason: string | null } | null;
+  /** The latest events, newest first; `historyTotal` says how many there are in all. */
   history: CableHistoryEntry[];
+  historyTotal: number;
 };
 
-const HISTORY_LIMIT = 100;
+export const HISTORY_LIMIT = 100;
 const dateFormat = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "short",
   timeStyle: "short",
@@ -191,6 +193,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       manufacturer: { select: { name: true } },
       lastActionBy: { select: { name: true } },
       looseEndTray: { select: { code: true } },
+      _count: { select: { events: true } },
       routeSteps: {
         orderBy: { position: "asc" },
         select: {
@@ -305,6 +308,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
           reason: deletion?.notes ?? null,
         }
       : null,
+    historyTotal: cable._count.events,
     history: cable.events.map((event) => ({
       id: event.id,
       action: event.action,

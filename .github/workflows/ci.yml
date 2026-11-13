@@ -152,7 +152,7 @@ jobs:
           --health-retries 10
       # Correo de pruebas: los E2E leen ahí los enlaces de confirmación y de recuperación.
       mailpit:
-        image: axllent/mailpit:latest # la misma que docker-compose.yml
+        image: axllent/mailpit:v1.33.1 # la misma que docker-compose.yml
         ports:
           - 1025:1025
           - 8025:8025

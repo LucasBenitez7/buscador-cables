@@ -1,8 +1,10 @@
 import "server-only";
-import { Prisma, prisma } from "@cables/db";
+import type { Prisma } from "@cables/db";
+import { prisma } from "@cables/db";
 import {
   CABLE_EDITABLE_FIELDS,
   diffFields,
+  validateCableState,
   type CableEditableField,
   type CableFields,
   type ConnectionStatus,
@@ -13,6 +15,7 @@ import {
   type LocationType,
   type UpdateCableInput,
 } from "@cables/shared";
+import { isUniqueViolation } from "@/server/prisma-errors";
 
 export class CableServiceError extends Error {}
 
@@ -85,10 +88,6 @@ function fieldData(input: CableFields) {
   };
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
-}
-
 async function assertCodeAvailable(db: Db, code: string, exceptId?: string) {
   const existing = await db.cable.findUnique({
     where: { code },
@@ -140,7 +139,11 @@ export async function createCable(
   actor: Actor,
   input: CreateCableInput,
 ): Promise<{ id: string; code: string }> {
-  const currentLocationId = input.installationStatus === "LAID" ? null : input.currentLocationId;
+  // Only a cable in stock or coiled has a place of its own: the form may still send the
+  // one chosen before switching to "tendido" or "sin revisar".
+  const hasOwnPlace =
+    input.installationStatus === "IN_STOCK" || input.installationStatus === "COILED";
+  const currentLocationId = hasOwnPlace ? input.currentLocationId : null;
   await assertCodeAvailable(prisma, input.code);
   await assertReferences(prisma, {
     typeId: input.typeId,
@@ -217,6 +220,24 @@ export async function updateCable(
   }
   if (changes.code) {
     await assertCodeAvailable(prisma, input.code, input.id);
+  }
+  if (changes.originId || changes.destinationId) {
+    // The state machine demands both ends of a laid cable; the form must not remove them.
+    // Cables from the project lists may know the equipment but not the room.
+    const stateError = validateCableState({
+      installationStatus: current.installationStatus,
+      connectionStatus: current.connectionStatus,
+      currentLocationId: current.currentLocationId,
+      looseEnd: current.looseEnd,
+      looseEndTray: current.looseEndTrayId,
+      originId: input.originId ?? current.originEquipment,
+      destinationId: input.destinationId ?? current.destinationEquipment,
+    });
+    if (stateError) {
+      throw new CableServiceError(
+        `${stateError} Cambia primero su estado con una acción (enrollar, corregir…).`,
+      );
+    }
   }
   await assertReferences(prisma, {
     typeId: input.typeId,

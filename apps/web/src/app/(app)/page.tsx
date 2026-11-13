@@ -1,10 +1,13 @@
 import { HealthCard } from "@/features/system/components/health-card";
 import { getHealth } from "@/server/health";
+import { requireUser } from "@/server/session";
 
 // El estado de la base de datos se consulta en cada petición, no en el build.
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  // Cada página comprueba la sesión: en una navegación en cliente el layout no se repite.
+  await requireUser();
   const health = await getHealth();
 
   return (

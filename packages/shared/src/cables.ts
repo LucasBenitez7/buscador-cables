@@ -30,6 +30,10 @@ export const CABLE_ACTIONS = [
   "DELETED",
 ] as const;
 
+/** Who wrote a history event. The Prisma enum `CableEventSource` must list the same members. */
+export const CABLE_EVENT_SOURCES = ["APP", "PROJECT_LOAD"] as const;
+export type CableEventSource = (typeof CABLE_EVENT_SOURCES)[number];
+
 export type InstallationStatus = (typeof INSTALLATION_STATUSES)[number];
 export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
 export type CableAction = (typeof CABLE_ACTIONS)[number];
@@ -145,6 +149,16 @@ export const PROJECT_FIELD_LABELS: Record<string, string> = {
 // Field schemas (inputs arrive as strings from a FormData)
 // ---------------------------------------------------------------------------
 
+/**
+ * Longest text each field accepts. One source for the edit form and for the load of the
+ * project lists (`packages/data`): a cable loaded with a longer text could not be saved again.
+ */
+export const CABLE_TEXT_LIMITS = {
+  description: 500,
+  voltageRating: 50,
+  notes: 2000,
+} as const;
+
 /** "" or missing → null; trims and caps length. */
 function optionalText(max: number, label: string) {
   return z
@@ -183,7 +197,10 @@ function optionalDecimal(label: string, max: number) {
       }
       const number = Number(text);
       if (number <= 0 || number > max) {
-        ctx.addIssue({ code: "custom", message: `${label}: debe estar entre 0 y ${max}` });
+        ctx.addIssue({
+          code: "custom",
+          message: `${label}: debe ser mayor que 0 y como máximo ${max}`,
+        });
         return z.NEVER;
       }
       return number;
@@ -198,7 +215,8 @@ const optionalConductors = z
     if (text === "") {
       return null;
     }
-    const number = Number(text);
+    // Only digits: `Number` alone also accepts "1e2" (100) and "0x10" (16).
+    const number = /^[0-9]+$/.test(text) ? Number(text) : Number.NaN;
     if (!Number.isInteger(number) || number < 1 || number > 500) {
       ctx.addIssue({
         code: "custom",
@@ -211,7 +229,7 @@ const optionalConductors = z
 
 const cableFieldsSchema = z.object({
   code: cableCodeSchema,
-  description: optionalText(200, "Descripción"),
+  description: optionalText(CABLE_TEXT_LIMITS.description, "Descripción"),
   typeId: optionalId,
   colorId: optionalId,
   manufacturerId: optionalId,
@@ -219,10 +237,10 @@ const cableFieldsSchema = z.object({
   crossSectionMm2: optionalDecimal("Sección", 10_000),
   outerDiameterMm: optionalDecimal("Diámetro exterior", 1_000),
   lengthM: optionalDecimal("Longitud", 100_000),
-  voltageRating: optionalText(30, "Tensión nominal"),
+  voltageRating: optionalText(CABLE_TEXT_LIMITS.voltageRating, "Tensión nominal"),
   originId: optionalId,
   destinationId: optionalId,
-  notes: optionalText(2000, "Notas"),
+  notes: optionalText(CABLE_TEXT_LIMITS.notes, "Notas"),
 });
 
 export type CableFields = z.infer<typeof cableFieldsSchema>;
@@ -275,7 +293,7 @@ export const createCableSchema = cableFieldsSchema
     }
   });
 
-const versionSchema = z.coerce
+export const versionSchema = z.coerce
   .number({ error: "Versión no válida" })
   .int("Versión no válida")
   .min(1, "Versión no válida");

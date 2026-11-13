@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountApprovedEmail,
   accountExistsEmail,
   escapeHtml,
   passwordResetEmail,
+  pendingApprovalEmail,
   verificationEmail,
 } from "./email-templates";
 
@@ -67,5 +69,37 @@ describe("accountExistsEmail", () => {
     expect(email.subject).toMatch(/ya tienes una cuenta/i);
     expect(email.text).toContain("https://cables.example/forgot-password");
     expect(email.html).toContain("Ana &lt;b&gt;");
+  });
+});
+
+describe("pendingApprovalEmail", () => {
+  it("tells the administrator who waits and where to approve", () => {
+    const email = pendingApprovalEmail({
+      to: "admin@planta.example",
+      applicantName: "Nico <b>",
+      applicantEmail: "nico@planta.example",
+      usersUrl: "https://cables.example/admin/users",
+    });
+
+    expect(email.to).toBe("admin@planta.example");
+    expect(email.subject).toMatch(/pendiente de aprobación/i);
+    expect(email.text).toContain("nico@planta.example");
+    expect(email.text).toContain("https://cables.example/admin/users");
+    expect(email.html).toContain("Nico &lt;b&gt;");
+    expect(email.html).not.toContain("<b>");
+  });
+});
+
+describe("accountApprovedEmail", () => {
+  it("tells the user that the account is ready", () => {
+    const email = accountApprovedEmail({
+      to: "nico@planta.example",
+      name: "Nico",
+      loginUrl: "https://cables.example/login",
+    });
+
+    expect(email.subject).toMatch(/aprobada/i);
+    expect(email.text).toContain("https://cables.example/login");
+    expect(email.html).toContain("Hola Nico.");
   });
 });

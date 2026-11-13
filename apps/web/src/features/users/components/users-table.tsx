@@ -33,7 +33,9 @@ export function UsersTable({ users, currentUserId, currentRole }: Props) {
         <tbody className="block md:table-row-group">
           {users.map((user) => (
             <UserRowView
-              key={user.id}
+              // La clave incluye el rol: si otro administrador lo cambia y la tabla se
+              // revalida, la fila se vuelve a montar con el rol real.
+              key={`${user.id}:${user.role}`}
               user={user}
               isSelf={user.id === currentUserId}
               currentRole={currentRole}
@@ -122,21 +124,25 @@ function UserRowView({
         )}
       </td>
       <td data-label="Estado" className={CELL}>
-        <span className={user.active ? "text-success" : "text-muted-foreground"}>
-          {user.active ? "Activo" : "Desactivado"}
+        <span
+          className={
+            user.active ? "text-success" : user.pending ? "text-warning" : "text-muted-foreground"
+          }
+        >
+          {user.active ? "Activo" : user.pending ? "Pendiente de aprobación" : "Desactivado"}
         </span>
       </td>
       <td className="block pt-2 md:table-cell md:px-4 md:py-3">
         {manageable ? (
           <Button
-            variant="outline"
+            variant={user.pending ? "default" : "outline"}
             size="sm"
             disabled={pending}
             onClick={() =>
               run(setUserActiveAction, { userId: user.id, active: String(!user.active) })
             }
           >
-            {user.active ? "Desactivar" : "Reactivar"}
+            {user.active ? "Desactivar" : user.pending ? "Aprobar" : "Reactivar"}
           </Button>
         ) : null}
         {message ? (

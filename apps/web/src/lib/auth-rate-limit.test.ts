@@ -8,7 +8,8 @@ describe("authRateLimit", () => {
   });
 
   it.each([
-    ["/sign-in/email", 5],
+    // Generoso a propósito: toda la planta comparte IP. El límite por cuenta va aparte.
+    ["/sign-in/email", 30],
     ["/sign-up/email", 3],
     ["/request-password-reset", 3],
     ["/reset-password", 5],

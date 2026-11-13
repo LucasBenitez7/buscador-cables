@@ -39,8 +39,7 @@ buscador-cables/
 │       │   ├── features/         # Módulos por dominio (cables, locations, users)
 │       │   │   └── cables/
 │       │   │       ├── components/
-│       │   │       ├── actions.ts    # Server Actions (capa fina)
-│       │   │       └── queries.ts
+│       │   │       └── actions.ts    # Server Actions (capa fina); las consultas van en server/
 │       │   ├── server/           # Lógica de negocio pura (services), permisos
 │       │   └── lib/              # auth, env, utilidades
 │       └── e2e/                  # Tests Playwright
@@ -233,17 +232,41 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   (`ORIGIN`/`DESTINATION`) y `Cable.looseEndTrayId` dicen qué punta quedó suelta y en qué
   bandeja espera; la restricción `cable_loose_end_check` exige que solo un cable tendido a
   medias los tenga. El historial guarda el código de la bandeja, no su id.
-- `CableType.code`: código del tipo en el listado eléctrico (`C0802`).
+- `CableType.code`: código del tipo en el listado eléctrico (`C0802`). Los nombres de los tres
+  catálogos son únicos sin distinguir mayúsculas (índice único sobre `lower(name)`).
+- `CableEvent.source` (`APP` / `PROJECT_LOAD`): quién escribió el evento, una persona en la
+  app o la carga de los listados. La carga lo usa para no pisar lo que alguien corrigió a mano.
+- Los límites de longitud de los textos de un cable (`CABLE_TEXT_LIMITS` en `packages/shared`)
+  son los mismos en el formulario y en la carga.
 
 ## Seguridad
 
 - Contraseñas con hash (gestionado por Better Auth, scrypt/argon2).
 - Tokens de recuperación de un solo uso, con caducidad y almacenados con hash.
 - La respuesta de "olvidé mi contraseña" es siempre la misma, exista o no el email (no revela usuarios).
-- Registro abierto con verificación de email obligatoria. Toda cuenta nueva es `VIEWER` activa
-  (lo fuerza un hook en el servidor, el cliente no puede elegir rol). Registrarse con un correo
-  que ya existe da la misma respuesta y solo avisa por correo al dueño real.
-- Las cuentas desactivadas no pueden abrir sesión (hook `session.create.before`).
+- Cualquiera puede **pedir** una cuenta, con verificación de email obligatoria, pero no entra
+  hasta que un administrador la **aprueba** en `/admin/users` (decisión del 2026-11-13: la app
+  guarda los datos reales del cliente). La cuenta nueva es `VIEWER` e inactiva (lo fuerza un
+  hook en el servidor, el cliente no puede elegir rol ni estado); `User.approvedAt` distingue
+  "pendiente de aprobación" de "desactivada". Al confirmar el correo se avisa a los
+  administradores, y al aprobarla, al usuario. Registrarse con un correo que ya existe da la
+  misma respuesta y solo avisa por correo al dueño real.
+- Las cuentas pendientes o desactivadas no pueden abrir sesión (hook `session.create.before`).
+- Nadie cambia su propio nombre, correo o imagen: el historial enseña el nombre actual de
+  quien hizo cada cosa, así que `POST /api/auth/update-user` se rechaza (hook
+  `user.update.before`). Los nombres los fija el registro o un administrador.
 - Toda Server Action / Route Handler valida la sesión, el rol y la entrada (Zod) en el servidor.
-- Rate limiting en endpoints de autenticación, con contadores en base de datos (tabla `rateLimit`).
-- Ningún secreto en el repositorio; solo `.env.example`.
+  Los cargadores que comparten `generateMetadata` y la página pasan por `whenSignedIn`: el
+  proxy solo comprueba que exista la cookie.
+- Límite de intentos en los endpoints de autenticación, con contadores en base de datos (tabla
+  `rateLimit`), en dos niveles:
+  - **por IP**: 30 inicios de sesión por minuto (toda la planta comparte IP), 3 registros y 3
+    peticiones de recuperación;
+  - **por cuenta**: 10 contraseñas incorrectas seguidas bloquean ese correo 15 minutos, venga
+    de la IP que venga, exista o no la cuenta (`server/login-throttle.ts`).
+- La redirección tras el login solo acepta rutas internas, resueltas como las resuelve el
+  navegador (`safeNextPath`).
+- Cabeceras en todas las rutas: `frame-ancestors 'none'`, `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff` y `Referrer-Policy`. La CSP completa queda para la fase 10.
+- Ningún secreto en el repositorio; solo `.env.example`. El seed se niega a crear en
+  producción el administrador con el correo o la contraseña de ejemplo.

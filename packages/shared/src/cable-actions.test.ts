@@ -96,6 +96,23 @@ describe("UNVERIFIED (sin revisar)", () => {
     );
   });
 
+  // Revisión F0-F7 (B15): una corrección podía dejarlo "sin revisar" y con ubicación.
+  it("cannot have a physical location", () => {
+    expect(validateCableState({ ...unverified, currentLocationId: "store" })).toMatch(
+      /Un cable sin revisar no tiene ubicación/,
+    );
+    const outcome = applyCableAction(inStock, {
+      action: "CORRECTION",
+      correctsEventId: "e1",
+      installationStatus: "UNVERIFIED",
+      connectionStatus: "DISCONNECTED",
+      currentLocationId: inStock.currentLocationId,
+      looseEnd: null,
+      looseEndTray: null,
+    });
+    expect(outcome.ok).toBe(false);
+  });
+
   it("is registered as found: laid, partially laid, coiled or retired", () => {
     expect(nextOf(unverified, { action: "LAID" }).changes.installationStatus).toEqual({
       from: "UNVERIFIED",

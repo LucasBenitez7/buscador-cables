@@ -53,6 +53,46 @@ export function verificationEmail(input: { to: string; name: string; url: string
   };
 }
 
+/** Sent to every active administrator when a new account confirms its email. */
+export function pendingApprovalEmail(input: {
+  to: string;
+  applicantName: string;
+  applicantEmail: string;
+  usersUrl: string;
+}): OutgoingEmail {
+  const who = `${input.applicantName} (${input.applicantEmail})`;
+  return {
+    to: input.to,
+    subject: `${APP_NAME}: cuenta pendiente de aprobación`,
+    text: `${who} ha creado una cuenta y ha confirmado su correo.\n\nNo podrá entrar hasta que un administrador la apruebe:\n${input.usersUrl}\n\nSi no conoces a esta persona, no la apruebes.`,
+    html: layout(
+      "Cuenta pendiente de aprobación",
+      `${escapeHtml(who)} ha creado una cuenta y ha confirmado su correo. No podrá entrar hasta que un administrador la apruebe. Si no conoces a esta persona, no la apruebes.`,
+      "Revisar usuarios",
+      input.usersUrl,
+    ),
+  };
+}
+
+/** Sent to the user when an administrator approves the account. */
+export function accountApprovedEmail(input: {
+  to: string;
+  name: string;
+  loginUrl: string;
+}): OutgoingEmail {
+  return {
+    to: input.to,
+    subject: `${APP_NAME}: tu cuenta está aprobada`,
+    text: `Hola ${input.name}.\n\nUn administrador ha aprobado tu cuenta. Ya puedes entrar:\n${input.loginUrl}`,
+    html: layout(
+      "Tu cuenta está aprobada",
+      `Hola ${escapeHtml(input.name)}. Un administrador ha aprobado tu cuenta. Ya puedes entrar con tu correo y tu contraseña.`,
+      "Iniciar sesión",
+      input.loginUrl,
+    ),
+  };
+}
+
 /**
  * Sent when someone tries to register with an email that already has an account.
  * The sign-up form always shows the same answer, so only the real owner of the

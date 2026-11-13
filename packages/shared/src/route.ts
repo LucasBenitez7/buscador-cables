@@ -25,9 +25,16 @@ export function routeProgress(
   if (state.installationStatus === "LAID") {
     return { steps: route.map(() => "laid"), looseIndex: null };
   }
+  // A route may go through the same tray twice. The record only says "it waits in tray X",
+  // so the cable is taken to have got as far as the first time it meets that tray in the
+  // direction it is laid: from the origin when the destination end is loose, and back from
+  // the destination when the origin end is. Nothing is marked laid that might not be.
+  const isLooseTray = (step: { trayCode: string | null }) => step.trayCode === state.looseEndTray;
   const looseIndex =
     state.installationStatus === "PARTIALLY_LAID" && state.looseEndTray
-      ? route.findIndex((step) => step.trayCode === state.looseEndTray)
+      ? state.looseEnd === "ORIGIN"
+        ? route.findLastIndex(isLooseTray)
+        : route.findIndex(isLooseTray)
       : -1;
   if (looseIndex === -1 || !state.looseEnd) {
     return { steps: route.map(() => "unknown"), looseIndex: null };

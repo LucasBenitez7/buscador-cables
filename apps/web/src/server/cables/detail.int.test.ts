@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@cables/db";
 import { cableActionSchema, createCableSchema, updateCableSchema } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
-import { getCableDetail } from "./detail";
+import { HISTORY_LIMIT, getCableDetail } from "./detail";
 import { runCableAction } from "./field-actions";
 import { createCable, deleteCable, getCableForEdit, updateCable } from "./service";
 
@@ -64,6 +64,26 @@ describe("getCableDetail", () => {
       lastAction: { action: "CREATED", user: "Tomás Gil" },
       deleted: null,
     });
+  });
+
+  // Revisión F0-F7 (B9): el historial se cortaba en los 100 últimos sin decir que había más.
+  it("says how many events there are when it only returns the latest", async () => {
+    const { id } = await newCable();
+    await prisma.cableEvent.createMany({
+      data: Array.from({ length: HISTORY_LIMIT + 4 }, (_, index) => ({
+        cableId: id,
+        userId: actor.id,
+        action: "UPDATED" as const,
+        changes: { notes: { from: null, to: `nota ${index}` } },
+        createdAt: new Date(Date.UTC(2026, 10, 13, 8, 0, index)),
+      })),
+    });
+
+    const detail = await getCableDetail(id);
+
+    expect(detail?.history).toHaveLength(HISTORY_LIMIT);
+    // The CREATED event of `newCable` plus the ones above.
+    expect(detail?.historyTotal).toBe(HISTORY_LIMIT + 5);
   });
 
   it("returns a readable history, newest first", async () => {

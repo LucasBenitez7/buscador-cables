@@ -9,9 +9,11 @@ import {
   type CreateLocationInput,
   type FlatLocation,
   type LocationNode,
+  type LocationType,
   type MoveLocationInput,
   type UpdateLocationInput,
 } from "@cables/shared";
+import { isForeignKeyViolation, isUniqueViolation } from "@/server/prisma-errors";
 
 export class LocationServiceError extends Error {}
 
@@ -24,10 +26,6 @@ export type LocationWithCounts = FlatLocation & {
 };
 
 const DUPLICATE_CODE = "Ya existe una ubicación con ese código.";
-
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
-}
 
 export async function listLocationTree(): Promise<LocationNode<LocationWithCounts>[]> {
   const [locations, counts] = await Promise.all([
@@ -116,20 +114,37 @@ async function rewriteDescendantPaths(tx: Transaction, oldPath: string, newPath:
     WHERE "path" LIKE ${`${oldPath}${PATH_SEPARATOR}%`}`;
 }
 
+type LockedLocation = {
+  id: string;
+  type: LocationType;
+  code: string;
+  path: string;
+  parentId: string | null;
+};
+
+/**
+ * Reads locations inside the transaction and locks their rows until it ends. The paths
+ * of a subtree are rewritten from the path read here: read outside the transaction, a
+ * rename and a move of the same branch at the same time left descendants with a stale
+ * prefix. Rows are locked in id order so two transactions cannot deadlock.
+ */
+async function lockLocations(tx: Transaction, ids: readonly string[]) {
+  const rows = await tx.$queryRaw<LockedLocation[]>`
+    SELECT "id", "type"::text AS "type", "code", "path", "parentId"
+    FROM "location" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`;
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
 export async function updateLocation(input: UpdateLocationInput): Promise<void> {
-  const current = await prisma.location.findUnique({
-    where: { id: input.id },
-    select: { code: true, path: true },
-  });
-  if (!current) {
-    throw new LocationServiceError("La ubicación no existe.");
-  }
-
-  const oldPath = current.path;
-  const newPath = `${oldPath.slice(0, oldPath.length - current.code.length)}${input.code}`;
-
   try {
     await prisma.$transaction(async (tx) => {
+      const current = (await lockLocations(tx, [input.id])).get(input.id);
+      if (!current) {
+        throw new LocationServiceError("La ubicación no existe.");
+      }
+      const oldPath = current.path;
+      const newPath = `${oldPath.slice(0, oldPath.length - current.code.length)}${input.code}`;
+
       await tx.location.update({
         where: { id: input.id },
         data: { name: input.name, code: input.code, path: newPath },
@@ -153,39 +168,32 @@ export async function updateLocation(input: UpdateLocationInput): Promise<void> 
  * only the materialized paths change.
  */
 export async function moveLocation(input: MoveLocationInput): Promise<void> {
-  const [location, parent] = await Promise.all([
-    prisma.location.findUnique({
-      where: { id: input.id },
-      select: { type: true, code: true, path: true, parentId: true },
-    }),
-    prisma.location.findUnique({
-      where: { id: input.parentId },
-      select: { type: true, path: true },
-    }),
-  ]);
-  if (!location) {
-    throw new LocationServiceError("La ubicación no existe.");
-  }
-  if (!parent) {
-    throw new LocationServiceError("La ubicación de destino no existe.");
-  }
-  if (location.type === "PLANT") {
-    throw new LocationServiceError("Las plantas no se pueden mover.");
-  }
-  if (location.parentId === input.parentId) {
-    return;
-  }
-  // Imposible con la jerarquía por niveles, pero un ciclo rompería el árbol entero.
-  if (isWithinPath(parent.path, location.path)) {
-    throw new LocationServiceError("No se puede mover una ubicación dentro de sí misma.");
-  }
-  const error = validateLocationPlacement(location.type, parent.type);
-  if (error) {
-    throw new LocationServiceError(error);
-  }
-
-  const newPath = buildLocationPath(parent.path, location.code);
   await prisma.$transaction(async (tx) => {
+    const locked = await lockLocations(tx, [input.id, input.parentId]);
+    const location = locked.get(input.id);
+    const parent = locked.get(input.parentId);
+    if (!location) {
+      throw new LocationServiceError("La ubicación no existe.");
+    }
+    if (!parent) {
+      throw new LocationServiceError("La ubicación de destino no existe.");
+    }
+    if (location.type === "PLANT") {
+      throw new LocationServiceError("Las plantas no se pueden mover.");
+    }
+    if (location.parentId === input.parentId) {
+      return;
+    }
+    // Imposible con la jerarquía por niveles, pero un ciclo rompería el árbol entero.
+    if (isWithinPath(parent.path, location.path)) {
+      throw new LocationServiceError("No se puede mover una ubicación dentro de sí misma.");
+    }
+    const error = validateLocationPlacement(location.type, parent.type);
+    if (error) {
+      throw new LocationServiceError(error);
+    }
+
+    const newPath = buildLocationPath(parent.path, location.code);
     await tx.location.update({
       where: { id: input.id },
       data: { parentId: input.parentId, path: newPath },
@@ -232,7 +240,7 @@ export async function deleteLocation(id: string): Promise<void> {
     await prisma.location.delete({ where: { id } });
   } catch (caught) {
     // Otra petición creó una referencia entre la comprobación y el borrado.
-    if (caught instanceof Prisma.PrismaClientKnownRequestError && caught.code === "P2003") {
+    if (isForeignKeyViolation(caught)) {
       throw new LocationServiceError("No se puede eliminar: la ubicación está en uso.");
     }
     throw caught;

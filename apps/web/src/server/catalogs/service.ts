@@ -1,5 +1,5 @@
 import "server-only";
-import { Prisma, prisma } from "@cables/db";
+import { prisma } from "@cables/db";
 import {
   CATALOG_LABELS,
   type CatalogItem,
@@ -7,6 +7,7 @@ import {
   type CreateCatalogItemInput,
   type UpdateCatalogItemInput,
 } from "@cables/shared";
+import { isPrismaError } from "@/server/prisma-errors";
 
 export class CatalogServiceError extends Error {}
 
@@ -91,10 +92,6 @@ function duplicate(kind: CatalogKind): CatalogServiceError {
   return new CatalogServiceError(
     `Ya existe un elemento con ese nombre en ${CATALOG_LABELS[kind].plural.toLowerCase()}.`,
   );
-}
-
-function isPrismaError(error: unknown, code: string): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
 }
 
 export type Catalogs = Record<CatalogKind, CatalogItem[]>;

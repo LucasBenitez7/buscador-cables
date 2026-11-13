@@ -154,3 +154,101 @@ describe("formatReport", () => {
     expect(report).not.toContain("## Errores");
   });
 });
+
+// Revisión F0-F7 (B11): cosas que la extracción dejaba fuera o decidía sin decirlo.
+describe("what the extraction leaves out is reported", () => {
+  it("reports a tray dropped because its size does not pass the schema", async () => {
+    const data = makePdf([
+      drawingSheet({
+        drawing: "EJ-ELE-DRW-0024",
+        sheet: "02",
+        trays: [
+          { code: "99UXA00L22036", size: "L000100300" },
+          { code: "99UXA00L22051", size: "L600100300" },
+        ],
+      }),
+    ]);
+
+    const { trays, issues } = await extractProjectData([{ name: "planos.pdf", data }]);
+
+    expect(trays.map((tray) => tray.code)).toEqual(["99UXA00L22051"]);
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        severity: "error",
+        code: "99UXA00L22036",
+        page: 1,
+        message: expect.stringMatching(/^Bandeja descartada: widthMm: /),
+      }),
+    );
+  });
+
+  it("flags two sheets of one cable with the same revision and different data", async () => {
+    const data = makePdf([
+      powerSheet({ code: "99XAT10W2005", revision: "3", length: "142 m" }),
+      powerSheet({ code: "99XAT10W2005", revision: "3", length: "150 m" }),
+    ]);
+
+    const { cables, issues } = await extractProjectData([{ name: "electrico.pdf", data }]);
+
+    expect(cables).toHaveLength(1);
+    expect(cables[0]?.lengthM).toBe(142);
+    expect(issues).toContainEqual({
+      severity: "error",
+      file: "electrico.pdf",
+      page: 2,
+      code: "99XAT10W2005",
+      message:
+        "Repetido con la misma revisión (3) y datos distintos a los de electrico.pdf pág. 1: se conserva aquella ficha. Revisa cuál es la buena.",
+    });
+  });
+
+  it("still treats an identical repeated sheet as a warning", async () => {
+    const sheet = powerSheet({ code: "99XAT10W2005", revision: "3" });
+
+    const { issues } = await extractProjectData([
+      { name: "electrico.pdf", data: makePdf([sheet, sheet]) },
+    ]);
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        severity: "warning",
+        message: "Repetido e idéntico al de electrico.pdf pág. 1.",
+      }),
+    );
+  });
+
+  it("reads each file only when its turn comes", async () => {
+    const order: string[] = [];
+    const file = (name: string, code: string) => ({
+      name,
+      data: async () => {
+        order.push(name);
+        return makePdf([powerSheet({ code })]);
+      },
+    });
+
+    const { cables } = await extractProjectData(
+      [file("a.pdf", "99XAT10W2005"), file("b.pdf", "99XAT10W2006")],
+      (message) => order.push(message),
+    );
+
+    expect(cables).toHaveLength(2);
+    expect(order).toEqual(["a.pdf", "a.pdf: 1 páginas leídas", "b.pdf", "b.pdf: 1 páginas leídas"]);
+  });
+
+  it("escapes a pipe in a file name so it cannot break the files table", () => {
+    const report = formatReport({
+      cables: [],
+      trays: [],
+      issues: [],
+      stats: {
+        files: [{ name: "lista|v2.pdf", pages: 1, cableSheets: 1, drawingSheets: 0 }],
+        cablesByLevel: {},
+        traysInDrawings: 0,
+        traysOnlyInRoutes: 0,
+      },
+    });
+
+    expect(report).toContain("| lista\\|v2.pdf | 1 | 1 | 0 |");
+  });
+});

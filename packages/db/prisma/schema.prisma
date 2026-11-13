@@ -31,6 +31,8 @@ model User {
   image            String?
   role             Role         @default(VIEWER)
   active           Boolean      @default(true)
+  /// Cuándo aprobó un administrador la cuenta. Null: registrada y pendiente de aprobación.
+  approvedAt       DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   sessions         Session[]
@@ -422,6 +424,13 @@ model CableRouteStep {
   @@map("cable_route_step")
 }
 
+/// De dónde sale un evento del historial. La carga de los listados lo usa para no pisar lo
+/// que una persona corrigió a mano en la app.
+enum CableEventSource {
+  APP // una persona, desde la aplicación
+  PROJECT_LOAD // la carga de los listados del proyecto (`pnpm data:load`)
+}
+
 /// Registro INMUTABLE de lo que hace cada usuario sobre un cable. Nunca se edita
 /// ni se borra: los errores se corrigen con un evento CORRECTION.
 model CableEvent {
@@ -441,6 +450,8 @@ model CableEvent {
   correctsEventId String?
   correctsEvent   CableEvent?  @relation("EventCorrection", fields: [correctsEventId], references: [id], onDelete: Restrict)
   corrections     CableEvent[] @relation("EventCorrection")
+  /// Quién escribió el evento: una persona en la app o la carga de los listados.
+  source          CableEventSource @default(APP)
   /// Hora real en campo (acciones hechas sin conexión).
   clientCreatedAt DateTime?
   createdAt       DateTime     @default(now())

@@ -74,6 +74,7 @@ async function prepare() {
         email: user.email,
         role: user.role,
         emailVerified: true,
+        approvedAt: new Date(),
         accounts: {
           create: { id: randomUUID(), accountId: id, providerId: "credential", password },
         },

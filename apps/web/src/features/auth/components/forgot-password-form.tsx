@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TEXT_LINK, TEXT_LINK_SM } from "@/components/ui/text-link";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,10 +39,7 @@ export function ForgotPasswordForm() {
           Si el correo está registrado, recibirás un enlace para restablecer la contraseña. El
           enlace caduca en 1 hora.
         </p>
-        <Link
-          href="/login"
-          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm text-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
-        >
+        <Link href="/login" className={TEXT_LINK_SM}>
           Volver al inicio de sesión
         </Link>
       </div>
@@ -66,10 +64,7 @@ export function ForgotPasswordForm() {
       </Button>
 
       <p className="text-center text-sm">
-        <Link
-          href="/login"
-          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline underline-offset-4 transition-colors outline-none focus-visible:ring-3"
-        >
+        <Link href="/login" className={TEXT_LINK}>
           Volver al inicio de sesión
         </Link>
       </p>

@@ -1,7 +1,8 @@
 import { prisma } from "@cables/db";
 import { parseActivitySearch } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
-import { listActivity } from "./service";
+import { getSearchOptions } from "@/server/cables/search";
+import { listActivity, listActivityUsers } from "./service";
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
@@ -65,6 +66,40 @@ const list = (params: Record<string, string>, pageSize?: number) =>
   listActivity(parseActivitySearch(params), pageSize);
 const ids = async (params: Record<string, string>) =>
   (await list(params)).entries.map((entry) => entry.id);
+
+// Revisión F0-F7 (B19): los filtros de "quién" enviaban todas las cuentas a cualquiera.
+describe("who appears in the filters", () => {
+  beforeEach(async () => {
+    await prisma.user.createMany({
+      data: [
+        { id: "nico", name: "Nico Nuevo", email: "nico@cables.test", role: "VIEWER" },
+        {
+          id: "baja",
+          name: "Berta Baja",
+          email: "berta@cables.test",
+          role: "VIEWER",
+          active: false,
+        },
+      ],
+    });
+  });
+
+  it("lists only people who registered something, by name", async () => {
+    expect(await listActivityUsers()).toEqual([
+      { id: "ana", label: "Ana Ruiz" },
+      { id: "juan", label: "Juan Pérez" },
+    ]);
+  });
+
+  it("offers the same people in the cable search", async () => {
+    const { users } = await getSearchOptions();
+
+    expect(users).toEqual([
+      { id: "ana", label: "Ana Ruiz" },
+      { id: "juan", label: "Juan Pérez" },
+    ]);
+  });
+});
 
 describe("listActivity", () => {
   it("lists every action newest first, as readable sentences", async () => {

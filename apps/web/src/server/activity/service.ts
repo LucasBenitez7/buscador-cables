@@ -124,7 +124,9 @@ export async function listActivity(
 
 /** People who appear in the activity filter, sorted by name. */
 export async function listActivityUsers(): Promise<{ id: string; label: string }[]> {
+  // Only who has registered something: the filter is not a list of every account.
   const users = await prisma.user.findMany({
+    where: { cableEvents: { some: {} } },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });

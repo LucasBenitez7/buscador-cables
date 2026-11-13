@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CABLES, storageStatePath } from "./support/data";
+import { CABLES, USERS, storageStatePath } from "./support/data";
 import { openCable } from "./support/cables";
 
 const nav = (page: Page) => page.getByRole("navigation", { name: "Principal" });
@@ -29,6 +29,21 @@ test.describe("consulta", () => {
 
 test.describe("técnico", () => {
   test.use({ storageState: storageStatePath("technician") });
+
+  // Revisión F0-F7 (M1): Better Auth dejaba cambiarse el nombre, y el historial enseña el
+  // nombre actual de quien hizo cada cosa.
+  test("no puede cambiarse el nombre para firmar como otra persona", async ({ page }) => {
+    await page.goto("/");
+    const response = await page.request.post("/api/auth/update-user", {
+      data: { name: "Ada Admin" },
+      headers: { origin: new URL(page.url()).origin },
+    });
+
+    expect(response.status()).toBe(403);
+    expect(((await response.json()) as { code?: string }).code).toBe("PROFILE_LOCKED");
+    await page.reload();
+    await expect(page.getByRole("banner")).toContainText(USERS.technician.name);
+  });
 
   test("ve su actividad pero no la de todos", async ({ page }) => {
     await page.goto("/");

@@ -10,7 +10,13 @@ const nameField = z
   .min(2, "El nombre debe tener al menos 2 caracteres")
   .max(100, "El nombre no puede superar 100 caracteres");
 
-const emailField = z.email({ error: "Introduce un correo válido" }).trim().toLowerCase();
+// Trim first: Zod checks the format before a `.trim()` chained after `z.email()`, so a
+// pasted address with a space around it was rejected.
+const emailField = z
+  .string({ error: "Introduce un correo válido" })
+  .trim()
+  .toLowerCase()
+  .pipe(z.email({ error: "Introduce un correo válido" }));
 
 const passwordField = z
   .string({ error: "La contraseña es obligatoria" })

@@ -22,7 +22,8 @@ export function formatReport(result: ExtractionResult, generatedAt = new Date())
     "| Fichero | Páginas | Fichas de cable | Hojas de plano |",
     "| --- | ---: | ---: | ---: |",
     ...stats.files.map(
-      (file) => `| ${file.name} | ${file.pages} | ${file.cableSheets} | ${file.drawingSheets} |`,
+      (file) =>
+        `| ${cell(file.name)} | ${file.pages} | ${file.cableSheets} | ${file.drawingSheets} |`,
     ),
     "",
     "## Resultado",

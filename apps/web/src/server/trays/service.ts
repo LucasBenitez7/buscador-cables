@@ -1,5 +1,5 @@
 import "server-only";
-import { prisma } from "@cables/db";
+import { Prisma, prisma } from "@cables/db";
 import {
   TRAY_PAGE_SIZE,
   type CableEndSide,
@@ -8,6 +8,7 @@ import {
   type InstallationStatus,
   type TrayKind,
 } from "@cables/shared";
+import { escapeLike } from "@/server/like";
 
 export type TrayListItem = {
   code: string;
@@ -16,7 +17,7 @@ export type TrayListItem = {
   elevationLevel: number | null;
   building: string | null;
   size: TraySize;
-  /** Route steps of active cables through it. */
+  /** Active cables whose route goes through it (each cable once). */
   cables: number;
   /** Active cables whose loose end waits in it. */
   waiting: number;
@@ -73,7 +74,10 @@ export async function searchTrays(
   search: { q?: string; page?: number },
   pageSize = TRAY_PAGE_SIZE,
 ): Promise<{ items: TrayListItem[]; total: number; page: number; pageCount: number }> {
-  const where = search.q ? { code: { contains: search.q, mode: "insensitive" as const } } : {};
+  // Prisma does not escape LIKE wildcards in `contains`, and "_" is part of tray codes.
+  const where = search.q
+    ? { code: { contains: escapeLike(search.q), mode: "insensitive" as const } }
+    : {};
   const total = await prisma.tray.count({ where });
   const pageCount = Math.ceil(total / pageSize);
   const page = Math.min(search.page ?? 1, Math.max(pageCount, 1));
@@ -84,14 +88,20 @@ export async function searchTrays(
     take: pageSize,
     include: {
       location: { select: { code: true, name: true, parent: { select: { name: true } } } },
-      _count: {
-        select: {
-          routeSteps: { where: { cable: ACTIVE } },
-          looseEndCables: { where: ACTIVE },
-        },
-      },
+      _count: { select: { looseEndCables: { where: ACTIVE } } },
     },
   });
+  // A route may name the same tray twice: count cables, not route steps, like the record.
+  const counts =
+    trays.length === 0
+      ? []
+      : await prisma.$queryRaw<{ trayId: string; cables: bigint }[]>`
+          SELECT s."trayId", count(DISTINCT s."cableId") AS cables
+          FROM "cable_route_step" s JOIN "cable" c ON c."id" = s."cableId"
+          WHERE c."deletedAt" IS NULL
+            AND s."trayId" IN (${Prisma.join(trays.map((tray) => tray.id))})
+          GROUP BY s."trayId"`;
+  const cablesByTray = new Map(counts.map((row) => [row.trayId, Number(row.cables)]));
   return {
     total,
     page,
@@ -103,7 +113,7 @@ export async function searchTrays(
       elevationLevel: tray.elevationLevel,
       building: buildingLabel(tray.location),
       size: sizeOf(tray),
-      cables: tray._count.routeSteps,
+      cables: cablesByTray.get(tray.id) ?? 0,
       waiting: tray._count.looseEndCables,
     })),
   };
