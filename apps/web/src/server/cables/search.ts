@@ -18,6 +18,7 @@ import {
   type LocationOption,
   type Option,
 } from "@/server/cables/service";
+import { escapeLike } from "@/server/like";
 import { findSubtreeIds } from "@/server/locations/service";
 
 export type CableSearchItem = {
@@ -59,7 +60,7 @@ const FUZZY_THRESHOLD = 0.4;
 
 /** Escapes LIKE wildcards typed by the user ("%" or "_" must match literally). */
 function likeContains(value: string): string {
-  return `%${value.replace(/[\\%_]/g, "\\$&")}%`;
+  return `%${escapeLike(value)}%`;
 }
 
 /** "SH-2" before "SH-10": letters first, then the first number padded, then the code. */
