@@ -40,13 +40,70 @@ Estado de las comprobaciones automáticas en el momento de la revisión:
 Cómo leer "Comprobado": **confirmado** significa que se reprodujo ejecutando código;
 **leído** significa que sale de leer el código y falta reproducirlo con un test.
 
+## Resultado (2026-11-13)
+
+Todo lo alto, medio y bajo está corregido en `fix/review-f0-f7`, cada cosa con su test. El
+texto de cada hallazgo se deja como estaba (qué pasaba y por qué); aquí va lo que se hizo.
+
+Comprobaciones al cerrar: `pnpm check` en verde (649 tests: shared 225, db 30, web 334, data
+60), `pnpm db:check` sin diferencias sobre una base nueva, y los 37 E2E en verde.
+
+**Decisiones del responsable** (delegadas en la recomendación de la revisión):
+
+| Hallazgo | Decisión                                                                                                                                                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A2       | Aprobación por un administrador. La cuenta nueva queda pendiente (`User.approvedAt`); al confirmar el correo se avisa a los administradores y, al aprobarla en `/admin/users`, al usuario.                                                     |
+| M3       | Lo corregido a mano en la app manda sobre el listado: la carga no lo sustituye y lo dice en los avisos. Para distinguirlo, cada evento lleva su origen (`CableEvent.source`).                                                                  |
+| M7       | Se corrige ahora: 30 inicios de sesión por minuto e IP, y bloqueo por cuenta (10 contraseñas incorrectas seguidas, 15 minutos). El falseo de la IP con `X-Forwarded-For` sigue en la fase 10: depende del proxy que haya delante al desplegar. |
+
+**Lo que cambia para quien usa la app:**
+
+- Quien se registra ya no entra al confirmar el correo: espera a que un administrador lo
+  apruebe. El panel de usuarios enseña primero las cuentas pendientes, con el botón "Aprobar".
+- Nadie puede cambiarse el nombre; lo hace un administrador.
+- Editar un cable tendido no deja quitarle el origen o el destino.
+- `pnpm data:load` enseña a qué base escribe, exige que firme un supervisor o un
+  administrador activo y admite `--dry-run`.
+
+**Hay que aplicar tres migraciones** (`pnpm db:deploy`): `add_user_approved_at`,
+`add_cable_event_source` y `catalog_names_unique_ignoring_case`. Son aditivas. La segunda
+marca los eventos que ya escribió la carga; se probó sobre una base con eventos anteriores.
+La tercera falla si ya hay dos nombres de catálogo que solo difieren en mayúsculas.
+
+**Desviaciones respecto a lo propuesto:**
+
+- **B15:** dar de alta un cable como "Sin revisar" se mantiene: un test lo cubría a propósito.
+  Lo que se corrige es que ese estado no puede guardar una ubicación, ni en el alta ni en una
+  corrección.
+- **B9:** el historial sigue mostrando los 100 últimos movimientos, ahora diciendo cuántos hay
+  en total. No se añadió paginación.
+- **B10:** con la punta de origen suelta se toma la aparición de la bandeja más cercana al
+  destino, no la primera. Con la de destino, la primera, como antes.
+- **B19:** los filtros de "quién" solo listan a quien ha registrado algo. `/admin/users` sigue
+  sin paginar.
+- **M4:** un tipo de cable **sin código** (instrumentación) que se renombre en la app se
+  vuelve a crear en la carga siguiente: el listado no da nada más con que reconocerlo.
+- Los commits agrupan hallazgos que tocan los mismos ficheros en lugar de ir uno por uno.
+
+**Calidad de código:**
+
+- **C1, C5, C7 y C8:** hechos. De C1 quedan fuera `optionalNotes` (su mensaje es distinto del
+  de `optionalText`) y los enlaces con otras variantes de clase.
+- **C2:** medido con un E2E. React envía la lista de ubicaciones una sola vez y los demás
+  diálogos la referencian, así que no hay nada que corregir; el test (`e2e/payload.spec.ts`)
+  queda para avisar si deja de ser así.
+- **C3:** no se cambia. La etiqueta de una ubicación es su ruta completa, así que hacen falta
+  sus antecesores, y son cuatro consultas a tablas pequeñas.
+- **C4:** sin cambios: con el volumen actual no hace falta. Queda anotado.
+- **C6:** pasa a la fase 10 ("Registro de auditoría"), ya anotado en `docs/PLAN.md`.
+
 ---
 
 ## Gravedad alta
 
 ### A1 — Redirección abierta después de iniciar sesión
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/lib/route-access.ts:23` (`safeNextPath`), usado en
 `apps/web/src/app/(auth)/login/page.tsx:13` y
@@ -83,8 +140,8 @@ escribir su contraseña en la app real: es la base de un phishing creíble.
 
 ### A2 — Registro abierto con los datos reales del cliente dentro (decisión)
 
-- [ ] Decidido por el responsable
-- [ ] Corregido
+- [x] Decidido por el responsable
+- [x] Corregido
 
 **Dónde:** `apps/web/src/lib/auth.ts:25-48` (registro abierto con verificación de correo),
 `apps/web/src/server/auth-policy.ts:39` (toda cuenta nueva es `VIEWER` **activa**).
@@ -121,7 +178,7 @@ correo, y hay que actualizar `docs/ARQUITECTURA.md` → Seguridad, los textos de
 
 ### M1 — Un usuario puede cambiarse el nombre y firmar el historial como otra persona
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/lib/auth.ts` (no hay hook `user.update`); el historial muestra
 `user.name` en `apps/web/src/server/cables/detail.ts:135` y
@@ -151,7 +208,7 @@ reproducirlo con un test de integración contra `auth.api.updateUser`.
 
 ### M2 — Editar un cable puede dejar su estado incoherente
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/server/cables/service.ts:202-256` (`updateCable`),
 `packages/shared/src/cables.ts:283` (`updateCableSchema`).
@@ -174,8 +231,8 @@ uno `LAID` con `originEquipment` se acepta.
 
 ### M3 — `pnpm data:load` deshace en silencio lo que se editó en la app
 
-- [ ] Decidido el criterio (decisión)
-- [ ] Corregido
+- [x] Decidido el criterio (decisión)
+- [x] Corregido
 
 **Dónde:** `packages/data/src/load/load.ts:368-401` (`engineeringValues`) y `492-563`
 (actualización de cables existentes).
@@ -213,7 +270,7 @@ ediciones del formulario.
 
 ### M4 — La carga empareja los tipos de cable por nombre: renombrar uno lo duplica
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/data/src/load/load.ts:224-267` (`ensureCableTypes`), línea 374
 (`typeIds.get(cable.typeName)`).
@@ -232,7 +289,7 @@ existente. Test: renombrar un tipo con código y recargar no crea tipos ni event
 
 ### M5 — Los cables cargados con textos largos no se pueden editar
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/shared/src/cables.ts:214` y `222` (descripción ≤ 200, tensión ≤ 30)
 frente a `packages/data/src/extract/schema.ts` (descripción ≤ 500, tensión ≤ 50).
@@ -251,7 +308,7 @@ que compare los límites de ambos esquemas, como el que ya compara los enums.
 
 ### M6 — En la búsqueda de bandejas, `_` y `%` actúan como comodines
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/server/trays/service.ts:76` (`code: { contains: search.q }`).
 
@@ -269,8 +326,8 @@ consulta SQL con `likeContains`). Test de integración: con `99UXA00L22036` y `9
 
 ### M7 — El límite de intentos de login es por IP: bloquea a toda la planta a la vez
 
-- [ ] Decidido el criterio (decisión)
-- [ ] Corregido
+- [x] Decidido el criterio (decisión)
+- [x] Corregido
 
 **Dónde:** `apps/web/src/lib/auth-rate-limit.ts:14` (`/sign-in/email`: 5 por minuto e IP).
 
@@ -294,7 +351,7 @@ la fase 10, anotarlo en `docs/PLAN.md` y marcar aquí "aplazado".
 
 ### B1 — `generateMetadata` lee datos sin comprobar la sesión
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/app/(app)/cables/[id]/page.tsx:34-38` y
 `apps/web/src/app/(app)/trays/[code]/page.tsx:21-28`.
@@ -308,7 +365,7 @@ puede ir en el `<title>`. El id del cable no se puede adivinar; el código de un
 
 ### B2 — La página de inicio no comprueba la sesión por sí misma
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/app/(app)/page.tsx`. Es la única página de `(app)` que confía solo
 en el layout. En una navegación en cliente el layout no se vuelve a ejecutar. Hoy solo
@@ -317,7 +374,7 @@ muestra el estado de la base de datos, pero la fase 8 pondrá aquí el panel.
 
 ### B3 — `?deleted=` se muestra sin validar
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/app/(app)/cables/page.tsx:25` y `45-49`. Cualquier texto de la URL
 aparece dentro de "Cable … dado de baja." React lo escapa (no es XSS), pero permite montar
@@ -326,7 +383,7 @@ cumplan el patrón de código de cable (máx. 50 caracteres) e ignorar el resto.
 
 ### B4 — "Nº de conductores" acepta `1e2` y `0x10`
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/shared/src/cables.ts:193-210`. Usa `Number(text)`.
 **Comprobado (confirmado):** `"1e2"` se guarda como 100 y `"0x10"` como 16.
@@ -334,7 +391,7 @@ cumplan el patrón de código de cable (máx. 50 caracteres) e ignorar el resto.
 
 ### B5 — Un correo con espacios alrededor se rechaza
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/shared/src/users.ts:13` (`z.email().trim().toLowerCase()`). En Zod 4 el
 formato se comprueba antes del `trim`. **Comprobado (confirmado):** `"  Ana@Example.com "`
@@ -343,7 +400,7 @@ da "Introduce un correo válido". Pasa al pegar un correo copiado con un espacio
 
 ### B6 — "Debe quedar un administrador" tiene una condición de carrera
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/server/users/service.ts:105-158`. `countOtherActiveAdmins` y la
 escritura no van en la misma transacción. Dos administradores que se quitan el rol (o se
@@ -354,7 +411,7 @@ reintento. Test de integración con dos llamadas simultáneas (como el de altas 
 
 ### B7 — Nombres de catálogo duplicados si se crean a la vez
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/server/catalogs/service.ts:111-144`. La unicidad sin distinguir
 mayúsculas se comprueba con una lectura previa; el índice único de la base sí distingue.
@@ -363,7 +420,7 @@ mayúsculas se comprueba con una lectura previa; el índice único de la base s�
 
 ### B8 — El número de cables de una bandeja no coincide entre el listado y la ficha
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/server/trays/service.ts:106` (cuenta **pasos** de recorrido) frente
 a la línea 168 (cuenta **cables distintos**). Si un recorrido nombra dos veces la misma
@@ -372,7 +429,7 @@ en el listado, o cambiar el texto a "tramos". Test.
 
 ### B9 — El historial de la ficha se corta en 100 sin avisar
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/server/cables/detail.ts:98` (`HISTORY_LIMIT`). Un cable con más de
 100 eventos enseña los 100 últimos sin decir que hay más, y "Corregir" solo deja elegir
@@ -381,7 +438,7 @@ recientes de N" con enlace a "Actividad" filtrada por cable, o paginar.
 
 ### B10 — Recorridos que repiten bandeja
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/app/(app)/cables/[id]/page.tsx:110` → `routeTrays` sin deduplicar →
 claves de React repetidas en el `<datalist>` de
@@ -393,7 +450,7 @@ usa y cubrirlo con un test.
 
 ### B11 — La extracción y la carga descartan cosas sin dejar aviso
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:**
 
@@ -412,7 +469,7 @@ distinto, severidad `error` y mensaje propio. Tests con fichas inventadas.
 
 ### B12 — Renombrar y mover ubicaciones leen fuera de la transacción
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/server/locations/service.ts:119-147` y `155-195`. La ruta antigua
 se lee antes de abrir la transacción. Si dos supervisores renombran y mueven la misma rama a
@@ -422,7 +479,7 @@ la transacción con `FOR UPDATE`. Test de concurrencia.
 
 ### B13 — `data:load` no enseña ni confirma la base de destino
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/data/src/cli/load.ts:25-41`. Escribe los datos del cliente en lo que
 diga `DATABASE_URL`, sin mostrar a qué servidor y base va, y firma con cualquier usuario que
@@ -433,7 +490,7 @@ que solo muestre el resumen.
 
 ### B14 — El seed acepta la contraseña de ejemplo en producción
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/db/prisma/seed.ts:19-58`; `.env.example` trae
 `SEED_ADMIN_PASSWORD=CambiaEstaClave1!`, que es pública. **Qué hacer:** con
@@ -442,7 +499,7 @@ De paso, usar `PASSWORD_MIN_LENGTH` de `@cables/shared` en lugar de la constante
 
 ### B15 — "Sin revisar" admite ubicación física y se puede elegir en el alta manual
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/shared/src/cable-actions.ts:166-196` (`validateCableState`) y
 `apps/web/src/features/cables/components/cable-form.tsx:216`. La documentación dice que un
@@ -453,8 +510,8 @@ confirmar con el responsable que se quiere permitir).
 
 ### B16 — Doble decodificación del código de bandeja en la URL
 
-- [ ] Comprobado
-- [ ] Corregido si hace falta
+- [x] Comprobado
+- [x] Corregido si hace falta
 
 **Dónde:** `apps/web/src/app/(app)/trays/[code]/page.tsx:21-23`
 (`decodeURIComponent(code)`). Si Next ya entrega el parámetro decodificado, un código con
@@ -464,7 +521,7 @@ envolver la decodificación para que un valor inválido acabe en `notFound()`. T
 
 ### B17 — El trigger de inmutabilidad no cubre `TRUNCATE`
 
-- [ ] Anotado para la fase 10
+- [x] Anotado para la fase 10
 
 **Dónde:** migración `add_locations_catalogs_and_cables`. El trigger es
 `BEFORE UPDATE OR DELETE … FOR EACH ROW`; un `TRUNCATE` vacía `cable_event` sin oposición.
@@ -474,7 +531,7 @@ dueño de las tablas. **Qué hacer:** añadirlo a la fase 10 en `docs/PLAN.md`.
 
 ### B18 — `.gitignore`: la excepción de `__fixtures__` es demasiado amplia
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `.gitignore:34` (`!**/__fixtures__/**`). Anula **todas** las reglas anteriores
 dentro de cualquier carpeta `__fixtures__`: un `.env`, un PDF real o un Excel copiados ahí
@@ -484,7 +541,7 @@ se subirían al repo público. Además `.claude/` no está ignorada y aparece co
 
 ### B19 — Los nombres de todos los usuarios llegan a cualquier `VIEWER`
 
-- [ ] Corregido (o cerrado con A2)
+- [x] Corregido (o cerrado con A2)
 
 **Dónde:** `apps/web/src/server/cables/search.ts:339-352` (filtro "Quién") y
 `apps/web/src/server/activity/service.ts:126-132`. Se envían todos los usuarios, también
@@ -494,26 +551,26 @@ hizo qué", pero con el registro abierto (A2) expone la plantilla a cualquiera.
 
 ### Otras notas menores
 
-- [ ] `packages/shared/src/cables.ts:185-186`: el mensaje dice "debe estar entre 0 y N" pero
+- [x] `packages/shared/src/cables.ts:185-186`: el mensaje dice "debe estar entre 0 y N" pero
       0 no se acepta ("mayor que 0 y como máximo N").
-- [ ] `docker-compose.yml` y `ci.yml` usan `axllent/mailpit:latest`: fijar una versión para
+- [x] `docker-compose.yml` y `ci.yml` usan `axllent/mailpit:latest`: fijar una versión para
       que el CI no cambie solo.
-- [ ] `packages/data/src/cli/extract.ts:112`: lee todos los PDF en memoria a la vez antes de
+- [x] `packages/data/src/cli/extract.ts:112`: lee todos los PDF en memoria a la vez antes de
       procesarlos; leerlos de uno en uno.
-- [ ] `packages/data/src/extract/report.ts`: el nombre del fichero en la tabla "Ficheros" no
+- [x] `packages/data/src/extract/report.ts`: el nombre del fichero en la tabla "Ficheros" no
       pasa por `cell()` (un `|` en el nombre rompe la tabla).
-- [ ] `apps/web/src/features/users/components/users-table.tsx:59`: el rol del selector se
+- [x] `apps/web/src/features/users/components/users-table.tsx:59`: el rol del selector se
       inicializa una vez; si otro administrador cambia el rol y la tabla se revalida, la fila
       sigue mostrando el antiguo hasta recargar. Usar `key={user.id + user.role}` o derivar.
-- [ ] `apps/web/src/features/auth/components/register-form.tsx:46`: enseña
+- [x] `apps/web/src/features/auth/components/register-form.tsx:46`: enseña
       `signUpError.message` tal cual; los mensajes propios de Better Auth salen en inglés.
-- [ ] Tablas `verification` y `rateLimit`: nadie borra las filas caducadas (fase 10).
+- [x] Tablas `verification` y `rateLimit`: nadie borra las filas caducadas (fase 10).
 
 ---
 
 ## Calidad de código y mejoras (opcional, commits `refactor:` / `perf:` / `test:`)
 
-- [ ] **C1 — Duplicación.**
+- [x] **C1 — Duplicación.**
   - El esquema `day` y la función que aplana `searchParams` están copiados en
     `packages/shared/src/search.ts` y `activity.ts`.
   - `versionSchema` está dos veces (`cables.ts` y `cable-actions.ts`); `optionalNotes`
@@ -523,7 +580,7 @@ hizo qué", pero con el registro abierto (A2) expone la plantilla a cualquiera.
   - `Section` e `Item` están duplicados en la ficha del cable y en la de la bandeja.
   - La clase larga de los enlaces de texto (la que empieza por `hover:text-primary`) se
     repite unas quince veces: un componente `TextLink`.
-- [ ] **C2 — El buscador pinta cada cable dos veces.** `search-results.tsx:78-139`
+- [x] **C2 — El buscador pinta cada cable dos veces.** `search-results.tsx:78-139`
       (tarjetas) y `141-237` (tabla) montan dos `CableActions` por cable: 50 componentes cliente
       con su diálogo por página, y la lista de ubicaciones como prop de cada uno. Medir el
       tamaño de la respuesta de `/cables` con un rol que tenga acciones; si pesa, un solo
@@ -535,16 +592,16 @@ hizo qué", pero con el registro abierto (A2) expone la plantilla a cualquiera.
       buscan con `ILIKE '%…%'` sin índice. Con ~4.500 cables va sobrado; si el volumen crece,
       índices trigram. El orden "natural" (`naturalCodeOrder`) estaba pensado para `SH-50` y
       con códigos que empiezan por dígitos equivale al orden alfabético: revisar si aporta.
-- [ ] **C5 — Tests que faltan.** `apps/web/src/features/users/actions.ts` es el único
+- [x] **C5 — Tests que faltan.** `apps/web/src/features/users/actions.ts` es el único
       fichero de acciones sin test (cables, catálogos y ubicaciones lo tienen). Las CLIs de
       `packages/data` tampoco. El umbral de cobertura solo vigila `server/` y `shared`.
 - [ ] **C6 — Cambios de rol y de estado de usuarios sin rastro.** No queda constancia de
       quién hizo administrador a quién. Está previsto en la fase 10 ("Registro de auditoría de
       acciones de administración"); con el registro abierto conviene no retrasarlo.
-- [ ] **C7 — Cabeceras de seguridad.** `next.config.ts` no define CSP, `X-Frame-Options` /
+- [x] **C7 — Cabeceras de seguridad.** `next.config.ts` no define CSP, `X-Frame-Options` /
       `frame-ancestors`, `Referrer-Policy` ni `poweredByHeader: false`. Previsto en la fase 10;
       `frame-ancestors 'none'` y `poweredByHeader` se pueden adelantar sin riesgo.
-- [ ] **C8 — Documentación desfasada.** `docs/ARQUITECTURA.md` nombra `queries.ts` en cada
+- [x] **C8 — Documentación desfasada.** `docs/ARQUITECTURA.md` nombra `queries.ts` en cada
       feature (no existe) y enseña el modelo original. `docs/PLAN.md` y `docs/REVISIONES.md`
       dicen que los datos reales no están cargados en ninguna base: actualizar cuando proceda.
 

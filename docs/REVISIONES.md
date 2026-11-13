@@ -6,6 +6,62 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-13 — Revisión completa de las fases 0 a 7
+
+**Rama:** `fix/review-f0-f7`. Revisión de todo el código tras cerrar la fase 7, buscando
+vulnerabilidades, bugs y código mejorable. La lista completa, con dónde está cada cosa, cómo
+se comprobó y qué se hizo, está en `docs/REVISION-F0-F7.md`: 2 hallazgos altos, 7 medios, 19
+bajos y 8 notas de calidad.
+
+**Decisiones del responsable** (siguió la recomendación de la revisión):
+
+- Las cuentas nuevas necesitan la **aprobación de un administrador** antes de entrar.
+- Lo que alguien **corrige a mano en la app manda** sobre el listado al volver a cargar.
+- El límite de intentos de login se corrige ahora, sin esperar a la fase 10.
+
+**Encontrado y corregido** (lo más importante; el resto, en el documento de la revisión):
+
+| Problema                                                                                                                                               | Corrección                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login?next=/%09/evil.example` llevaba a otro sitio tras entrar: los navegadores quitan el tabulador y queda `//evil.example`.                        | `safeNextPath` resuelve la ruta como el navegador y rechaza los caracteres de control. Tests y E2E.                                                            |
+| Cualquiera que confirmara un correo entraba como `VIEWER` y leía todos los datos del cliente.                                                          | La cuenta queda pendiente hasta que un administrador la aprueba; avisos por correo en los dos sentidos.                                                        |
+| `POST /api/auth/update-user` dejaba cambiarse el nombre, y el historial enseña el nombre actual de quien hizo cada cosa.                               | Hook `user.update.before` que lo rechaza. E2E.                                                                                                                 |
+| El formulario de edición dejaba un cable tendido y conectado sin origen o sin destino.                                                                 | `updateCable` valida el estado con la máquina de estados.                                                                                                      |
+| `pnpm data:load` restauraba en silencio lo corregido en la app (longitud medida, sala de un extremo…).                                                 | La carga conserva lo que una persona cambió por última vez y lo avisa; los eventos llevan su origen (`CableEvent.source`).                                     |
+| Renombrar un tipo de cable en "Catálogos" lo duplicaba en la carga siguiente.                                                                          | Se empareja por nombre sin distinguir mayúsculas y, si se renombró, por su código.                                                                             |
+| Un cable cargado con una descripción de más de 200 caracteres no se podía volver a guardar.                                                            | Un solo juego de límites (`CABLE_TEXT_LIMITS`) para el formulario y la carga.                                                                                  |
+| En la búsqueda de bandejas `_` y `%` eran comodines; `_` es parte normal de los códigos.                                                               | Se escapan antes de buscar.                                                                                                                                    |
+| El límite de login era de 5 por minuto para toda la IP: un cambio de turno bloqueaba a la planta.                                                      | 30 por minuto e IP, y bloqueo por cuenta tras 10 contraseñas incorrectas seguidas.                                                                             |
+| Dos administradores que se desactivaban el uno al otro a la vez dejaban la app sin ninguno; renombrar y mover una ubicación a la vez rompía sus rutas. | Las dos comprobaciones van dentro de la transacción, con las filas bloqueadas. El test de ubicaciones se comprobó contra el código anterior: falla, como debe. |
+| El seed creaba en producción el administrador con la contraseña de ejemplo, que es pública.                                                            | Se niega con un mensaje claro.                                                                                                                                 |
+
+**Encontrado al corregir:**
+
+- Existía un test que da de alta un cable como "Sin revisar" a propósito, así que esa opción
+  se mantiene. El bug real era otro: el formulario seguía enviando la ubicación elegida antes
+  de cambiar de estado y el cable quedaba sin revisar y con ubicación.
+- React ya envía una sola vez la lista de ubicaciones que reciben los 50 diálogos de acciones
+  del buscador. La sospecha de la revisión (C2) no se confirmó; queda un E2E que lo vigila.
+- La migración que marca el origen de los eventos tiene que desactivar un momento el trigger
+  de inmutabilidad para rellenar la columna nueva. Se probó sobre una base con eventos de la
+  carga ya escritos: los marca y el trigger vuelve a rechazar los cambios.
+
+**Verificación:**
+
+- `pnpm check`: 649 tests en verde (shared 225, db 30, web 334, data 60).
+- `pnpm db:check` sobre una base nueva: las migraciones coinciden con el esquema.
+- E2E: 37 en verde, con cuatro nuevos (registro con aprobación, bloqueo por cuenta,
+  redirección y cambio de nombre).
+
+**Pendiente:**
+
+- Aplicar las tres migraciones nuevas en cada base (`pnpm db:deploy`).
+- Pasan a la fase 10, ya anotados en `docs/PLAN.md`: auditoría de las acciones de
+  administración, cabeceras de IP de confianza para el límite de intentos, usuario de base de
+  datos sin `TRUNCATE`, limpieza de `verification` y `rateLimit`, y la CSP completa.
+- `/admin/users` no pagina y el historial de la ficha enseña los 100 últimos movimientos
+  (ahora dice cuántos hay).
+
 ## 2026-11-13 — Fase 7: datos reales del proyecto
 
 **Rama:** `feat/f7-project-data`, la única de la fase. Los tres PDFs del cliente (listado de

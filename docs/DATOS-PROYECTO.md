@@ -154,7 +154,17 @@ Los tests no usan los PDFs reales: generan en memoria PDFs inventados con la mis
 
 Lee `private-data/extracted/cables.json` y `trays.json` y los escribe en la base de datos de
 `DATABASE_URL`. Hay que indicar quién firma la carga (`--as <correo>`; por defecto
-`SEED_ADMIN_EMAIL`). Se ejecuta en local o en el entorno del cliente, nunca en CI.
+`SEED_ADMIN_EMAIL`): tiene que ser una cuenta activa de supervisor o administrador. Se ejecuta
+en local o en el entorno del cliente, nunca en CI.
+
+Antes de escribir enseña a qué base va (nombre y servidor, sin contraseña) y se niega a cargar
+en las bases de tests (`cables_test`, `cables_e2e`). Con `--dry-run` hace la carga entera
+dentro de una transacción y la deshace: sirve para ver el resumen y los avisos sin cambiar
+nada.
+
+```bash
+pnpm data:load -- --dry-run
+```
 
 - **Idempotente**: crea o actualiza por código. Repetirla con los mismos listados no cambia
   nada; con una revisión nueva, solo cambia lo que cambió.
@@ -166,6 +176,21 @@ Lee `private-data/extracted/cables.json` y `trays.json` y los escribe en la base
 - **Cables que ya existen**: se actualizan solo los datos de ingeniería (los del listado), con
   un evento de edición. **Nunca** se tocan estado, conexión, ubicación física, punta suelta,
   notas ni "último movimiento". Los dados de baja no se tocan.
+- **Lo corregido a mano en la app manda sobre el listado.** Si el último cambio de un campo
+  (descripción, tipo, conductores, sección, tensión, longitud, origen o destino) lo hizo una
+  persona desde el formulario de edición, la carga no lo sustituye y lo dice en los avisos:
+  "Longitud (m) corregido en la app (150); el listado dice 142. No se cambia.". Tampoco quita
+  la sala que alguien asignó a un extremo que el listado deja sin sala. Los eventos llevan su
+  origen (`CableEvent.source`), así que una carga posterior que sí cambie el campo lo recupera.
+- **Punta suelta fuera del recorrido**: si una revisión cambia el recorrido de un cable
+  tendido a medias y la bandeja donde espera la punta ya no está en él, se avisa para
+  revisarlo en campo. Lo registrado no se toca.
+- **Tipos de cable**: se emparejan por nombre sin distinguir mayúsculas ni espacios repetidos
+  y, si el tipo se renombró en "Catálogos", por su código. Renombrar un tipo no lo duplica.
+  Un tipo sin código (instrumentación) que se renombre sí se crea de nuevo en la carga
+  siguiente: el listado no da nada más con que reconocerlo.
+- **Bandejas de un recorrido que no están cargadas**: el tramo se guarda con su texto, sin
+  enlace, y se avisa.
 - **Cables que ya no están en los listados**: se avisa, no se borran.
 - Bandejas: se actualizan tipo, niveles, edificio, tamaño y hojas de plano; sus notas no.
 

@@ -71,7 +71,8 @@ fase 0, pero nunca se ha ejecutado: se activa en la fase 4.5.)_
   - Local: Mailpit. Producción: Resend (u otro SMTP).
 - [x] Verificación de email (obligatoria para entrar; enlace de 24 h, se reenvía al intentar entrar).
 - [x] Roles: `ADMIN`, `SUPERVISOR`, `TECHNICIAN`, `VIEWER`.
-- [x] Registro abierto: cada usuario crea su cuenta con **su propio correo y contraseña**.
+- [x] Registro: cada usuario pide su cuenta con **su propio correo y contraseña**. _(Desde la
+      revisión del 2026-11-13 no entra hasta que un administrador la aprueba.)_
       Entra como `VIEWER` (solo consulta) y un `ADMIN` le asigna el rol. El ADMIN también
       puede dar de alta usuarios desde el panel. _(Cambio de decisión del 2026-11-10: antes
       el plan decía "sin registro público".)_
@@ -546,6 +547,17 @@ Orden de trabajo, todo en `feat/f7-project-data`:
 no están cargados en ninguna base: se cargan con `pnpm data:load` en local o en el entorno del
 cliente cuando se decida.
 
+### Revisión de las fases 0 a 7 (2026-11-13)
+
+Rama `fix/review-f0-f7`. Lista de hallazgos y lo que se hizo con cada uno en
+`docs/REVISION-F0-F7.md`; resumen en `docs/REVISIONES.md`.
+
+- [x] Hallazgos altos y medios corregidos, con tests: redirección tras el login, aprobación
+      de cuentas por un administrador, bloqueo del cambio de nombre, coherencia del estado al
+      editar, carga que respeta lo corregido en la app, tipos renombrados, límites de texto,
+      búsqueda de bandejas y límite de intentos por cuenta.
+- [x] Hallazgos bajos corregidos; los que dependen del despliegue pasan a la fase 10.
+
 ## Fase 8 — Importación masiva y panel (v0.9.0)
 
 Viene de la fase 6, de donde salió el 2026-11-13.
@@ -572,8 +584,16 @@ Viene de la fase 6, de donde salió el 2026-11-13.
 - [ ] Despliegue: **Vercel** (web) + **Railway** (PostgreSQL gestionado).
       Alternativa preparada: `Dockerfile` de producción por si se requiere servidor propio/intranet.
 - [ ] Migraciones automáticas en el despliegue (`prisma migrate deploy`).
-- [ ] Cabeceras de seguridad, CSP, revisión OWASP básica.
-- [ ] Registro de auditoría de acciones de administración.
+- [ ] CSP completa y revisión OWASP básica. _(Las cabeceras que no dependen del despliegue
+      —`frame-ancestors`, `nosniff`, `Referrer-Policy`— están desde la revisión F0-F7.)_
+- [ ] Registro de auditoría de acciones de administración: quién aprobó, desactivó o cambió
+      el rol de cada cuenta. Con la aprobación de cuentas conviene no retrasarlo.
+- [ ] Límite de intentos: configurar las cabeceras de IP de confianza de Better Auth según el
+      proxy real (hoy la IP se podría falsear con `X-Forwarded-For`).
+- [ ] Usuario de base de datos de la app sin permiso `TRUNCATE` ni propiedad de las tablas: el
+      trigger de inmutabilidad de `cable_event` cubre `UPDATE` y `DELETE`, no `TRUNCATE`.
+- [ ] Limpieza periódica de las tablas `verification` y `rateLimit` (los contadores de login
+      por cuenta ya se limpian solos).
 - [ ] Backups automáticos de la base de datos y procedimiento de restauración probado.
 - [ ] Monitorización de errores (Sentry) y logs.
 - [ ] Manual de usuario y manual de despliegue.
