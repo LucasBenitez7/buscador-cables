@@ -98,6 +98,7 @@ export default async function CablePage({ params }: { params: Params }) {
         availability={availability}
         locations={locations}
         events={correctableEvents}
+        routeTrays={cable.route.flatMap((step) => (step.trayCode ? [step.trayCode] : []))}
       />
 
       <Section title="Recorrido">

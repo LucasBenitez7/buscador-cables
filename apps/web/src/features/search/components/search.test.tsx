@@ -80,6 +80,8 @@ const item = {
     installationStatus: "LAID",
     connectionStatus: "CONNECTED",
     currentLocationId: null,
+    looseEnd: null,
+    looseEndTray: null,
     originId: "o",
     destinationId: "d",
     deleted: false,

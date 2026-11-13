@@ -15,6 +15,8 @@ export const CHANGE_FIELD_ORDER = [
   "installationStatus",
   "connectionStatus",
   "currentLocationId",
+  "looseEnd",
+  "looseEndTray",
   "deletedAt",
 ] as const;
 
@@ -38,6 +40,17 @@ const CONNECTION_BITS: Record<ConnectionStatus, number> = {
   DESTINATION_ONLY: 2,
   CONNECTED: 3,
 };
+
+/** The `to` value of a change, if it is a non-empty string. */
+function changedTo(changes: unknown, field: string): string | null {
+  const value = (changes as Record<string, FieldChange> | null)?.[field]?.to;
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+function changedFrom(changes: unknown, field: string): string | null {
+  const value = (changes as Record<string, FieldChange> | null)?.[field]?.from;
+  return typeof value === "string" && value !== "" ? value : null;
+}
 
 /** Which end a connect / disconnect event touched, read from its status change. */
 function touchedEnd(changes: unknown): string | null {
@@ -72,7 +85,27 @@ export function describeCableEvent(event: CableEventForSentence): string {
     case "UPDATED":
       return "editó los datos del cable";
     case "LAID":
-      return "tendió el cable";
+      return changedFrom(event.changes, "installationStatus") === "PARTIALLY_LAID"
+        ? "terminó de tender el cable"
+        : "tendió el cable";
+    case "PARTIALLY_LAID": {
+      const tray = changedTo(event.changes, "looseEndTray");
+      const previousTray = changedFrom(event.changes, "looseEndTray");
+      if (tray && previousTray && !changedTo(event.changes, "installationStatus")) {
+        return `llevó la punta suelta de la bandeja ${previousTray} a la ${tray}`;
+      }
+      // The loose end is stored only when it changes; the tray tells where the cable got.
+      const end = changedTo(event.changes, "looseEnd");
+      const which =
+        end === "ORIGIN"
+          ? "la punta de origen"
+          : end === "DESTINATION"
+            ? "la punta de destino"
+            : "la punta suelta";
+      return tray
+        ? `tendió el cable a medias: ${which} espera en la bandeja ${tray}`
+        : "tendió el cable a medias";
+    }
     case "COILED":
       return toLocation ? `enrolló el cable en ${toLocation}` : "enrolló el cable";
     case "CONNECTED": {

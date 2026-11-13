@@ -1,5 +1,6 @@
 import {
   CableAction,
+  CableEndSide,
   CableLevel,
   ConnectionStatus,
   InstallationStatus,
@@ -8,6 +9,7 @@ import {
 } from "@cables/db";
 import {
   CABLE_ACTIONS,
+  CABLE_END_SIDES,
   CABLE_LEVELS,
   CONNECTION_STATUSES,
   INSTALLATION_STATUSES,
@@ -25,6 +27,7 @@ describe("shared constants match the Prisma enums", () => {
     ["CableLevel", CableLevel, CABLE_LEVELS],
     ["TrayKind", TrayKind, TRAY_KINDS],
     ["RouteSection", RouteSection, ROUTE_SECTIONS],
+    ["CableEndSide", CableEndSide, CABLE_END_SIDES],
   ])("%s", (_name, prismaEnum, shared) => {
     expect([...shared].sort()).toEqual(Object.values(prismaEnum).sort());
   });

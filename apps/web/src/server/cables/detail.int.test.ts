@@ -162,3 +162,55 @@ describe("getCableDetail", () => {
     expect(await getCableDetail("missing")).toBeNull();
   });
 });
+
+describe("getCableDetail: route and loose end", () => {
+  it("returns the planned route in order and the loose end, readable in the history", async () => {
+    const created = await createCable(
+      actor,
+      createCableSchema.parse({
+        code: "99XAT10W2005",
+        originId: "c1",
+        destinationId: "c2",
+        installationStatus: "IN_STOCK",
+        connectionStatus: "DISCONNECTED",
+        currentLocationId: "cal",
+      }),
+    );
+    const tray = await prisma.tray.create({ data: { code: "99UXA00L22036", kind: "LADDER" } });
+    await prisma.cableRouteStep.createMany({
+      data: [
+        { cableId: created.id, position: 2, label: "CONTIGUOUS PANEL" },
+        { cableId: created.id, position: 1, label: tray.code, trayId: tray.id },
+      ],
+    });
+    await runCableAction(
+      { id: actor.id, role: "ADMIN" },
+      cableActionSchema.parse({
+        cableId: created.id,
+        version: "1",
+        action: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        trayCode: tray.code,
+      }),
+    );
+
+    const detail = await getCableDetail(created.id);
+
+    expect(detail?.route).toEqual([
+      { position: 1, label: "99UXA00L22036", trayCode: "99UXA00L22036" },
+      { position: 2, label: "CONTIGUOUS PANEL", trayCode: null },
+    ]);
+    expect(detail?.state).toMatchObject({
+      installationStatus: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      looseEndTray: "99UXA00L22036",
+    });
+    const [event] = detail!.history;
+    expect(event?.changes).toEqual(
+      expect.arrayContaining([
+        { field: "Punta suelta", from: "—", to: "Destino" },
+        { field: "Bandeja de la punta suelta", from: "—", to: "99UXA00L22036" },
+      ]),
+    );
+  });
+});

@@ -17,12 +17,14 @@ const laid: CableState = {
   installationStatus: "LAID",
   connectionStatus: "DISCONNECTED",
   currentLocationId: null,
+  looseEnd: null,
+  looseEndTray: null,
   originId: "o",
   destinationId: "d",
   deleted: false,
 };
 
-function renderActions(role: Role, state: CableState = laid) {
+function renderActions(role: Role, state: CableState = laid, routeTrays: string[] = []) {
   render(
     <CableActions
       cableId="c1"
@@ -32,6 +34,7 @@ function renderActions(role: Role, state: CableState = laid) {
       availability={cableActionAvailability(role, state)}
       locations={locations}
       events={[{ id: "e1", label: "Tendido · Tomás · 11/11/26" }]}
+      routeTrays={routeTrays}
     />,
   );
 }
@@ -152,6 +155,90 @@ describe("CableActions", () => {
   });
 });
 
+describe("CableActions: partial laying", () => {
+  const partial: CableState = {
+    ...laid,
+    installationStatus: "PARTIALLY_LAID",
+    connectionStatus: "ORIGIN_ONLY",
+    looseEnd: "DESTINATION",
+    looseEndTray: "99UXA00L22036",
+  };
+
+  beforeEach(() => {
+    mocks.runCableActionAction.mockReset();
+    mocks.refresh.mockReset();
+  });
+
+  it("asks which end stays loose and the tray, suggesting the route trays", async () => {
+    mocks.runCableActionAction.mockResolvedValue({ ok: true, message: "Hecho", id: "c1" });
+    renderActions("TECHNICIAN", { ...laid, connectionStatus: "ORIGIN_ONLY" }, [
+      "99UXA00L22036",
+      "99UXA00L22051",
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tender a medias" }));
+    const dialog = await screen.findByRole("dialog");
+    // The origin is connected, so the destination is the end that can stay loose.
+    expect(within(dialog).getByLabelText("Destino")).toBeChecked();
+    const tray = within(dialog).getByLabelText("Bandeja donde espera la punta");
+    expect(tray).toHaveAttribute("list", "action-trayCode-route");
+    expect(dialog.querySelectorAll("datalist option")).toHaveLength(2);
+
+    fireEvent.change(tray, { target: { value: "99UXA00L22051" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tender a medias" }));
+
+    await screen.findByText("Hecho");
+    expect(sentForm()).toMatchObject({
+      action: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      trayCode: "99UXA00L22051",
+    });
+  });
+
+  it("works without a route: the tray is typed", async () => {
+    renderActions("TECHNICIAN", {
+      ...laid,
+      installationStatus: "COILED",
+      currentLocationId: "store",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Tender a medias" }));
+    const tray = within(await screen.findByRole("dialog")).getByLabelText(
+      "Bandeja donde espera la punta",
+    );
+    expect(tray).not.toHaveAttribute("list");
+  });
+
+  it("explains that laying a partially laid cable completes it", async () => {
+    renderActions("TECHNICIAN", partial);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tender" }));
+    expect(await screen.findByText(/La punta suelta llega a su extremo/)).toBeInTheDocument();
+  });
+
+  it("proposes connecting only the end that arrived", async () => {
+    renderActions("TECHNICIAN", { ...partial, connectionStatus: "DISCONNECTED" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Conectar" }));
+    expect(
+      within(await screen.findByRole("dialog")).getByLabelText("Extremo de origen"),
+    ).toBeChecked();
+  });
+
+  it("lets a supervisor correct the loose end", async () => {
+    renderActions("SUPERVISOR", partial);
+
+    fireEvent.click(screen.getByRole("button", { name: "Corregir" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("Punta suelta (si está tendido a medias)")).toHaveValue(
+      "DESTINATION",
+    );
+    expect(within(dialog).getByLabelText("Bandeja de la punta suelta")).toHaveValue(
+      "99UXA00L22036",
+    );
+  });
+});
+
 describe("CableStatusBadges", () => {
   it("colours connected green, half connected amber and retired red", () => {
     const { rerender } = render(
@@ -161,6 +248,11 @@ describe("CableStatusBadges", () => {
 
     rerender(<CableStatusBadges installationStatus="LAID" connectionStatus="ORIGIN_ONLY" />);
     expect(screen.getByText("Solo origen")).toHaveClass("text-warning");
+
+    rerender(
+      <CableStatusBadges installationStatus="PARTIALLY_LAID" connectionStatus="ORIGIN_ONLY" />,
+    );
+    expect(screen.getByText("Tendido parcial")).toHaveClass("text-warning");
 
     rerender(<CableStatusBadges installationStatus="RETIRED" connectionStatus="DISCONNECTED" />);
     expect(screen.getByText("Retirado")).toHaveClass("text-destructive");

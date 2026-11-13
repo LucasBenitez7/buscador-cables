@@ -213,7 +213,9 @@ export function CableForm(props: Props) {
               {...field("installationStatus")}
               onChange={(event) => set("installationStatus", event.target.value)}
             >
-              {INSTALLATION_STATUSES.filter((status) => status !== "RETIRED").map((status) => (
+              {INSTALLATION_STATUSES.filter(
+                (status) => status !== "RETIRED" && status !== "PARTIALLY_LAID",
+              ).map((status) => (
                 <option key={status} value={status}>
                   {INSTALLATION_STATUS_LABELS[status]}
                 </option>

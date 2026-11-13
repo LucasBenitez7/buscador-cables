@@ -179,6 +179,7 @@ model Manufacturer {
 enum InstallationStatus {
   IN_STOCK // en almacén
   COILED // enrollado
+  PARTIALLY_LAID // tendido a medias: una punta espera en una bandeja
   LAID // tendido
   RETIRED // retirado
 }
@@ -194,6 +195,7 @@ enum CableAction {
   CREATED
   UPDATED
   LAID
+  PARTIALLY_LAID
   COILED
   CONNECTED
   DISCONNECTED
@@ -209,6 +211,12 @@ enum CableLevel {
   L2 // baja tensión, fuerza y control
   L3 // baja tensión, unipolares
   L4 // media tensión
+}
+
+/// Un extremo del cable.
+enum CableEndSide {
+  ORIGIN
+  DESTINATION
 }
 
 model Cable {
@@ -270,7 +278,8 @@ model Cable {
 
   /// Recorrido previsto, en orden.
   routeSteps     CableRouteStep[]
-  /// Bandeja donde espera la punta suelta de un cable tendido a medias.
+  /// Cable tendido a medias: qué punta quedó suelta y en qué bandeja espera.
+  looseEnd       CableEndSide?
   looseEndTrayId String?
   looseEndTray   Tray?            @relation("CableLooseEndTray", fields: [looseEndTrayId], references: [id], onDelete: Restrict)
 

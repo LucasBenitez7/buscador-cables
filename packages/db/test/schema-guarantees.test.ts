@@ -143,7 +143,14 @@ describe("trays and routes", () => {
     await expect(prisma.tray.delete({ where: { id: tray.id } })).rejects.toThrow();
 
     await prisma.cableRouteStep.deleteMany({ where: { cableId: cable.id } });
-    await prisma.cable.update({ where: { id: cable.id }, data: { looseEndTrayId: tray.id } });
+    await prisma.cable.update({
+      where: { id: cable.id },
+      data: {
+        installationStatus: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        looseEndTrayId: tray.id,
+      },
+    });
     await expect(prisma.tray.delete({ where: { id: tray.id } })).rejects.toThrow();
   });
 

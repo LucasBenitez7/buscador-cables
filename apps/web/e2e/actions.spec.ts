@@ -66,12 +66,52 @@ test.describe("técnico", () => {
 
     await page
       .getByRole("region", { name: "Acciones" })
-      .getByRole("button", { name: "Tender" })
+      .getByRole("button", { name: "Tender", exact: true })
       .click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByRole("button", { name: "Tender" }).click();
+    await dialog.getByRole("button", { name: "Tender", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText(
       "Otra persona ha registrado un movimiento en este cable mientras tanto.",
+    );
+  });
+
+  test("tiende un cable a medias, conecta la punta que llegó y termina de tenderlo", async ({
+    page,
+  }) => {
+    const { code } = CABLES.partial;
+    await openCable(page, code);
+    const badges = cableHeader(page);
+
+    // La bandeja tiene que estar en el recorrido del cable.
+    await page
+      .getByRole("region", { name: "Acciones" })
+      .getByRole("button", { name: "Tender a medias", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Bandeja donde espera la punta").fill("99UXB00L22001");
+    await dialog.getByRole("button", { name: "Tender a medias", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "La bandeja 99UXB00L22001 no está en el recorrido del cable.",
+    );
+    await dialog.getByLabel("Bandeja donde espera la punta").fill("99uxa00l22051");
+    await dialog.getByRole("button", { name: "Tender a medias", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(badges).toContainText("Tendido parcial");
+
+    // Solo se puede conectar la punta que llegó: el diálogo la propone.
+    await runAction(page, "Conectar", (dialog) =>
+      expect(dialog.getByLabel("Extremo de origen")).toBeChecked(),
+    );
+    await expect(badges).toContainText("Solo origen");
+
+    await runAction(page, "Tender");
+    await expect(badges).toContainText("Tendido");
+    await expect(badges).toContainText("Solo origen");
+
+    const mine = page.getByRole("listitem").filter({ hasText: USERS.technician.name });
+    await expect(mine.nth(0)).toContainText("terminó de tender el cable");
+    await expect(mine.nth(2)).toContainText(
+      "tendió el cable a medias: la punta de destino espera en la bandeja 99UXA00L22051",
     );
   });
 

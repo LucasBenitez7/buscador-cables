@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@cables/db";
 import {
   CABLE_ACTION_LABELS,
+  CABLE_END_SIDE_LABELS,
   CABLE_FIELD_LABELS,
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUS_LABELS,
@@ -10,6 +11,7 @@ import {
   isRole,
   orderedChanges,
   type CableAction,
+  type CableEndSide,
   type CableState,
   type ConnectionStatus,
   type InstallationStatus,
@@ -38,6 +40,8 @@ export type CableDetail = {
   version: number;
   /** Raw state for the action state machine (ids, not names). */
   state: CableState;
+  /** Planned route, in order: the list text and, if it is a known tray, its code. */
+  route: { position: number; label: string; trayCode: string | null }[];
   description: string | null;
   type: string | null;
   color: { name: string; hex: string | null } | null;
@@ -119,6 +123,8 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
       return lookups.manufacturers.get(text) ?? "(fabricante eliminado)";
     case "installationStatus":
       return INSTALLATION_STATUS_LABELS[text as InstallationStatus] ?? text;
+    case "looseEnd":
+      return CABLE_END_SIDE_LABELS[text as CableEndSide] ?? text;
     case "connectionStatus":
       return CONNECTION_STATUS_LABELS[text as ConnectionStatus] ?? text;
     case "deletedAt":
@@ -150,6 +156,11 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       color: { select: { name: true, hex: true } },
       manufacturer: { select: { name: true } },
       lastActionBy: { select: { name: true } },
+      looseEndTray: { select: { code: true } },
+      routeSteps: {
+        orderBy: { position: "asc" },
+        select: { position: true, label: true, tray: { select: { code: true } } },
+      },
       events: {
         orderBy: { createdAt: "desc" },
         take: HISTORY_LIMIT,
@@ -178,10 +189,17 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       installationStatus: cable.installationStatus,
       connectionStatus: cable.connectionStatus,
       currentLocationId: cable.currentLocationId,
+      looseEnd: cable.looseEnd,
+      looseEndTray: cable.looseEndTray?.code ?? null,
       originId: cable.originId,
       destinationId: cable.destinationId,
       deleted: cable.deletedAt !== null,
     },
+    route: cable.routeSteps.map((step) => ({
+      position: step.position,
+      label: step.label,
+      trayCode: step.tray?.code ?? null,
+    })),
     description: cable.description,
     type: cable.type?.name ?? null,
     color: cable.color,

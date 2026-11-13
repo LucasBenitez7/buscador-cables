@@ -241,6 +241,8 @@ export async function searchCables(
       origin: { select: { name: true, parent: { select: { name: true } } } },
       destination: { select: { name: true, parent: { select: { name: true } } } },
       lastActionBy: { select: { name: true } },
+      looseEnd: true,
+      looseEndTray: { select: { code: true } },
     },
   });
   const byId = new Map(cables.map((cable) => [cable.id, cable]));
@@ -259,6 +261,8 @@ export async function searchCables(
           installationStatus: cable.installationStatus,
           connectionStatus: cable.connectionStatus,
           currentLocationId: cable.currentLocationId,
+          looseEnd: cable.looseEnd,
+          looseEndTray: cable.looseEndTray?.code ?? null,
           originId: cable.originId,
           destinationId: cable.destinationId,
           // The search only returns active cables.

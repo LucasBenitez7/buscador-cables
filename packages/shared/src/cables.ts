@@ -2,7 +2,13 @@ import { z } from "zod";
 import { cableCodeSchema } from "./cable-code";
 
 /** The Prisma enums must list exactly the same members. */
-export const INSTALLATION_STATUSES = ["IN_STOCK", "COILED", "LAID", "RETIRED"] as const;
+export const INSTALLATION_STATUSES = [
+  "IN_STOCK",
+  "COILED",
+  "PARTIALLY_LAID",
+  "LAID",
+  "RETIRED",
+] as const;
 export const CONNECTION_STATUSES = [
   "DISCONNECTED",
   "ORIGIN_ONLY",
@@ -13,6 +19,7 @@ export const CABLE_ACTIONS = [
   "CREATED",
   "UPDATED",
   "LAID",
+  "PARTIALLY_LAID",
   "COILED",
   "CONNECTED",
   "DISCONNECTED",
@@ -29,6 +36,7 @@ export type CableAction = (typeof CABLE_ACTIONS)[number];
 export const INSTALLATION_STATUS_LABELS: Record<InstallationStatus, string> = {
   IN_STOCK: "En almacén",
   COILED: "Enrollado",
+  PARTIALLY_LAID: "Tendido parcial",
   LAID: "Tendido",
   RETIRED: "Retirado",
 };
@@ -44,6 +52,7 @@ export const CABLE_ACTION_LABELS: Record<CableAction, string> = {
   CREATED: "Alta",
   UPDATED: "Datos editados",
   LAID: "Tendido",
+  PARTIALLY_LAID: "Tendido parcial",
   COILED: "Enrollado",
   CONNECTED: "Conectado",
   DISCONNECTED: "Desconectado",
@@ -77,6 +86,8 @@ export const CABLE_FIELD_LABELS: Record<
   | "installationStatus"
   | "connectionStatus"
   | "currentLocationId"
+  | "looseEnd"
+  | "looseEndTray"
   | "deletedAt",
   string
 > = {
@@ -96,6 +107,8 @@ export const CABLE_FIELD_LABELS: Record<
   installationStatus: "Estado de instalación",
   connectionStatus: "Estado de conexión",
   currentLocationId: "Ubicación actual",
+  looseEnd: "Punta suelta",
+  looseEndTray: "Bandeja de la punta suelta",
   deletedAt: "Baja",
 };
 
@@ -206,6 +219,9 @@ export function validateInitialStatus(input: {
   const { installationStatus, connectionStatus } = input;
   if (installationStatus === "RETIRED") {
     return "Un cable no se puede dar de alta como retirado.";
+  }
+  if (installationStatus === "PARTIALLY_LAID") {
+    return "Da de alta el cable y regístralo después con la acción «Tender a medias».";
   }
   if (installationStatus !== "LAID" && connectionStatus !== "DISCONNECTED") {
     return "Solo un cable tendido puede estar conectado.";

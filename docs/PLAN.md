@@ -468,9 +468,22 @@ Orden de trabajo, todo en `feat/f7-project-data`:
       por equipo. `parseTrayCode` y `parseTraySize` en `packages/shared`, probados además contra
       los ~2.500 códigos reales: solo falla uno con errata. Nuevo test que comprueba que los
       enums de Prisma y las constantes compartidas coinciden.
-- [ ] Máquina de estados y acciones: estado _tendido parcial_ (con su migración), tender a
-      medias (bandeja de la punta suelta, que debe estar en el recorrido) y completar el
-      tendido, con su reflejo en el historial.
+- [x] Estado _tendido parcial_ y acción "Tender a medias" (migración
+      `add_partially_laid_status`). Reglas acordadas:
+  - Se puede tender a medias desde almacén, enrollado o tendido. Pide qué punta queda suelta y
+    la bandeja donde espera, que tiene que existir y, si el cable tiene recorrido, estar en él.
+  - La punta suelta no puede estar conectada; solo se conecta la que llegó.
+  - Volver a "Tender a medias" con otra bandeja lleva la punta más adelante.
+  - "Tender" termina el tendido y conserva lo que ya estaba conectado; enrollar o retirar
+    quitan la punta suelta.
+  - La base de datos lo garantiza con una comprobación: solo un cable tendido a medias tiene
+    punta suelta y bandeja.
+  - Historial: "tendió el cable a medias: la punta de destino espera en la bandeja X", "llevó
+    la punta suelta de la bandeja X a la Y", "terminó de tender el cable". Insignia ámbar.
+  - El diálogo sugiere las bandejas del recorrido y admite escribir el código. Las correcciones
+    también fijan la punta suelta.
+  - Tests de la máquina de estados, del servicio contra Postgres, de componentes y un E2E del
+    flujo completo. El E2E encontró que la Server Action no leía los campos nuevos.
 - [ ] Seed y E2E con datos inventados de forma real (KKS, bandejas, recorridos, extremos) en
       lugar de los códigos `SH-50`.
 - [ ] Script de extracción repetible `pnpm data:extract` (TypeScript + `pdfjs-dist`), que lee

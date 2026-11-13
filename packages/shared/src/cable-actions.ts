@@ -1,5 +1,5 @@
 /**
- * Field actions on a cable (phase 5): the state machine shared by the server, which applies
+ * Field actions on a cable (phases 5 and 7): the state machine shared by the server, which applies
  * them, and the UI, which only offers what is allowed.
  *
  * Pure functions: no database, no React. The server validates the input with
@@ -17,9 +17,11 @@ import {
   type InstallationStatus,
 } from "./cables";
 import { hasPermission, type Permission, type Role } from "./permissions";
+import { normalizeTrayCode } from "./trays";
 
 export const CABLE_FIELD_ACTIONS = [
   "LAID",
+  "PARTIALLY_LAID",
   "COILED",
   "CONNECTED",
   "DISCONNECTED",
@@ -33,6 +35,7 @@ export type CableFieldAction = (typeof CABLE_FIELD_ACTIONS)[number];
 /** Button labels (infinitive); the history uses CABLE_ACTION_LABELS (past participle). */
 export const CABLE_FIELD_ACTION_LABELS: Record<CableFieldAction, string> = {
   LAID: "Tender",
+  PARTIALLY_LAID: "Tender a medias",
   COILED: "Enrollar",
   CONNECTED: "Conectar",
   DISCONNECTED: "Desconectar",
@@ -43,6 +46,7 @@ export const CABLE_FIELD_ACTION_LABELS: Record<CableFieldAction, string> = {
 
 export const CABLE_ACTION_PERMISSIONS: Record<CableFieldAction, Permission> = {
   LAID: "cable:lay",
+  PARTIALLY_LAID: "cable:lay",
   COILED: "cable:coil",
   CONNECTED: "cable:connect",
   DISCONNECTED: "cable:disconnect",
@@ -63,11 +67,23 @@ export const CABLE_END_LABELS: Record<CableEnd, string> = {
   BOTH: "Ambos extremos",
 };
 
+/** One end of the cable. The Prisma enum `CableEndSide` must list the same members. */
+export const CABLE_END_SIDES = ["ORIGIN", "DESTINATION"] as const;
+export type CableEndSide = (typeof CABLE_END_SIDES)[number];
+
+export const CABLE_END_SIDE_LABELS: Record<CableEndSide, string> = {
+  ORIGIN: "Origen",
+  DESTINATION: "Destino",
+};
+
 /** The part of a cable the state machine reads and writes. */
 export type CableState = {
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
   currentLocationId: string | null;
+  /** Partially laid cable: which end is loose and the code of the tray where it waits. */
+  looseEnd: CableEndSide | null;
+  looseEndTray: string | null;
   originId: string | null;
   destinationId: string | null;
   deleted: boolean;
@@ -78,6 +94,8 @@ export const CABLE_STATE_FIELDS = [
   "installationStatus",
   "connectionStatus",
   "currentLocationId",
+  "looseEnd",
+  "looseEndTray",
 ] as const;
 
 export type CableStateField = (typeof CABLE_STATE_FIELDS)[number];
@@ -85,6 +103,7 @@ export type CableStateValues = Pick<CableState, CableStateField>;
 
 export type CableActionInput =
   | { action: "LAID" }
+  | { action: "PARTIALLY_LAID"; looseEnd: CableEndSide; trayCode: string }
   | { action: "COILED"; locationId: string }
   | { action: "CONNECTED"; end: CableEnd }
   | { action: "DISCONNECTED"; end: CableEnd }
@@ -96,6 +115,8 @@ export type CableActionInput =
       installationStatus: InstallationStatus;
       connectionStatus: ConnectionStatus;
       currentLocationId: string | null;
+      looseEnd: CableEndSide | null;
+      looseEndTray: string | null;
     };
 
 export type CableActionOutcome =
@@ -127,6 +148,12 @@ const STATUS_BY_BITS: ConnectionStatus[] = [
 ];
 const END_BITS: Record<CableEnd, number> = { ORIGIN: 1, DESTINATION: 2, BOTH: 3 };
 
+const isOnItsWay = (status: InstallationStatus) => status === "LAID" || status === "PARTIALLY_LAID";
+
+/** "la punta de destino": the loose end, for messages. */
+const looseEndText = (end: CableEndSide) =>
+  end === "ORIGIN" ? "la punta de origen" : "la punta de destino";
+
 // ---------------------------------------------------------------------------
 // Rules
 // ---------------------------------------------------------------------------
@@ -135,14 +162,14 @@ const END_BITS: Record<CableEnd, number> = { ORIGIN: 1, DESTINATION: 2, BOTH: 3 
 export function validateCableState(
   state: CableStateValues & Pick<CableState, "originId" | "destinationId">,
 ) {
-  const { installationStatus, connectionStatus, currentLocationId } = state;
-  if (installationStatus !== "LAID" && connectionStatus !== "DISCONNECTED") {
+  const { installationStatus, connectionStatus, currentLocationId, looseEnd, looseEndTray } = state;
+  if (!isOnItsWay(installationStatus) && connectionStatus !== "DISCONNECTED") {
     return "Solo un cable tendido puede estar conectado.";
   }
-  if (installationStatus === "LAID" && (!state.originId || !state.destinationId)) {
+  if (isOnItsWay(installationStatus) && (!state.originId || !state.destinationId)) {
     return "Un cable tendido necesita origen y destino.";
   }
-  if (installationStatus === "LAID" && currentLocationId !== null) {
+  if (isOnItsWay(installationStatus) && currentLocationId !== null) {
     return "Un cable tendido no tiene ubicación física aparte de su recorrido.";
   }
   if (
@@ -150,6 +177,16 @@ export function validateCableState(
     !currentLocationId
   ) {
     return "Indica dónde está el cable (almacén o lugar donde está enrollado).";
+  }
+  if (installationStatus === "PARTIALLY_LAID") {
+    if (!looseEnd || !looseEndTray) {
+      return "Indica qué punta quedó suelta y en qué bandeja espera.";
+    }
+    if ((CONNECTION_BITS[connectionStatus] & END_BITS[looseEnd]) !== 0) {
+      return `No se puede conectar ${looseEndText(looseEnd)}: está suelta en la bandeja ${looseEndTray}.`;
+    }
+  } else if (looseEnd !== null || looseEndTray !== null) {
+    return "Solo un cable tendido a medias tiene una punta suelta.";
   }
   return null;
 }
@@ -162,8 +199,11 @@ function computeNext(
     installationStatus: state.installationStatus,
     connectionStatus: state.connectionStatus,
     currentLocationId: state.currentLocationId,
+    looseEnd: state.looseEnd,
+    looseEndTray: state.looseEndTray,
   };
   const status = state.installationStatus;
+  const settled = { looseEnd: null, looseEndTray: null };
 
   if (input.action !== "CORRECTION" && status === "RETIRED") {
     return { error: "El cable está retirado. Solo un supervisor puede corregir su estado." };
@@ -175,11 +215,32 @@ function computeNext(
       if (!state.originId || !state.destinationId) {
         return { error: "Para tender el cable, primero indica su origen y su destino." };
       }
+      // Completing a partial laying keeps the end that was already connected.
       return {
         next: {
           installationStatus: "LAID",
-          connectionStatus: "DISCONNECTED",
+          connectionStatus: state.connectionStatus,
           currentLocationId: null,
+          ...settled,
+        },
+      };
+    }
+    case "PARTIALLY_LAID": {
+      if (!state.originId || !state.destinationId) {
+        return { error: "Para tender el cable, primero indica su origen y su destino." };
+      }
+      if ((CONNECTION_BITS[state.connectionStatus] & END_BITS[input.looseEnd]) !== 0) {
+        return {
+          error: `${capitalize(looseEndText(input.looseEnd))} está conectada: desconéctala antes de dejarla suelta.`,
+        };
+      }
+      return {
+        next: {
+          installationStatus: "PARTIALLY_LAID",
+          connectionStatus: state.connectionStatus,
+          currentLocationId: null,
+          looseEnd: input.looseEnd,
+          looseEndTray: normalizeTrayCode(input.trayCode),
         },
       };
     }
@@ -192,13 +253,19 @@ function computeNext(
           installationStatus: "COILED",
           connectionStatus: "DISCONNECTED",
           currentLocationId: input.locationId,
+          ...settled,
         },
       };
     }
     case "CONNECTED": {
-      if (status !== "LAID") return { error: "Solo se puede conectar un cable tendido." };
+      if (!isOnItsWay(status)) return { error: "Solo se puede conectar un cable tendido." };
       const bits = CONNECTION_BITS[state.connectionStatus];
       const end = END_BITS[input.end];
+      if (status === "PARTIALLY_LAID" && state.looseEnd && end & END_BITS[state.looseEnd]) {
+        return {
+          error: `${capitalize(looseEndText(state.looseEnd))} sigue suelta en la bandeja ${state.looseEndTray}: termina de tender el cable antes de conectarla.`,
+        };
+      }
       if ((bits & end) === end) {
         return { error: "El cable ya está conectado por ese extremo." };
       }
@@ -216,7 +283,7 @@ function computeNext(
       return { next: { ...current, connectionStatus: STATUS_BY_BITS[bits & ~end]! } };
     }
     case "MOVED": {
-      if (status === "LAID") {
+      if (isOnItsWay(status)) {
         return {
           error: "Un cable tendido no se mueve: primero enróllalo o desconéctalo y enróllalo.",
         };
@@ -231,7 +298,8 @@ function computeNext(
         next: {
           installationStatus: "RETIRED",
           connectionStatus: "DISCONNECTED",
-          currentLocationId: status === "LAID" ? null : state.currentLocationId,
+          currentLocationId: isOnItsWay(status) ? null : state.currentLocationId,
+          ...settled,
         },
       };
     }
@@ -241,10 +309,16 @@ function computeNext(
           installationStatus: input.installationStatus,
           connectionStatus: input.connectionStatus,
           currentLocationId: input.currentLocationId,
+          looseEnd: input.looseEnd,
+          looseEndTray: input.looseEndTray ? normalizeTrayCode(input.looseEndTray) : null,
         },
       };
     }
   }
+}
+
+function capitalize(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /**
@@ -313,8 +387,14 @@ export function cableActionAvailability(role: Role, state: CableState): CableAct
 function probe(state: CableState, action: CableFieldAction): string | null {
   // A location that differs from the current one, so "already there" never blocks the probe.
   const anyOtherLocation = `${state.currentLocationId ?? ""}~probe`;
+  const anyOtherTray = `${state.looseEndTray ?? ""}~PROBE`;
   const attemptsByAction: Record<CableFieldAction, CableActionInput[]> = {
     LAID: [{ action: "LAID" }],
+    PARTIALLY_LAID: CABLE_END_SIDES.map((looseEnd) => ({
+      action: "PARTIALLY_LAID",
+      looseEnd,
+      trayCode: anyOtherTray,
+    })),
     COILED: [{ action: "COILED", locationId: anyOtherLocation }],
     CONNECTED: CABLE_ENDS.map((end) => ({ action: "CONNECTED", end })),
     DISCONNECTED: CABLE_ENDS.map((end) => ({ action: "DISCONNECTED", end })),
@@ -363,11 +443,30 @@ const reasonNotes = z
 const common = { cableId: requiredId("Cable no válido"), version: versionField };
 const endField = z.enum(CABLE_ENDS, { error: "Elige qué extremo" });
 const locationField = requiredId("Elige una ubicación");
+const looseEndField = z.enum(CABLE_END_SIDES, { error: "Elige qué punta queda suelta" });
+const trayCodeField = z
+  .string({ error: "Indica la bandeja" })
+  .transform(normalizeTrayCode)
+  .pipe(
+    z
+      .string()
+      .min(1, "Indica la bandeja")
+      .max(50, "El código de bandeja no puede superar 50 caracteres")
+      .regex(/^[A-Z0-9_.-]+$/, "El código de bandeja solo admite letras, números, '_', '-' y '.'"),
+  );
+const emptyToNull = (value: string | undefined) => (value?.trim() ? value.trim() : null);
 
 export const cableActionSchema = z.discriminatedUnion(
   "action",
   [
     z.object({ ...common, action: z.literal("LAID"), notes: optionalNotes }),
+    z.object({
+      ...common,
+      action: z.literal("PARTIALLY_LAID"),
+      looseEnd: looseEndField,
+      trayCode: trayCodeField,
+      notes: optionalNotes,
+    }),
     z.object({
       ...common,
       action: z.literal("COILED"),
@@ -391,10 +490,16 @@ export const cableActionSchema = z.discriminatedUnion(
         error: "Estado de instalación no válido",
       }),
       connectionStatus: z.enum(CONNECTION_STATUSES, { error: "Estado de conexión no válido" }),
-      currentLocationId: z
-        .string()
+      currentLocationId: z.string().optional().transform(emptyToNull),
+      looseEnd: z
+        .union([z.literal(""), looseEndField])
         .optional()
-        .transform((value) => (value?.trim() ? value.trim() : null)),
+        .transform((value) => (value ? value : null)),
+      looseEndTray: z
+        .string()
+        .max(50, "El código de bandeja no puede superar 50 caracteres")
+        .optional()
+        .transform(emptyToNull),
       notes: reasonNotes,
     }),
   ],
@@ -409,6 +514,8 @@ export function toCableActionInput(request: CableActionRequest): CableActionInpu
     case "LAID":
     case "RETIRED":
       return { action: request.action };
+    case "PARTIALLY_LAID":
+      return { action: request.action, looseEnd: request.looseEnd, trayCode: request.trayCode };
     case "COILED":
     case "MOVED":
       return { action: request.action, locationId: request.locationId };
@@ -422,6 +529,8 @@ export function toCableActionInput(request: CableActionRequest): CableActionInpu
         installationStatus: request.installationStatus,
         connectionStatus: request.connectionStatus,
         currentLocationId: request.currentLocationId,
+        looseEnd: request.looseEnd,
+        looseEndTray: request.looseEndTray,
       };
   }
 }

@@ -40,4 +40,13 @@ export const CABLES = {
   supervisor: { code: "AC-2", status: "LAID", connection: "CONNECTED" },
   mobile: { code: "MV-1", status: "COILED", connection: "DISCONNECTED" },
   concurrency: { code: "CC-1", status: "IN_STOCK", connection: "DISCONNECTED" },
+  partial: {
+    code: "TP-1",
+    status: "IN_STOCK",
+    connection: "DISCONNECTED",
+    route: ["99UXA00L22036", "99UXA00L22051"],
+  },
 } as const;
+
+/** Bandejas inventadas para los recorridos. */
+export const TRAYS = ["99UXA00L22036", "99UXA00L22051", "99UXB00L22001"] as const;

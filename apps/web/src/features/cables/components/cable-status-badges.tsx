@@ -12,6 +12,7 @@ type BadgeVariant = "default" | "outline" | "success" | "warning" | "destructive
 const INSTALLATION_VARIANT: Record<InstallationStatus, BadgeVariant> = {
   IN_STOCK: "outline",
   COILED: "default",
+  PARTIALLY_LAID: "warning",
   LAID: "default",
   RETIRED: "destructive",
 };

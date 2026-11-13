@@ -19,6 +19,8 @@ const inStock: CableState = {
   installationStatus: "IN_STOCK",
   connectionStatus: "DISCONNECTED",
   currentLocationId: "store",
+  looseEnd: null,
+  looseEndTray: null,
   ...route,
   deleted: false,
 };
@@ -58,6 +60,8 @@ describe("LAID (tender)", () => {
         installationStatus: "LAID",
         connectionStatus: "DISCONNECTED",
         currentLocationId: null,
+        looseEnd: null,
+        looseEndTray: null,
       });
       expect(outcome.changes.installationStatus).toEqual({
         from: state.installationStatus,
@@ -77,6 +81,177 @@ describe("LAID (tender)", () => {
   });
 });
 
+describe("PARTIALLY_LAID (tender a medias)", () => {
+  const partial: CableState = {
+    ...laid,
+    installationStatus: "PARTIALLY_LAID",
+    connectionStatus: "ORIGIN_ONLY",
+    looseEnd: "DESTINATION",
+    looseEndTray: "99UXA00L22036",
+  };
+
+  it("leaves one end waiting in a tray, from stock or coiled", () => {
+    for (const state of [inStock, coiled]) {
+      const outcome = nextOf(state, {
+        action: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        trayCode: " 99uxa00l22036 ",
+      });
+      expect(outcome.next).toEqual({
+        installationStatus: "PARTIALLY_LAID",
+        connectionStatus: "DISCONNECTED",
+        currentLocationId: null,
+        looseEnd: "DESTINATION",
+        looseEndTray: "99UXA00L22036",
+      });
+      expect(outcome.changes.looseEndTray).toEqual({ from: null, to: "99UXA00L22036" });
+    }
+  });
+
+  it("pulls back the free end of a laid cable that is connected only at the other end", () => {
+    const outcome = nextOf(
+      { ...laid, connectionStatus: "ORIGIN_ONLY" },
+      { action: "PARTIALLY_LAID", looseEnd: "DESTINATION", trayCode: "99UXA00L22036" },
+    );
+
+    expect(outcome.next.connectionStatus).toBe("ORIGIN_ONLY");
+  });
+
+  it("refuses to leave a connected end loose", () => {
+    expect(
+      errorOf(
+        { ...laid, connectionStatus: "ORIGIN_ONLY" },
+        { action: "PARTIALLY_LAID", looseEnd: "ORIGIN", trayCode: "99UXA00L22036" },
+      ),
+    ).toBe("La punta de origen está conectada: desconéctala antes de dejarla suelta.");
+  });
+
+  it("moves the loose end to another tray, and rejects the same tray", () => {
+    const outcome = nextOf(partial, {
+      action: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      trayCode: "99UXA00L22051",
+    });
+    expect(Object.keys(outcome.changes)).toEqual(["looseEndTray"]);
+
+    expect(
+      errorOf(partial, {
+        action: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        trayCode: "99UXA00L22036",
+      }),
+    ).toMatch(/no cambia nada/);
+  });
+
+  it("needs origin and destination, like laying", () => {
+    expect(
+      errorOf(
+        { ...inStock, destinationId: null },
+        { action: "PARTIALLY_LAID", looseEnd: "DESTINATION", trayCode: "99UXA00L22036" },
+      ),
+    ).toMatch(/origen y su destino/);
+  });
+
+  it("connects only the end that arrived", () => {
+    const outcome = nextOf(
+      { ...partial, connectionStatus: "DISCONNECTED" },
+      { action: "CONNECTED", end: "ORIGIN" },
+    );
+    expect(outcome.next.connectionStatus).toBe("ORIGIN_ONLY");
+
+    for (const end of ["DESTINATION", "BOTH"] as const) {
+      expect(errorOf(partial, { action: "CONNECTED", end })).toBe(
+        "La punta de destino sigue suelta en la bandeja 99UXA00L22036: termina de tender el cable antes de conectarla.",
+      );
+    }
+  });
+
+  it("completes the laying, keeping the end already connected", () => {
+    const outcome = nextOf(partial, { action: "LAID" });
+
+    expect(outcome.next).toEqual({
+      installationStatus: "LAID",
+      connectionStatus: "ORIGIN_ONLY",
+      currentLocationId: null,
+      looseEnd: null,
+      looseEndTray: null,
+    });
+    expect(Object.keys(outcome.changes)).toEqual([
+      "installationStatus",
+      "looseEnd",
+      "looseEndTray",
+    ]);
+  });
+
+  it("clears the loose end when the cable is coiled or retired", () => {
+    for (const input of [
+      { action: "COILED", locationId: "site-a" },
+      { action: "RETIRED" },
+    ] as const) {
+      const outcome = nextOf(partial, input);
+      expect(outcome.next).toMatchObject({
+        connectionStatus: "DISCONNECTED",
+        looseEnd: null,
+        looseEndTray: null,
+      });
+    }
+    expect(nextOf(partial, { action: "RETIRED" }).next.currentLocationId).toBeNull();
+  });
+
+  it("is not moved like a cable in stock", () => {
+    expect(errorOf(partial, { action: "MOVED", locationId: "site-a" })).toMatch(
+      /primero enróllalo/,
+    );
+  });
+
+  it("is offered to technicians with the reason when it cannot be used", () => {
+    expect(canRunCableAction("TECHNICIAN", "PARTIALLY_LAID")).toBe(true);
+    expect(canRunCableAction("VIEWER", "PARTIALLY_LAID")).toBe(false);
+
+    const actions = Object.fromEntries(
+      cableActionAvailability("TECHNICIAN", { ...laid, connectionStatus: "CONNECTED" }).map(
+        (item) => [item.action, item.disabledReason],
+      ),
+    );
+    expect(actions.PARTIALLY_LAID).toMatch(/desconéctala/);
+    // A partially laid cable can move its loose end to another tray.
+    const fromPartial = cableActionAvailability("TECHNICIAN", partial);
+    expect(fromPartial.find((item) => item.action === "PARTIALLY_LAID")?.disabledReason).toBeNull();
+  });
+});
+
+describe("validateCableState with a loose end", () => {
+  const values = {
+    installationStatus: "PARTIALLY_LAID",
+    connectionStatus: "DISCONNECTED",
+    currentLocationId: null,
+    looseEnd: "DESTINATION",
+    looseEndTray: "99UXA00L22036",
+    ...route,
+  } as const;
+
+  it("accepts a partially laid cable with its loose end and tray", () => {
+    expect(validateCableState(values)).toBeNull();
+  });
+
+  it("requires the loose end and the tray of a partially laid cable", () => {
+    expect(validateCableState({ ...values, looseEndTray: null })).toMatch(/qué punta/);
+    expect(validateCableState({ ...values, looseEnd: null })).toMatch(/qué punta/);
+  });
+
+  it("rejects a loose end that is connected", () => {
+    expect(validateCableState({ ...values, connectionStatus: "CONNECTED" })).toMatch(
+      /No se puede conectar la punta de destino/,
+    );
+  });
+
+  it("rejects a loose end on a cable that is not partially laid", () => {
+    expect(validateCableState({ ...values, installationStatus: "LAID" })).toMatch(
+      /Solo un cable tendido a medias/,
+    );
+  });
+});
+
 describe("COILED (enrollar)", () => {
   it("coils a laid and connected cable, disconnecting it and recording the move", () => {
     const outcome = nextOf(connected, { action: "COILED", locationId: "site-b" });
@@ -85,6 +260,8 @@ describe("COILED (enrollar)", () => {
       installationStatus: "COILED",
       connectionStatus: "DISCONNECTED",
       currentLocationId: "site-b",
+      looseEnd: null,
+      looseEndTray: null,
     });
     expect(outcome.changes.connectionStatus).toEqual({ from: "CONNECTED", to: "DISCONNECTED" });
     expect(outcome).toMatchObject({ fromLocationId: null, toLocationId: "site-b" });
@@ -168,6 +345,8 @@ describe("RETIRED (retirar)", () => {
       installationStatus: "RETIRED",
       connectionStatus: "DISCONNECTED",
       currentLocationId: null,
+      looseEnd: null,
+      looseEndTray: null,
     });
     expect(Object.keys(outcome.changes)).toEqual(["installationStatus", "connectionStatus"]);
   });
@@ -194,6 +373,8 @@ describe("CORRECTION (corregir)", () => {
   const correction = {
     action: "CORRECTION",
     correctsEventId: "event-1",
+    looseEnd: null,
+    looseEndTray: null,
   } as const;
 
   it("sets the corrected state, also on a retired cable", () => {
@@ -253,6 +434,8 @@ describe("validateCableState", () => {
         installationStatus: "LAID",
         connectionStatus: "DISCONNECTED",
         currentLocationId: "store",
+        looseEnd: null,
+        looseEndTray: null,
         ...route,
       }),
     ).toMatch(/no tiene ubicación física/);
@@ -289,8 +472,16 @@ describe("cableActionAvailability", () => {
   it("enables only what makes sense for a laid, disconnected cable", () => {
     const actions = byAction("TECHNICIAN", laid);
 
-    expect(Object.keys(actions)).toEqual(["LAID", "COILED", "CONNECTED", "DISCONNECTED", "MOVED"]);
+    expect(Object.keys(actions)).toEqual([
+      "LAID",
+      "PARTIALLY_LAID",
+      "COILED",
+      "CONNECTED",
+      "DISCONNECTED",
+      "MOVED",
+    ]);
     expect(actions.CONNECTED).toBeNull();
+    expect(actions.PARTIALLY_LAID).toBeNull();
     expect(actions.COILED).toBeNull();
     expect(actions.LAID).toMatch(/ya está tendido/);
     // Sin ningún extremo conectado, el motivo no habla de "ese extremo".
@@ -316,6 +507,53 @@ describe("cableActionAvailability", () => {
 
 describe("cableActionSchema", () => {
   const base = { cableId: "c1", version: "3" };
+
+  it("parses a partial laying and normalizes the tray code", () => {
+    const request = cableActionSchema.parse({
+      ...base,
+      action: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      trayCode: " 99uxa00l22036 ",
+    });
+
+    expect(toCableActionInput(request)).toEqual({
+      action: "PARTIALLY_LAID",
+      looseEnd: "DESTINATION",
+      trayCode: "99UXA00L22036",
+    });
+  });
+
+  it("requires the loose end and a valid tray code for a partial laying", () => {
+    const result = cableActionSchema.safeParse({
+      ...base,
+      action: "PARTIALLY_LAID",
+      trayCode: "bandeja 1; drop",
+    });
+
+    expect(result.success).toBe(false);
+    const messages = result.error?.issues.map((issue) => issue.message);
+    expect(messages).toContain("Elige qué punta queda suelta");
+    expect(messages).toContain("El código de bandeja solo admite letras, números, '_', '-' y '.'");
+  });
+
+  it("parses a correction to a partially laid state", () => {
+    const request = cableActionSchema.parse({
+      ...base,
+      action: "CORRECTION",
+      correctsEventId: "e1",
+      installationStatus: "PARTIALLY_LAID",
+      connectionStatus: "ORIGIN_ONLY",
+      currentLocationId: "",
+      looseEnd: "DESTINATION",
+      looseEndTray: "99UXA00L22036",
+      notes: "La punta no llegó",
+    });
+
+    expect(toCableActionInput(request)).toMatchObject({
+      looseEnd: "DESTINATION",
+      looseEndTray: "99UXA00L22036",
+    });
+  });
 
   it("parses a move from FormData strings", () => {
     const request = cableActionSchema.parse({
@@ -371,6 +609,8 @@ describe("cableActionSchema", () => {
       installationStatus: "RETIRED",
       connectionStatus: "DISCONNECTED",
       currentLocationId: null,
+      looseEnd: null,
+      looseEndTray: null,
     });
   });
 });

@@ -222,7 +222,10 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - `CableRouteStep`: recorrido **ordenado** de cada cable (`position` ≥ 1). Cada paso guarda el
   texto del listado y, si es una bandeja conocida, la bandeja; en instrumentación, además, el
   tramo (`FIELD` campo / `ROOM` sala).
-- `Cable.looseEndTrayId`: bandeja donde espera la punta suelta de un cable tendido a medias.
+- Estado `PARTIALLY_LAID` (tendido parcial) y acción del mismo nombre. `Cable.looseEnd`
+  (`ORIGIN`/`DESTINATION`) y `Cable.looseEndTrayId` dicen qué punta quedó suelta y en qué
+  bandeja espera; la restricción `cable_loose_end_check` exige que solo un cable tendido a
+  medias los tenga. El historial guarda el código de la bandeja, no su id.
 - `CableType.code`: código del tipo en el listado eléctrico (`C0802`).
 
 ## Seguridad
