@@ -217,7 +217,10 @@ y escribe `sheets.json` (una entrada por plano y hoja). Hay dos tipos de plano:
 - La fila de la tabla queda como marca débil (`table`): dice la sección, no dónde está.
 
 Un código se toma como fila de tabla cuando está en horizontal y tiene otro código justo
-encima o debajo en la misma columna, o un número de sección a su izquierda. Las posiciones se
+encima o debajo en la misma columna, o **su propia** sección a la izquierda en la misma línea
+(una tabla de una fila). Otro número a la izquierda no cuenta: en instrumentación muchas
+etiquetas llevan delante el ancho de la bandeja (`U 600 80UHA01L10011`). Cada marca guarda
+también el tamaño del código: en el visor, una fila de tabla se enmarca entera. Las posiciones se
 guardan en fracción de la hoja (0 a 1 desde la esquina superior izquierda), sin depender de la
 resolución de la imagen. El informe dice cuántas bandejas se localizan de cada forma.
 
@@ -226,7 +229,8 @@ resolución de la imagen. El informe dice cuántas bandejas se localizan de cada
 Dibuja cada hoja de `sheets.json` en teselas Deep Zoom (`<plano>_<hoja>.dzi` y su carpeta)
 en `private-data/drawings/` (`DRAWINGS_DIR`), que git ignora: son los planos del cliente. El
 lado mayor de cada hoja mide como mucho 8192 px (A0 y A1 se leen bien). Cada hoja guarda una
-huella del texto que contiene (`fingerprint`): solo se vuelven a dibujar las que cambian (una
+huella del texto crudo del PDF y de su posición (`fingerprint`, independiente de cómo se
+interpreta después): solo se vuelven a dibujar las que cambian (una
 revisión nueva añade una fila al cajetín) y se borran las que ya no están. `--force` las
 dibuja todas.
 

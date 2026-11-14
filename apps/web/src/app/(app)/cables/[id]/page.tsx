@@ -10,6 +10,7 @@ import {
   formatDecimal,
   hasPermission,
 } from "@cables/shared";
+import { ChangeList } from "@/components/change-list";
 import { DataList, Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
@@ -237,16 +238,7 @@ export default async function CablePage({ params }: { params: Params }) {
                   .
                 </p>
                 {entry.notes ? <p className="italic">“{entry.notes}”</p> : null}
-                {entry.changes.length > 0 ? (
-                  <ul className="text-muted-foreground space-y-0.5">
-                    {entry.changes.map((change) => (
-                      <li key={change.field}>
-                        {change.field}: {change.from} →{" "}
-                        <span className="text-foreground">{change.to}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                <ChangeList changes={entry.changes} />
               </li>
             ))}
           </ol>

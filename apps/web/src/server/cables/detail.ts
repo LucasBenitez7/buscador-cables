@@ -23,7 +23,14 @@ import {
 } from "@cables/shared";
 import { listLocationOptions } from "@/server/cables/service";
 
-export type ReadableChange = { field: string; from: string; to: string };
+/** A change as text, with a link for each value that has a page (a tray, a location). */
+export type ReadableChange = {
+  field: string;
+  from: string;
+  to: string;
+  fromHref?: string;
+  toHref?: string;
+};
 
 export type CableHistoryEntry = {
   id: string;
@@ -172,15 +179,38 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
   }
 }
 
+/** Where a stored value can be opened: a tray, or the cables of a location. */
+function valueHref(field: string, value: unknown, lookups: Lookups): string | undefined {
+  if (typeof value !== "string" || value === "") return undefined;
+  switch (field) {
+    case "looseEndTray":
+      return `/trays/${encodeURIComponent(value)}`;
+    case "originId":
+    case "destinationId":
+    case "currentLocationId":
+      return lookups.locations.has(value)
+        ? `/cables?location=${encodeURIComponent(value)}`
+        : undefined;
+    default:
+      return undefined;
+  }
+}
+
 export function readableChanges(changes: unknown, lookups: Lookups): ReadableChange[] {
-  return orderedChanges(changes).map(([field, change]) => ({
-    field:
-      CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
-      PROJECT_FIELD_LABELS[field] ??
-      field,
-    from: readableValue(field, change?.from, lookups),
-    to: readableValue(field, change?.to, lookups),
-  }));
+  return orderedChanges(changes).map(([field, change]) => {
+    const fromHref = valueHref(field, change?.from, lookups);
+    const toHref = valueHref(field, change?.to, lookups);
+    return {
+      field:
+        CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
+        PROJECT_FIELD_LABELS[field] ??
+        field,
+      from: readableValue(field, change?.from, lookups),
+      to: readableValue(field, change?.to, lookups),
+      ...(fromHref ? { fromHref } : {}),
+      ...(toHref ? { toHref } : {}),
+    };
+  });
 }
 
 const toNumber = (value: { toNumber(): number } | null) => value?.toNumber() ?? null;

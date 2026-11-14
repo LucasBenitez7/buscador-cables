@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "cn";
+import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 import { useCallback, useState, useTransition } from "react";
 import {
@@ -120,9 +121,13 @@ function TreeItem({ node, tree, canManage, open, setOpen, close }: ItemProps) {
           <code className="bg-muted rounded px-1.5 text-xs">{node.code}</code>
           <span className="text-muted-foreground text-xs">{LOCATION_TYPE_LABELS[node.type]}</span>
           {node.cableCount > 0 ? (
-            <span className="text-muted-foreground text-xs">
-              {node.cableCount} {node.cableCount === 1 ? "cable" : "cables"}
-            </span>
+            // Abre el buscador con los cables de aquí y de todo lo que contiene.
+            <Link
+              href={`/cables?location=${encodeURIComponent(node.id)}`}
+              className="text-primary hover:text-primary/80 focus-visible:ring-ring/50 rounded-sm text-xs font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+            >
+              {node.cableCount} {node.cableCount === 1 ? "cable" : "cables"} →
+            </Link>
           ) : null}
 
           {canManage ? (

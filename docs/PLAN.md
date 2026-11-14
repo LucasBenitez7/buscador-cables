@@ -620,6 +620,10 @@ planos, se sustituye el PDF y se repite `data:extract` → `data:render` → `da
       numerados; una bandeja fuera del recorrido se acepta si se confirma.
 - [x] Recorrido del cable sobre el plano: bandejas numeradas, tendido / falta / dónde está.
 - [x] Tests (posiciones con PDFs inventados, carga, timbrado, visor) y E2E.
+- [x] Repaso (2026-11-14): marca sin parpadeo; filas de tabla enmarcadas enteras; el ancho
+      de bandeja delante de una etiqueta ya no se toma por sección; enlaces de cada ubicación a
+      sus cables; Actividad y Mi actividad por días, con la acción en color, periodos rápidos y
+      enlaces a cable, persona, bandeja y ubicaciones.
 - Fotos de los técnicos: mejora futura (necesitan almacenamiento privado).
 
 ## Fase 8 — Importación masiva y panel (mejora futura)
