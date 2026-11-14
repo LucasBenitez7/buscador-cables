@@ -15,6 +15,8 @@ export const environmentSchema = z.object({
   // Better Auth reads these two straight from process.env; we only validate them.
   BETTER_AUTH_SECRET: z.string().min(32).optional(),
   BETTER_AUTH_URL: optionalUrl,
+  // Teselas de los planos (`pnpm data:render`). Relativa a la raíz del monorepo o absoluta.
+  DRAWINGS_DIR: z.string().trim().min(1).default("private-data/drawings"),
 });
 
 export type AppEnvironment = z.infer<typeof environmentSchema>;

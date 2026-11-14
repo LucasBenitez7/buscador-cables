@@ -171,7 +171,11 @@ function endRows(
 export type DrawingSheetSpec = {
   drawing: string;
   sheet: string;
-  trays?: { code: string; size?: string; x?: number; top?: number }[];
+  trays?: { code: string; size?: string; x?: number; top?: number; angle?: number }[];
+  /** Section flags drawn on the plan ("015"). */
+  flags?: { section: string; x: number; top: number }[];
+  /** A section table: the section number left of its rows of tray codes. */
+  tables?: { x: number; top: number; sections: [section: string, codes: string[]][] }[];
   /** Rows of the sheet index, when the page is the index. */
   index?: [sheet: string, title: string][];
   /** Other drawing numbers printed on the sheet (references to other drawings). */
@@ -195,9 +199,21 @@ export function drawingSheet(spec: DrawingSheetSpec): PdfPageSpec {
   (spec.trays ?? []).forEach((tray, index) => {
     const x = tray.x ?? 400;
     const top = tray.top ?? 400 + index * 20;
-    texts.push({ text: tray.code, x, top });
+    texts.push({ text: tray.code, x, top, angle: tray.angle });
     if (tray.size) texts.push({ text: tray.size, x: x + 100, top });
   });
+  for (const flag of spec.flags ?? []) texts.push({ text: flag.section, x: flag.x, top: flag.top });
+  for (const table of spec.tables ?? []) {
+    let row = 0;
+    for (const [section, codes] of table.sections) {
+      const middle = row + (codes.length - 1) / 2;
+      texts.push({ text: section, x: table.x, top: table.top + middle * 13 });
+      for (const code of codes) {
+        texts.push({ text: code, x: table.x + 50, top: table.top + row * 13 });
+        row += 1;
+      }
+    }
+  }
   if (spec.index) {
     texts.push({ text: "SHEET INDEX", x: 229, top: 112 });
     spec.index.forEach(([sheet, title], index) => {

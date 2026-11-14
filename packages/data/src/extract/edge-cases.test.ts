@@ -113,6 +113,7 @@ describe("formatReport", () => {
     const report = formatReport({
       cables: [],
       trays: [],
+      sheets: [],
       issues: [
         {
           severity: "error",
@@ -123,7 +124,13 @@ describe("formatReport", () => {
           message: "ends with a backslash \\| and a pipe",
         },
       ],
-      stats: { files: [], cablesByLevel: {}, traysInDrawings: 0, traysOnlyInRoutes: 0 },
+      stats: {
+        files: [],
+        cablesByLevel: {},
+        traysInDrawings: 0,
+        traysOnlyInRoutes: 0,
+        trayMarks: { label: 0, flag: 0, tableOnly: 0 },
+      },
     });
 
     // Backslashes doubled first, then each pipe escaped: no cell can close early.
@@ -136,6 +143,7 @@ describe("formatReport", () => {
     const result: ExtractionResult = {
       cables: [],
       trays: [],
+      sheets: [],
       issues: Array.from({ length: 205 }, (_, index) => ({
         severity: "warning" as const,
         file: "lista.pdf",
@@ -143,7 +151,13 @@ describe("formatReport", () => {
         code: null,
         message: `Aviso | ${index}`,
       })),
-      stats: { files: [], cablesByLevel: {}, traysInDrawings: 0, traysOnlyInRoutes: 0 },
+      stats: {
+        files: [],
+        cablesByLevel: {},
+        traysInDrawings: 0,
+        traysOnlyInRoutes: 0,
+        trayMarks: { label: 0, flag: 0, tableOnly: 0 },
+      },
     };
 
     const report = formatReport(result);
@@ -240,12 +254,14 @@ describe("what the extraction leaves out is reported", () => {
     const report = formatReport({
       cables: [],
       trays: [],
+      sheets: [],
       issues: [],
       stats: {
         files: [{ name: "lista|v2.pdf", pages: 1, cableSheets: 1, drawingSheets: 0 }],
         cablesByLevel: {},
         traysInDrawings: 0,
         traysOnlyInRoutes: 0,
+        trayMarks: { label: 0, flag: 0, tableOnly: 0 },
       },
     });
 

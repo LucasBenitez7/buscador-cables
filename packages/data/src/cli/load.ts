@@ -1,7 +1,7 @@
 /**
- * `pnpm data:load`: loads `private-data/extracted/cables.json` and `trays.json` (written by
- * `pnpm data:extract`) into the database of `DATABASE_URL`. Run it locally or in the client's
- * environment, never in CI: the data is the client's.
+ * `pnpm data:load`: loads `private-data/extracted/cables.json`, `trays.json` and `sheets.json`
+ * (written by `pnpm data:extract`) into the database of `DATABASE_URL`. Run it locally or in
+ * the client's environment, never in CI: the data is the client's.
  *
  * Options:
  *   --from <folder>   where the extracted files are (default: private-data/extracted)
@@ -41,6 +41,8 @@ async function main() {
   const read = async (name: string) =>
     JSON.parse(await readFile(path.join(folder, name), "utf8")) as unknown;
   const [cables, trays] = await Promise.all([read("cables.json"), read("trays.json")]);
+  // Extracciones anteriores a las hojas de plano no tienen sheets.json: se cargan sin ellas.
+  const sheets = await read("sheets.json").catch(() => undefined);
 
   const db = createPrismaClient(url);
   try {
@@ -63,7 +65,7 @@ async function main() {
     const started = Date.now();
     const summary = await loadProjectData(
       db,
-      { cables, trays },
+      { cables, trays, sheets },
       {
         userId: user.id,
         dryRun,

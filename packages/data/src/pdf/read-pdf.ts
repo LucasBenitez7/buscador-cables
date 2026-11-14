@@ -8,6 +8,11 @@ export type TextRun = {
   /** Distance from the top of the page to the top of the text. */
   top: number;
   size: number;
+  /** Centre of the text from the top-left corner, also for rotated text (drawings). */
+  cx: number;
+  cy: number;
+  /** Direction of the text in degrees, counter-clockwise: 0 reads left to right, 90 upwards. */
+  angle: number;
 };
 
 export type PdfPage = {
@@ -33,7 +38,8 @@ export async function* readPdfPages(data: Uint8Array): AsyncGenerator<PdfPage> {
   try {
     for (let number = 1; number <= document.numPages; number += 1) {
       const page = await document.getPage(number);
-      const { width, height } = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: 1 });
+      const { width, height } = viewport;
       const content = await page.getTextContent();
       const runs: TextRun[] = [];
       for (const item of content.items) {
@@ -41,9 +47,28 @@ export async function* readPdfPages(data: Uint8Array): AsyncGenerator<PdfPage> {
         // NFKC: "μ" and "µ" (and other look-alikes) become the same character.
         const text = item.str.normalize("NFKC").replace(/\s+/g, " ").trim();
         if (text === "") continue;
-        const [scaleX = 0, skewY = 0, , scaleY = 0, x = 0, y = 0] = item.transform;
+        const [scaleX = 0, skewY = 0, skewX = 0, scaleY = 0, x = 0, y = 0] = item.transform;
         const size = Math.hypot(scaleY, skewY) || Math.abs(scaleX);
-        runs.push({ text, x0: x, x1: x + item.width, top: height - y - size, size });
+        // Centre: half the width along the text and half the size across it, in PDF space;
+        // the viewport turns it into top-left coordinates (and handles page offsets).
+        const along = Math.hypot(scaleX, skewY) || 1;
+        const across = Math.hypot(skewX, scaleY) || 1;
+        const centre = viewport.convertToViewportPoint(
+          x + (scaleX / along) * (item.width / 2) + (skewX / across) * (size / 2),
+          y + (skewY / along) * (item.width / 2) + (scaleY / across) * (size / 2),
+        ) as [number, number];
+        const angle = Math.round((Math.atan2(skewY, scaleX) * 180) / Math.PI);
+        runs.push({
+          text,
+          x0: x,
+          x1: x + item.width,
+          top: height - y - size,
+          size,
+          cx: centre[0],
+          cy: centre[1],
+          // `+ 0` turns -0 into 0.
+          angle: angle + 0,
+        });
       }
       page.cleanup();
       yield { number, width, height, runs };

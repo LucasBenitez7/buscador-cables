@@ -3,6 +3,7 @@
  * reads). Validated with Zod: a row that does not fit is reported with its page and left out.
  */
 import {
+  drawingMarkSchema,
   CABLE_LEVELS,
   CABLE_TEXT_LIMITS,
   ROUTE_SECTIONS,
@@ -64,6 +65,12 @@ export const projectCableSchema = z.object({
   route: z.array(projectRouteStepSchema),
 });
 
+/**
+ * Where a tray is on a sheet, as a fraction of the sheet from the top-left corner. "label": its
+ * code drawn along it; "flag": the flag of its section; "table": its row in a table.
+ */
+export const trayMarkSchema = drawingMarkSchema;
+
 export const projectTraySchema = z.object({
   code: z.string().refine(isTrayCode, "Código de bandeja no válido"),
   kind: z.enum(TRAY_KINDS),
@@ -80,14 +87,29 @@ export const projectTraySchema = z.object({
       sheet: text(10),
       title: optionalText(300),
       sourcePage: z.number().int().positive(),
+      marks: z.array(trayMarkSchema),
     }),
   ),
+});
+
+/** A sheet of the routing drawings: what `data:render` draws and `data:load` stores. */
+export const projectSheetSchema = z.object({
+  drawing: text(80),
+  sheet: text(10),
+  title: optionalText(300),
+  file: text(255),
+  page: z.number().int().positive(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  fingerprint: text(64),
 });
 
 export type ProjectCable = z.infer<typeof projectCableSchema>;
 export type ProjectCableEnd = z.infer<typeof projectCableEndSchema>;
 export type ProjectRouteStep = z.infer<typeof projectRouteStepSchema>;
 export type ProjectTray = z.infer<typeof projectTraySchema>;
+export type ProjectSheet = z.infer<typeof projectSheetSchema>;
+export type TrayMark = z.infer<typeof trayMarkSchema>;
 
 export type IssueSeverity = "error" | "warning";
 
@@ -103,11 +125,14 @@ export type ExtractionIssue = {
 export type ExtractionResult = {
   cables: ProjectCable[];
   trays: ProjectTray[];
+  sheets: ProjectSheet[];
   issues: ExtractionIssue[];
   stats: {
     files: { name: string; pages: number; cableSheets: number; drawingSheets: number }[];
     cablesByLevel: Record<string, number>;
     traysInDrawings: number;
     traysOnlyInRoutes: number;
+    /** How the trays were found on the plans (see `locateTrays`). */
+    trayMarks: { label: number; flag: number; tableOnly: number };
   };
 };
