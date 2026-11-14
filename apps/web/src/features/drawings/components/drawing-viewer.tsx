@@ -47,12 +47,16 @@ function markElement(mark: ViewerMark): HTMLElement {
     element.innerHTML = `<span class="block size-10 rounded-md border-2 border-dashed ${TONE_RING[tone]}"></span>`;
     return element;
   }
-  element.innerHTML = `
+  // Solo lo que se busca lleva flecha y pulso: en un recorrido, la bandeja donde está el cable.
+  const highlighted = tone === "primary" || tone === "warning";
+  element.innerHTML = highlighted
+    ? `
     <span class="absolute inset-0 animate-ping rounded-full border-4 ${TONE_RING[tone]} opacity-60"></span>
     <span class="absolute inset-0 rounded-full border-4 ${TONE_RING[tone]}"></span>
-    <svg class="absolute -top-14 left-1/2 size-12 -translate-x-1/2 drop-shadow ${tone === "success" ? "text-success" : tone === "muted" ? "text-muted-foreground" : "text-warning"}" viewBox="0 0 24 24" aria-hidden="true">
+    <svg class="absolute -top-14 left-1/2 size-12 -translate-x-1/2 drop-shadow text-warning" viewBox="0 0 24 24" aria-hidden="true">
       <path fill="currentColor" stroke="black" stroke-width="0.6" d="M12 22 4 12h5V2h6v10h5z"/>
-    </svg>`;
+    </svg>`
+    : `<span class="absolute inset-1 rounded-full border-4 ${TONE_RING[tone]}"></span>`;
   if (mark.label) {
     const badge = document.createElement("span");
     badge.className =
@@ -77,13 +81,33 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
   const primary = marks.filter(isPrimary);
   const focusable = primary.length > 0 ? primary : marks;
   const aspect = height / width;
+  // OpenSeadragon calls back later (when the sheet opens): it must read the latest marks.
+  const latest = useRef({ marks, focusable, aspect });
+  useEffect(() => {
+    latest.current = { marks, focusable, aspect };
+  });
+
+  function drawMarks() {
+    const OSD = library.current;
+    const instance = viewer.current;
+    if (!OSD || !instance) return;
+    instance.clearOverlays();
+    for (const mark of latest.current.marks) {
+      instance.addOverlay({
+        element: markElement(mark),
+        location: new OSD.Point(mark.x, mark.y * latest.current.aspect),
+        placement: OSD.Placement.CENTER,
+        checkResize: false,
+      });
+    }
+  }
 
   function focus(index: number) {
     const OSD = library.current;
-    const mark = focusable[index];
+    const mark = latest.current.focusable[index];
     if (!OSD || !viewer.current || !mark) return;
     const x = mark.x;
-    const y = mark.y * aspect;
+    const y = mark.y * latest.current.aspect;
     // Unos metros alrededor de la marca: se ve la bandeja y lo que tiene cerca.
     viewer.current.viewport.fitBoundsWithConstraints(new OSD.Rect(x - 0.1, y - 0.065, 0.2, 0.13));
     setCurrent(index);
@@ -109,14 +133,7 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
       });
       viewer.current = instance;
       instance.addHandler("open", () => {
-        for (const mark of marks) {
-          instance!.addOverlay({
-            element: markElement(mark),
-            location: new OSD.Point(mark.x, mark.y * aspect),
-            placement: OSD.Placement.CENTER,
-            checkResize: false,
-          });
-        }
+        drawMarks();
         setStatus("ready");
         focus(0);
       });
@@ -127,9 +144,16 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
       instance?.destroy();
       viewer.current = null;
     };
-    // Las marcas y la hoja vienen del servidor: un cambio monta otro visor (la clave del padre).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Solo otra hoja monta otro visor; las marcas se redibujan aparte (efecto de abajo).
   }, [imageKey]);
+
+  // Tras registrar una acción la página se refresca con marcas nuevas sobre la misma hoja
+  // (otro color, otra bandeja): se cambian sin volver a cargar el plano.
+  const marksKey = JSON.stringify(marks);
+  useEffect(() => {
+    if (status === "ready") drawMarks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marksKey]);
 
   useEffect(() => {
     if (!fullScreen) return;

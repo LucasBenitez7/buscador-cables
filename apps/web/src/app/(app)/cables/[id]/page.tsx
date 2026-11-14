@@ -14,6 +14,8 @@ import { DataList, Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
+import { RouteDrawings } from "@/features/drawings/components/route-drawings";
+import { getRouteSheets } from "@/server/drawings/route-sheets";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getCableDetail } from "@/server/cables/detail";
 import { listLocationOptions } from "@/server/cables/service";
@@ -52,7 +54,10 @@ export default async function CablePage({ params }: { params: Params }) {
   const canEdit = !cable.deleted && hasPermission(user.role, "cable:update");
   // Dados de baja: sin acciones. El resto ve solo lo que su rol permite.
   const availability = cable.deleted ? [] : cableActionAvailability(user.role, cable.state);
-  const locations = availability.length > 0 ? await listLocationOptions() : [];
+  const [locations, routeSheets] = await Promise.all([
+    availability.length > 0 ? listLocationOptions() : Promise.resolve([]),
+    getRouteSheets(cable.route, cable.state),
+  ]);
   const correctableEvents = canRunCableAction(user.role, "CORRECTION")
     ? cable.history.map((entry) => ({
         id: entry.id,
@@ -85,6 +90,8 @@ export default async function CablePage({ params }: { params: Params }) {
           <CableStatusBadges
             installationStatus={cable.installationStatus}
             connectionStatus={cable.connectionStatus}
+            testStatus={cable.testStatus}
+            showUntested
           />
         </div>
         {canEdit ? (
@@ -128,7 +135,14 @@ export default async function CablePage({ params }: { params: Params }) {
       <Section
         title={`Recorrido por bandejas${cable.route.length > 0 ? ` (${cable.route.length} tramos)` : ""}`}
       >
-        <CableRoute route={cable.route} state={cable.state} />
+        {routeSheets.length > 0 ? (
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+            <CableRoute route={cable.route} state={cable.state} />
+            <RouteDrawings sheets={routeSheets} />
+          </div>
+        ) : (
+          <CableRoute route={cable.route} state={cable.state} />
+        )}
       </Section>
 
       <Section title="Datos">

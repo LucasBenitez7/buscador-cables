@@ -192,7 +192,50 @@ pnpm data:load -- --dry-run
 - **Bandejas de un recorrido que no están cargadas**: el tramo se guarda con su texto, sin
   enlace, y se avisa.
 - **Cables que ya no están en los listados**: se avisa, no se borran.
-- Bandejas: se actualizan tipo, niveles, edificio, tamaño y hojas de plano; sus notas no.
+- Bandejas: se actualizan tipo, niveles, edificio, tamaño y hojas de plano (con sus marcas);
+  sus notas no.
+- **Hojas de plano** (`sheets.json`): se crean o actualizan por plano y hoja; las que ya no
+  están se retiran (sus bandejas conservan el nombre de la hoja, sin imagen). Una extracción
+  anterior sin `sheets.json` se carga igual, sin tocar las hojas.
+
+## Planos: posiciones e imágenes (fase 7.5)
+
+### Dónde está cada bandeja en su hoja
+
+`pnpm data:extract` también lee la posición del texto en cada hoja de los planos de recorrido
+y escribe `sheets.json` (una entrada por plano y hoja). Hay dos tipos de plano:
+
+- **Instrumentación**: el código de la bandeja está escrito a lo largo de la bandeja (a menudo
+  girado). Esa posición es la marca (`label`).
+- **Eléctricos**: la planta lleva **banderas** con el número de sección ("015") y unas tablas
+  (`SECTION | RACEWAY CODIFICATION | TYPE`), en la misma hoja o en otra del mismo plano, dicen
+  qué bandejas forman cada sección. Las tres últimas cifras del código de la bandeja son la
+  sección (`…L40015` → `015`). La marca es la bandera (`flag`):
+  - si la hoja de la tabla tiene esa bandera, esa;
+  - si no, la de las otras hojas del mismo plano que la tengan, menos las que definen esa
+    sección en sus propias tablas (allí la bandera es de otra planta o nivel).
+- La fila de la tabla queda como marca débil (`table`): dice la sección, no dónde está.
+
+Un código se toma como fila de tabla cuando está en horizontal y tiene otro código justo
+encima o debajo en la misma columna, o un número de sección a su izquierda. Las posiciones se
+guardan en fracción de la hoja (0 a 1 desde la esquina superior izquierda), sin depender de la
+resolución de la imagen. El informe dice cuántas bandejas se localizan de cada forma.
+
+### Imágenes: `pnpm data:render`
+
+Dibuja cada hoja de `sheets.json` en teselas Deep Zoom (`<plano>_<hoja>.dzi` y su carpeta)
+en `private-data/drawings/` (`DRAWINGS_DIR`), que git ignora: son los planos del cliente. El
+lado mayor de cada hoja mide como mucho 8192 px (A0 y A1 se leen bien). Cada hoja guarda una
+huella del texto que contiene (`fingerprint`): solo se vuelven a dibujar las que cambian (una
+revisión nueva añade una fila al cajetín) y se borran las que ya no están. `--force` las
+dibuja todas.
+
+### Si cambian los planos
+
+1. Sustituye el PDF en `private-data/source/`.
+2. `pnpm data:extract` → `pnpm data:render` → `pnpm data:load`.
+
+Las marcas se recalculan del texto del PDF: no hay que colocar nada a mano.
 
 ## Dónde se ve en la app
 
@@ -201,8 +244,12 @@ pnpm data:load -- --dry-run
   suelta y lo que falta.
 - **Buscador**: por código, equipo o nº alternativo; filtros de nivel, bandeja y "solo con la
   punta suelta".
-- **Bandejas** (`/trays`): listado y ficha de cada bandeja, con sus planos, los cables que
-  pasan y los que esperan en ella.
+- **Bandejas** (`/trays`): listado y ficha de cada bandeja, con el plano abierto en la
+  bandeja (flecha y círculo), las otras hojas donde aparece, los cables que pasan y los que
+  esperan en ella.
+- **Recorrido sobre el plano** (ficha del cable): en cada hoja, las bandejas del recorrido
+  numeradas en orden; en verde lo tendido, en gris lo que falta y en ámbar con flecha donde
+  está la punta suelta.
 
 ## Comparación con el modelo actual
 

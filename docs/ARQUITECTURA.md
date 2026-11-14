@@ -2,20 +2,21 @@
 
 ## Stack
 
-| Capa               | Tecnología                                   | Motivo                                              |
-| ------------------ | -------------------------------------------- | --------------------------------------------------- |
-| Monorepo           | pnpm workspaces + Turborepo                  | Paquetes compartidos, builds cacheados              |
-| Frontend + Backend | Next.js (App Router) + TypeScript estricto   | Un solo despliegue; Server Actions / Route Handlers |
-| UI                 | Tailwind CSS + shadcn/ui                     | Rápido, accesible y consistente                     |
-| Base de datos      | PostgreSQL 16 (+ extensión `pg_trgm`)        | Robusta; búsqueda tolerante a errores               |
-| ORM                | Prisma                                       | Migraciones y tipado                                |
-| Validación         | Zod (compartido cliente/servidor)            | Una sola fuente de verdad                           |
-| Autenticación      | Better Auth (email + contraseña)             | Sesiones, reset y verificación integrados           |
-| Email              | Mailpit (local) / Resend (producción)        |                                                     |
-| Tests              | Vitest + Testing Library + Playwright        | Unitarios, integración y E2E                        |
-| Offline (fase 9)   | Serwist (service worker) + Dexie (IndexedDB) | Mejora futura, fuera de la v1.0.0                   |
-| CI                 | GitHub Actions + CodeQL + Dependabot         | Gratis en repo público; activo desde la fase 4.5    |
-| Despliegue         | Vercel + Railway                             | Docker solo en local (y opcional en producción)     |
+| Capa               | Tecnología                                      | Motivo                                              |
+| ------------------ | ----------------------------------------------- | --------------------------------------------------- |
+| Monorepo           | pnpm workspaces + Turborepo                     | Paquetes compartidos, builds cacheados              |
+| Frontend + Backend | Next.js (App Router) + TypeScript estricto      | Un solo despliegue; Server Actions / Route Handlers |
+| UI                 | Tailwind CSS + shadcn/ui                        | Rápido, accesible y consistente                     |
+| Base de datos      | PostgreSQL 16 (+ extensión `pg_trgm`)           | Robusta; búsqueda tolerante a errores               |
+| ORM                | Prisma                                          | Migraciones y tipado                                |
+| Validación         | Zod (compartido cliente/servidor)               | Una sola fuente de verdad                           |
+| Autenticación      | Better Auth (email + contraseña)                | Sesiones, reset y verificación integrados           |
+| Email              | Mailpit (local) / Resend (producción)           |                                                     |
+| Tests              | Vitest + Testing Library + Playwright           | Unitarios, integración y E2E                        |
+| Offline (fase 9)   | Serwist (service worker) + Dexie (IndexedDB)    | Mejora futura, fuera de la v1.0.0                   |
+| Planos (fase 7.5)  | pdf.js + @napi-rs/canvas + sharp, OpenSeadragon | Teselas Deep Zoom servidas solo con sesión          |
+| CI                 | GitHub Actions + CodeQL + Dependabot            | Gratis en repo público; activo desde la fase 4.5    |
+| Despliegue         | Vercel + Railway                                | Docker solo en local (y opcional en producción)     |
 
 ### ¿Por qué Next.js "puro" y no una API separada?
 
@@ -238,6 +239,26 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   app o la carga de los listados. La carga lo usa para no pisar lo que alguien corrigió a mano.
 - Los límites de longitud de los textos de un cable (`CABLE_TEXT_LIMITS` en `packages/shared`)
   son los mismos en el formulario y en la carga.
+
+### Planos y timbrado (fase 7.5)
+
+- `DrawingSheet`: hoja de los planos de recorrido (plano, hoja, título, página, tamaño en
+  puntos, `imageKey` de sus teselas y `fingerprint`). `TrayDrawing.marks` (JSON validado con
+  `drawingMarkSchema` de `packages/shared`) dice dónde está la bandeja en la hoja, y
+  `TrayDrawing.sheetId` la enlaza con su `DrawingSheet`.
+- Las teselas viven fuera de git (`DRAWINGS_DIR`, por defecto `private-data/drawings`).
+  `apps/web/src/server/drawings/store.ts` es la única pieza que sabe dónde están: en
+  producción se cambia por un almacenamiento privado de objetos (fase 10). La ruta
+  `GET /api/drawings/<clave>.dzi` y `…/<clave>_files/<nivel>/<x>_<y>.webp` solo responde con
+  sesión, con `Cache-Control: private`, y solo acepta esas dos formas de ruta.
+- El visor es OpenSeadragon (BSD), cargado solo en el navegador: zoom con rueda o dos dedos,
+  pantalla completa y marcas superpuestas en HTML.
+- `Cable.testStatus` (`NOT_TESTED`, `TESTED_OK`, `TESTED_FAILED`) y la acción `TESTED`
+  ("Timbrar", permiso `cable:test` para técnico, supervisor y administrador). Es
+  independiente del tendido y la conexión: tender, enrollar o mover no lo cambian; solo otro
+  timbrado o una corrección. Un fallo exige una nota.
+- Una punta suelta en una bandeja que no está en el recorrido previsto se acepta si quien la
+  registra lo confirma (`confirmOffRoute`); las correcciones del supervisor no lo piden.
 
 ## Seguridad
 
