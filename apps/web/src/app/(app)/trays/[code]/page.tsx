@@ -13,6 +13,7 @@ import { DataList, Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
+import { TrayDrawings } from "@/features/drawings/components/tray-drawings";
 import { getTrayDetail, type TrayCable } from "@/server/trays/service";
 import { decodeRouteParam } from "@/lib/route-params";
 import { requireUser, whenSignedIn } from "@/server/session";
@@ -63,6 +64,16 @@ export default async function TrayPage({ params }: { params: Params }) {
         </p>
       </header>
 
+      <Section
+        title={`Plano${tray.drawings.length > 1 ? `s (${tray.drawings.length} hojas)` : ""}`}
+      >
+        {tray.drawings.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No aparece en los planos cargados.</p>
+        ) : (
+          <TrayDrawings code={tray.code} sheets={tray.drawings} />
+        )}
+      </Section>
+
       <Section title="Datos">
         <DataList>
           <Item label="Tamaño">{size}</Item>
@@ -70,23 +81,6 @@ export default async function TrayPage({ params }: { params: Params }) {
           <Item label="Cables que pasan">{tray.cables}</Item>
         </DataList>
         {tray.notes ? <p className="text-sm whitespace-pre-line">{tray.notes}</p> : null}
-      </Section>
-
-      <Section title="Planos">
-        {tray.drawings.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No aparece en los planos cargados.</p>
-        ) : (
-          <ul className="space-y-1 text-sm">
-            {tray.drawings.map((drawing) => (
-              <li key={`${drawing.drawing}-${drawing.sheet}`}>
-                <span className="font-mono">{drawing.drawing}</span> · hoja {drawing.sheet}
-                {drawing.title ? (
-                  <span className="text-muted-foreground"> · {drawing.title}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
       </Section>
 
       <Section title={`Cables esperando aquí (${tray.waitingCables.length})`}>
