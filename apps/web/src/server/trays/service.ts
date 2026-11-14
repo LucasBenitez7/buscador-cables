@@ -8,6 +8,7 @@ import {
   type CableLevel,
   type ConnectionStatus,
   type DrawingMark,
+  type TestStatus,
   type InstallationStatus,
   type TrayKind,
   type TraySearch,
@@ -44,6 +45,7 @@ export type TrayCable = {
   destinationEquipment: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
+  testStatus: TestStatus;
   /** Which end waits in this tray, if any. */
   looseEndHere: CableEndSide | null;
 };
@@ -145,6 +147,7 @@ const cableSelect = {
   destinationEquipment: true,
   installationStatus: true,
   connectionStatus: true,
+  testStatus: true,
   looseEnd: true,
   looseEndTrayId: true,
 } as const;
@@ -180,6 +183,7 @@ export async function getTrayDetail(code: string): Promise<TrayDetail | null> {
     destinationEquipment: cable.destinationEquipment,
     installationStatus: cable.installationStatus,
     connectionStatus: cable.connectionStatus,
+    testStatus: cable.testStatus,
     looseEndHere: cable.looseEndTrayId === tray.id ? cable.looseEnd : null,
   });
   // A route may name the same tray twice: list each cable once.

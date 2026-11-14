@@ -608,18 +608,18 @@ planos, se sustituye el PDF y se repite `data:extract` → `data:render` → `da
 
 ### Tareas
 
-- [ ] Posiciones de bandejas y banderas por hoja en la extracción, con informe.
-- [ ] `pnpm data:render`: cada hoja en teselas de imagen (Deep Zoom) en `private-data/drawings/`
+- [x] Posiciones de bandejas y banderas por hoja en la extracción, con informe.
+- [x] `pnpm data:render`: cada hoja en teselas de imagen (Deep Zoom) en `private-data/drawings/`
       (fuera de git); solo se vuelven a dibujar las hojas que cambian.
-- [ ] Hojas de plano en la base de datos y marcas por bandeja.
-- [ ] Teselas servidas solo con sesión; visor con zoom en la ficha de bandeja, centrado en la
+- [x] Hojas de plano en la base de datos y marcas por bandeja.
+- [x] Teselas servidas solo con sesión; visor con zoom en la ficha de bandeja, centrado en la
       bandeja marcada.
-- [ ] Timbrado: estado nuevo (sin timbrar / OK / con fallo), acción «Timbrar» para técnicos,
+- [x] Timbrado: estado nuevo (sin timbrar / OK / con fallo), acción «Timbrar» para técnicos,
       supervisores y administradores, filtro en el buscador y recuento en el inicio.
-- [ ] «Indicar dónde está»: bandejas del recorrido como botones; una bandeja fuera del
-      recorrido se acepta con aviso.
-- [ ] Recorrido del cable sobre el plano: bandejas numeradas, tendido / falta / dónde está.
-- [ ] Tests (posiciones con PDFs inventados, carga, timbrado, visor) y E2E.
+- [x] «Indicar dónde está»: en «Tender a medias», las bandejas del recorrido como botones
+      numerados; una bandeja fuera del recorrido se acepta si se confirma.
+- [x] Recorrido del cable sobre el plano: bandejas numeradas, tendido / falta / dónde está.
+- [x] Tests (posiciones con PDFs inventados, carga, timbrado, visor) y E2E.
 - Fotos de los técnicos: mejora futura (necesitan almacenamiento privado).
 
 ## Fase 8 — Importación masiva y panel (mejora futura)

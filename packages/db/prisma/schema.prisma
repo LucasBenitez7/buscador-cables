@@ -194,6 +194,13 @@ enum ConnectionStatus {
   CONNECTED
 }
 
+/// Timbrado: prueba de continuidad / identificación de los conductores del cable.
+enum TestStatus {
+  NOT_TESTED
+  TESTED_OK
+  TESTED_FAILED
+}
+
 enum CableAction {
   CREATED
   UPDATED
@@ -205,6 +212,7 @@ enum CableAction {
   MOVED
   RETIRED
   CORRECTION
+  TESTED // timbrado
   DELETED // baja lógica (deletedAt)
 }
 
@@ -291,6 +299,7 @@ model Cable {
   currentLocation    Location?          @relation("CableCurrent", fields: [currentLocationId], references: [id], onDelete: Restrict)
   installationStatus InstallationStatus @default(IN_STOCK)
   connectionStatus   ConnectionStatus   @default(DISCONNECTED)
+  testStatus         TestStatus         @default(NOT_TESTED)
 
   // Columnas resumen (desnormalizadas) para la tabla del buscador. Se actualizan
   // en la misma transacción que crea el CableEvent.

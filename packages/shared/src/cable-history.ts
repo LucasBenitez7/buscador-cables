@@ -14,6 +14,7 @@ export const CHANGE_FIELD_ORDER = [
   ...CABLE_EDITABLE_FIELDS,
   "installationStatus",
   "connectionStatus",
+  "testStatus",
   "currentLocationId",
   "looseEnd",
   "looseEndTray",
@@ -126,6 +127,10 @@ export function describeCableEvent(event: CableEventForSentence): string {
       return "retiró el cable";
     case "CORRECTION":
       return "corrigió un movimiento anterior";
+    case "TESTED":
+      return changedTo(event.changes, "testStatus") === "TESTED_FAILED"
+        ? "timbró el cable y encontró un fallo"
+        : "timbró el cable: correcto";
     case "DELETED":
       return "dio de baja el cable";
   }

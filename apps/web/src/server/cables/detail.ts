@@ -5,6 +5,7 @@ import {
   CABLE_END_SIDE_LABELS,
   CABLE_FIELD_LABELS,
   CONNECTION_STATUS_LABELS,
+  TEST_STATUS_LABELS,
   INSTALLATION_STATUS_LABELS,
   PROJECT_FIELD_LABELS,
   describeCableEvent,
@@ -16,6 +17,7 @@ import {
   type CableLevel,
   type CableState,
   type ConnectionStatus,
+  type TestStatus,
   type InstallationStatus,
   type RouteSection,
 } from "@cables/shared";
@@ -88,6 +90,7 @@ export type CableDetail = {
   currentLocation: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
+  testStatus: TestStatus;
   lastAction: { action: CableAction; user: string; at: Date } | null;
   createdAt: Date;
   updatedAt: Date;
@@ -160,6 +163,8 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
       return CABLE_END_SIDE_LABELS[text as CableEndSide] ?? text;
     case "connectionStatus":
       return CONNECTION_STATUS_LABELS[text as ConnectionStatus] ?? text;
+    case "testStatus":
+      return TEST_STATUS_LABELS[text as TestStatus] ?? text;
     case "deletedAt":
       return dateFormat.format(new Date(text));
     default:
@@ -230,6 +235,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
     state: {
       installationStatus: cable.installationStatus,
       connectionStatus: cable.connectionStatus,
+      testStatus: cable.testStatus,
       currentLocationId: cable.currentLocationId,
       looseEnd: cable.looseEnd,
       looseEndTray: cable.looseEndTray?.code ?? null,
@@ -291,6 +297,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
     currentLocation: location(cable.currentLocationId),
     installationStatus: cable.installationStatus,
     connectionStatus: cable.connectionStatus,
+    testStatus: cable.testStatus,
     lastAction:
       cable.lastAction && cable.lastActionAt
         ? {

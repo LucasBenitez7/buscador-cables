@@ -13,6 +13,8 @@ import type { CableDetail, CableEndDetail } from "@/server/cables/detail";
 
 export const trayHref = (code: string) => `/trays/${encodeURIComponent(code)}`;
 
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 const looseEndText = (end: CableEndSide) =>
   end === "ORIGIN" ? "la punta de origen" : "la punta de destino";
 
@@ -106,6 +108,9 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
   }
   const { steps, looseIndex } = routeProgress(route, state);
   const looseStep = looseIndex === null ? null : route[looseIndex];
+  // Encontrado fuera de su recorrido previsto (el técnico lo confirmó al registrarlo).
+  const offRoute =
+    state.installationStatus === "PARTIALLY_LAID" && state.looseEndTray && looseIndex === null;
 
   return (
     <div className="space-y-3">
@@ -114,6 +119,15 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
           Tendido hasta la bandeja <span className="font-mono">{looseStep.trayCode}</span>, donde
           espera {looseEndText(state.looseEnd)}. Faltan{" "}
           {steps.filter((step) => step === "pending").length} tramos.
+        </p>
+      ) : null}
+      {offRoute && state.looseEnd ? (
+        <p className="border-warning/40 bg-warning/10 rounded-md border px-3 py-2 text-sm">
+          {capitalize(looseEndText(state.looseEnd))} está en la bandeja{" "}
+          <Link href={trayHref(state.looseEndTray!)} className={CODE_LINK}>
+            {state.looseEndTray}
+          </Link>
+          , que no está en su recorrido previsto.
         </p>
       ) : null}
       <ol aria-label="Tramos del recorrido" className="space-y-1 text-sm">

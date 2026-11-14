@@ -144,6 +144,7 @@ function CableList({ cables }: { cables: TrayCable[] }) {
           <CableStatusBadges
             installationStatus={cable.installationStatus}
             connectionStatus={cable.connectionStatus}
+            testStatus={cable.testStatus}
           />
         </li>
       ))}

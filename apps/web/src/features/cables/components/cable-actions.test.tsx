@@ -16,6 +16,7 @@ const locations = [
 const laid: CableState = {
   installationStatus: "LAID",
   connectionStatus: "DISCONNECTED",
+  testStatus: "NOT_TESTED",
   currentLocationId: null,
   looseEnd: null,
   looseEndTray: null,
@@ -169,7 +170,7 @@ describe("CableActions: partial laying", () => {
     mocks.refresh.mockReset();
   });
 
-  it("asks which end stays loose and the tray, suggesting the route trays", async () => {
+  it("asks which end stays loose and offers the route trays as buttons, in order", async () => {
     mocks.runCableActionAction.mockResolvedValue({ ok: true, message: "Hecho", id: "c1" });
     renderActions("TECHNICIAN", { ...laid, connectionStatus: "ORIGIN_ONLY" }, [
       "99UXA00L22036",
@@ -180,11 +181,23 @@ describe("CableActions: partial laying", () => {
     const dialog = await screen.findByRole("dialog");
     // The origin is connected, so the destination is the end that can stay loose.
     expect(within(dialog).getByLabelText("Destino")).toBeChecked();
-    const tray = within(dialog).getByLabelText("Bandeja donde espera la punta");
-    expect(tray).toHaveAttribute("list", "action-trayCode-route");
-    expect(dialog.querySelectorAll("datalist option")).toHaveLength(2);
+    const route = within(dialog).getByRole("list", { name: "Bandejas del recorrido" });
+    expect(
+      within(route)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["1. 99UXA00L22036", "2. 99UXA00L22051"]);
 
-    fireEvent.change(tray, { target: { value: "99UXA00L22051" } });
+    fireEvent.click(within(route).getByRole("button", { name: "2. 99UXA00L22051" }));
+    expect(within(dialog).getByLabelText("Bandeja donde está la punta")).toHaveValue(
+      "99UXA00L22051",
+    );
+    expect(within(route).getByRole("button", { name: "2. 99UXA00L22051" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // On the route: nothing to confirm.
+    expect(within(dialog).queryByRole("checkbox")).toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: "Tender a medias" }));
 
     await screen.findByText("Hecho");
@@ -195,6 +208,23 @@ describe("CableActions: partial laying", () => {
     });
   });
 
+  it("asks to confirm a tray that is not on the planned route", async () => {
+    mocks.runCableActionAction.mockResolvedValue({ ok: true, message: "Hecho", id: "c1" });
+    renderActions("TECHNICIAN", { ...laid, connectionStatus: "ORIGIN_ONLY" }, ["99UXA00L22036"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tender a medias" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Bandeja donde está la punta"), {
+      target: { value: "99uxa00l22099" },
+    });
+    const confirm = within(dialog).getByRole("checkbox", { name: /no está en su recorrido/ });
+    fireEvent.click(confirm);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tender a medias" }));
+
+    await screen.findByText("Hecho");
+    expect(sentForm()).toMatchObject({ trayCode: "99uxa00l22099", confirmOffRoute: "1" });
+  });
+
   it("works without a route: the tray is typed", async () => {
     renderActions("TECHNICIAN", {
       ...laid,
@@ -203,10 +233,9 @@ describe("CableActions: partial laying", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Tender a medias" }));
-    const tray = within(await screen.findByRole("dialog")).getByLabelText(
-      "Bandeja donde espera la punta",
-    );
-    expect(tray).not.toHaveAttribute("list");
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("Bandeja donde está la punta")).toHaveValue("");
+    expect(within(dialog).queryByRole("list", { name: "Bandejas del recorrido" })).toBeNull();
   });
 
   it("explains that laying a partially laid cable completes it", async () => {
@@ -257,5 +286,40 @@ describe("CableStatusBadges", () => {
     rerender(<CableStatusBadges installationStatus="RETIRED" connectionStatus="DISCONNECTED" />);
     expect(screen.getByText("Retirado")).toHaveClass("text-destructive");
     expect(screen.getByText("Desconectado")).not.toHaveClass("text-success");
+  });
+});
+
+describe("CableActions: timbrado", () => {
+  beforeEach(() => {
+    mocks.runCableActionAction.mockReset();
+    mocks.refresh.mockReset();
+  });
+
+  it("records the result, correct by default", async () => {
+    mocks.runCableActionAction.mockResolvedValue({ ok: true, message: "Hecho", id: "c1" });
+    renderActions("TECHNICIAN", laid);
+
+    fireEvent.click(screen.getByRole("button", { name: "Timbrar" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("Correcto")).toBeChecked();
+    expect(within(dialog).getByLabelText("Nota (obligatoria si falla)")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByLabelText("Con fallo"));
+    fireEvent.change(within(dialog).getByLabelText("Nota (obligatoria si falla)"), {
+      target: { value: "Conductor 3 abierto" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Timbrar" }));
+
+    await screen.findByText("Hecho");
+    expect(sentForm()).toMatchObject({
+      action: "TESTED",
+      result: "FAILED",
+      notes: "Conductor 3 abierto",
+    });
+  });
+
+  it("is not offered to a viewer", () => {
+    renderActions("VIEWER", laid);
+
+    expect(screen.queryByRole("button", { name: "Timbrar" })).toBeNull();
   });
 });

@@ -11,6 +11,8 @@ import {
   CABLE_LEVEL_LABELS,
   CONNECTION_STATUSES,
   CONNECTION_STATUS_LABELS,
+  TEST_STATUSES,
+  TEST_STATUS_LABELS,
   INSTALLATION_STATUSES,
   INSTALLATION_STATUS_LABELS,
   cableSearchQuery,
@@ -148,6 +150,15 @@ export function SearchFilters({ search, options }: Props) {
               {CONNECTION_STATUSES.map((status) => (
                 <option key={status} value={status}>
                   {CONNECTION_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </Filter>
+          <Filter label="Timbrado" htmlFor="test">
+            <Select id="test" name="test" defaultValue={search.test}>
+              {TEST_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {TEST_STATUS_LABELS[status]}
                 </option>
               ))}
             </Select>

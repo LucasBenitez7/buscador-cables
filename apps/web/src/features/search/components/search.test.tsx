@@ -94,6 +94,7 @@ const item = {
   state: {
     installationStatus: "LAID",
     connectionStatus: "CONNECTED",
+    testStatus: "NOT_TESTED",
     currentLocationId: null,
     looseEnd: null,
     looseEndTray: null,
@@ -109,6 +110,7 @@ const item = {
   lengthM: 120.5,
   installationStatus: "LAID",
   connectionStatus: "CONNECTED",
+  testStatus: "NOT_TESTED",
   level: null,
   originEquipment: null,
   destinationEquipment: null,

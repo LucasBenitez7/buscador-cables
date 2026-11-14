@@ -104,6 +104,7 @@ export function SearchResults({ search, result, actions }: Props) {
               <CableStatusBadges
                 installationStatus={cable.installationStatus}
                 connectionStatus={cable.connectionStatus}
+                testStatus={cable.testStatus}
               />
             </div>
             <Ends cable={cable} />
@@ -214,6 +215,7 @@ export function SearchResults({ search, result, actions }: Props) {
                   <CableStatusBadges
                     installationStatus={cable.installationStatus}
                     connectionStatus={cable.connectionStatus}
+                    testStatus={cable.testStatus}
                   />
                   <LooseEnd cable={cable} />
                 </td>

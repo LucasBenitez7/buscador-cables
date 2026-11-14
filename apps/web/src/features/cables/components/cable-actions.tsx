@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import { useRouter } from "next/navigation";
 import {
   useState,
@@ -18,6 +19,11 @@ import {
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUSES,
   INSTALLATION_STATUS_LABELS,
+  TEST_RESULTS,
+  TEST_RESULT_LABELS,
+  TEST_STATUSES,
+  TEST_STATUS_LABELS,
+  normalizeTrayCode,
   type CableActionAvailability,
   type CableEnd,
   type CableEndSide,
@@ -62,10 +68,12 @@ type Props = {
 const DESCRIPTIONS: Record<CableFieldAction, string> = {
   LAID: "El cable queda tendido entre su origen y su destino, todavía sin conectar.",
   PARTIALLY_LAID:
-    "Una punta llega a su equipo y la otra queda esperando en una bandeja del recorrido (por ejemplo, porque el equipo aún no está montado).",
+    "El cable no llegó a su destino: una punta llega a su equipo y la otra está en una bandeja del camino. Elige la bandeja donde lo has encontrado.",
   COILED: "El cable queda enrollado y desconectado en el sitio que indiques.",
   CONNECTED: "Indica qué extremo has conectado.",
   DISCONNECTED: "Indica qué extremo has desconectado.",
+  TESTED:
+    "Resultado de timbrar el cable (continuidad e identificación de los conductores). Si falla, explica qué en la nota.",
   MOVED: "Indica a dónde has llevado el cable.",
   RETIRED: "El cable queda fuera de servicio y desconectado. Solo un supervisor puede deshacerlo.",
   CORRECTION:
@@ -186,6 +194,7 @@ export function CableActions({
             />
             <NotesField
               required={ACTIONS_REQUIRING_REASON.includes(open)}
+              label={open === "TESTED" ? "Nota (obligatoria si falla)" : undefined}
               error={fieldErrors.notes}
             />
             {result && !result.ok ? (
@@ -332,10 +341,11 @@ function ActionFields({
           <LooseEndChoice defaultValue={defaultLooseEnd(state)} error={errors.looseEnd} />
           <TrayField
             name="trayCode"
-            label="Bandeja donde espera la punta"
+            label="Bandeja donde está la punta"
             defaultValue={state.looseEndTray ?? ""}
             routeTrays={routeTrays}
             error={errors.trayCode}
+            confirmOffRoute
           />
         </>
       );
@@ -354,6 +364,28 @@ function ActionFields({
             defaultValue=""
           />
         </Field>
+      );
+    case "TESTED":
+      return (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">Resultado</legend>
+          {TEST_RESULTS.map((result) => (
+            <label
+              key={result}
+              className="hover:bg-accent/60 has-checked:bg-accent flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 text-sm transition-colors"
+            >
+              <input
+                type="radio"
+                name="result"
+                value={result}
+                defaultChecked={result === "OK"}
+                className="accent-primary"
+              />
+              {TEST_RESULT_LABELS[result]}
+            </label>
+          ))}
+          {errors.result ? <ErrorText>{errors.result}</ErrorText> : null}
+        </fieldset>
       );
     case "CONNECTED":
     case "DISCONNECTED":
@@ -427,6 +459,15 @@ function ActionFields({
               ))}
             </Select>
           </Field>
+          <Field id="action-test" label="Timbrado correcto" error={errors.testStatus}>
+            <Select id="action-test" name="testStatus" defaultValue={state.testStatus}>
+              {TEST_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {TEST_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <Field
             id="action-location"
             label="Dónde está (si no está tendido)"
@@ -491,52 +532,101 @@ function LooseEndChoice({ defaultValue, error }: { defaultValue: CableEndSide; e
   );
 }
 
-/** Free text with the route trays as suggestions: a cable without a loaded route still works. */
+/**
+ * The tray code, typed or picked from the route: its trays are buttons, numbered in route
+ * order, so in the field one tap is enough. With `confirmOffRoute`, a tray that is not on the
+ * planned route asks for a confirmation instead of being refused.
+ */
 function TrayField({
   name,
   label,
   defaultValue,
   routeTrays,
   error,
+  confirmOffRoute = false,
 }: {
   name: string;
   label: string;
   defaultValue: string;
   routeTrays: string[];
   error?: string;
+  confirmOffRoute?: boolean;
 }) {
   const id = `action-${name}`;
+  const [value, setValue] = useState(defaultValue);
+  const typed = normalizeTrayCode(value);
+  const offRoute =
+    confirmOffRoute && typed !== "" && routeTrays.length > 0 && !routeTrays.includes(typed);
   return (
     <Field id={id} label={label} error={error}>
+      {routeTrays.length > 0 ? (
+        <ol
+          aria-label="Bandejas del recorrido"
+          className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto"
+        >
+          {routeTrays.map((code, index) => (
+            <li key={code}>
+              <button
+                type="button"
+                aria-pressed={typed === code}
+                onClick={() => setValue(code)}
+                className={cn(
+                  "focus-visible:ring-ring/50 rounded-md border px-2 py-1 font-mono text-xs transition-colors outline-none focus-visible:ring-3",
+                  typed === code
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "hover:bg-muted bg-background",
+                )}
+              >
+                <span className="opacity-70">{index + 1}.</span> {code}
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : null}
       <Input
         id={id}
         name={name}
-        defaultValue={defaultValue}
-        list={routeTrays.length > 0 ? `${id}-route` : undefined}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        placeholder={routeTrays.length > 0 ? "O escribe otro código" : "Código de la bandeja"}
         autoComplete="off"
         spellCheck={false}
         className="font-mono uppercase"
         aria-invalid={error ? true : undefined}
       />
-      {routeTrays.length > 0 ? (
-        <>
-          <datalist id={`${id}-route`}>
-            {routeTrays.map((code) => (
-              <option key={code} value={code} />
-            ))}
-          </datalist>
-          <p className="text-muted-foreground text-xs">
-            Escribe el código o elige una bandeja del recorrido.
-          </p>
-        </>
+      {offRoute ? (
+        <label className="border-warning/40 bg-warning/10 flex cursor-pointer items-start gap-2 rounded-md border p-2 text-sm">
+          <input
+            type="checkbox"
+            name="confirmOffRoute"
+            value="1"
+            className="accent-primary mt-0.5"
+          />
+          <span>
+            Esta bandeja no está en su recorrido previsto. Confirmo que el cable está en{" "}
+            <span className="font-mono">{typed}</span>.
+          </span>
+        </label>
       ) : null}
     </Field>
   );
 }
 
-function NotesField({ required, error }: { required: boolean; error?: string }) {
+function NotesField({
+  required,
+  label,
+  error,
+}: {
+  required: boolean;
+  label?: string;
+  error?: string;
+}) {
   return (
-    <Field id="action-notes" label={required ? "Motivo" : "Nota (opcional)"} error={error}>
+    <Field
+      id="action-notes"
+      label={label ?? (required ? "Motivo" : "Nota (opcional)")}
+      error={error}
+    >
       <Textarea
         id="action-notes"
         name="notes"

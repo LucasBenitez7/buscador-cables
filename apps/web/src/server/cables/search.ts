@@ -10,6 +10,7 @@ import {
   type CableSearch,
   type CableState,
   type ConnectionStatus,
+  type TestStatus,
   type InstallationStatus,
 } from "@cables/shared";
 import {
@@ -35,6 +36,7 @@ export type CableSearchItem = {
   lengthM: number | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
+  testStatus: TestStatus;
   level: CableLevel | null;
   /** Equipment of each end (cables from the project lists). */
   originEquipment: string | null;
@@ -127,6 +129,9 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
     conditions.push(
       Prisma.sql`c."installationStatus" = ${search.installation}::"InstallationStatus"`,
     );
+  }
+  if (search.test) {
+    conditions.push(Prisma.sql`c."testStatus" = ${search.test}::"TestStatus"`);
   }
   if (search.connection) {
     conditions.push(Prisma.sql`c."connectionStatus" = ${search.connection}::"ConnectionStatus"`);
@@ -266,6 +271,7 @@ export async function searchCables(
       lengthM: true,
       installationStatus: true,
       connectionStatus: true,
+      testStatus: true,
       lastAction: true,
       lastActionAt: true,
       type: { select: { name: true } },
@@ -295,6 +301,7 @@ export async function searchCables(
         state: {
           installationStatus: cable.installationStatus,
           connectionStatus: cable.connectionStatus,
+          testStatus: cable.testStatus,
           currentLocationId: cable.currentLocationId,
           looseEnd: cable.looseEnd,
           looseEndTray: cable.looseEndTray?.code ?? null,
@@ -312,6 +319,7 @@ export async function searchCables(
         lengthM: cable.lengthM?.toNumber() ?? null,
         installationStatus: cable.installationStatus,
         connectionStatus: cable.connectionStatus,
+        testStatus: cable.testStatus,
         level: cable.level,
         originEquipment: cable.originEquipment,
         destinationEquipment: cable.destinationEquipment,

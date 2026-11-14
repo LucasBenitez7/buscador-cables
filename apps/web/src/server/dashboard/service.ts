@@ -5,11 +5,13 @@ import {
   CONNECTION_STATUSES,
   INSTALLATION_STATUSES,
   ROLES,
+  TEST_STATUSES,
   canRunCableAction,
   hasPermission,
   type ConnectionStatus,
   type InstallationStatus,
   type Role,
+  type TestStatus,
 } from "@cables/shared";
 import { listActivity, type ActivityEntry } from "@/server/activity/service";
 import { getHealth, type HealthStatus } from "@/server/health";
@@ -21,8 +23,11 @@ export type CableProgress = {
   laid: number;
   /** Connected at both ends. */
   connected: number;
+  /** Timbrado OK. */
+  tested: number;
   installation: Record<InstallationStatus, number>;
   connection: Record<ConnectionStatus, number>;
+  test: Record<TestStatus, number>;
 };
 
 /**
@@ -52,21 +57,26 @@ const zeroes = <T extends string>(keys: readonly T[]) =>
 
 export async function getCableProgress(): Promise<CableProgress> {
   const active = { deletedAt: null };
-  const [byInstallation, byConnection] = await Promise.all([
+  const [byInstallation, byConnection, byTest] = await Promise.all([
     prisma.cable.groupBy({ by: ["installationStatus"], where: active, _count: { _all: true } }),
     prisma.cable.groupBy({ by: ["connectionStatus"], where: active, _count: { _all: true } }),
+    prisma.cable.groupBy({ by: ["testStatus"], where: active, _count: { _all: true } }),
   ]);
   const installation = zeroes(INSTALLATION_STATUSES);
   for (const row of byInstallation) installation[row.installationStatus] = row._count._all;
   const connection = zeroes(CONNECTION_STATUSES);
   for (const row of byConnection) connection[row.connectionStatus] = row._count._all;
+  const test = zeroes(TEST_STATUSES);
+  for (const row of byTest) test[row.testStatus] = row._count._all;
   const total = Object.values(installation).reduce((sum, count) => sum + count, 0);
   return {
     total,
     laid: installation.LAID,
     connected: connection.CONNECTED,
+    tested: test.TESTED_OK,
     installation,
     connection,
+    test,
   };
 }
 

@@ -17,6 +17,8 @@ const progress: CableProgress = {
     RETIRED: 0,
   },
   connection: { DISCONNECTED: 160, ORIGIN_ONLY: 15, DESTINATION_ONLY: 5, CONNECTED: 20 },
+  tested: 40,
+  test: { NOT_TESTED: 157, TESTED_OK: 40, TESTED_FAILED: 3 },
 };
 
 const entry: ActivityEntry = {
@@ -55,6 +57,14 @@ describe("Dashboard", () => {
     expect(screen.getByRole("link", { name: /10 cables tendidos a medias/ })).toHaveAttribute(
       "href",
       "/cables?loose=1",
+    );
+    expect(screen.getByRole("progressbar", { name: "Timbrados" })).toHaveAttribute(
+      "aria-valuenow",
+      "20",
+    );
+    expect(screen.getByRole("link", { name: "3 cables timbrados con fallo" })).toHaveAttribute(
+      "href",
+      "/cables?test=TESTED_FAILED",
     );
   });
 

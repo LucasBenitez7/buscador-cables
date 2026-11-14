@@ -119,3 +119,24 @@ describe("orderedChanges", () => {
     expect(orderedChanges("x")).toEqual([]);
   });
 });
+
+describe("describeCableEvent: timbrado", () => {
+  it("says whether the timbrado was correct or found a fault", () => {
+    expect(
+      describeCableEvent({
+        action: "TESTED",
+        changes: { testStatus: { from: "NOT_TESTED", to: "TESTED_OK" } },
+        fromLocation: null,
+        toLocation: null,
+      }),
+    ).toBe("timbró el cable: correcto");
+    expect(
+      describeCableEvent({
+        action: "TESTED",
+        changes: { testStatus: { from: "TESTED_OK", to: "TESTED_FAILED" } },
+        fromLocation: null,
+        toLocation: null,
+      }),
+    ).toBe("timbró el cable y encontró un fallo");
+  });
+});

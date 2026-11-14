@@ -190,8 +190,40 @@ describe("runCableActionAction", () => {
       action: "PARTIALLY_LAID",
       looseEnd: "DESTINATION",
       trayCode: "99UXA00L22036",
+      confirmOffRoute: false,
       notes: null,
     });
+  });
+
+  it("passes a timbrado and its confirmation of an off-route tray", async () => {
+    mocks.runCableAction.mockResolvedValue({ cableId: "c1", message: "Movimiento registrado." });
+
+    await runCableActionAction(
+      form({
+        cableId: "c1",
+        version: "2",
+        action: "TESTED",
+        result: "FAILED",
+        notes: "Conductor 3",
+      }),
+    );
+    expect(mocks.runCableAction.mock.calls[0]?.[1]).toMatchObject({
+      action: "TESTED",
+      result: "FAILED",
+      notes: "Conductor 3",
+    });
+
+    await runCableActionAction(
+      form({
+        cableId: "c1",
+        version: "2",
+        action: "PARTIALLY_LAID",
+        looseEnd: "DESTINATION",
+        trayCode: "99UXA00L22099",
+        confirmOffRoute: "1",
+      }),
+    );
+    expect(mocks.runCableAction.mock.calls[1]?.[1]).toMatchObject({ confirmOffRoute: true });
   });
 
   it("passes the loose end of a correction to the service", async () => {
@@ -206,6 +238,7 @@ describe("runCableActionAction", () => {
         correctsEventId: "e1",
         installationStatus: "PARTIALLY_LAID",
         connectionStatus: "DISCONNECTED",
+        testStatus: "NOT_TESTED",
         looseEnd: "ORIGIN",
         looseEndTray: "99UXA00L22036",
         notes: "La punta no llegó",
