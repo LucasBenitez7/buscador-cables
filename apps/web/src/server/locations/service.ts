@@ -262,3 +262,102 @@ export async function findSubtreeIds(id: string): Promise<string[]> {
   });
   return locations.map((location) => location.id);
 }
+
+export type LocationDetail = {
+  id: string;
+  name: string;
+  code: string;
+  type: LocationType;
+  /** From the plant down to the parent, for the breadcrumb. */
+  ancestors: { id: string; name: string; code: string; type: LocationType }[];
+  children: { id: string; name: string; code: string; type: LocationType }[];
+  /** Active cables that start, end or are physically here or in anything it contains. */
+  cables: number;
+  /** Trays of this building or of the buildings it contains. */
+  trays: number;
+  /** The first cables, by code: enough for a room; a building links to the search instead. */
+  someCables: {
+    id: string;
+    code: string;
+    /** Whether it starts, ends or is stored here (or in something it contains). */
+    roles: ("origin" | "destination" | "here")[];
+    otherEnd: string | null;
+  }[];
+};
+
+export const LOCATION_CABLE_LIST_SIZE = 25;
+
+/** One location with where it is, what it contains and how many cables and trays it has. */
+export async function getLocationDetail(id: string): Promise<LocationDetail | null> {
+  const location = await prisma.location.findUnique({
+    where: { id },
+    select: { id: true, name: true, code: true, type: true, path: true },
+  });
+  if (!location) return null;
+  const subtree = await findSubtreeIds(id);
+  // The path is made of codes ("/80/80UB/80UBA"): each prefix is an ancestor.
+  const codes = location.path.split(PATH_SEPARATOR).filter(Boolean);
+  const ancestorPaths = codes
+    .slice(0, -1)
+    .map((_, index) => `${PATH_SEPARATOR}${codes.slice(0, index + 1).join(PATH_SEPARATOR)}`);
+  const select = { id: true, name: true, code: true, type: true } as const;
+  const inSubtree = {
+    deletedAt: null,
+    OR: [
+      { originId: { in: subtree } },
+      { destinationId: { in: subtree } },
+      { currentLocationId: { in: subtree } },
+    ],
+  };
+  const [ancestors, children, cables, trays, firstCables] = await Promise.all([
+    prisma.location.findMany({
+      where: { path: { in: ancestorPaths } },
+      select: { ...select, path: true },
+    }),
+    prisma.location.findMany({ where: { parentId: id }, select, orderBy: { name: "asc" } }),
+    prisma.cable.count({ where: inSubtree }),
+    prisma.tray.count({ where: { locationId: { in: subtree } } }),
+    prisma.cable.findMany({
+      where: inSubtree,
+      orderBy: { code: "asc" },
+      take: LOCATION_CABLE_LIST_SIZE,
+      select: {
+        id: true,
+        code: true,
+        originId: true,
+        destinationId: true,
+        currentLocationId: true,
+        originEquipment: true,
+        destinationEquipment: true,
+      },
+    }),
+  ]);
+  const inside = new Set(subtree);
+  const depth = (path: string) => path.split(PATH_SEPARATOR).length;
+  return {
+    id: location.id,
+    name: location.name,
+    code: location.code,
+    type: location.type,
+    ancestors: ancestors
+      .sort((a, b) => depth(a.path) - depth(b.path))
+      .map(({ path: _path, ...ancestor }) => ancestor),
+    children,
+    cables,
+    trays,
+    someCables: firstCables.map((cable) => {
+      const roles: LocationDetail["someCables"][number]["roles"] = [];
+      if (cable.originId && inside.has(cable.originId)) roles.push("origin");
+      if (cable.destinationId && inside.has(cable.destinationId)) roles.push("destination");
+      if (cable.currentLocationId && inside.has(cable.currentLocationId)) roles.push("here");
+      // The other end: where it goes if it starts here, where it comes from if it ends here.
+      const otherEnd =
+        roles[0] === "origin"
+          ? cable.destinationEquipment
+          : roles[0] === "destination"
+            ? cable.originEquipment
+            : null;
+      return { id: cable.id, code: cable.code, roles, otherEnd };
+    }),
+  };
+}

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CABLE_ACTIONS, CONNECTION_STATUSES, INSTALLATION_STATUSES } from "./cables";
+import { CABLE_ACTIONS, CONNECTION_STATUSES, INSTALLATION_STATUSES, TEST_STATUSES } from "./cables";
 import { CABLE_LEVELS, normalizeTrayCode } from "./trays";
 import {
   daySchema as day,
@@ -66,7 +66,11 @@ export const cableSearchSchema = z.object({
   manufacturer: id,
   installation: z.enum(INSTALLATION_STATUSES).optional().catch(undefined),
   connection: z.enum(CONNECTION_STATUSES).optional().catch(undefined),
+  /** Timbrado. */
+  test: z.enum(TEST_STATUSES).optional().catch(undefined),
   level: z.enum(CABLE_LEVELS).optional().catch(undefined),
+  /** Cables that start or end at this equipment, exactly ("+80BBA01"). */
+  equipment: text(80),
   /** Cables whose route goes through this tray (or, with `loose`, waiting in it). */
   tray: z
     .string()

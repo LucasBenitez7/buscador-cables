@@ -5,6 +5,7 @@
  */
 import { parseTrayCode, parseTraySize } from "@cables/shared";
 import { findLabel } from "../pdf/layout";
+import { sectionFlags, trayLabels, type SectionFlag, type TrayLabel } from "./drawing-marks";
 import type { PdfPage, TextRun } from "../pdf/read-pdf";
 
 export type RawDrawingTray = { code: string; size: string | null };
@@ -16,6 +17,16 @@ export type RawDrawingSheet = {
   /** Sheet titles listed on an index page: sheet number → title. */
   index: { sheet: string; title: string }[];
   trays: RawDrawingTray[];
+  /** Size of the sheet in points. */
+  width: number;
+  height: number;
+  labels: TrayLabel[];
+  flags: SectionFlag[];
+  /**
+   * Changes when the text of the sheet changes, title block included (a new revision adds a
+   * row): `data:render` only draws again the sheets whose fingerprint changed.
+   */
+  fingerprint: string;
 };
 
 const DRAWING_NUMBER = /^[A-Z0-9]+(?:-[A-Z0-9]+)*-DRW-\d{4}$/;
@@ -115,5 +126,10 @@ export function parseDrawingSheet(page: PdfPage): RawDrawingSheet {
     sheet: sheetNumber(page.runs),
     index: sheetIndex(page),
     trays: traysOn(page.runs),
+    width: Math.round(page.width),
+    height: Math.round(page.height),
+    labels: trayLabels(page),
+    flags: sectionFlags(page),
+    fingerprint: page.fingerprint,
   };
 }

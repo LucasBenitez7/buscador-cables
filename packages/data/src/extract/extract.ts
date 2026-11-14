@@ -5,15 +5,18 @@
  */
 import { parseTrayCode, parseTraySize } from "@cables/shared";
 import { parseCableSheet } from "../parse/cable-page";
+import { traySection } from "../parse/drawing-marks";
 import { parseDrawingSheet, type RawDrawingSheet } from "../parse/drawing-page";
 import { readPdfPages } from "../pdf/read-pdf";
 import { compareRevisions, normalizeCableSheet } from "./normalize";
 import {
   projectCableSchema,
+  projectSheetSchema,
   projectTraySchema,
   type ExtractionIssue,
   type ExtractionResult,
   type ProjectCable,
+  type ProjectSheet,
   type ProjectTray,
 } from "./schema";
 
@@ -34,6 +37,7 @@ export async function extractProjectData(
     cablesByLevel: {},
     traysInDrawings: 0,
     traysOnlyInRoutes: 0,
+    trayMarks: { label: 0, flag: 0, tableOnly: 0 },
   };
 
   for (const file of files) {
@@ -112,8 +116,43 @@ export async function extractProjectData(
   for (const cable of cables) {
     stats.cablesByLevel[cable.level] = (stats.cablesByLevel[cable.level] ?? 0) + 1;
   }
+  const sheets = buildSheets(drawingSheets);
   const trays = buildTrays(drawingSheets, cables, issues, stats);
-  return { cables, trays, issues, stats };
+  return { cables, trays, sheets, issues, stats };
+}
+
+/** Sheet titles come from the index page of each drawing. */
+function sheetTitles(sheets: readonly DrawingSheetOf[]): Map<string, string> {
+  const titles = new Map<string, string>();
+  for (const sheet of sheets) {
+    for (const entry of sheet.index) titles.set(`${sheet.drawing}#${entry.sheet}`, entry.title);
+  }
+  return titles;
+}
+
+/** One entry per drawing and sheet (the first page that has it). */
+function buildSheets(sheets: readonly DrawingSheetOf[]): ProjectSheet[] {
+  const titles = sheetTitles(sheets);
+  const seen = new Set<string>();
+  const result: ProjectSheet[] = [];
+  for (const sheet of sheets) {
+    const sheetNumber = sheet.sheet ?? "?";
+    const key = `${sheet.drawing}#${sheetNumber}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const parsed = projectSheetSchema.safeParse({
+      drawing: sheet.drawing,
+      sheet: sheetNumber,
+      title: titles.get(key) ?? null,
+      file: sheet.file,
+      page: sheet.page,
+      width: sheet.width,
+      height: sheet.height,
+      fingerprint: sheet.fingerprint,
+    });
+    if (parsed.success) result.push(parsed.data);
+  }
+  return result;
 }
 
 function buildTrays(
@@ -122,11 +161,7 @@ function buildTrays(
   issues: ExtractionIssue[],
   stats: ExtractionResult["stats"],
 ): ProjectTray[] {
-  // Sheet titles come from the index page of each drawing.
-  const titles = new Map<string, string>();
-  for (const sheet of sheets) {
-    for (const entry of sheet.index) titles.set(`${sheet.drawing}#${entry.sheet}`, entry.title);
-  }
+  const titles = sheetTitles(sheets);
 
   const trays = new Map<string, ProjectTray>();
   const sizes = new Map<string, Map<string, number>>();
@@ -162,6 +197,7 @@ function buildTrays(
           sheet: sheetNumber,
           title: titles.get(`${sheet.drawing}#${sheetNumber}`) ?? null,
           sourcePage: sheet.page,
+          marks: [],
         });
       }
       if (found.size) {
@@ -172,6 +208,7 @@ function buildTrays(
     }
   }
   stats.traysInDrawings = trays.size;
+  locateTrays(sheets, trays, titles, stats);
 
   // The size printed most often wins; disagreements go to the report.
   for (const [code, counts] of sizes) {
@@ -223,4 +260,91 @@ function buildTrays(
     }
     return false;
   });
+}
+
+/**
+ * Marks where each tray is on its sheets. A code drawn along the tray is the best mark. A tray
+ * that only shows up in a table row (electrical drawings) is pointed at by the flag of its
+ * section: on the same sheet if it has that flag, otherwise on the other sheets of the same
+ * drawing that have it, except those whose own tables define that section (there the flag is
+ * another floor's or level's). The table row stays as a mark of its own.
+ */
+function locateTrays(
+  sheets: readonly DrawingSheetOf[],
+  trays: Map<string, ProjectTray>,
+  titles: Map<string, string>,
+  stats: ExtractionResult["stats"],
+) {
+  const key = (drawing: string, sheet: string) => `${drawing}#${sheet}`;
+  const byKey = new Map<string, DrawingSheetOf>();
+  const byDrawing = new Map<string, DrawingSheetOf[]>();
+  for (const sheet of sheets) {
+    const sheetKey = key(sheet.drawing!, sheet.sheet ?? "?");
+    if (byKey.has(sheetKey)) continue;
+    byKey.set(sheetKey, sheet);
+    byDrawing.set(sheet.drawing!, [...(byDrawing.get(sheet.drawing!) ?? []), sheet]);
+  }
+
+  const entryFor = (tray: ProjectTray, sheet: DrawingSheetOf) => {
+    const sheetNumber = sheet.sheet ?? "?";
+    let entry = tray.drawings.find((d) => d.drawing === sheet.drawing && d.sheet === sheetNumber);
+    if (!entry) {
+      entry = {
+        drawing: sheet.drawing!,
+        sheet: sheetNumber,
+        title: titles.get(key(sheet.drawing!, sheetNumber)) ?? null,
+        sourcePage: sheet.page,
+        marks: [],
+      };
+      tray.drawings.push(entry);
+    }
+    return entry;
+  };
+
+  for (const sheet of byKey.values()) {
+    for (const label of sheet.labels) {
+      const tray = trays.get(label.code);
+      if (!tray) continue;
+      entryFor(tray, sheet).marks.push({
+        x: label.x,
+        y: label.y,
+        w: label.w,
+        h: label.h,
+        kind: label.inTable ? "table" : "label",
+      });
+    }
+  }
+
+  const definesSection = (sheet: DrawingSheetOf, section: string) =>
+    sheet.labels.some((label) => label.inTable && traySection(label.code) === section);
+  const hasFlag = (sheet: DrawingSheetOf, section: string) =>
+    sheet.flags.some((flag) => flag.section === section);
+
+  for (const tray of trays.values()) {
+    if (tray.drawings.some((entry) => entry.marks.some((mark) => mark.kind === "label"))) {
+      stats.trayMarks.label += 1;
+      continue;
+    }
+    const section = traySection(tray.code);
+    let flagged = false;
+    for (const entry of [...tray.drawings]) {
+      if (!section || !entry.marks.some((mark) => mark.kind === "table")) continue;
+      const own = byKey.get(key(entry.drawing, entry.sheet));
+      if (!own) continue;
+      const targets = hasFlag(own, section)
+        ? [own]
+        : (byDrawing.get(entry.drawing) ?? []).filter(
+            (sheet) => sheet !== own && hasFlag(sheet, section) && !definesSection(sheet, section),
+          );
+      for (const target of targets) {
+        const marks = entryFor(tray, target).marks;
+        for (const flag of target.flags.filter((candidate) => candidate.section === section)) {
+          marks.push({ x: flag.x, y: flag.y, w: flag.w, h: flag.h, kind: "flag" });
+        }
+        flagged = true;
+      }
+    }
+    if (flagged) stats.trayMarks.flag += 1;
+    else if (tray.drawings.length > 0) stats.trayMarks.tableOnly += 1;
+  }
 }

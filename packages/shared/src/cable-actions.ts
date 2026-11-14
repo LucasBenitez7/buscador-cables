@@ -10,12 +10,14 @@ import { z } from "zod";
 import {
   CONNECTION_STATUSES,
   INSTALLATION_STATUSES,
+  TEST_STATUSES,
   diffFields,
   versionSchema,
   type CableAction,
   type ConnectionStatus,
   type FieldChange,
   type InstallationStatus,
+  type TestStatus,
 } from "./cables";
 import { hasPermission, type Permission, type Role } from "./permissions";
 import { normalizeTrayCode } from "./trays";
@@ -26,6 +28,7 @@ export const CABLE_FIELD_ACTIONS = [
   "COILED",
   "CONNECTED",
   "DISCONNECTED",
+  "TESTED",
   "MOVED",
   "RETIRED",
   "CORRECTION",
@@ -40,6 +43,7 @@ export const CABLE_FIELD_ACTION_LABELS: Record<CableFieldAction, string> = {
   COILED: "Enrollar",
   CONNECTED: "Conectar",
   DISCONNECTED: "Desconectar",
+  TESTED: "Timbrar",
   MOVED: "Mover",
   RETIRED: "Retirar",
   CORRECTION: "Corregir",
@@ -51,6 +55,7 @@ export const CABLE_ACTION_PERMISSIONS: Record<CableFieldAction, Permission> = {
   COILED: "cable:coil",
   CONNECTED: "cable:connect",
   DISCONNECTED: "cable:disconnect",
+  TESTED: "cable:test",
   MOVED: "cable:move",
   RETIRED: "cable:retire",
   CORRECTION: "cable:correct",
@@ -72,6 +77,15 @@ export const CABLE_END_LABELS: Record<CableEnd, string> = {
 export const CABLE_END_SIDES = ["ORIGIN", "DESTINATION"] as const;
 export type CableEndSide = (typeof CABLE_END_SIDES)[number];
 
+/** Result of a timbrado. A failure must say what failed (the note is mandatory). */
+export const TEST_RESULTS = ["OK", "FAILED"] as const;
+export type TestResult = (typeof TEST_RESULTS)[number];
+
+export const TEST_RESULT_LABELS: Record<TestResult, string> = {
+  OK: "Correcto",
+  FAILED: "Con fallo",
+};
+
 export const CABLE_END_SIDE_LABELS: Record<CableEndSide, string> = {
   ORIGIN: "Origen",
   DESTINATION: "Destino",
@@ -81,6 +95,8 @@ export const CABLE_END_SIDE_LABELS: Record<CableEndSide, string> = {
 export type CableState = {
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
+  /** Timbrado: independent of laying and connection. */
+  testStatus: TestStatus;
   currentLocationId: string | null;
   /** Partially laid cable: which end is loose and the code of the tray where it waits. */
   looseEnd: CableEndSide | null;
@@ -98,6 +114,7 @@ export type CableState = {
 export const CABLE_STATE_FIELDS = [
   "installationStatus",
   "connectionStatus",
+  "testStatus",
   "currentLocationId",
   "looseEnd",
   "looseEndTray",
@@ -112,6 +129,7 @@ export type CableActionInput =
   | { action: "COILED"; locationId: string }
   | { action: "CONNECTED"; end: CableEnd }
   | { action: "DISCONNECTED"; end: CableEnd }
+  | { action: "TESTED"; result: TestResult }
   | { action: "MOVED"; locationId: string }
   | { action: "RETIRED" }
   | {
@@ -119,6 +137,8 @@ export type CableActionInput =
       correctsEventId: string;
       installationStatus: InstallationStatus;
       connectionStatus: ConnectionStatus;
+      /** Left out: the timbrado stays as it is. */
+      testStatus?: TestStatus;
       currentLocationId: string | null;
       looseEnd: CableEndSide | null;
       looseEndTray: string | null;
@@ -206,12 +226,15 @@ function computeNext(
   const current: CableStateValues = {
     installationStatus: state.installationStatus,
     connectionStatus: state.connectionStatus,
+    testStatus: state.testStatus,
     currentLocationId: state.currentLocationId,
     looseEnd: state.looseEnd,
     looseEndTray: state.looseEndTray,
   };
   const status = state.installationStatus;
   const settled = { looseEnd: null, looseEndTray: null };
+  // Laying, coiling or moving does not undo a timbrado: only a new one or a correction does.
+  const testStatus = state.testStatus;
 
   if (input.action !== "CORRECTION" && status === "RETIRED") {
     return { error: "El cable está retirado. Solo un supervisor puede corregir su estado." };
@@ -228,6 +251,7 @@ function computeNext(
         next: {
           installationStatus: "LAID",
           connectionStatus: state.connectionStatus,
+          testStatus,
           currentLocationId: null,
           ...settled,
         },
@@ -246,6 +270,7 @@ function computeNext(
         next: {
           installationStatus: "PARTIALLY_LAID",
           connectionStatus: state.connectionStatus,
+          testStatus,
           currentLocationId: null,
           looseEnd: input.looseEnd,
           looseEndTray: normalizeTrayCode(input.trayCode),
@@ -260,6 +285,7 @@ function computeNext(
         next: {
           installationStatus: "COILED",
           connectionStatus: "DISCONNECTED",
+          testStatus,
           currentLocationId: input.locationId,
           ...settled,
         },
@@ -290,6 +316,18 @@ function computeNext(
       }
       return { next: { ...current, connectionStatus: STATUS_BY_BITS[bits & ~end]! } };
     }
+    case "TESTED": {
+      const next: TestStatus = input.result === "OK" ? "TESTED_OK" : "TESTED_FAILED";
+      if (next === state.testStatus) {
+        return {
+          error:
+            next === "TESTED_OK"
+              ? "El cable ya consta como timbrado correctamente."
+              : "El cable ya consta como timbrado con fallo.",
+        };
+      }
+      return { next: { ...current, testStatus: next } };
+    }
     case "MOVED": {
       if (status === "UNVERIFIED") {
         return {
@@ -312,6 +350,7 @@ function computeNext(
         next: {
           installationStatus: "RETIRED",
           connectionStatus: "DISCONNECTED",
+          testStatus,
           currentLocationId: isOnItsWay(status) ? null : state.currentLocationId,
           ...settled,
         },
@@ -322,6 +361,7 @@ function computeNext(
         next: {
           installationStatus: input.installationStatus,
           connectionStatus: input.connectionStatus,
+          testStatus: input.testStatus ?? testStatus,
           currentLocationId: input.currentLocationId,
           looseEnd: input.looseEnd,
           looseEndTray: input.looseEndTray ? normalizeTrayCode(input.looseEndTray) : null,
@@ -412,6 +452,7 @@ function probe(state: CableState, action: CableFieldAction): string | null {
     COILED: [{ action: "COILED", locationId: anyOtherLocation }],
     CONNECTED: CABLE_ENDS.map((end) => ({ action: "CONNECTED", end })),
     DISCONNECTED: CABLE_ENDS.map((end) => ({ action: "DISCONNECTED", end })),
+    TESTED: TEST_RESULTS.map((result) => ({ action: "TESTED", result })),
     MOVED: [{ action: "MOVED", locationId: anyOtherLocation }],
     RETIRED: [{ action: "RETIRED" }],
     // A correction can always be attempted; its target state is validated when sent.
@@ -474,6 +515,12 @@ export const cableActionSchema = z.discriminatedUnion(
       action: z.literal("PARTIALLY_LAID"),
       looseEnd: looseEndField,
       trayCode: trayCodeField,
+      /** "1": the user confirms a tray that is not on the planned route. */
+      confirmOffRoute: z
+        .literal("1")
+        .optional()
+        .catch(undefined)
+        .transform((value) => value === "1"),
       notes: optionalNotes,
     }),
     z.object({
@@ -484,6 +531,17 @@ export const cableActionSchema = z.discriminatedUnion(
     }),
     z.object({ ...common, action: z.literal("CONNECTED"), end: endField, notes: optionalNotes }),
     z.object({ ...common, action: z.literal("DISCONNECTED"), end: endField, notes: optionalNotes }),
+    z
+      .object({
+        ...common,
+        action: z.literal("TESTED"),
+        result: z.enum(TEST_RESULTS, { error: "Indica el resultado del timbrado" }),
+        notes: optionalNotes,
+      })
+      .refine((value) => value.result === "OK" || (value.notes?.length ?? 0) >= 3, {
+        path: ["notes"],
+        message: "Indica qué falló",
+      }),
     z.object({
       ...common,
       action: z.literal("MOVED"),
@@ -499,6 +557,7 @@ export const cableActionSchema = z.discriminatedUnion(
         error: "Estado de instalación no válido",
       }),
       connectionStatus: z.enum(CONNECTION_STATUSES, { error: "Estado de conexión no válido" }),
+      testStatus: z.enum(TEST_STATUSES, { error: "Estado de timbrado no válido" }).optional(),
       currentLocationId: z.string().optional().transform(emptyToNull),
       looseEnd: z
         .union([z.literal(""), looseEndField])
@@ -531,12 +590,15 @@ export function toCableActionInput(request: CableActionRequest): CableActionInpu
     case "CONNECTED":
     case "DISCONNECTED":
       return { action: request.action, end: request.end };
+    case "TESTED":
+      return { action: "TESTED", result: request.result };
     case "CORRECTION":
       return {
         action: "CORRECTION",
         correctsEventId: request.correctsEventId,
         installationStatus: request.installationStatus,
         connectionStatus: request.connectionStatus,
+        ...(request.testStatus ? { testStatus: request.testStatus } : {}),
         currentLocationId: request.currentLocationId,
         looseEnd: request.looseEnd,
         looseEndTray: request.looseEndTray,

@@ -7,6 +7,7 @@ import { CableEnds, CableRoute } from "./cable-route";
 const state: CableState = {
   installationStatus: "PARTIALLY_LAID",
   connectionStatus: "ORIGIN_ONLY",
+  testStatus: "NOT_TESTED",
   currentLocationId: null,
   looseEnd: "DESTINATION",
   looseEndTray: "99UXA00L22051",
@@ -30,6 +31,7 @@ const end = (fields: Partial<CableDetail["ends"]["origin"]>): CableDetail["ends"
   installationKks: null,
   room: null,
   location: null,
+  locationId: null,
   ...fields,
 });
 

@@ -25,6 +25,7 @@ hizo qué y cuándo.
 | 5    | Estados y trazabilidad        | v0.6.0  | Tendido/enrollado, conectado, historial por usuario   |
 | 6    | Diseño responsive y E2E       | v0.7.0  | Menú y vistas para móvil, E2E de las fases 1-5        |
 | 7    | Datos reales del proyecto     | v0.8.0  | Cables, bandejas y estado cargados desde los PDFs     |
+| 7.5  | Planos y trabajo en campo     | v0.8.1  | Plano con la bandeja marcada, timbrado, dónde está    |
 | 8    | Importación masiva y panel    | —       | _Mejora futura_: CSV/Excel masivo, dashboard          |
 | 9    | Modo sin conexión (PWA)       | —       | _Mejora futura_: consulta offline + cola de cambios   |
 | 10   | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
@@ -586,6 +587,51 @@ Rama `feat/ui-catalogs-dashboard`.
       obra (tendidos y conectados). Técnicos: su actividad reciente. Supervisores: desglose por
       estado enlazado al buscador y actividad del equipo. Administradores: cuentas pendientes de
       aprobar, usuarios activos por rol y estado del sistema. Lo que un rol no ve no se consulta.
+
+## Fase 7.5 — Planos y trabajo en campo (v0.8.1)
+
+Añadida el 2026-11-14. Rama `feat/f7.5-drawings-field`. Objetivo: que en campo se vea en el
+plano dónde está cada bandeja y cada cable, y que el técnico registre lo que encuentra.
+
+### Cómo se localiza una bandeja en el plano
+
+Hay dos tipos de plano en el PDF de recorridos:
+
+- **Instrumentación**: el código de la bandeja está escrito junto a la bandeja dibujada. Se marca
+  esa posición.
+- **Eléctricos**: la planta lleva banderas con el número de sección ("015") y unas tablas
+  (en la misma hoja o en otra del mismo plano) dicen qué bandejas forman cada sección. Las tres
+  últimas cifras del código son la sección. Se marca la bandera.
+
+Las posiciones salen del texto del PDF, en proporción al tamaño de la hoja: si cambian los
+planos, se sustituye el PDF y se repite `data:extract` → `data:render` → `data:load`.
+
+### Tareas
+
+- [x] Posiciones de bandejas y banderas por hoja en la extracción, con informe.
+- [x] `pnpm data:render`: cada hoja en teselas de imagen (Deep Zoom) en `private-data/drawings/`
+      (fuera de git); solo se vuelven a dibujar las hojas que cambian.
+- [x] Hojas de plano en la base de datos y marcas por bandeja.
+- [x] Teselas servidas solo con sesión; visor con zoom en la ficha de bandeja, centrado en la
+      bandeja marcada.
+- [x] Timbrado: estado nuevo (sin timbrar / OK / con fallo), acción «Timbrar» para técnicos,
+      supervisores y administradores, filtro en el buscador y recuento en el inicio.
+- [x] «Indicar dónde está»: en «Tender a medias», las bandejas del recorrido como botones
+      numerados; una bandeja fuera del recorrido se acepta si se confirma.
+- [x] Recorrido del cable sobre el plano: bandejas numeradas, tendido / falta / dónde está.
+- [x] Tests (posiciones con PDFs inventados, carga, timbrado, visor) y E2E.
+- [x] Repaso (2026-11-14): marca sin parpadeo; filas de tabla enmarcadas enteras; el ancho
+      de bandeja delante de una etiqueta ya no se toma por sección; enlaces de cada ubicación a
+      sus cables; Actividad y Mi actividad por días, con la acción en color, periodos rápidos y
+      enlaces a cable, persona, bandeja y ubicaciones.
+- [x] Repaso de enlaces (2026-11-14): página de cada ubicación (`/locations/[id]`) con su
+      ruta, lo que contiene, sus cables y sus bandejas; equipos (filtro exacto `?equipment=`),
+      salas, edificios, niveles, tipo, color y fabricante enlazados en el buscador, la ficha del
+      cable y la de bandeja; origen y destino etiquetados en el buscador.
+- [x] Marcas del plano ajustadas al texto marcado (bandera, código o fila de tabla): crecen y
+      se encogen con el plano; la flecha y el número de lo buscado se ven a cualquier zoom, y
+      los demás números se ocultan con la hoja entera a la vista.
+- Fotos de los técnicos: mejora futura (necesitan almacenamiento privado).
 
 ## Fase 8 — Importación masiva y panel (mejora futura)
 

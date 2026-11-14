@@ -10,6 +10,7 @@ import {
   type CableSearch,
   type CableState,
   type ConnectionStatus,
+  type TestStatus,
   type InstallationStatus,
 } from "@cables/shared";
 import {
@@ -35,12 +36,16 @@ export type CableSearchItem = {
   lengthM: number | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
+  testStatus: TestStatus;
   level: CableLevel | null;
   /** Equipment of each end (cables from the project lists). */
   originEquipment: string | null;
   destinationEquipment: string | null;
   origin: string | null;
   destination: string | null;
+  /** To link each end's location to its page. */
+  originLocationId: string | null;
+  destinationLocationId: string | null;
   lastAction: CableAction | null;
   lastActionAt: Date | null;
   lastActionBy: string | null;
@@ -107,6 +112,13 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
     }
   }
 
+  if (search.equipment) {
+    const equipment = search.equipment.toUpperCase();
+    conditions.push(Prisma.sql`(
+      upper(c."originEquipment") = ${equipment} OR upper(c."destinationEquipment") = ${equipment}
+    )`);
+  }
+
   if (search.location) {
     const ids = await findSubtreeIds(search.location);
     if (ids.length === 0) {
@@ -127,6 +139,9 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
     conditions.push(
       Prisma.sql`c."installationStatus" = ${search.installation}::"InstallationStatus"`,
     );
+  }
+  if (search.test) {
+    conditions.push(Prisma.sql`c."testStatus" = ${search.test}::"TestStatus"`);
   }
   if (search.connection) {
     conditions.push(Prisma.sql`c."connectionStatus" = ${search.connection}::"ConnectionStatus"`);
@@ -266,6 +281,7 @@ export async function searchCables(
       lengthM: true,
       installationStatus: true,
       connectionStatus: true,
+      testStatus: true,
       lastAction: true,
       lastActionAt: true,
       type: { select: { name: true } },
@@ -295,6 +311,7 @@ export async function searchCables(
         state: {
           installationStatus: cable.installationStatus,
           connectionStatus: cable.connectionStatus,
+          testStatus: cable.testStatus,
           currentLocationId: cable.currentLocationId,
           looseEnd: cable.looseEnd,
           looseEndTray: cable.looseEndTray?.code ?? null,
@@ -312,11 +329,14 @@ export async function searchCables(
         lengthM: cable.lengthM?.toNumber() ?? null,
         installationStatus: cable.installationStatus,
         connectionStatus: cable.connectionStatus,
+        testStatus: cable.testStatus,
         level: cable.level,
         originEquipment: cable.originEquipment,
         destinationEquipment: cable.destinationEquipment,
         origin: locationLabel(cable.origin),
         destination: locationLabel(cable.destination),
+        originLocationId: cable.originId,
+        destinationLocationId: cable.destinationId,
         lastAction: cable.lastAction,
         lastActionAt: cable.lastActionAt,
         lastActionBy: cable.lastActionBy?.name ?? null,

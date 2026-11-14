@@ -227,6 +227,7 @@ export async function updateCable(
     const stateError = validateCableState({
       installationStatus: current.installationStatus,
       connectionStatus: current.connectionStatus,
+      testStatus: current.testStatus,
       currentLocationId: current.currentLocationId,
       looseEnd: current.looseEnd,
       looseEndTray: current.looseEndTrayId,

@@ -8,6 +8,8 @@ export type PdfText = {
   /** Distance from the top of the page to the top of the text, like `TextRun.top`. */
   top: number;
   size?: number;
+  /** Counter-clockwise rotation in degrees around (x, top): 90 writes upwards, like drawings. */
+  angle?: number;
 };
 
 export type PdfPageSpec = { width: number; height: number; texts: PdfText[] };
@@ -28,9 +30,11 @@ export function makePdf(pages: readonly PdfPageSpec[]): Uint8Array {
   );
   const pageIds = pages.map((page) => {
     const stream = page.texts
-      .map(({ text, x, top, size = 10 }) => {
+      .map(({ text, x, top, size = 10, angle = 0 }) => {
         const y = page.height - top - size;
-        return `BT /F1 ${size} Tf 1 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)} Tm (${escape(text)}) Tj ET`;
+        const radians = (angle * Math.PI) / 180;
+        const [cos, sin] = [Math.cos(radians), Math.sin(radians)].map((n) => n.toFixed(4));
+        return `BT /F1 ${size} Tf ${cos} ${sin} ${-Number(sin)} ${cos} ${x.toFixed(2)} ${y.toFixed(2)} Tm (${escape(text)}) Tj ET`;
       })
       .join("\n");
     const content = add(

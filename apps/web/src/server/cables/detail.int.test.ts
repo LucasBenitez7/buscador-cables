@@ -110,11 +110,20 @@ describe("getCableDetail", () => {
     expect(update).toMatchObject({ action: "UPDATED", user: "Tomás Gil" });
     expect(update?.changes).toEqual([
       { field: "Longitud (m)", from: "120", to: "125,5" },
-      { field: "Origen", from: "Norte › Calderas › Caldera 1", to: "Norte › Calderas › Caldera 2" },
+      // Las ubicaciones enlazan a sus cables en el buscador.
+      {
+        field: "Origen",
+        from: "Norte › Calderas › Caldera 1",
+        to: "Norte › Calderas › Caldera 2",
+        fromHref: "/cables?location=c1",
+        toHref: "/cables?location=c2",
+      },
       {
         field: "Destino",
         from: "Norte › Calderas › Caldera 2",
         to: "Norte › Calderas › Caldera 1",
+        fromHref: "/cables?location=c2",
+        toHref: "/cables?location=c1",
       },
     ]);
     expect(creation?.action).toBe("CREATED");
@@ -229,7 +238,12 @@ describe("getCableDetail: route and loose end", () => {
     expect(event?.changes).toEqual(
       expect.arrayContaining([
         { field: "Punta suelta", from: "—", to: "Destino" },
-        { field: "Bandeja de la punta suelta", from: "—", to: "99UXA00L22036" },
+        {
+          field: "Bandeja de la punta suelta",
+          from: "—",
+          to: "99UXA00L22036",
+          toHref: "/trays/99UXA00L22036",
+        },
       ]),
     );
   });

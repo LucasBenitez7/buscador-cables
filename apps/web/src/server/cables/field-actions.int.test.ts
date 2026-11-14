@@ -367,8 +367,48 @@ describe("runCableAction: partial laying", () => {
         looseEnd: "ORIGIN",
         trayCode: "99UXB00L22001",
       }),
-    ).rejects.toThrow("La bandeja 99UXB00L22001 no está en el recorrido del cable.");
+    ).rejects.toThrow(
+      "La bandeja 99UXB00L22001 no está en el recorrido previsto del cable. Si el cable está ahí, confírmalo.",
+    );
     expect((await cableOf(id)).installationStatus).toBe("IN_STOCK");
+  });
+
+  it("accepts a tray off the planned route when the user confirms it", async () => {
+    const { id } = await newCable();
+    await routeThrough(id, ["99UXA00L22036"]);
+    await prisma.tray.create({ data: { code: "99UXB00L22001", kind: "LADDER" } });
+
+    await act(technician, id, {
+      action: "PARTIALLY_LAID",
+      looseEnd: "ORIGIN",
+      trayCode: "99UXB00L22001",
+      confirmOffRoute: "1",
+    });
+
+    const cable = await prisma.cable.findUniqueOrThrow({
+      where: { id },
+      include: { looseEndTray: true },
+    });
+    expect(cable).toMatchObject({
+      installationStatus: "PARTIALLY_LAID",
+      looseEnd: "ORIGIN",
+      looseEndTray: { code: "99UXB00L22001" },
+    });
+  });
+
+  it("records a timbrado with who and why, and keeps it when the cable is laid", async () => {
+    const { id } = await newCable();
+
+    await act(technician, id, { action: "TESTED", result: "FAILED", notes: "Conductor 3 abierto" });
+    expect(await lastEvent(id)).toMatchObject({
+      action: "TESTED",
+      userId: technician.id,
+      notes: "Conductor 3 abierto",
+      changes: { testStatus: { from: "NOT_TESTED", to: "TESTED_FAILED" } },
+    });
+
+    await act(technician, id, { action: "TESTED", result: "OK" });
+    expect(await cableOf(id)).toMatchObject({ testStatus: "TESTED_OK", lastAction: "TESTED" });
   });
 
   it("accepts any existing tray when the cable has no route", async () => {

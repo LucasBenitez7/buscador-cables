@@ -236,6 +236,7 @@ describe("extractProjectData", () => {
           sheet: "02",
           title: "MAIN ELECTRICAL BUILDING - FIRST FLOOR",
           sourcePage: 2,
+          marks: expect.any(Array),
         },
       ],
     });

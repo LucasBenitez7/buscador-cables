@@ -11,6 +11,8 @@ import {
   CABLE_LEVEL_LABELS,
   CONNECTION_STATUSES,
   CONNECTION_STATUS_LABELS,
+  TEST_STATUSES,
+  TEST_STATUS_LABELS,
   INSTALLATION_STATUSES,
   INSTALLATION_STATUS_LABELS,
   cableSearchQuery,
@@ -42,6 +44,7 @@ export function SearchFilters({ search, options }: Props) {
   const [expanded, setExpanded] = useState(false);
   const advancedActive = Boolean(
     search.manufacturer ||
+    search.equipment ||
     search.color ||
     hasActivityFilters(search) ||
     RANGES.some(
@@ -152,6 +155,15 @@ export function SearchFilters({ search, options }: Props) {
               ))}
             </Select>
           </Filter>
+          <Filter label="Timbrado" htmlFor="test">
+            <Select id="test" name="test" defaultValue={search.test}>
+              {TEST_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {TEST_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </Filter>
           <Filter label="Bandeja (código)" htmlFor="tray">
             <Input
               id="tray"
@@ -180,6 +192,17 @@ export function SearchFilters({ search, options }: Props) {
             Más filtros
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Filter label="Equipo (exacto, en origen o destino)" htmlFor="equipment">
+              <Input
+                id="equipment"
+                name="equipment"
+                defaultValue={search.equipment ?? ""}
+                placeholder="+80BBA01"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono uppercase"
+              />
+            </Filter>
             <Filter label="Color" htmlFor="color">
               <Select id="color" name="color" defaultValue={search.color}>
                 {options.colors.map((item) => (
