@@ -252,7 +252,12 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   `GET /api/drawings/<clave>.dzi` y `…/<clave>_files/<nivel>/<x>_<y>.webp` solo responde con
   sesión, con `Cache-Control: private`, y solo acepta esas dos formas de ruta.
 - El visor es OpenSeadragon (BSD), cargado solo en el navegador: zoom con rueda o dos dedos,
-  pantalla completa y marcas superpuestas en HTML.
+  pantalla completa y marcas superpuestas en HTML. Cada marca es un marco en coordenadas del
+  plano (ajustado al texto que marca, con `w`/`h` guardados en la extracción); la flecha y el
+  número van a tamaño fijo en pantalla.
+- Enlaces: `apps/web/src/lib/links.ts` dice a dónde lleva cada cosa (ubicación → su página,
+  equipo o nivel → el buscador filtrado, bandeja → su ficha), para que todas las páginas
+  enlacen igual.
 - `Cable.testStatus` (`NOT_TESTED`, `TESTED_OK`, `TESTED_FAILED`) y la acción `TESTED`
   ("Timbrar", permiso `cable:test` para técnico, supervisor y administrador). Es
   independiente del tendido y la conexión: tender, enrollar o mover no lo cambian; solo otro

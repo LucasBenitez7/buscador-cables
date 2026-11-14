@@ -43,6 +43,9 @@ export type CableSearchItem = {
   destinationEquipment: string | null;
   origin: string | null;
   destination: string | null;
+  /** To link each end's location to its page. */
+  originLocationId: string | null;
+  destinationLocationId: string | null;
   lastAction: CableAction | null;
   lastActionAt: Date | null;
   lastActionBy: string | null;
@@ -107,6 +110,13 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
       }
       conditions.push(Prisma.sql`(${Prisma.join(matches, " OR ")})`);
     }
+  }
+
+  if (search.equipment) {
+    const equipment = search.equipment.toUpperCase();
+    conditions.push(Prisma.sql`(
+      upper(c."originEquipment") = ${equipment} OR upper(c."destinationEquipment") = ${equipment}
+    )`);
   }
 
   if (search.location) {
@@ -325,6 +335,8 @@ export async function searchCables(
         destinationEquipment: cable.destinationEquipment,
         origin: locationLabel(cable.origin),
         destination: locationLabel(cable.destination),
+        originLocationId: cable.originId,
+        destinationLocationId: cable.destinationId,
         lastAction: cable.lastAction,
         lastActionAt: cable.lastActionAt,
         lastActionBy: cable.lastActionBy?.name ?? null,

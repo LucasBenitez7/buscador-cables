@@ -22,6 +22,8 @@ export type TrayListItem = {
   voltageLevel: number | null;
   elevationLevel: number | null;
   building: string | null;
+  /** The building in the location tree, to link it. */
+  buildingId: string | null;
   size: TraySize;
   /** Active cables whose route goes through it (each cable once). */
   cables: number;
@@ -106,7 +108,9 @@ export async function searchTrays(
     skip: (page - 1) * pageSize,
     take: pageSize,
     include: {
-      location: { select: { code: true, name: true, parent: { select: { name: true } } } },
+      location: {
+        select: { id: true, code: true, name: true, parent: { select: { name: true } } },
+      },
       _count: { select: { looseEndCables: { where: ACTIVE } } },
     },
   });
@@ -131,6 +135,7 @@ export async function searchTrays(
       voltageLevel: tray.voltageLevel,
       elevationLevel: tray.elevationLevel,
       building: buildingLabel(tray.location),
+      buildingId: tray.location?.id ?? null,
       size: sizeOf(tray),
       cables: cablesByTray.get(tray.id) ?? 0,
       waiting: tray._count.looseEndCables,
@@ -160,7 +165,9 @@ export async function getTrayDetail(code: string): Promise<TrayDetail | null> {
   const tray = await prisma.tray.findUnique({
     where: { code },
     include: {
-      location: { select: { code: true, name: true, parent: { select: { name: true } } } },
+      location: {
+        select: { id: true, code: true, name: true, parent: { select: { name: true } } },
+      },
       drawings: {
         orderBy: [{ drawing: "asc" }, { sheet: "asc" }],
         include: { drawingSheet: { select: { imageKey: true, width: true, height: true } } },
@@ -197,6 +204,7 @@ export async function getTrayDetail(code: string): Promise<TrayDetail | null> {
     voltageLevel: tray.voltageLevel,
     elevationLevel: tray.elevationLevel,
     building: buildingLabel(tray.location),
+    buildingId: tray.location?.id ?? null,
     size: sizeOf(tray),
     notes: tray.notes,
     cables: routeCables.length,

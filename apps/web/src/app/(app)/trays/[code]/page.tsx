@@ -15,7 +15,9 @@ import { CODE_LINK } from "@/components/ui/text-link";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { TrayDrawings } from "@/features/drawings/components/tray-drawings";
 import { getTrayDetail, type TrayCable } from "@/server/trays/service";
+import { INLINE_LINK, levelCablesHref, locationHref } from "@/lib/links";
 import { decodeRouteParam } from "@/lib/route-params";
+import { EquipmentLink } from "@/features/cables/components/equipment-link";
 import { requireUser, whenSignedIn } from "@/server/session";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +79,15 @@ export default async function TrayPage({ params }: { params: Params }) {
       <Section title="Datos">
         <DataList>
           <Item label="Tamaño">{size}</Item>
-          <Item label="Edificio">{tray.building}</Item>
+          <Item label="Edificio">
+            {tray.building && tray.buildingId ? (
+              <Link href={locationHref(tray.buildingId)} className={INLINE_LINK}>
+                {tray.building}
+              </Link>
+            ) : (
+              tray.building
+            )}
+          </Item>
           <Item label="Cables que pasan">{tray.cables}</Item>
         </DataList>
         {tray.notes ? <p className="text-sm whitespace-pre-line">{tray.notes}</p> : null}
@@ -125,15 +135,23 @@ function CableList({ cables }: { cables: TrayCable[] }) {
             <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
               {cable.code}
             </Link>
-            <p className="text-muted-foreground text-xs">
-              {[
-                cable.level ? CABLE_LEVEL_LABELS[cable.level] : null,
-                cable.originEquipment || cable.destinationEquipment
-                  ? `${cable.originEquipment ?? "—"} → ${cable.destinationEquipment ?? "—"}`
-                  : cable.description,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+            <p className="text-muted-foreground flex flex-wrap gap-x-1.5 text-xs">
+              {cable.level ? (
+                <>
+                  <Link href={levelCablesHref(cable.level)} className={INLINE_LINK}>
+                    {CABLE_LEVEL_LABELS[cable.level]}
+                  </Link>
+                  <span aria-hidden>·</span>
+                </>
+              ) : null}
+              {cable.originEquipment || cable.destinationEquipment ? (
+                <span>
+                  de <EquipmentLink equipment={cable.originEquipment} /> a{" "}
+                  <EquipmentLink equipment={cable.destinationEquipment} />
+                </span>
+              ) : (
+                <span>{cable.description}</span>
+              )}
             </p>
             {cable.looseEndHere ? (
               <p className="text-warning text-xs">

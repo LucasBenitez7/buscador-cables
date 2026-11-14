@@ -44,6 +44,7 @@ export function SearchFilters({ search, options }: Props) {
   const [expanded, setExpanded] = useState(false);
   const advancedActive = Boolean(
     search.manufacturer ||
+    search.equipment ||
     search.color ||
     hasActivityFilters(search) ||
     RANGES.some(
@@ -191,6 +192,17 @@ export function SearchFilters({ search, options }: Props) {
             Más filtros
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Filter label="Equipo (exacto, en origen o destino)" htmlFor="equipment">
+              <Input
+                id="equipment"
+                name="equipment"
+                defaultValue={search.equipment ?? ""}
+                placeholder="+80BBA01"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono uppercase"
+              />
+            </Filter>
             <Filter label="Color" htmlFor="color">
               <Select id="color" name="color" defaultValue={search.color}>
                 {options.colors.map((item) => (

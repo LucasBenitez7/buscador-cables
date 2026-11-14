@@ -31,6 +31,7 @@ const end = (fields: Partial<CableDetail["ends"]["origin"]>): CableDetail["ends"
   installationKks: null,
   room: null,
   location: null,
+  locationId: null,
   ...fields,
 });
 

@@ -16,6 +16,8 @@ import { CODE_LINK } from "@/components/ui/text-link";
 import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
 import { trayHref } from "@/features/cables/components/cable-route";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
+import { EquipmentLink } from "@/features/cables/components/equipment-link";
+import { INLINE_LINK, locationHref } from "@/lib/links";
 import type { CableSearchItem, CableSearchResult } from "@/server/cables/search";
 
 const dateFormat = new Intl.DateTimeFormat("es-ES", {
@@ -166,7 +168,7 @@ export function SearchResults({ search, result, actions }: Props) {
               {header("Sección", "section", "hidden lg:table-cell")}
               {header("Longitud", "length", "hidden lg:table-cell")}
               <th scope="col" className="px-3 py-2 font-medium">
-                Origen → destino
+                Origen / destino
               </th>
               <th scope="col" className="px-3 py-2 font-medium">
                 Estado
@@ -265,24 +267,35 @@ export function SearchResults({ search, result, actions }: Props) {
  * in the field), with the room or location below; otherwise the location.
  */
 function Ends({ cable }: { cable: CableSearchItem }) {
-  const end = (equipment: string | null, location: string | null) =>
-    equipment ? (
-      <span>
-        <span className="font-mono">{equipment}</span>
-        {location ? <span className="text-muted-foreground block text-xs">{location}</span> : null}
-      </span>
-    ) : (
-      <span>{location ?? "—"}</span>
-    );
+  const rows = [
+    ["Origen", cable.originEquipment, cable.origin, cable.originLocationId],
+    ["Destino", cable.destinationEquipment, cable.destination, cable.destinationLocationId],
+  ] as const;
   return (
-    <p className="flex flex-wrap items-start gap-x-2">
-      {end(cable.originEquipment, cable.origin)}
-      <span aria-hidden className="text-muted-foreground">
-        →
-      </span>
-      <span className="sr-only">a</span>
-      {end(cable.destinationEquipment, cable.destination)}
-    </p>
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1">
+      {rows.map(([label, equipment, location, locationId]) => (
+        <div key={label} className="contents">
+          <dt className="text-muted-foreground text-[0.65rem] font-medium tracking-wide uppercase">
+            {label}
+          </dt>
+          <dd className="min-w-0">
+            {equipment ? <EquipmentLink equipment={equipment} className="font-medium" /> : null}
+            {location ? (
+              <span className={equipment ? "text-muted-foreground block text-xs" : "block"}>
+                {locationId ? (
+                  <Link href={locationHref(locationId)} className={INLINE_LINK}>
+                    {location}
+                  </Link>
+                ) : (
+                  location
+                )}
+              </span>
+            ) : null}
+            {!equipment && !location ? <span className="text-muted-foreground">—</span> : null}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

@@ -54,6 +54,8 @@ export type CableEndDetail = {
   room: string | null;
   /** Full route of the location in the tree ("99 › 99UX › 99UXA › 99UXA16RA001"). */
   location: string | null;
+  /** To link the room to its page. */
+  locationId: string | null;
 };
 
 export type CableDetail = {
@@ -86,6 +88,10 @@ export type CableDetail = {
   type: string | null;
   color: { name: string; hex: string | null } | null;
   manufacturer: string | null;
+  /** To open the cables with the same type, colour or manufacturer. */
+  typeId: string | null;
+  colorId: string | null;
+  manufacturerId: string | null;
   conductors: number | null;
   crossSectionMm2: number | null;
   outerDiameterMm: number | null;
@@ -95,6 +101,7 @@ export type CableDetail = {
   origin: string | null;
   destination: string | null;
   currentLocation: string | null;
+  currentLocationId: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
   testStatus: TestStatus;
@@ -301,6 +308,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
         installationKks: cable.originInstallationKks,
         room: cable.originRoom,
         location: location(cable.originId),
+        locationId: cable.originId,
       },
       destination: {
         equipment: cable.destinationEquipment,
@@ -310,12 +318,16 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
         installationKks: cable.destinationInstallationKks,
         room: cable.destinationRoom,
         location: location(cable.destinationId),
+        locationId: cable.destinationId,
       },
     },
     description: cable.description,
     type: cable.type?.name ?? null,
     color: cable.color,
     manufacturer: cable.manufacturer?.name ?? null,
+    typeId: cable.typeId,
+    colorId: cable.colorId,
+    manufacturerId: cable.manufacturerId,
     conductors: cable.conductors,
     crossSectionMm2: toNumber(cable.crossSectionMm2),
     outerDiameterMm: toNumber(cable.outerDiameterMm),
@@ -325,6 +337,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
     origin: location(cable.originId),
     destination: location(cable.destinationId),
     currentLocation: location(cable.currentLocationId),
+    currentLocationId: cable.currentLocationId,
     installationStatus: cable.installationStatus,
     connectionStatus: cable.connectionStatus,
     testStatus: cable.testStatus,

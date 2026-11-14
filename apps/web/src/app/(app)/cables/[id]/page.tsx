@@ -11,6 +11,7 @@ import {
   hasPermission,
 } from "@cables/shared";
 import { ChangeList } from "@/components/change-list";
+import { INLINE_LINK, levelCablesHref, locationHref } from "@/lib/links";
 import { DataList, Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
@@ -82,9 +83,13 @@ export default async function CablePage({ params }: { params: Params }) {
           <h1 className="font-mono text-3xl font-semibold tracking-tight">{cable.code}</h1>
           {cable.level || cable.altCode ? (
             <p className="text-muted-foreground text-sm">
-              {[cable.level ? CABLE_LEVEL_LABELS[cable.level] : null, cable.altCode]
-                .filter(Boolean)
-                .join(" · ")}
+              {cable.level ? (
+                <Link href={levelCablesHref(cable.level)} className={INLINE_LINK}>
+                  {CABLE_LEVEL_LABELS[cable.level]}
+                </Link>
+              ) : null}
+              {cable.level && cable.altCode ? " · " : null}
+              {cable.altCode}
             </p>
           ) : null}
           {cable.description ? <p className="text-muted-foreground">{cable.description}</p> : null}
@@ -128,7 +133,13 @@ export default async function CablePage({ params }: { params: Params }) {
         {cable.currentLocation ? (
           <p className="text-sm">
             <span className="text-muted-foreground">Ahora está en: </span>
-            {cable.currentLocation}
+            {cable.currentLocationId ? (
+              <Link href={locationHref(cable.currentLocationId)} className={INLINE_LINK}>
+                {cable.currentLocation}
+              </Link>
+            ) : (
+              cable.currentLocation
+            )}
           </p>
         ) : null}
       </Section>
@@ -148,7 +159,18 @@ export default async function CablePage({ params }: { params: Params }) {
 
       <Section title="Datos">
         <DataList>
-          <Item label="Tipo">{cable.type}</Item>
+          <Item label="Tipo">
+            {cable.type && cable.typeId ? (
+              <Link
+                href={`/cables?type=${encodeURIComponent(cable.typeId)}`}
+                className={INLINE_LINK}
+              >
+                {cable.type}
+              </Link>
+            ) : (
+              cable.type
+            )}
+          </Item>
           <Item label="Color">
             {cable.color ? (
               <span className="inline-flex items-center gap-1.5">
@@ -157,11 +179,31 @@ export default async function CablePage({ params }: { params: Params }) {
                   className="border-foreground/40 size-3 rounded-full border"
                   style={{ backgroundColor: cable.color.hex ?? "transparent" }}
                 />
-                {cable.color.name}
+                {cable.colorId ? (
+                  <Link
+                    href={`/cables?color=${encodeURIComponent(cable.colorId)}`}
+                    className={INLINE_LINK}
+                  >
+                    {cable.color.name}
+                  </Link>
+                ) : (
+                  cable.color.name
+                )}
               </span>
             ) : null}
           </Item>
-          <Item label="Fabricante">{cable.manufacturer}</Item>
+          <Item label="Fabricante">
+            {cable.manufacturer && cable.manufacturerId ? (
+              <Link
+                href={`/cables?manufacturer=${encodeURIComponent(cable.manufacturerId)}`}
+                className={INLINE_LINK}
+              >
+                {cable.manufacturer}
+              </Link>
+            ) : (
+              cable.manufacturer
+            )}
+          </Item>
           <Item label="Nº de conductores">{cable.conductors}</Item>
           <Item label="Sección">{withUnit(cable.crossSectionMm2, "mm²")}</Item>
           <Item label="Diámetro exterior">{withUnit(cable.outerDiameterMm, "mm")}</Item>

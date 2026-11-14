@@ -85,6 +85,7 @@ describe("searchTrays", () => {
         voltageLevel: 2,
         elevationLevel: 2,
         building: "99UXA · Edificio eléctrico",
+        buildingId: expect.any(String),
         size: { widthMm: 600, flangeHeightMm: 100, bendRadiusMm: 300, diameterMm: null },
         // Active cables, each once: one names the tray twice and the deleted one is out.
         cables: 2,

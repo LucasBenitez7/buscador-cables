@@ -6,6 +6,7 @@ import {
   createLocation,
   deleteLocation,
   findSubtreeIds,
+  getLocationDetail,
   listLocationTree,
   moveLocation,
   updateLocation,
@@ -299,5 +300,46 @@ describe("moveLocation", () => {
     await moveLocation({ id: area.id, parentId: plant.id });
 
     expect(await prisma.location.findUniqueOrThrow({ where: { id: area.id } })).toEqual(before);
+  });
+});
+
+describe("getLocationDetail", () => {
+  beforeEach(reset);
+
+  it("gives the path from the plant, what it contains and its cables and trays", async () => {
+    const { plant, area, unit, site } = await seedTree();
+    await prisma.tray.create({
+      data: { code: "99UXA00L22036", kind: "LADDER", locationId: unit.id },
+    });
+    await prisma.cable.createMany({
+      data: [
+        { code: "SH-1", originId: site.id, destinationEquipment: "99BMA01" },
+        { code: "SH-2", originEquipment: "99XKA10", destinationId: unit.id },
+        { code: "SH-3", originId: plant.id, deletedAt: new Date() },
+      ],
+    });
+
+    const detail = await getLocationDetail(unit.id);
+
+    expect(detail).toMatchObject({
+      name: "Reactor X",
+      type: "UNIT",
+      ancestors: [
+        { id: plant.id, name: "Planta" },
+        { id: area.id, name: "Área 1" },
+      ],
+      children: [{ id: site.id, name: "Sitio XZ" }],
+      // SH-1 sale de un sitio que contiene; SH-2 llega aquí; SH-3 está de baja.
+      cables: 2,
+      trays: 1,
+    });
+    expect(detail!.someCables).toEqual([
+      { id: expect.any(String), code: "SH-1", roles: ["origin"], otherEnd: "99BMA01" },
+      { id: expect.any(String), code: "SH-2", roles: ["destination"], otherEnd: "99XKA10" },
+    ]);
+  });
+
+  it("answers null for a location that does not exist", async () => {
+    expect(await getLocationDetail("nope")).toBeNull();
   });
 });

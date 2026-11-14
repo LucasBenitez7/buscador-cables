@@ -624,6 +624,13 @@ planos, se sustituye el PDF y se repite `data:extract` → `data:render` → `da
       de bandeja delante de una etiqueta ya no se toma por sección; enlaces de cada ubicación a
       sus cables; Actividad y Mi actividad por días, con la acción en color, periodos rápidos y
       enlaces a cable, persona, bandeja y ubicaciones.
+- [x] Repaso de enlaces (2026-11-14): página de cada ubicación (`/locations/[id]`) con su
+      ruta, lo que contiene, sus cables y sus bandejas; equipos (filtro exacto `?equipment=`),
+      salas, edificios, niveles, tipo, color y fabricante enlazados en el buscador, la ficha del
+      cable y la de bandeja; origen y destino etiquetados en el buscador.
+- [x] Marcas del plano ajustadas al texto marcado (bandera, código o fila de tabla): crecen y
+      se encogen con el plano; la flecha y el número de lo buscado se ven a cualquier zoom, y
+      los demás números se ocultan con la hoja entera a la vista.
 - Fotos de los técnicos: mejora futura (necesitan almacenamiento privado).
 
 ## Fase 8 — Importación masiva y panel (mejora futura)

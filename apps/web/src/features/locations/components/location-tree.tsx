@@ -117,7 +117,12 @@ function TreeItem({ node, tree, canManage, open, setOpen, close }: ItemProps) {
           ) : (
             <span className="w-5 md:w-3" aria-hidden />
           )}
-          <span className="font-medium">{node.name}</span>
+          <Link
+            href={`/locations/${encodeURIComponent(node.id)}`}
+            className="hover:text-primary focus-visible:ring-ring/50 rounded-sm font-medium underline-offset-4 transition-colors outline-none hover:underline focus-visible:ring-3"
+          >
+            {node.name}
+          </Link>
           <code className="bg-muted rounded px-1.5 text-xs">{node.code}</code>
           <span className="text-muted-foreground text-xs">{LOCATION_TYPE_LABELS[node.type]}</span>
           {node.cableCount > 0 ? (
