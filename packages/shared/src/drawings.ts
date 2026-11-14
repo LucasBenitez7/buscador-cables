@@ -14,6 +14,9 @@ export const drawingMarkSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
   kind: z.enum(DRAWING_MARK_KINDS),
+  /** Size of the text marked, as a fraction of the sheet: a table row is framed whole. */
+  w: z.number().min(0).max(1).optional(),
+  h: z.number().min(0).max(1).optional(),
 });
 export type DrawingMark = z.infer<typeof drawingMarkSchema>;
 

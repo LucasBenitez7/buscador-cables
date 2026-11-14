@@ -44,14 +44,14 @@ function markElement(mark: ViewerMark): HTMLElement {
   element.className = "pointer-events-none relative flex size-14 items-center justify-center";
   element.dataset.mark = mark.kind;
   if (mark.kind === "table") {
-    element.innerHTML = `<span class="block size-10 rounded-md border-2 border-dashed ${TONE_RING[tone]}"></span>`;
+    // The overlay is laid over the whole code (see `drawMarks`): a frame that grows with zoom.
+    element.className = `pointer-events-none rounded-sm border-2 ${TONE_RING[tone]} bg-warning/10`;
     return element;
   }
   // Solo lo que se busca lleva flecha y pulso: en un recorrido, la bandeja donde está el cable.
   const highlighted = tone === "primary" || tone === "warning";
   element.innerHTML = highlighted
     ? `
-    <span class="absolute inset-0 animate-ping rounded-full border-4 ${TONE_RING[tone]} opacity-60"></span>
     <span class="absolute inset-0 rounded-full border-4 ${TONE_RING[tone]}"></span>
     <svg class="absolute -top-14 left-1/2 size-12 -translate-x-1/2 drop-shadow text-warning" viewBox="0 0 24 24" aria-hidden="true">
       <path fill="currentColor" stroke="black" stroke-width="0.6" d="M12 22 4 12h5V2h6v10h5z"/>
@@ -92,10 +92,21 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
     const instance = viewer.current;
     if (!OSD || !instance) return;
     instance.clearOverlays();
+    const { aspect } = latest.current;
     for (const mark of latest.current.marks) {
+      if (mark.kind === "table" && mark.w && mark.h) {
+        // A table row: a frame around the code, a little larger than the text.
+        const w = mark.w * 1.15;
+        const h = mark.h * 1.4;
+        instance.addOverlay({
+          element: markElement(mark),
+          location: new OSD.Rect(mark.x - w / 2, (mark.y - h / 2) * aspect, w, h * aspect),
+        });
+        continue;
+      }
       instance.addOverlay({
         element: markElement(mark),
-        location: new OSD.Point(mark.x, mark.y * latest.current.aspect),
+        location: new OSD.Point(mark.x, mark.y * aspect),
         placement: OSD.Placement.CENTER,
         checkResize: false,
       });

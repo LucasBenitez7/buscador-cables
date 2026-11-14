@@ -13,8 +13,15 @@
 import { parseTrayCode } from "@cables/shared";
 import type { PdfPage, TextRun } from "../pdf/read-pdf";
 
-/** A tray code written on the sheet: along the tray, or in a table row. */
-export type TrayLabel = { code: string; x: number; y: number; inTable: boolean };
+/** A tray code written on the sheet: along the tray, or in a table row, with its size. */
+export type TrayLabel = {
+  code: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  inTable: boolean;
+};
 
 /** A section flag on the plan ("015"). */
 export type SectionFlag = { section: string; x: number; y: number };
@@ -30,7 +37,7 @@ const round = (value: number) => Math.round(value * 10_000) / 10_000;
 
 /** Every tray code token with its centre (a run may hold a code and its size). */
 function codeTokens(runs: readonly TextRun[]) {
-  const tokens: { code: string; run: TextRun; cx: number; cy: number }[] = [];
+  const tokens: { code: string; run: TextRun; cx: number; cy: number; length: number }[] = [];
   for (const run of runs) {
     const parts = run.text.split(" ");
     let offset = 0;
@@ -46,6 +53,7 @@ function codeTokens(runs: readonly TextRun[]) {
           run,
           cx: run.cx + share * length * Math.cos(radians),
           cy: run.cy - share * length * Math.sin(radians),
+          length: (length * part.length) / run.text.length,
         });
       }
       offset += part.length + 1;
@@ -56,11 +64,12 @@ function codeTokens(runs: readonly TextRun[]) {
 
 /**
  * A code in a table: horizontal, and with another code right above or below it in the same
- * column, or a section number just to its left on its line (a one-row table). Codes written
- * along the trays are scattered, often rotated.
+ * column, or its own section number just to its left on its line (a one-row table). Codes
+ * written along the trays are scattered, often rotated; some carry the tray width before them
+ * ("U 600 99UXA01L10011"), which is a number but not their section.
  */
 function isInTable(
-  token: { run: TextRun },
+  token: { code: string; run: TextRun },
   all: readonly { run: TextRun }[],
   runs: readonly TextRun[],
 ): boolean {
@@ -73,11 +82,12 @@ function isInTable(
       Math.abs(other.run.x0 - run.x0) < 3 &&
       Math.abs(other.run.top - run.top) < run.size * 2.5,
   );
+  const section = traySection(token.code);
   return (
     stacked ||
     runs.some(
       (other) =>
-        SECTION.test(other.text) &&
+        other.text === section &&
         other.x1 < run.x0 &&
         run.x0 - other.x1 < TABLE_LABEL_GAP &&
         Math.abs(other.top - run.top) < run.size,
@@ -87,12 +97,19 @@ function isInTable(
 
 export function trayLabels(page: PdfPage): TrayLabel[] {
   const tokens = codeTokens(page.runs);
-  return tokens.map((token) => ({
-    code: token.code,
-    x: round(token.cx / page.width),
-    y: round(token.cy / page.height),
-    inTable: isInTable(token, tokens, page.runs),
-  }));
+  return tokens.map((token) => {
+    // Along the text and across it; a code written upwards is tall and narrow.
+    const upright = Math.abs(Math.sin((token.run.angle * Math.PI) / 180)) > 0.7;
+    const [along, across] = [token.length, token.run.size * 1.2];
+    return {
+      code: token.code,
+      x: round(token.cx / page.width),
+      y: round(token.cy / page.height),
+      w: round((upright ? across : along) / page.width),
+      h: round((upright ? along : across) / page.height),
+      inTable: isInTable(token, tokens, page.runs),
+    };
+  });
 }
 
 /**

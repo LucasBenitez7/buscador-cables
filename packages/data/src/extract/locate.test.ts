@@ -40,6 +40,36 @@ describe("trayLabels", () => {
   });
 });
 
+describe("trayLabels: width before the code", () => {
+  // Regresión: "U 600 99UXA01L10011" en un plano de instrumentación se tomaba por una tabla
+  // de una fila (un número de tres cifras a la izquierda), y la bandeja perdía su marca.
+  it("does not take the tray width for a table section", async () => {
+    const page = await pageOf({
+      drawing: "EJ-ICO-DRW-0003",
+      sheet: "05",
+      trays: [{ code: "99UXA01L10011", x: 900, top: 600 }],
+      flags: [{ section: "600", x: 860, top: 600 }],
+    });
+
+    expect(trayLabels(page)[0]).toMatchObject({ code: "99UXA01L10011", inTable: false });
+  });
+
+  it("keeps the size of the code, upright when the text is", async () => {
+    const page = await pageOf({
+      drawing: "EJ-ICO-DRW-0003",
+      sheet: "05",
+      trays: [
+        { code: "99UXA01L10011", x: 900, top: 600 },
+        { code: "99UXA01L10012", x: 300, top: 1200, angle: 90 },
+      ],
+    });
+    const [flat, upright] = trayLabels(page);
+
+    expect(flat!.w).toBeGreaterThan(flat!.h * 2);
+    expect(upright!.h).toBeGreaterThan(upright!.w * 2);
+  });
+});
+
 describe("sectionFlags", () => {
   it("keeps the flags on the plan and leaves out table sections and the frame", async () => {
     const page = await pageOf({

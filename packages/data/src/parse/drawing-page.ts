@@ -3,7 +3,6 @@
  * tray codes drawn on it with their size when the drawing gives it ("L600100300", "C025"),
  * and, on "SHEET INDEX" pages, the title of every sheet of the drawing.
  */
-import { createHash } from "node:crypto";
 import { parseTrayCode, parseTraySize } from "@cables/shared";
 import { findLabel } from "../pdf/layout";
 import { sectionFlags, trayLabels, type SectionFlag, type TrayLabel } from "./drawing-marks";
@@ -131,15 +130,6 @@ export function parseDrawingSheet(page: PdfPage): RawDrawingSheet {
     height: Math.round(page.height),
     labels: trayLabels(page),
     flags: sectionFlags(page),
-    fingerprint: fingerprint(page),
+    fingerprint: page.fingerprint,
   };
-}
-
-function fingerprint(page: PdfPage): string {
-  const hash = createHash("sha256");
-  hash.update(`${Math.round(page.width)}x${Math.round(page.height)}`);
-  for (const run of page.runs) {
-    hash.update(`|${run.text}@${Math.round(run.cx)},${Math.round(run.cy)}`);
-  }
-  return hash.digest("hex").slice(0, 16);
 }

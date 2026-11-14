@@ -308,6 +308,8 @@ function locateTrays(
       entryFor(tray, sheet).marks.push({
         x: label.x,
         y: label.y,
+        w: label.w,
+        h: label.h,
         kind: label.inTable ? "table" : "label",
       });
     }

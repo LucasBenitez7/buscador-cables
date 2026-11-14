@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 /** A run of text as the PDF draws it: a table cell, a label, a value. */
@@ -21,6 +22,11 @@ export type PdfPage = {
   width: number;
   height: number;
   runs: TextRun[];
+  /**
+   * Hash of the raw text and its position as the PDF draws it: changes when the sheet changes
+   * (a new revision adds a row to the title block), not when this code reads it differently.
+   */
+  fingerprint: string;
 };
 
 type TextItem = { str: string; transform: number[]; width: number };
@@ -42,8 +48,10 @@ export async function* readPdfPages(data: Uint8Array): AsyncGenerator<PdfPage> {
       const { width, height } = viewport;
       const content = await page.getTextContent();
       const runs: TextRun[] = [];
+      const hash = createHash("sha256").update(`${Math.round(width)}x${Math.round(height)}`);
       for (const item of content.items) {
         if (!isTextItem(item)) continue;
+        hash.update(`|${item.str}@${item.transform.map((value) => Math.round(value)).join(",")}`);
         // NFKC: "μ" and "µ" (and other look-alikes) become the same character.
         const text = item.str.normalize("NFKC").replace(/\s+/g, " ").trim();
         if (text === "") continue;
@@ -71,7 +79,7 @@ export async function* readPdfPages(data: Uint8Array): AsyncGenerator<PdfPage> {
         });
       }
       page.cleanup();
-      yield { number, width, height, runs };
+      yield { number, width, height, runs, fingerprint: hash.digest("hex").slice(0, 16) };
     }
   } finally {
     await task.destroy();
