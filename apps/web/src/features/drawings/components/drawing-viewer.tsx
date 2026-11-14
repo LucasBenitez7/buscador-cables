@@ -30,42 +30,81 @@ type OpenSeadragonModule = typeof OpenSeadragon;
 /** Marks the eye should go to: the drawn code or the section flag, not the table rows. */
 const isPrimary = (mark: ViewerMark) => mark.kind !== "table";
 
-const TONE_RING: Record<NonNullable<ViewerMark["tone"]>, string> = {
-  primary: "border-warning",
-  warning: "border-warning",
-  success: "border-success",
-  muted: "border-muted-foreground",
+const TONE_FRAME: Record<NonNullable<ViewerMark["tone"]>, string> = {
+  primary: "border-warning bg-warning/15",
+  warning: "border-warning bg-warning/15",
+  success: "border-success bg-success/10",
+  muted: "border-muted-foreground bg-muted-foreground/10",
 };
 
-/** The HTML laid over the drawing at a mark. Built by hand: OpenSeadragon owns that DOM. */
-function markElement(mark: ViewerMark): HTMLElement {
-  const tone = mark.tone ?? "primary";
+/** The arrow and the pulse go only to what is being looked for (on a route, where it is). */
+const isHighlighted = (mark: ViewerMark) =>
+  mark.kind !== "table" && (mark.tone ?? "primary") !== "success" && mark.tone !== "muted";
+
+/** Without a stored size (older data), a small square around the point. */
+const DEFAULT_SIZE = { w: 0.012, h: 0.008 };
+
+/**
+ * Where a mark sits on the image, in OpenSeadragon's coordinates (the width is 1, the height
+ * follows the sheet): a frame around the text with a margin, so it fits whatever it marks
+ * and grows and shrinks with the drawing.
+ */
+export function markFrame(mark: ViewerMark, aspect: number) {
+  const w = mark.w ?? DEFAULT_SIZE.w;
+  const h = mark.h ?? DEFAULT_SIZE.h;
+  // Margin of half a line of text around it; the flags' boxes are a bit larger than their number.
+  const pad = h * (mark.kind === "flag" ? 0.7 : 0.35);
+  const width = w + pad * 2;
+  const height = h + pad * 2;
+  return {
+    x: mark.x - width / 2,
+    y: (mark.y - height / 2) * aspect,
+    width,
+    height: height * aspect,
+  };
+}
+
+/** Built by hand: OpenSeadragon owns the DOM of its overlays. */
+function frameElement(mark: ViewerMark): HTMLElement {
   const element = document.createElement("div");
-  element.className = "pointer-events-none relative flex size-14 items-center justify-center";
   element.dataset.mark = mark.kind;
-  if (mark.kind === "table") {
-    // The overlay is laid over the whole code (see `drawMarks`): a frame that grows with zoom.
-    element.className = `pointer-events-none rounded-sm border-2 ${TONE_RING[tone]} bg-warning/10`;
-    return element;
-  }
-  // Solo lo que se busca lleva flecha y pulso: en un recorrido, la bandeja donde está el cable.
-  const highlighted = tone === "primary" || tone === "warning";
-  element.innerHTML = highlighted
-    ? `
-    <span class="absolute inset-0 rounded-full border-4 ${TONE_RING[tone]}"></span>
-    <svg class="absolute -top-14 left-1/2 size-12 -translate-x-1/2 drop-shadow text-warning" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" stroke="black" stroke-width="0.6" d="M12 22 4 12h5V2h6v10h5z"/>
-    </svg>`
-    : `<span class="absolute inset-1 rounded-full border-4 ${TONE_RING[tone]}"></span>`;
-  if (mark.label) {
-    const badge = document.createElement("span");
-    badge.className =
-      "absolute -right-3 -bottom-3 rounded-full bg-background px-1.5 text-xs font-bold text-foreground";
-    badge.textContent = mark.label;
-    element.append(badge);
-  }
+  element.dataset.tone = mark.tone ?? "primary";
+  element.className = cn(
+    "pointer-events-none rounded-sm",
+    TONE_FRAME[mark.tone ?? "primary"],
+    isHighlighted(mark) ? "border-[3px]" : "border-2",
+    mark.kind === "table" && "border-dashed",
+  );
   return element;
 }
+
+/** Fixed size on screen: found at a glance even with the whole sheet in view. */
+function arrowElement(): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "pointer-events-none pb-1";
+  element.dataset.arrow = "";
+  element.innerHTML = `<svg class="size-9 drop-shadow text-warning" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" stroke="black" stroke-width="0.6" d="M12 22 4 12h5V2h6v10h5z"/>
+    </svg>`;
+  return element;
+}
+
+/**
+ * The step number. With the sheet far away the numbers of neighbouring trays would pile up:
+ * then only the one of what is being looked for stays (see `FAR_WIDTH`).
+ */
+function labelElement(label: string, keep: boolean): HTMLElement {
+  const element = document.createElement("span");
+  element.className = cn(
+    "pointer-events-none ml-1 rounded-full bg-background px-1.5 text-xs font-bold text-foreground shadow",
+    !keep && "group-data-[far=true]/viewer:invisible",
+  );
+  element.textContent = label;
+  return element;
+}
+
+/** Below this width on screen (pixels) the whole sheet is too small for every number. */
+const FAR_WIDTH = 2200;
 
 /**
  * A sheet of the drawings with pan and zoom (also with two fingers), opened centred on the
@@ -94,22 +133,28 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
     instance.clearOverlays();
     const { aspect } = latest.current;
     for (const mark of latest.current.marks) {
-      if (mark.kind === "table" && mark.w && mark.h) {
-        // A table row: a frame around the code, a little larger than the text.
-        const w = mark.w * 1.15;
-        const h = mark.h * 1.4;
-        instance.addOverlay({
-          element: markElement(mark),
-          location: new OSD.Rect(mark.x - w / 2, (mark.y - h / 2) * aspect, w, h * aspect),
-        });
-        continue;
-      }
+      const frame = markFrame(mark, aspect);
+      // The frame belongs to the drawing: it scales with it and always fits what it marks.
       instance.addOverlay({
-        element: markElement(mark),
-        location: new OSD.Point(mark.x, mark.y * aspect),
-        placement: OSD.Placement.CENTER,
-        checkResize: false,
+        element: frameElement(mark),
+        location: new OSD.Rect(frame.x, frame.y, frame.width, frame.height),
       });
+      if (isHighlighted(mark)) {
+        instance.addOverlay({
+          element: arrowElement(),
+          location: new OSD.Point(frame.x + frame.width / 2, frame.y),
+          placement: OSD.Placement.BOTTOM,
+          checkResize: false,
+        });
+      }
+      if (mark.label) {
+        instance.addOverlay({
+          element: labelElement(mark.label, isHighlighted(mark)),
+          location: new OSD.Point(frame.x + frame.width, frame.y + frame.height / 2),
+          placement: OSD.Placement.LEFT,
+          checkResize: false,
+        });
+      }
     }
   }
 
@@ -143,7 +188,15 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
         animationTime: 0.6,
       });
       viewer.current = instance;
+      // How wide the whole sheet will be on screen (the zoom it is going to) decides whether
+      // every number fits.
+      const updateDistance = () => {
+        const sheetWidth = instance!.viewport.getZoom() * instance!.viewport.getContainerSize().x;
+        container.current?.setAttribute("data-far", String(sheetWidth < FAR_WIDTH));
+      };
+      instance.addHandler("zoom", updateDistance);
       instance.addHandler("open", () => {
+        updateDistance();
         drawMarks();
         setStatus("ready");
         focus(0);
@@ -191,7 +244,7 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
         ref={container}
         role="img"
         aria-label={label}
-        className="absolute inset-0 touch-none"
+        className="group/viewer absolute inset-0 touch-none"
         data-testid="drawing-viewer"
       />
       {status === "loading" ? (

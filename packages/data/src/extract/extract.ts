@@ -339,7 +339,7 @@ function locateTrays(
       for (const target of targets) {
         const marks = entryFor(tray, target).marks;
         for (const flag of target.flags.filter((candidate) => candidate.section === section)) {
-          marks.push({ x: flag.x, y: flag.y, kind: "flag" });
+          marks.push({ x: flag.x, y: flag.y, w: flag.w, h: flag.h, kind: "flag" });
         }
         flagged = true;
       }

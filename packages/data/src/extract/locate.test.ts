@@ -84,7 +84,13 @@ describe("sectionFlags", () => {
     });
 
     expect(sectionFlags(page)).toEqual([
-      { section: "015", x: expect.closeTo(1209 / W, 2), y: expect.closeTo(265 / H, 2) },
+      {
+        section: "015",
+        x: expect.closeTo(1209 / W, 2),
+        y: expect.closeTo(265 / H, 2),
+        w: expect.closeTo(17 / W, 2),
+        h: expect.closeTo(12 / H, 2),
+      },
     ]);
   });
 
@@ -155,7 +161,11 @@ describe("extractProjectData: trays on the plans", () => {
 
     expect([...bySheet.keys()].sort()).toEqual(["03", "04"]);
     expect(bySheet.get("03")!.marks).toEqual([
-      { kind: "flag", x: expect.closeTo(709 / W, 2), y: expect.closeTo(505 / H, 2) },
+      expect.objectContaining({
+        kind: "flag",
+        x: expect.closeTo(709 / W, 2),
+        y: expect.closeTo(505 / H, 2),
+      }),
     ]);
     expect(bySheet.get("04")!.marks.map((mark) => mark.kind)).toEqual(["table"]);
     expect(sheets.map((sheet) => `${sheet.drawing}/${sheet.sheet}`)).toEqual([

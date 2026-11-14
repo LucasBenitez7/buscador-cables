@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TraySheet } from "@/server/trays/service";
-import { DrawingViewer } from "./drawing-viewer";
+import { DrawingViewer, markFrame } from "./drawing-viewer";
 import { TrayDrawings, sheetHint } from "./tray-drawings";
 
 // OpenSeadragon dibuja en un canvas que jsdom no tiene: se sustituye por un doble que guarda
@@ -44,6 +44,8 @@ const osd = vi.hoisted(() => {
           zoomBy: () => {},
           applyConstraints: () => {},
           goHome: () => {},
+          getZoom: () => 1,
+          getContainerSize: () => ({ x: 800, y: 500 }),
         },
       };
     },
@@ -82,12 +84,22 @@ describe("DrawingViewer", () => {
     osd.state.handlers.open!();
 
     await waitFor(() => expect(screen.queryByText("Cargando el plano…")).toBeNull());
-    expect(osd.state.overlays.map((overlay) => overlay.element.dataset.mark)).toEqual([
+    // La bandera: su marco y la flecha; la fila de tabla, solo su marco (discontinuo).
+    expect(osd.state.overlays.map((overlay) => overlay.element.dataset.mark ?? "flecha")).toEqual([
       "flag",
+      "flecha",
       "table",
     ]);
-    // Coordenadas de OpenSeadragon: el alto va en proporción al ancho (1000 / 2000).
-    expect(osd.state.overlays[0]!.location).toEqual({ x: 0.5, y: 0.2 });
+    // Coordenadas de OpenSeadragon: el alto va en proporción al ancho (1000 / 2000). El marco
+    // está centrado en la marca.
+    const frame = osd.state.overlays[0]!.location as unknown as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    expect(frame.x + frame.width / 2).toBeCloseTo(0.5);
+    expect(frame.y + frame.height / 2).toBeCloseTo(0.2);
     // Se abre centrado en la bandera, no en la fila de la tabla.
     expect(osd.state.fitted[0]!.x).toBeCloseTo(0.4);
   });
@@ -114,6 +126,44 @@ describe("DrawingViewer", () => {
 
     osd.state.handlers["open-failed"]!();
     expect(await screen.findByRole("alert")).toHaveTextContent("No se ha podido cargar el plano");
+  });
+});
+
+describe("markFrame", () => {
+  it("frames the text with a margin, centred on it, in the drawing's coordinates", () => {
+    const frame = markFrame({ x: 0.5, y: 0.5, w: 0.04, h: 0.01, kind: "label" }, 0.5);
+
+    expect(frame.width).toBeGreaterThan(0.04);
+    expect(frame.x + frame.width / 2).toBeCloseTo(0.5);
+    // El alto va en proporción a la hoja: 0,5 de su ancho.
+    expect(frame.y + frame.height / 2).toBeCloseTo(0.25);
+  });
+
+  it("only points the arrow at what is being looked for", async () => {
+    render(
+      <DrawingViewer
+        imageKey="EJ_02"
+        width={1000}
+        height={1000}
+        marks={[
+          { x: 0.2, y: 0.2, w: 0.02, h: 0.01, kind: "flag", tone: "warning", label: "3" },
+          { x: 0.4, y: 0.4, w: 0.02, h: 0.01, kind: "flag", tone: "success", label: "2" },
+        ]}
+        label="Recorrido"
+      />,
+    );
+    await waitFor(() => expect(osd.state.handlers.open).toBeDefined());
+    osd.state.handlers.open!();
+
+    const arrows = osd.state.overlays.filter((overlay) => "arrow" in overlay.element.dataset);
+    expect(arrows).toHaveLength(1);
+    expect(osd.state.overlays.map((overlay) => overlay.element.textContent)).toContain("2");
+    // Hoja entera en 800 px: solo se queda el número de lo buscado.
+    expect(screen.getByRole("img", { name: "Recorrido" })).toHaveAttribute("data-far", "true");
+    const label = (text: string) =>
+      osd.state.overlays.find((overlay) => overlay.element.textContent === text)!.element;
+    expect(label("2").className).toContain("group-data-[far=true]/viewer:invisible");
+    expect(label("3").className).not.toContain("invisible");
   });
 });
 

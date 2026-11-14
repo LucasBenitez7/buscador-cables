@@ -23,8 +23,8 @@ export type TrayLabel = {
   inTable: boolean;
 };
 
-/** A section flag on the plan ("015"). */
-export type SectionFlag = { section: string; x: number; y: number };
+/** A section flag on the plan ("015"), with the size of its number. */
+export type SectionFlag = { section: string; x: number; y: number; w: number; h: number };
 
 const SECTION = /^\d{3}$/;
 /** Margin with the frame and its grid numbers, as a fraction of the sheet. */
@@ -140,6 +140,8 @@ export function sectionFlags(page: PdfPage): SectionFlag[] {
       section: run.text,
       x: round(run.cx / page.width),
       y: round(run.cy / page.height),
+      w: round((run.x1 - run.x0) / page.width),
+      h: round((run.size * 1.2) / page.height),
     }));
 }
 

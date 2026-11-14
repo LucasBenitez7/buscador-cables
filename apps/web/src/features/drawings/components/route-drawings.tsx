@@ -50,14 +50,14 @@ export function RouteDrawings({ sheets }: { sheets: RouteSheet[] }) {
       <p className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
         <span>Los números son los tramos del recorrido.</span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="border-success size-3 rounded-full border-2" /> Tendido
+          <span aria-hidden className="border-success size-3 rounded-sm border-2" /> Tendido
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="border-muted-foreground size-3 rounded-full border-2" />{" "}
-          Falta o sin datos
+          <span aria-hidden className="border-muted-foreground size-3 rounded-sm border-2" /> Falta
+          o sin datos
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="border-warning size-3 rounded-full border-2" /> Dónde está la
+          <span aria-hidden className="border-warning size-3 rounded-sm border-2" /> Dónde está la
           punta suelta
         </span>
       </p>
