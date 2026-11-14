@@ -97,18 +97,22 @@ export default async function TrayPage({ params }: { params: Params }) {
         )}
       </Section>
 
-      <Section title={`Cables que pasan por aquí (${tray.routeCables.length})`}>
-        {tray.routeCables.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Ningún recorrido cargado pasa por aquí.</p>
-        ) : (
-          <>
-            <CableList cables={tray.routeCables} />
-            <Button asChild variant="outline">
+      <Section
+        title={`Cables que pasan por aquí (${tray.routeCables.length})`}
+        action={
+          tray.routeCables.length > 0 ? (
+            <Button asChild variant="outline" size="sm">
               <Link href={`/cables?tray=${encodeURIComponent(tray.code)}`}>
                 Ver y filtrar en el buscador
               </Link>
             </Button>
-          </>
+          ) : null
+        }
+      >
+        {tray.routeCables.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Ningún recorrido cargado pasa por aquí.</p>
+        ) : (
+          <CableList cables={tray.routeCables} />
         )}
       </Section>
     </article>
@@ -117,7 +121,7 @@ export default async function TrayPage({ params }: { params: Params }) {
 
 function CableList({ cables }: { cables: TrayCable[] }) {
   return (
-    <ul className="divide-y rounded-lg border">
+    <ul className="bg-card divide-y rounded-lg border">
       {cables.map((cable) => (
         <li
           key={cable.id}

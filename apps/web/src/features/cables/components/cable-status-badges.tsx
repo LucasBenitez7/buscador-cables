@@ -12,7 +12,7 @@ type BadgeVariant = "default" | "outline" | "info" | "success" | "warning" | "de
  * Verde: conectado. Azul: tendido. Ámbar: a medias. Rojo: retirado. El resto, neutro.
  * Cada badge lleva un punto del mismo color para distinguir los estados de un vistazo.
  */
-const INSTALLATION_VARIANT: Record<InstallationStatus, BadgeVariant> = {
+export const INSTALLATION_VARIANT: Record<InstallationStatus, BadgeVariant> = {
   UNVERIFIED: "outline",
   IN_STOCK: "outline",
   COILED: "default",
@@ -21,7 +21,7 @@ const INSTALLATION_VARIANT: Record<InstallationStatus, BadgeVariant> = {
   RETIRED: "destructive",
 };
 
-const CONNECTION_VARIANT: Record<ConnectionStatus, BadgeVariant> = {
+export const CONNECTION_VARIANT: Record<ConnectionStatus, BadgeVariant> = {
   DISCONNECTED: "outline",
   ORIGIN_ONLY: "warning",
   DESTINATION_ONLY: "warning",

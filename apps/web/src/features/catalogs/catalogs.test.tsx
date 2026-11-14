@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CatalogSection } from "./components/catalog-section";
+import { CatalogTabs } from "./components/catalog-tabs";
 
 const mocks = vi.hoisted(() => ({
   createCatalogItemAction: vi.fn(),
@@ -77,5 +78,71 @@ describe("CatalogSection", () => {
     const formData = mocks.updateCatalogItemAction.mock.calls[0]?.[0] as FormData;
     expect(formData.get("id")).toBe("c2");
     expect(formData.get("name")).toBe("Control y mando");
+  });
+
+  it("puts the add form before the list", () => {
+    render(<CatalogSection kind="color" items={items} />);
+
+    const add = screen.getByLabelText("Nuevo: color");
+    const firstItem = screen.getByText("Rojo");
+    expect(add.compareDocumentPosition(firstItem) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("filters a long list by name, and only offers the search box when it is long", () => {
+    const many = Array.from({ length: 12 }, (_, index) => ({
+      id: `t${index}`,
+      name: index === 5 ? "Control apantallado" : `Potencia ${index}`,
+      hex: null,
+      cableCount: index,
+    }));
+    const { unmount } = render(<CatalogSection kind="cableType" items={many} />);
+
+    fireEvent.change(screen.getByLabelText("Buscar en tipos de cable"), {
+      target: { value: "apant" },
+    });
+    expect(screen.getByText("Control apantallado")).toBeInTheDocument();
+    expect(screen.queryByText("Potencia 1")).toBeNull();
+    expect(screen.getByText("1 de 12")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Buscar en tipos de cable"), {
+      target: { value: "zzz" },
+    });
+    expect(screen.getByText("Ninguno contiene «zzz».")).toBeInTheDocument();
+    unmount();
+
+    render(<CatalogSection kind="color" items={items} />);
+    expect(screen.queryByLabelText("Buscar en colores")).toBeNull();
+  });
+});
+
+describe("CatalogTabs", () => {
+  const catalogs = {
+    cableType: [{ id: "t1", name: "Control", hex: null, cableCount: 3 }],
+    color: items,
+    manufacturer: [],
+  };
+
+  it("shows one catalog at a time, with its size on the tab", () => {
+    render(<CatalogTabs catalogs={catalogs} />);
+
+    const typesTab = screen.getByRole("tab", { name: /Tipos de cable/ });
+    expect(typesTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /Colores/ })).toHaveTextContent("2");
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("Control");
+
+    fireEvent.click(screen.getByRole("tab", { name: /Colores/ }));
+    expect(screen.getByRole("tab", { name: /Colores/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("Rojo");
+  });
+
+  it("moves between tabs with the arrow keys", () => {
+    render(<CatalogTabs catalogs={catalogs} />);
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: /Tipos de cable/ }), { key: "ArrowLeft" });
+    expect(screen.getByRole("tab", { name: /Fabricantes/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: /Fabricantes/ })).toHaveFocus();
   });
 });

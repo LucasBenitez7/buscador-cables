@@ -1,10 +1,24 @@
 import type { ReactNode } from "react";
 
-/** A titled block of a record page (cable, tray). */
-export function Section({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * A titled block of a record page (cable, tray). `action` (a button or link about the whole
+ * block) sits at the right of the title, where it is seen before the list.
+ */
+export function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="space-y-3">
-      <h2 className="border-b pb-2 text-base font-semibold">{title}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {action}
+      </div>
       {children}
     </section>
   );

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { CATALOG_KINDS } from "@cables/shared";
-import { CatalogSection } from "@/features/catalogs/components/catalog-section";
+import { CatalogTabs } from "@/features/catalogs/components/catalog-tabs";
 import { listCatalogs } from "@/server/catalogs/service";
 import { requirePermission } from "@/server/session";
 
@@ -20,11 +19,7 @@ export default async function CatalogsPage() {
           eliminar, solo renombrar.
         </p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        {CATALOG_KINDS.map((kind) => (
-          <CatalogSection key={kind} kind={kind} items={catalogs[kind]} />
-        ))}
-      </div>
+      <CatalogTabs catalogs={catalogs} />
     </div>
   );
 }
