@@ -5,6 +5,7 @@
     "NODE_ENV",
     "DATABASE_URL",
     "DATABASE_URL_TEST",
+    "DATABASE_POOL_MAX",
     "APP_URL",
     "SMTP_HOST",
     "SMTP_PORT",
@@ -15,7 +16,8 @@
     "BETTER_AUTH_URL",
     "SEED_ADMIN_EMAIL",
     "SEED_ADMIN_PASSWORD",
-    "SEED_ADMIN_NAME"
+    "SEED_ADMIN_NAME",
+    "DRAWINGS_DIR"
   ],
   "tasks": {
     "generate": {
@@ -38,6 +40,11 @@
     },
     "test": {
       "dependsOn": ["^generate", "^test"],
+      "outputs": ["coverage/**"]
+    },
+    "@cables/shared#test": {
+      "dependsOn": ["^generate", "^test"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/**"],
       "outputs": ["coverage/**"]
     },
     "@cables/data#test": {

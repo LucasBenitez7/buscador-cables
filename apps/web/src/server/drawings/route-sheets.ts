@@ -53,6 +53,13 @@ export type SheetRow = {
 
 const TONE_RANK: Record<RouteSheetMark["tone"], number> = { warning: 0, success: 1, muted: 2 };
 
+/** Route numbers in order; "Aquí" (off the route) after them. */
+const byStepNumber = (a: string, b: string) => {
+  const [x, y] = [Number(a), Number(b)];
+  if (Number.isNaN(x) || Number.isNaN(y)) return Number(Number.isNaN(x)) - Number(Number.isNaN(y));
+  return x - y;
+};
+
 /**
  * Pure: groups the marks of the route trays by sheet. Only marks that show where a tray is
  * (its drawn code, its section flag) count; table rows do not. Trays that share a flag (a
@@ -101,7 +108,7 @@ export function buildRouteSheets(
         continue;
       }
       existing.label = [...new Set([...existing.label.split(", "), ...label.split(", ")])]
-        .sort((a, b) => Number(a) - Number(b))
+        .sort(byStepNumber)
         .join(", ");
       if (TONE_RANK[tone] < TONE_RANK[existing.tone]) existing.tone = tone;
     }

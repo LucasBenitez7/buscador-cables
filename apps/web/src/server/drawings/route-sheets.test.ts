@@ -60,6 +60,22 @@ describe("buildRouteSheets", () => {
     expect(only!.marks).toEqual([{ ...flag(0.5), label: "1, 2", tone: "success" }]);
   });
 
+  // Revisión F7.5, B6: "Aquí" se ordenaba con Number() y daba NaN, así que el orden dependía
+  // del motor.
+  it("lists the route numbers in order and the off-route tray last when they share a mark", () => {
+    const [only] = buildRouteSheets(
+      [
+        row("99UXB00L22001", "24", [flag(0.5)]),
+        row("99UXA00L21003", "24", [flag(0.5)]),
+        row("99UXA00L21001", "24", [flag(0.5)]),
+      ],
+      route,
+      { installationStatus: "PARTIALLY_LAID", looseEnd: "ORIGIN", looseEndTray: "99UXB00L22001" },
+    );
+
+    expect(only!.marks).toEqual([{ ...flag(0.5), label: "1, 3, Aquí", tone: "warning" }]);
+  });
+
   it("puts first the sheet where the loose end is, then the ones with more trays", () => {
     const sheets = buildRouteSheets(
       [

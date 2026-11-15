@@ -62,7 +62,11 @@ export async function renderSheets(options: {
   const manifest = await readManifest(outDir);
   const summary: RenderSummary = { rendered: 0, unchanged: 0, removed: 0 };
 
-  const wanted = new Map(sheets.map((sheet) => [sheetKey(sheet), sheet]));
+  // The first sheet with a key wins, as in `data:load` (which warns about the others).
+  const wanted = new Map<string, ProjectSheet>();
+  for (const sheet of sheets) {
+    if (!wanted.has(sheetKey(sheet))) wanted.set(sheetKey(sheet), sheet);
+  }
   for (const key of Object.keys(manifest)) {
     if (wanted.has(key)) continue;
     await removeTiles(outDir, key);

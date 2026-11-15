@@ -15,6 +15,7 @@ import {
   assertNoProfileSelfEdit,
   prepareSignUpUser,
 } from "@/server/auth-policy";
+import { drawingAccessCookie } from "@/server/drawings/access";
 import { sendEmail } from "@/server/email";
 import {
   assertLoginNotLocked,
@@ -28,6 +29,7 @@ export const EMAIL_VERIFICATION_EXPIRES_SECONDS = 60 * 60 * 24;
 const baseURL = env.BETTER_AUTH_URL ?? env.APP_URL;
 
 const SIGN_IN_PATH = "/sign-in/email";
+const SIGN_OUT_PATH = "/sign-out";
 
 const signInEmail = (body: unknown): unknown =>
   typeof body === "object" && body !== null ? (body as { email?: unknown }).email : undefined;
@@ -138,6 +140,13 @@ export const auth = betterAuth({
       }
     }),
     after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === SIGN_OUT_PATH) {
+        // El pase corto de las teselas de los planos (`server/drawings/access.ts`) se va con
+        // la sesión.
+        const { name, value, ...options } = drawingAccessCookie("", 0);
+        ctx.setCookie(name, value, options);
+        return;
+      }
       if (ctx.path !== SIGN_IN_PATH) {
         return;
       }

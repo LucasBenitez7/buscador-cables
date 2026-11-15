@@ -95,7 +95,7 @@ describe("sectionFlags", () => {
   });
 
   it("reads the section of a tray from its code", () => {
-    expect(traySection("80UBA00L21014")).toBe("014");
+    expect(traySection("99UXA00L21014")).toBe("014");
     expect(traySection("99UMC_1D20059")).toBe("059");
     expect(traySection("not a tray")).toBeNull();
   });

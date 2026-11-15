@@ -148,7 +148,7 @@ describe("SearchResults", () => {
       <SearchResults
         search={{}}
         result={{
-          items: [{ ...item, originEquipment: "+80BBA01" }],
+          items: [{ ...item, originEquipment: "+99BMA01" }],
           total: 1,
           page: 1,
           pageCount: 1,
@@ -159,9 +159,9 @@ describe("SearchResults", () => {
 
     expect(table.getByText("Origen")).toBeInTheDocument();
     expect(table.getByText("Destino")).toBeInTheDocument();
-    expect(table.getByRole("link", { name: "+80BBA01" })).toHaveAttribute(
+    expect(table.getByRole("link", { name: "+99BMA01" })).toHaveAttribute(
       "href",
-      "/cables?equipment=%2B80BBA01",
+      "/cables?equipment=%2B99BMA01",
     );
     expect(table.getByRole("link", { name: "Caldera 1 › Bandeja norte" })).toHaveAttribute(
       "href",

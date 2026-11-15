@@ -1,8 +1,9 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { parseEnvironment } from "@cables/shared";
+import { environmentSchema } from "@cables/shared";
 
 /**
  * The drawing tiles drawn by `pnpm data:render` (`<key>.dzi` and `<key>_files/<level>/<x>_<y>.webp`).
@@ -26,12 +27,27 @@ function repoRoot(): string {
   return dir;
 }
 
+// Resolved once, not on every tile; again only if the variable changes (the tests change it).
+let resolved: { raw: string | undefined; dir: string } | null = null;
+
 export function drawingsDir(): string {
-  const configured = parseEnvironment(process.env).DRAWINGS_DIR;
-  return path.isAbsolute(configured) ? configured : path.join(repoRoot(), configured);
+  const raw = process.env.DRAWINGS_DIR;
+  if (resolved && resolved.raw === raw) return resolved.dir;
+  const configured = environmentSchema.shape.DRAWINGS_DIR.parse(raw);
+  const dir = path.isAbsolute(configured) ? configured : path.join(repoRoot(), configured);
+  resolved = { raw, dir };
+  return dir;
 }
 
-export type DrawingFile = { body: Buffer; contentType: string };
+export type DrawingFile = {
+  body: Buffer;
+  contentType: string;
+  /** Strong validator of the content: the browser revalidates instead of keeping it. */
+  etag: string;
+};
+
+/** The descriptor of a sheet (`<key>.dzi`), the first thing the viewer asks for. */
+export const isDrawingDescriptor = (segments: readonly string[]): boolean => segments.length === 1;
 
 /**
  * The relative path of a tile or descriptor from the URL segments, or null for anything else.
@@ -61,6 +77,7 @@ export async function readDrawingFile(segments: readonly string[]): Promise<Draw
     return {
       body,
       contentType: relative.endsWith(".dzi") ? "application/xml" : "image/webp",
+      etag: `"${createHash("sha256").update(body).digest("base64url").slice(0, 27)}"`,
     };
   } catch {
     return null;

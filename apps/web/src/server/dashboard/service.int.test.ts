@@ -1,11 +1,40 @@
 import { prisma } from "@cables/db";
-import { beforeEach, describe, expect, it } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { getCableProgress, getDashboard } from "./service";
+
+let drawings: string;
+const previousDrawingsDir = process.env.DRAWINGS_DIR;
+
+beforeAll(async () => {
+  drawings = await mkdtemp(path.join(tmpdir(), "dashboard-drawings-"));
+  process.env.DRAWINGS_DIR = drawings;
+  await writeFile(path.join(drawings, "EJ-ELE-DRW-0024_02.dzi"), "<Image/>");
+});
+
+afterAll(async () => {
+  process.env.DRAWINGS_DIR = previousDrawingsDir;
+  await rm(drawings, { recursive: true, force: true });
+});
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "drawing_sheet", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
+  // Dos hojas cargadas; solo la primera tiene teselas.
+  await prisma.drawingSheet.createMany({
+    data: ["02", "03"].map((sheet) => ({
+      drawing: "EJ-ELE-DRW-0024",
+      sheet,
+      sourcePage: Number(sheet),
+      width: 2384,
+      height: 1684,
+      imageKey: `EJ-ELE-DRW-0024_${sheet}`,
+      fingerprint: `f-${sheet}`,
+    })),
+  });
   await prisma.user.createMany({
     data: [
       {
@@ -123,6 +152,7 @@ describe("getDashboard", () => {
       pendingAccounts: 1,
       activeUsers: { ADMIN: 1, SUPERVISOR: 1, TECHNICIAN: 1, VIEWER: 1 },
       database: "ok",
+      drawings: { sheets: 2, drawn: 1 },
     });
     expect(dashboard.team).not.toBeNull();
   });

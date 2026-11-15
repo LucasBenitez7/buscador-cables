@@ -115,6 +115,18 @@ const chunks = <T>(items: readonly T[], size = BATCH) =>
     items.slice(index * size, (index + 1) * size),
   );
 
+/**
+ * JSON with the object keys sorted: Postgres `jsonb` does not keep the key order, so what
+ * comes back from the database must not differ from the extraction only by that order.
+ */
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) =>
+    item && typeof item === "object" && !Array.isArray(item)
+      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : item,
+  );
+}
+
 const ROLLBACK = Symbol("dry run");
 
 export async function loadProjectData(
@@ -374,14 +386,27 @@ async function loadSheets(
   const existing = await db.drawingSheet.findMany();
   const byKey = new Map(existing.map((row) => [drawingSheetKey(row), row]));
   const ids = new Map<string, string>();
+  // The image key is unique: two sheets with the same one would share their tiles. The
+  // drawing numbers and sheets read today cannot give it, but a new format could
+  // (`A.1` and `A-1`). Only the first is loaded, as `data:render` only draws the first.
+  const imageKeys = new Map<string, string>();
   for (const sheet of sheets) {
     const key = drawingSheetKey(sheet);
+    const imageKey = sheetKey(sheet);
+    const other = imageKeys.get(imageKey);
+    if (other !== undefined && other !== key) {
+      summary.issues.push(
+        `La hoja ${sheet.sheet} del plano ${sheet.drawing} tiene la misma clave de imagen (${imageKey}) que otra hoja: no se carga.`,
+      );
+      continue;
+    }
+    imageKeys.set(imageKey, key);
     const values = {
       title: sheet.title,
       sourcePage: sheet.page,
       width: sheet.width,
       height: sheet.height,
-      imageKey: sheetKey(sheet),
+      imageKey,
       fingerprint: sheet.fingerprint,
     };
     const current = byKey.get(key);
@@ -452,7 +477,7 @@ async function loadTrays(
       }))
       .sort((a, b) => a.drawing.localeCompare(b.drawing) || a.sheet.localeCompare(b.sheet));
   const sameSheets = (a: readonly object[], b: readonly object[]) =>
-    JSON.stringify(a) === JSON.stringify(b);
+    stableJson(a) === stableJson(b);
 
   const toCreate = trays.filter((tray) => !byCode.has(tray.code));
   for (const batch of chunks(toCreate)) {

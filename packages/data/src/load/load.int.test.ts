@@ -391,6 +391,43 @@ describe("loadProjectData: drawing sheets", () => {
     expect(await db.drawingSheet.count()).toBe(1);
   });
 
+  // Regresión (revisión F7.5, M1): Postgres devuelve las claves de `jsonb` en otro orden
+  // (`h, w, x, y, kind`) y cada recarga reescribía las hojas de todas las bandejas con marcas.
+  it("leaves a tray alone when its sized marks come back unchanged", async () => {
+    const sized = tray("99UXA00L22036", {
+      drawings: [
+        {
+          drawing: "EJ-ELE-DRW-0024",
+          sheet: "02",
+          title: "HOJA 02",
+          sourcePage: 2,
+          marks: [{ x: 0.5, y: 0.25, w: 0.01, h: 0.005, kind: "table" }],
+        },
+      ],
+    });
+    await loadSheets([sheet("02")], [sized]);
+
+    const summary = await loadSheets([sheet("02")], [sized]);
+
+    expect(summary.trays).toMatchObject({ created: 0, updated: 0, unchanged: 1 });
+  });
+
+  // Revisión F7.5, B7: la clave de imagen es única y la carga fallaba entera.
+  it("loads only the first of two sheets that would share their image", async () => {
+    const summary = await loadSheets([
+      sheet("02", { drawing: "EJ-ELE-DRW.0024" }),
+      sheet("02", { drawing: "EJ-ELE-DRW-0024" }),
+    ]);
+
+    expect(summary.sheets.created).toBe(1);
+    expect(summary.issues).toEqual([
+      expect.stringContaining("misma clave de imagen (EJ-ELE-DRW-0024_02)"),
+    ]);
+    expect(await db.drawingSheet.findFirstOrThrow()).toMatchObject({
+      drawing: "EJ-ELE-DRW.0024",
+    });
+  });
+
   it("loads an older extraction without sheets and keeps the stored ones", async () => {
     await loadSheets([sheet("02")]);
 

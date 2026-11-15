@@ -2,7 +2,7 @@
 
 import { cn } from "cn";
 import { Maximize2Icon, Minimize2Icon, MinusIcon, PlusIcon, ScanIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type OpenSeadragon from "openseadragon";
 import type { Viewer } from "openseadragon";
 import type { DrawingMark } from "@cables/shared";
@@ -84,7 +84,7 @@ function arrowElement(): HTMLElement {
   element.className = "pointer-events-none pb-1";
   element.dataset.arrow = "";
   element.innerHTML = `<svg class="size-9 drop-shadow text-warning" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" stroke="black" stroke-width="0.6" d="M12 22 4 12h5V2h6v10h5z"/>
+      <path class="stroke-background" fill="currentColor" stroke-width="0.6" d="M12 22 4 12h5V2h6v10h5z"/>
     </svg>`;
   return element;
 }
@@ -103,6 +103,10 @@ function labelElement(label: string, keep: boolean): HTMLElement {
   return element;
 }
 
+/** Keys of OpenSeadragon that are not used here: rotate and flip the sheet. */
+const NO_KEYS = new Set(["KeyR", "KeyF"]);
+const KEY_ZOOM = 1.25;
+
 /** Below this width on screen (pixels) the whole sheet is too small for every number. */
 const FAR_WIDTH = 2200;
 
@@ -117,6 +121,7 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [fullScreen, setFullScreen] = useState(false);
   const [current, setCurrent] = useState(0);
+  const hintId = useId();
   const primary = marks.filter(isPrimary);
   const focusable = primary.length > 0 ? primary : marks;
   const aspect = height / width;
@@ -202,6 +207,23 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
         focus(0);
       });
       instance.addHandler("open-failed", () => setStatus("error"));
+      // Teclado (con el plano seleccionado): flechas o WASD, + y −, 0. Girar (R) y voltear (F)
+      // dejarían las marcas donde no toca y sin un botón para deshacerlo.
+      instance.addHandler("canvas-key", (event) => {
+        const { code, key } = event.originalEvent as KeyboardEvent;
+        if (NO_KEYS.has(code)) {
+          event.preventDefaultAction = true;
+          return;
+        }
+        // OpenSeadragon solo acerca y aleja con las teclas `=` y `-` de un teclado inglés: en
+        // uno español el «+» está en otra tecla.
+        const factor = key === "+" ? KEY_ZOOM : key === "-" ? 1 / KEY_ZOOM : null;
+        if (factor && code !== "Equal" && code !== "Minus") {
+          event.preventDefaultAction = true;
+          instance!.viewport.zoomBy(factor);
+          instance!.viewport.applyConstraints();
+        }
+      });
     });
     return () => {
       cancelled = true;
@@ -240,13 +262,20 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
         fullScreen ? "fixed inset-0 z-50 rounded-none border-0" : "h-[28rem] md:h-[34rem]",
       )}
     >
+      {/* Se mueve con el ratón, los dedos y el teclado: es una aplicación, no una imagen. */}
       <div
         ref={container}
-        role="img"
+        role="application"
+        aria-roledescription="plano"
         aria-label={label}
-        className="group/viewer absolute inset-0 touch-none"
+        aria-describedby={hintId}
+        className="group/viewer has-[:focus-visible]:ring-ring/50 absolute inset-0 touch-none has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-inset [&_:focus-visible]:outline-none"
         data-testid="drawing-viewer"
       />
+      <p id={hintId} className="sr-only">
+        Con el plano seleccionado: flechas para moverlo, + y − para acercar o alejar, y 0 para verlo
+        entero.
+      </p>
       {status === "loading" ? (
         <p className="text-muted-foreground absolute inset-0 flex items-center justify-center text-sm">
           Cargando el plano…
