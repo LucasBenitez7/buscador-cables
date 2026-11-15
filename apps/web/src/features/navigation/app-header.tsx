@@ -57,7 +57,11 @@ export function AppHeader({ items, user }: Props) {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             className="text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/70 focus-visible:ring-ring/50 -mr-1.5 rounded-md p-2 outline-none focus-visible:ring-3 xl:hidden"
-            aria-label={waiting > 0 ? `Abrir menú (${waiting} pendientes)` : "Abrir menú"}
+            aria-label={
+              waiting === 0
+                ? "Abrir menú"
+                : `Abrir menú (${waiting} ${waiting === 1 ? "pendiente" : "pendientes"})`
+            }
           >
             <span className="relative block">
               <MenuIcon className="size-6" />
