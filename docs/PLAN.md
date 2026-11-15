@@ -637,6 +637,17 @@ planos, se sustituye el PDF y se repite `data:extract` → `data:render` → `da
       móvil abre el del sistema.
 - Fotos de los técnicos: mejora futura (necesitan almacenamiento privado).
 
+### Revisión antes de desplegar (2026-11-15)
+
+Rama `fix/review-f7.5`. Lista de hallazgos y lo que se hizo con cada uno en
+`docs/REVISION-F7.5.md`; resumen en `docs/REVISIONES.md`.
+
+- [x] Códigos reales sustituidos por inventados y test que vigila todo el repositorio.
+- [x] Recarga idempotente de las marcas; teselas con un pase firmado por hoja y revalidadas
+      con `ETag`; límite de conexiones por instancia.
+- [x] Bajos corregidos (documentación, orden de las etiquetas, claves de imagen, visor con
+      teclado). Lo que depende del despliegue pasa a la fase 10.
+
 ## Fase 8 — Importación masiva y panel (mejora futura)
 
 > **Pendiente, mejora futura** (decisión del 2026-11-13): no entra en la v1.0.0.
@@ -666,6 +677,15 @@ Viene de la fase 6, de donde salió el 2026-11-13.
 
 - [ ] Despliegue: **Vercel** (web) + **Railway** (PostgreSQL gestionado).
       Alternativa preparada: `Dockerfile` de producción por si se requiere servidor propio/intranet.
+- [ ] Planos en producción: elegir dónde viven las teselas (almacenamiento privado de objetos,
+      S3/R2 o similar, con la app de intermediaria; o servidor propio con un volumen para
+      `DRAWINGS_DIR`), adaptar `apps/web/src/server/drawings/store.ts` y añadir a
+      `data:render` el paso de subirlas. En Vercel no hay disco: sin esto la fase 7.5 no se ve
+      (el inicio del administrador avisa de las hojas sin imagen). Revisión F7.5, A2.
+- [ ] Conexiones a la base: `DATABASE_URL` por el pooler del proveedor y
+      `DATABASE_POOL_MAX` bajo (1-3) en un despliegue sin servidor; migraciones por la conexión
+      directa (ver `.env.example`). La migración `add_cable_event_source` necesita que el
+      usuario que migra sea dueño de la tabla.
 - [ ] Migraciones automáticas en el despliegue (`prisma migrate deploy`).
 - [ ] CSP completa y revisión OWASP básica. _(Las cabeceras que no dependen del despliegue
       —`frame-ancestors`, `nosniff`, `Referrer-Policy`— están desde la revisión F0-F7.)_
@@ -680,6 +700,15 @@ Viene de la fase 6, de donde salió el 2026-11-13.
 - [ ] Backups automáticos de la base de datos y procedimiento de restauración probado.
 - [ ] Monitorización de errores (Sentry) y logs.
 - [ ] Manual de usuario y manual de despliegue.
+- [ ] Que la web no salga en buscadores: `robots.txt` que lo prohíba todo y cabecera
+      `X-Robots-Tag: noindex`.
+- [ ] Registro público: decidir si se cierra y las altas se dan desde el panel (con la web en
+      internet, cualquiera puede pedir cuenta y hacer que se envíen correos).
+- [ ] Correo real: proveedor SMTP y remitente con dominio propio; comprobar que llegan los
+      avisos de cuenta pendiente y de cuenta aprobada.
+- [ ] Primer administrador: `pnpm db:seed` con `NODE_ENV=production` y credenciales propias.
+- [ ] Llevar `dev` a `main` (merge por PR) antes de desplegar producción: la tabla de entornos
+      despliega producción desde `main`, que sigue en la fase 1.
 
 ---
 

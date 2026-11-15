@@ -30,14 +30,56 @@ Comprobaciones automáticas en el momento de la revisión:
 
 "Confirmado" significa que se reprodujo ejecutando código; "leído", que sale de leer el código.
 
+## Resultado (2026-11-15)
+
+Corregido en `fix/review-f7.5`, cada cosa con su test (y, si era un bug, comprobado primero
+en rojo). El texto de cada hallazgo se deja como estaba; aquí va lo que se hizo.
+
+Comprobaciones al cerrar: `pnpm check` en verde (759 tests: shared 244, db 32, web 403, data 80) y el visor probado en la app con los planos locales (teselas, 304, teclado).
+
+**Decisiones del responsable:**
+
+| Hallazgo | Decisión                                                                                                               |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| A1       | Los commits antiguos se quedan como están: no se reescribe el historial. Se corrigen los ficheros y un test lo vigila. |
+| A2       | El almacenamiento de las teselas se elige al desplegar (tarea en la fase 10). Ahora, solo el aviso al administrador.   |
+| M4       | Teselas con `private, no-cache` y `ETag`: el navegador pregunta siempre.                                               |
+| B3       | El timbrado se mantiene al desconectar, enrollar o mover el cable, como estaba.                                        |
+
+**Qué se hizo:**
+
+| Hallazgo | Corrección                                                                                                                                                                                                                                                                                                           |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1       | Los ejemplos usan la unidad `99`. `packages/shared/src/invented-codes.test.ts` revisa todos los ficheros versionados y falla con cualquier código con forma KKS de otra unidad (comprobado contra el código anterior: los encuentra todos). Turborepo lo vuelve a ejecutar cuando cambia cualquier fichero del repo. |
+| A2       | El inicio del administrador avisa de cuántas hojas cargadas no tienen imagen. Tarea en la fase 10 de `docs/PLAN.md`.                                                                                                                                                                                                 |
+| M1       | Las marcas se comparan con las claves ordenadas (`stableJson` en `load.ts`). Test: dos cargas de una bandeja con `w` y `h` dan `updated: 0`.                                                                                                                                                                         |
+| M2       | El descriptor de cada hoja comprueba la sesión y deja una cookie firmada de 10 minutos (`HttpOnly`, solo para `/api/drawings`, se borra al cerrar sesión); las teselas solo comprueban la firma. Abrir una hoja pasa de una consulta de sesión por tesela a una por hoja. `DRAWINGS_DIR` se resuelve una vez.        |
+| M3       | `DATABASE_POOL_MAX` (5 por defecto) limita las conexiones de cada instancia; `.env.example` explica el pooler y la URL directa para migrar.                                                                                                                                                                          |
+| M4       | `Cache-Control: private, no-cache` con `ETag`: 304 solo después de comprobar el acceso.                                                                                                                                                                                                                              |
+| B1       | `pnpm data:load --dry-run` en `docs/DATOS-PROYECTO.md`.                                                                                                                                                                                                                                                              |
+| B2       | La ficha ya dice de qué tipo es la marca («Bandera de la sección…», «Solo en la tabla…»). Falta la comprobación en campo por muestreo: es del responsable.                                                                                                                                                           |
+| B4       | Fase 10: planos, conexiones, `noindex`, registro público, correo real, primer administrador y el paso `dev` → `main`.                                                                                                                                                                                                |
+| B5       | `DRAWINGS_DIR` y `DATABASE_POOL_MAX` en `globalEnv`.                                                                                                                                                                                                                                                                 |
+| B6       | Los números del recorrido en orden y «Aquí» al final. Test.                                                                                                                                                                                                                                                          |
+| B7       | Con los formatos que se leen hoy no puede pasar (el plano solo lleva letras, cifras y guiones; la hoja, cifras). Aun así, la carga se queda con la primera hoja y avisa de la otra en lugar de fallar entera, y `data:render` dibuja esa misma.                                                                      |
+| B8       | La flecha usa el token del fondo. El visor es `role="application"` con la ayuda de sus teclas: flechas, «+» y «−» (también en teclado español, que OpenSeadragon no entendía) y 0; girar (R) y voltear (F) desactivados; anillo de foco.                                                                             |
+
+**Encontrado al corregir:**
+
+- Al probar M2 en la app, todas las hojas respondían 500: envolver la petición de Next.js en
+  otra `NextRequest` falla dentro de Next, y los tests usaban una `Request` normal. Los tests
+  usan ya `NextRequest`.
+- La ayuda del teclado decía «+ y −», pero OpenSeadragon solo acerca con las teclas `=` y `-`
+  de un teclado inglés. Se añadió «+» y «−» por el carácter, no por la tecla.
+
 ---
 
 ## Gravedad alta
 
 ### A1 — Hay códigos reales del cliente en el repositorio público
 
-- [ ] Sustituidos por códigos inventados
-- [ ] Decidido qué se hace con el historial (decisión)
+- [x] Sustituidos por códigos inventados
+- [x] Decidido qué se hace con el historial (decisión)
 
 **Dónde** (11 líneas con un código completo, más tres con códigos cortos):
 
@@ -78,8 +120,8 @@ aparecen esos. No hay ningún código de cable, número de plano ni de documento
 
 ### A2 — Los planos no funcionan tal cual en el despliegue previsto
 
-- [ ] Decidido dónde se guardan las teselas (decisión)
-- [ ] Implementado y probado
+- [x] Decidido dónde se guardan las teselas (decisión)
+- [ ] Implementado y probado (fase 10; de momento, el aviso al administrador)
 
 **Dónde:** `apps/web/src/server/drawings/store.ts` (lee de disco con `readFile` y `stat`),
 `packages/data/src/render/render-sheets.ts` (escribe en `private-data/drawings/`).
@@ -110,7 +152,7 @@ hay hojas cargadas pero ninguna imagen, en lugar del silencio actual.
 
 ### M1 — Volver a cargar los mismos datos reescribe casi todas las bandejas
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/data/src/load/load.ts:454` (`sameSheets` compara con `JSON.stringify`).
 
@@ -134,7 +176,7 @@ de comparar). Test: cargar dos veces una bandeja con una marca que tenga `w` y `
 
 ### M2 — Cada tesela del plano consulta la sesión en la base de datos
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/app/api/drawings/[...path]/route.ts:12` (`getCurrentUser`).
 
@@ -153,7 +195,7 @@ módulo. Medir antes y después cuántas consultas hace abrir una hoja.
 
 ### M3 — Sin límite de conexiones a la base para un despliegue sin servidor
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/db/src/client.ts` (`new PrismaPg({ connectionString })`).
 
@@ -170,8 +212,8 @@ el que dé el proveedor), con la URL directa solo para las migraciones. Document
 
 ### M4 — Las teselas quedan una hora en la caché del navegador
 
-- [ ] Decidido (decisión)
-- [ ] Corregido
+- [x] Decidido (decisión)
+- [x] Corregido
 
 **Dónde:** `apps/web/src/app/api/drawings/[...path]/route.ts:22`
 (`Cache-Control: private, max-age=3600`).
@@ -191,7 +233,7 @@ la sesión antes de responder 304), o aceptar el riesgo si los dispositivos son 
 
 ### B1 — El comando de prueba documentado no funciona
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `docs/DATOS-PROYECTO.md` (sección "Carga").
 
@@ -201,7 +243,7 @@ anterior. **Comprobado (confirmado).**
 
 ### B2 — Las marcas de las bandejas dependen de heurísticas sin validar en campo
 
-- [ ] Validado por muestreo
+- [ ] Validado por muestreo (pendiente del responsable)
 
 **Dónde:** `packages/data/src/parse/drawing-marks.ts` (`sectionFlags`, `isInTable`) y
 `packages/data/src/extract/extract.ts` (`locateTrays`).
@@ -216,7 +258,7 @@ que quien la usa sepa cuánto fiarse.
 
 ### B3 — El timbrado sobrevive a desconectar y enrollar el cable
 
-- [ ] Confirmado con el responsable (decisión)
+- [x] Confirmado con el responsable (decisión)
 
 **Dónde:** `packages/shared/src/cable-actions.ts` (comentario "Laying, coiling or moving does
 not undo a timbrado").
@@ -227,7 +269,7 @@ timbrar tras reconectar, el estado debería volver a "Sin timbrar" al desconecta
 
 ### B4 — La fase 10 no lista el almacenamiento de los planos ni `main`
 
-- [ ] Corregido
+- [x] Corregido
 
 `docs/PLAN.md`, fase 10: falta la tarea de A2. Además `main` va 138 commits por detrás de
 `dev` (sigue en la fase 1) y la tabla de entornos dice que producción sale de `main`: el paso
@@ -235,14 +277,14 @@ timbrar tras reconectar, el estado debería volver a "Sin timbrar" al desconecta
 
 ### B5 — `DRAWINGS_DIR` no está en `turbo.json`
 
-- [ ] Corregido
+- [x] Corregido
 
 Las demás variables de entorno están en `globalEnv`. Sin ella, Turborepo puede servir de
 caché un resultado hecho con otra ruta.
 
 ### B6 — Etiquetas "Aquí" mezcladas con números al ordenar
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/server/drawings/route-sheets.ts:103-105`. Cuando una bandeja fuera
 del recorrido comparte marca con una del recorrido, las etiquetas se ordenan con `Number()` y
@@ -251,7 +293,7 @@ y poner el texto al final. Test.
 
 ### B7 — Dos planos distintos pueden compartir clave de imagen
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `packages/data/src/render/render-sheets.ts:34` (`sheetKey`). Todo lo que no es
 letra, número, `_` o `-` se convierte en `-`, así que `A.1` y `A-1` dan la misma clave y
@@ -260,7 +302,7 @@ letra, número, `_` o `-` se convierte en `-`, así que `A.1` y `A-1` dan la mis
 
 ### B8 — Detalles del visor
 
-- [ ] Corregido
+- [x] Corregido
 
 **Dónde:** `apps/web/src/features/drawings/components/drawing-viewer.tsx`.
 
@@ -275,6 +317,8 @@ letra, número, `_` o `-` se convierte en `-`, así que `A.1` y `A-1` dan la mis
 
 No son fallos del código: es lo que falta decidir o montar. Varias cosas ya están en la fase
 10 de `docs/PLAN.md`; se repiten aquí para tener la lista completa en un sitio.
+
+**2026-11-15:** todas están ya como tareas de la fase 10 de `docs/PLAN.md`; se marcan allí.
 
 - [ ] **Dónde viven los planos** (A2). Sin esto, la fase 7.5 no se ve en producción.
 - [ ] **Registro público.** Con la web en internet, cualquiera puede pedir cuenta. No entra

@@ -163,7 +163,7 @@ dentro de una transacción y la deshace: sirve para ver el resumen y los avisos 
 nada.
 
 ```bash
-pnpm data:load -- --dry-run
+pnpm data:load --dry-run
 ```
 
 - **Idempotente**: crea o actualiza por código. Repetirla con los mismos listados no cambia

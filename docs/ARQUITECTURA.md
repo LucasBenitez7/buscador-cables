@@ -249,10 +249,16 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - Las teselas viven fuera de git (`DRAWINGS_DIR`, por defecto `private-data/drawings`).
   `apps/web/src/server/drawings/store.ts` es la única pieza que sabe dónde están: en
   producción se cambia por un almacenamiento privado de objetos (fase 10). La ruta
-  `GET /api/drawings/<clave>.dzi` y `…/<clave>_files/<nivel>/<x>_<y>.webp` solo responde con
-  sesión, con `Cache-Control: private`, y solo acepta esas dos formas de ruta.
-- El visor es OpenSeadragon (BSD), cargado solo en el navegador: zoom con rueda o dos dedos,
-  pantalla completa y marcas superpuestas en HTML. Cada marca es un marco en coordenadas del
+  `GET /api/drawings/<clave>.dzi` y `…/<clave>_files/<nivel>/<x>_<y>.webp` solo acepta esas
+  dos formas de ruta. El descriptor (`.dzi`) siempre comprueba la sesión y deja una cookie
+  firmada de 10 minutos (`drawing_access`, `HttpOnly`, solo para `/api/drawings`, se borra al
+  cerrar sesión); las teselas solo comprueban esa firma, sin consultar la base cada una
+  (`server/drawings/access.ts`). Todo va con `Cache-Control: private, no-cache` y `ETag`: el
+  navegador las guarda pero pregunta siempre, y el 304 llega después de comprobar el acceso.
+  Si hay hojas cargadas sin imagen, el inicio del administrador lo avisa.
+- El visor es OpenSeadragon (BSD), cargado solo en el navegador: zoom con rueda, dos dedos o
+  teclado (flechas, + y −, 0; sin girar ni voltear), pantalla completa y marcas superpuestas
+  en HTML. Es `role="application"`, con la ayuda de las teclas para los lectores de pantalla. Cada marca es un marco en coordenadas del
   plano (ajustado al texto que marca, con `w`/`h` guardados en la extracción); la flecha y el
   número van a tamaño fijo en pantalla.
 - Enlaces: `apps/web/src/lib/links.ts` dice a dónde lleva cada cosa (ubicación → su página,

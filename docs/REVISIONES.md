@@ -6,6 +6,38 @@ pendiente. Las entradas más recientes van arriba. Cada corrección tiene su pro
 
 ---
 
+## 2026-11-15 — Revisión antes de desplegar (fase 7.5)
+
+**Rama:** `fix/review-f7.5`. Revisión de lo que entró tras la de las fases 0 a 7: los repasos
+de interfaz y la fase 7.5 (planos y trabajo en campo). Lista completa en
+`docs/REVISION-F7.5.md`: 2 hallazgos altos, 4 medios, 8 bajos y la lista de lo que falta
+antes de desplegar.
+
+**Decisiones del responsable:** el historial de git no se reescribe; dónde viven las teselas
+se decide al desplegar (fase 10); las teselas se revalidan siempre; el timbrado sobrevive a
+desconectar el cable.
+
+**Encontrado y corregido:**
+
+| Problema                                                                                                     | Corrección                                                                                         |
+| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Algunos ejemplos (comentarios, tests, documentación) usaban códigos reales del cliente.                      | Unidad inventada `99` y un test que revisa todos los ficheros versionados.                         |
+| Desplegado sin teselas, las fichas salían sin plano y sin ningún aviso.                                      | Aviso en el inicio del administrador; el almacenamiento, tarea de la fase 10.                      |
+| Cada recarga reescribía las hojas de casi todas las bandejas (orden de claves de `jsonb`).                   | Comparación con las claves ordenadas.                                                              |
+| Cada tesela consultaba la sesión en la base; quedaban una hora en la caché del navegador tras cerrar sesión. | Una comprobación por hoja y un pase firmado de 10 minutos para sus teselas; `no-cache` con `ETag`. |
+| Sin límite de conexiones por instancia.                                                                      | `DATABASE_POOL_MAX` (5 por defecto) y el pooler documentado.                                       |
+| El visor era una imagen que no se movía con el teclado.                                                      | `role="application"`, flechas, «+» y «−» (también en teclado español) y 0; sin girar ni voltear.   |
+| Detalles: comando de prueba mal documentado, orden de «Aquí», claves de imagen repetidas, `turbo.json`.      | Corregidos, con test donde hay código.                                                             |
+
+**Encontrado al corregir:** envolver la petición de Next.js en otra `NextRequest` hacía
+responder 500 a todas las hojas; solo se vio al probarlo en la app, porque los tests usaban una
+`Request` normal.
+
+**Pendiente:** comprobar en campo una muestra de las marcas de cada tipo de plano (B2) y todo
+lo de la fase 10 (planos en producción, conexiones, `noindex`, registro, correo, `main`).
+
+---
+
 ## 2026-11-13 — Revisión completa de las fases 0 a 7
 
 **Rama:** `fix/review-f0-f7`. Revisión de todo el código tras cerrar la fase 7, buscando
