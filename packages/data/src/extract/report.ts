@@ -33,6 +33,8 @@ export function formatReport(result: ExtractionResult, generatedAt = new Date())
       .map(([level, count]) => `${level}: ${count}`)
       .join(", ")}).`,
     `- Bandejas: ${result.trays.length} (${stats.traysInDrawings} en los planos, ${stats.traysOnlyInRoutes} solo en los recorridos).`,
+    `- Bandejas localizadas en el plano: ${stats.trayMarks.label} por su código dibujado, ${stats.trayMarks.flag} por la bandera de su sección; ${stats.trayMarks.tableOnly} solo en una tabla.`,
+    `- Hojas de plano: ${result.sheets.length}.`,
     `- Tramos de recorrido: ${result.cables.reduce((sum, cable) => sum + cable.route.length, 0)}.`,
     `- Errores (fichas descartadas): ${errors.length}. Avisos: ${warnings.length}.`,
     "",

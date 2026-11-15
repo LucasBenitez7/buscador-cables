@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createPrismaClient } from "@cables/db";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { ProjectCable, ProjectTray } from "../extract/schema";
+import type { ProjectCable, ProjectSheet, ProjectTray } from "../extract/schema";
 import { loadProjectData } from "./load";
 
 const db = createPrismaClient(process.env.DATABASE_URL!);
@@ -9,7 +9,7 @@ let userId: string;
 
 beforeEach(async () => {
   await db.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "drawing_sheet", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
   ({ id: userId } = await db.user.create({
     data: { id: randomUUID(), name: "Carga", email: "carga@cables.test", role: "ADMIN" },
@@ -96,7 +96,9 @@ function tray(code: string, overrides: Partial<ProjectTray> = {}): ProjectTray {
     flangeHeightMm: null,
     bendRadiusMm: null,
     diameterMm: null,
-    drawings: [{ drawing: "EJ-ELE-DRW-0024", sheet: "02", title: "FIRST FLOOR", sourcePage: 93 }],
+    drawings: [
+      { drawing: "EJ-ELE-DRW-0024", sheet: "02", title: "FIRST FLOOR", sourcePage: 93, marks: [] },
+    ],
     ...overrides,
   };
 }
@@ -211,7 +213,15 @@ describe("loadProjectData: first load", () => {
       voltageLevel: 2,
       widthMm: 600,
       location: { code: "99UXA" },
-      drawings: [{ drawing: "EJ-ELE-DRW-0024", sheet: "02", title: "FIRST FLOOR", sourcePage: 93 }],
+      drawings: [
+        {
+          drawing: "EJ-ELE-DRW-0024",
+          sheet: "02",
+          title: "FIRST FLOOR",
+          sourcePage: 93,
+          marks: [],
+        },
+      ],
     });
     expect(await db.cableType.findUniqueOrThrow({ where: { code: "Q0825" } })).toMatchObject({
       name: "0,6/1 KV 8X2.5 MM2 CU",
@@ -302,7 +312,9 @@ describe("loadProjectData: loading again", () => {
         trays[1]!,
         tray("99UXA00L22036", {
           widthMm: 800,
-          drawings: [{ drawing: "EJ-ELE-DRW-0024", sheet: "03", title: null, sourcePage: 94 }],
+          drawings: [
+            { drawing: "EJ-ELE-DRW-0024", sheet: "03", title: null, sourcePage: 94, marks: [] },
+          ],
         }),
       ],
     );
@@ -328,6 +340,64 @@ describe("loadProjectData: loading again", () => {
     expect(
       (await db.cable.findUniqueOrThrow({ where: { code: "99XAT10W2005" } })).lengthM?.toNumber(),
     ).toBe(142);
+  });
+});
+
+describe("loadProjectData: drawing sheets", () => {
+  const sheet = (sheetNumber: string, overrides: Partial<ProjectSheet> = {}): ProjectSheet => ({
+    drawing: "EJ-ELE-DRW-0024",
+    sheet: sheetNumber,
+    title: `HOJA ${sheetNumber}`,
+    file: "planos.pdf",
+    page: Number(sheetNumber),
+    width: 2384,
+    height: 1684,
+    fingerprint: `f-${sheetNumber}`,
+    ...overrides,
+  });
+  const marked = tray("99UXA00L22036", {
+    drawings: [
+      {
+        drawing: "EJ-ELE-DRW-0024",
+        sheet: "02",
+        title: "HOJA 02",
+        sourcePage: 2,
+        marks: [{ x: 0.5, y: 0.25, kind: "flag" }],
+      },
+    ],
+  });
+  const loadSheets = (sheets: ProjectSheet[], trayList: ProjectTray[] = [marked]) =>
+    loadProjectData(db, { cables: [], trays: trayList, sheets }, { userId });
+
+  it("stores the sheets and links each tray sheet with its marks", async () => {
+    const summary = await loadSheets([sheet("02"), sheet("03")]);
+
+    expect(summary.sheets).toEqual({ created: 2, updated: 0, removed: 0 });
+    const stored = await db.trayDrawing.findFirstOrThrow({ include: { drawingSheet: true } });
+    expect(stored).toMatchObject({
+      sheet: "02",
+      marks: [{ x: 0.5, y: 0.25, kind: "flag" }],
+      drawingSheet: { imageKey: "EJ-ELE-DRW-0024_02", width: 2384, height: 1684 },
+    });
+  });
+
+  it("updates a revised sheet, removes the ones gone and keeps the trays", async () => {
+    await loadSheets([sheet("02"), sheet("03")]);
+
+    const summary = await loadSheets([sheet("02", { fingerprint: "nueva" })]);
+
+    expect(summary.sheets).toEqual({ created: 0, updated: 1, removed: 1 });
+    expect(summary.trays.unchanged).toBe(1);
+    expect(await db.drawingSheet.count()).toBe(1);
+  });
+
+  it("loads an older extraction without sheets and keeps the stored ones", async () => {
+    await loadSheets([sheet("02")]);
+
+    const summary = await loadProjectData(db, { cables: [], trays: [marked] }, { userId });
+
+    expect(summary.sheets).toEqual({ created: 0, updated: 0, removed: 0 });
+    expect(await db.trayDrawing.findFirstOrThrow()).toMatchObject({ sheetId: expect.any(String) });
   });
 });
 

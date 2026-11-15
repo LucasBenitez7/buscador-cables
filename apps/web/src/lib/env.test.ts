@@ -11,6 +11,7 @@ describe("environment contract used by lib/env", () => {
       SMTP_HOST: "localhost",
       SMTP_PORT: 1025,
       EMAIL_FROM: "no-reply@cables.local",
+      DRAWINGS_DIR: "private-data/drawings",
     });
   });
 

@@ -11,6 +11,8 @@ import {
   CABLE_LEVEL_LABELS,
   CONNECTION_STATUSES,
   CONNECTION_STATUS_LABELS,
+  TEST_STATUSES,
+  TEST_STATUS_LABELS,
   INSTALLATION_STATUSES,
   INSTALLATION_STATUS_LABELS,
   cableSearchQuery,
@@ -22,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { SearchableSelect, toOptions } from "@/components/searchable-select";
 import type { SearchOptions } from "@/server/cables/search";
 
 type Props = { search: CableSearch; options: SearchOptions };
@@ -42,6 +45,7 @@ export function SearchFilters({ search, options }: Props) {
   const [expanded, setExpanded] = useState(false);
   const advancedActive = Boolean(
     search.manufacturer ||
+    search.equipment ||
     search.color ||
     hasActivityFilters(search) ||
     RANGES.some(
@@ -107,23 +111,23 @@ export function SearchFilters({ search, options }: Props) {
 
       <div id="cable-filters" className={cn("space-y-4 md:block", expanded ? "block" : "hidden")}>
         <Filter label="Ubicación (incluye lo que contiene)" htmlFor="location">
-          <Select id="location" name="location" defaultValue={search.location}>
-            {options.locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.label}
-              </option>
-            ))}
-          </Select>
+          <SearchableSelect
+            id="location"
+            name="location"
+            defaultValue={search.location}
+            options={toOptions(options.locations)}
+            emptyLabel="Todos"
+          />
         </Filter>
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
           <Filter label="Tipo" htmlFor="type">
-            <Select id="type" name="type" defaultValue={search.type}>
-              {options.cableTypes.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              id="type"
+              name="type"
+              defaultValue={search.type}
+              options={toOptions(options.cableTypes)}
+              emptyLabel="Todos"
+            />
           </Filter>
           <Filter label="Nivel" htmlFor="level">
             <Select id="level" name="level" defaultValue={search.level}>
@@ -148,6 +152,15 @@ export function SearchFilters({ search, options }: Props) {
               {CONNECTION_STATUSES.map((status) => (
                 <option key={status} value={status}>
                   {CONNECTION_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </Filter>
+          <Filter label="Timbrado" htmlFor="test">
+            <Select id="test" name="test" defaultValue={search.test}>
+              {TEST_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {TEST_STATUS_LABELS[status]}
                 </option>
               ))}
             </Select>
@@ -180,23 +193,34 @@ export function SearchFilters({ search, options }: Props) {
             Más filtros
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Filter label="Equipo (exacto, en origen o destino)" htmlFor="equipment">
+              <Input
+                id="equipment"
+                name="equipment"
+                defaultValue={search.equipment ?? ""}
+                placeholder="+80BBA01"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono uppercase"
+              />
+            </Filter>
             <Filter label="Color" htmlFor="color">
-              <Select id="color" name="color" defaultValue={search.color}>
-                {options.colors.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </Select>
+              <SearchableSelect
+                id="color"
+                name="color"
+                defaultValue={search.color}
+                options={toOptions(options.colors)}
+                emptyLabel="Todos"
+              />
             </Filter>
             <Filter label="Fabricante" htmlFor="manufacturer">
-              <Select id="manufacturer" name="manufacturer" defaultValue={search.manufacturer}>
-                {options.manufacturers.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </Select>
+              <SearchableSelect
+                id="manufacturer"
+                name="manufacturer"
+                defaultValue={search.manufacturer}
+                options={toOptions(options.manufacturers)}
+                emptyLabel="Todos"
+              />
             </Filter>
             {RANGES.map(([name, label]) => (
               <fieldset key={name} className="space-y-1.5">
@@ -228,13 +252,13 @@ export function SearchFilters({ search, options }: Props) {
             </legend>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Filter label="Quién" htmlFor="actor">
-                <Select id="actor" name="actor" defaultValue={search.actor}>
-                  {options.users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.label}
-                    </option>
-                  ))}
-                </Select>
+                <SearchableSelect
+                  id="actor"
+                  name="actor"
+                  defaultValue={search.actor}
+                  options={toOptions(options.users)}
+                  emptyLabel="Todos"
+                />
               </Filter>
               <Filter label="Qué hizo" htmlFor="action">
                 <Select id="action" name="action" defaultValue={search.action}>

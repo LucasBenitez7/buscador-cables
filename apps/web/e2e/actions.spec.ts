@@ -82,18 +82,25 @@ test.describe("técnico", () => {
     await openCable(page, code);
     const badges = cableHeader(page);
 
-    // La bandeja tiene que estar en el recorrido del cable.
+    // Una bandeja fuera del recorrido hay que confirmarla.
     await page
       .getByRole("region", { name: "Acciones" })
       .getByRole("button", { name: "Tender a medias", exact: true })
       .click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Bandeja donde espera la punta").fill("99UXB00L22001");
+    const tray = dialog.getByLabel("Bandeja donde está la punta");
+    await tray.fill("99UXB00L22001");
+    await expect(dialog.getByRole("checkbox", { name: /no está en su recorrido/ })).toBeVisible();
     await dialog.getByRole("button", { name: "Tender a medias", exact: true }).click();
     await expect(dialog.getByRole("alert")).toHaveText(
-      "La bandeja 99UXB00L22001 no está en el recorrido del cable.",
+      "La bandeja 99UXB00L22001 no está en el recorrido previsto del cable. Si el cable está ahí, confírmalo.",
     );
-    await dialog.getByLabel("Bandeja donde espera la punta").fill("99uxa00l22051");
+    // Las bandejas del recorrido son botones: un toque basta.
+    await dialog
+      .getByRole("list", { name: "Bandejas del recorrido" })
+      .getByRole("button", { name: /99UXA00L22051/ })
+      .click();
+    await expect(tray).toHaveValue("99UXA00L22051");
     await dialog.getByRole("button", { name: "Tender a medias", exact: true }).click();
     await expect(dialog).toBeHidden();
     await expect(badges).toContainText("Tendido parcial");
@@ -113,6 +120,19 @@ test.describe("técnico", () => {
     await expect(mine.nth(2)).toContainText(
       "tendió el cable a medias: la punta de destino espera en la bandeja 99UXA00L22051",
     );
+
+    // Timbrado: un fallo exige decir qué falló; luego se repite y sale bien.
+    await runAction(page, "Timbrar", async (dialog) => {
+      await dialog.getByLabel("Con fallo").check();
+      await dialog.getByLabel("Nota (obligatoria si falla)").fill("Conductor 3 abierto");
+    });
+    await expect(badges).toContainText("Timbrado con fallo");
+    await runAction(page, "Timbrar", (dialog) => dialog.getByLabel("Correcto").check());
+    await expect(badges).toContainText("Timbrado");
+    await expect(badges).not.toContainText("con fallo");
+    await expect(mine.nth(0)).toContainText("timbró el cable: correcto");
+    await expect(mine.nth(1)).toContainText("timbró el cable y encontró un fallo");
+    await expect(mine.nth(1)).toContainText("“Conductor 3 abierto”");
   });
 
   test("un técnico no puede retirar ni corregir", async ({ page }) => {

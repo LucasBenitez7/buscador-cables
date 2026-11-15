@@ -5,6 +5,7 @@ import {
   CABLE_END_SIDE_LABELS,
   CABLE_FIELD_LABELS,
   CONNECTION_STATUS_LABELS,
+  TEST_STATUS_LABELS,
   INSTALLATION_STATUS_LABELS,
   PROJECT_FIELD_LABELS,
   describeCableEvent,
@@ -16,12 +17,20 @@ import {
   type CableLevel,
   type CableState,
   type ConnectionStatus,
+  type TestStatus,
   type InstallationStatus,
   type RouteSection,
 } from "@cables/shared";
 import { listLocationOptions } from "@/server/cables/service";
 
-export type ReadableChange = { field: string; from: string; to: string };
+/** A change as text, with a link for each value that has a page (a tray, a location). */
+export type ReadableChange = {
+  field: string;
+  from: string;
+  to: string;
+  fromHref?: string;
+  toHref?: string;
+};
 
 export type CableHistoryEntry = {
   id: string;
@@ -45,6 +54,8 @@ export type CableEndDetail = {
   room: string | null;
   /** Full route of the location in the tree ("99 › 99UX › 99UXA › 99UXA16RA001"). */
   location: string | null;
+  /** To link the room to its page. */
+  locationId: string | null;
 };
 
 export type CableDetail = {
@@ -77,6 +88,10 @@ export type CableDetail = {
   type: string | null;
   color: { name: string; hex: string | null } | null;
   manufacturer: string | null;
+  /** To open the cables with the same type, colour or manufacturer. */
+  typeId: string | null;
+  colorId: string | null;
+  manufacturerId: string | null;
   conductors: number | null;
   crossSectionMm2: number | null;
   outerDiameterMm: number | null;
@@ -86,8 +101,10 @@ export type CableDetail = {
   origin: string | null;
   destination: string | null;
   currentLocation: string | null;
+  currentLocationId: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
+  testStatus: TestStatus;
   lastAction: { action: CableAction; user: string; at: Date } | null;
   createdAt: Date;
   updatedAt: Date;
@@ -160,6 +177,8 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
       return CABLE_END_SIDE_LABELS[text as CableEndSide] ?? text;
     case "connectionStatus":
       return CONNECTION_STATUS_LABELS[text as ConnectionStatus] ?? text;
+    case "testStatus":
+      return TEST_STATUS_LABELS[text as TestStatus] ?? text;
     case "deletedAt":
       return dateFormat.format(new Date(text));
     default:
@@ -167,15 +186,38 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
   }
 }
 
+/** Where a stored value can be opened: a tray, or the cables of a location. */
+function valueHref(field: string, value: unknown, lookups: Lookups): string | undefined {
+  if (typeof value !== "string" || value === "") return undefined;
+  switch (field) {
+    case "looseEndTray":
+      return `/trays/${encodeURIComponent(value)}`;
+    case "originId":
+    case "destinationId":
+    case "currentLocationId":
+      return lookups.locations.has(value)
+        ? `/cables?location=${encodeURIComponent(value)}`
+        : undefined;
+    default:
+      return undefined;
+  }
+}
+
 export function readableChanges(changes: unknown, lookups: Lookups): ReadableChange[] {
-  return orderedChanges(changes).map(([field, change]) => ({
-    field:
-      CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
-      PROJECT_FIELD_LABELS[field] ??
-      field,
-    from: readableValue(field, change?.from, lookups),
-    to: readableValue(field, change?.to, lookups),
-  }));
+  return orderedChanges(changes).map(([field, change]) => {
+    const fromHref = valueHref(field, change?.from, lookups);
+    const toHref = valueHref(field, change?.to, lookups);
+    return {
+      field:
+        CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
+        PROJECT_FIELD_LABELS[field] ??
+        field,
+      from: readableValue(field, change?.from, lookups),
+      to: readableValue(field, change?.to, lookups),
+      ...(fromHref ? { fromHref } : {}),
+      ...(toHref ? { toHref } : {}),
+    };
+  });
 }
 
 const toNumber = (value: { toNumber(): number } | null) => value?.toNumber() ?? null;
@@ -230,6 +272,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
     state: {
       installationStatus: cable.installationStatus,
       connectionStatus: cable.connectionStatus,
+      testStatus: cable.testStatus,
       currentLocationId: cable.currentLocationId,
       looseEnd: cable.looseEnd,
       looseEndTray: cable.looseEndTray?.code ?? null,
@@ -265,6 +308,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
         installationKks: cable.originInstallationKks,
         room: cable.originRoom,
         location: location(cable.originId),
+        locationId: cable.originId,
       },
       destination: {
         equipment: cable.destinationEquipment,
@@ -274,12 +318,16 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
         installationKks: cable.destinationInstallationKks,
         room: cable.destinationRoom,
         location: location(cable.destinationId),
+        locationId: cable.destinationId,
       },
     },
     description: cable.description,
     type: cable.type?.name ?? null,
     color: cable.color,
     manufacturer: cable.manufacturer?.name ?? null,
+    typeId: cable.typeId,
+    colorId: cable.colorId,
+    manufacturerId: cable.manufacturerId,
     conductors: cable.conductors,
     crossSectionMm2: toNumber(cable.crossSectionMm2),
     outerDiameterMm: toNumber(cable.outerDiameterMm),
@@ -289,8 +337,10 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
     origin: location(cable.originId),
     destination: location(cable.destinationId),
     currentLocation: location(cable.currentLocationId),
+    currentLocationId: cable.currentLocationId,
     installationStatus: cable.installationStatus,
     connectionStatus: cable.connectionStatus,
+    testStatus: cable.testStatus,
     lastAction:
       cable.lastAction && cable.lastActionAt
         ? {

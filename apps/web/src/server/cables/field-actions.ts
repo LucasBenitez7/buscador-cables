@@ -40,6 +40,7 @@ export async function runCableAction(
       deletedAt: true,
       installationStatus: true,
       connectionStatus: true,
+      testStatus: true,
       currentLocationId: true,
       originId: true,
       destinationId: true,
@@ -76,6 +77,9 @@ export async function runCableAction(
     cable.id,
     looseEndTrayCode,
     cable.looseEndTray?.code ?? null,
+    // A supervisor's correction states the truth; in the field the user confirms it.
+    request.action === "CORRECTION" ||
+      (request.action === "PARTIALLY_LAID" && request.confirmOffRoute),
   );
 
   const newLocationId = outcome.next.currentLocationId;
@@ -137,13 +141,15 @@ export async function runCableAction(
 }
 
 /**
- * The id of the tray where the loose end waits. A new tray must exist and, when the cable
- * has a planned route through known trays, be one of them: the loose end waits along the way.
+ * The id of the tray where the loose end waits. A new tray must exist. When the cable has a
+ * planned route through known trays and the tray is not on it, the user must confirm it: in
+ * the field a cable is sometimes found off its planned way, and that is worth recording.
  */
 async function resolveLooseEndTray(
   cableId: string,
   code: string | null,
   currentCode: string | null,
+  offRouteConfirmed: boolean,
 ): Promise<string | null> {
   if (code === null) return null;
   const tray = await prisma.tray.findUnique({ where: { code }, select: { id: true } });
@@ -155,8 +161,14 @@ async function resolveLooseEndTray(
     where: { cableId, trayId: { not: null } },
     select: { trayId: true },
   });
-  if (routeTrays.length > 0 && !routeTrays.some((step) => step.trayId === tray.id)) {
-    throw new CableServiceError(`La bandeja ${code} no está en el recorrido del cable.`);
+  if (
+    !offRouteConfirmed &&
+    routeTrays.length > 0 &&
+    !routeTrays.some((step) => step.trayId === tray.id)
+  ) {
+    throw new CableServiceError(
+      `La bandeja ${code} no está en el recorrido previsto del cable. Si el cable está ahí, confírmalo.`,
+    );
   }
   return tray.id;
 }

@@ -2,13 +2,18 @@ import "server-only";
 import { Prisma, prisma } from "@cables/db";
 import {
   TRAY_PAGE_SIZE,
+  drawingMarkRank,
+  parseDrawingMarks,
   type CableEndSide,
   type CableLevel,
   type ConnectionStatus,
+  type DrawingMark,
+  type TestStatus,
   type InstallationStatus,
   type TrayKind,
   type TraySearch,
 } from "@cables/shared";
+import { hasDrawingImage } from "@/server/drawings/store";
 import { escapeLike } from "@/server/like";
 
 export type TrayListItem = {
@@ -17,6 +22,8 @@ export type TrayListItem = {
   voltageLevel: number | null;
   elevationLevel: number | null;
   building: string | null;
+  /** The building in the location tree, to link it. */
+  buildingId: string | null;
   size: TraySize;
   /** Active cables whose route goes through it (each cable once). */
   cables: number;
@@ -40,13 +47,26 @@ export type TrayCable = {
   destinationEquipment: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
+  testStatus: TestStatus;
   /** Which end waits in this tray, if any. */
   looseEndHere: CableEndSide | null;
 };
 
+/** A sheet of the drawings with where the tray is on it and, when drawn, its image. */
+export type TraySheet = {
+  drawing: string;
+  sheet: string;
+  title: string | null;
+  sourcePage: number | null;
+  marks: DrawingMark[];
+  /** Tiles of the sheet (`/api/drawings/<key>.dzi`); null until `pnpm data:render` draws it. */
+  image: { key: string; width: number; height: number } | null;
+};
+
 export type TrayDetail = TrayListItem & {
   notes: string | null;
-  drawings: { drawing: string; sheet: string; title: string | null; sourcePage: number | null }[];
+  /** Sheets where the tray is, the ones that show it best first. */
+  drawings: TraySheet[];
   /** Cables whose loose end waits here, then every cable whose route goes through it. */
   waitingCables: TrayCable[];
   routeCables: TrayCable[];
@@ -88,7 +108,9 @@ export async function searchTrays(
     skip: (page - 1) * pageSize,
     take: pageSize,
     include: {
-      location: { select: { code: true, name: true, parent: { select: { name: true } } } },
+      location: {
+        select: { id: true, code: true, name: true, parent: { select: { name: true } } },
+      },
       _count: { select: { looseEndCables: { where: ACTIVE } } },
     },
   });
@@ -113,6 +135,7 @@ export async function searchTrays(
       voltageLevel: tray.voltageLevel,
       elevationLevel: tray.elevationLevel,
       building: buildingLabel(tray.location),
+      buildingId: tray.location?.id ?? null,
       size: sizeOf(tray),
       cables: cablesByTray.get(tray.id) ?? 0,
       waiting: tray._count.looseEndCables,
@@ -129,6 +152,7 @@ const cableSelect = {
   destinationEquipment: true,
   installationStatus: true,
   connectionStatus: true,
+  testStatus: true,
   looseEnd: true,
   looseEndTrayId: true,
 } as const;
@@ -141,8 +165,13 @@ export async function getTrayDetail(code: string): Promise<TrayDetail | null> {
   const tray = await prisma.tray.findUnique({
     where: { code },
     include: {
-      location: { select: { code: true, name: true, parent: { select: { name: true } } } },
-      drawings: { orderBy: [{ drawing: "asc" }, { sheet: "asc" }] },
+      location: {
+        select: { id: true, code: true, name: true, parent: { select: { name: true } } },
+      },
+      drawings: {
+        orderBy: [{ drawing: "asc" }, { sheet: "asc" }],
+        include: { drawingSheet: { select: { imageKey: true, width: true, height: true } } },
+      },
       looseEndCables: { where: ACTIVE, select: cableSelect },
       routeSteps: {
         where: { cable: ACTIVE },
@@ -161,6 +190,7 @@ export async function getTrayDetail(code: string): Promise<TrayDetail | null> {
     destinationEquipment: cable.destinationEquipment,
     installationStatus: cable.installationStatus,
     connectionStatus: cable.connectionStatus,
+    testStatus: cable.testStatus,
     looseEndHere: cable.looseEndTrayId === tray.id ? cable.looseEnd : null,
   });
   // A route may name the same tray twice: list each cable once.
@@ -174,17 +204,52 @@ export async function getTrayDetail(code: string): Promise<TrayDetail | null> {
     voltageLevel: tray.voltageLevel,
     elevationLevel: tray.elevationLevel,
     building: buildingLabel(tray.location),
+    buildingId: tray.location?.id ?? null,
     size: sizeOf(tray),
     notes: tray.notes,
     cables: routeCables.length,
     waiting: tray.looseEndCables.length,
-    drawings: tray.drawings.map(({ drawing, sheet, title, sourcePage }) => ({
-      drawing,
-      sheet,
-      title,
-      sourcePage,
-    })),
+    drawings: await traySheets(tray.drawings),
     waitingCables: tray.looseEndCables.map(toCable).sort(byCode),
     routeCables,
   };
+}
+
+async function traySheets(
+  rows: {
+    drawing: string;
+    sheet: string;
+    title: string | null;
+    sourcePage: number | null;
+    marks: unknown;
+    drawingSheet: { imageKey: string; width: number; height: number } | null;
+  }[],
+): Promise<TraySheet[]> {
+  const sheets = await Promise.all(
+    rows.map(async (row) => ({
+      drawing: row.drawing,
+      sheet: row.sheet,
+      title: row.title,
+      sourcePage: row.sourcePage,
+      marks: parseDrawingMarks(row.marks),
+      image:
+        row.drawingSheet && (await hasDrawingImage(row.drawingSheet.imageKey))
+          ? {
+              key: row.drawingSheet.imageKey,
+              width: row.drawingSheet.width,
+              height: row.drawingSheet.height,
+            }
+          : null,
+    })),
+  );
+  // Las hojas que muestran la bandeja primero; a igualdad, el orden del plano.
+  return sheets
+    .map((sheet, index) => ({ sheet, index }))
+    .sort(
+      (a, b) =>
+        drawingMarkRank(a.sheet.marks) - drawingMarkRank(b.sheet.marks) ||
+        Number(b.sheet.image !== null) - Number(a.sheet.image !== null) ||
+        a.index - b.index,
+    )
+    .map(({ sheet }) => sheet);
 }

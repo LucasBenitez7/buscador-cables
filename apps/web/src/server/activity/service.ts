@@ -19,7 +19,14 @@ export type ActivityEntry = {
   at: Date;
   action: CableAction;
   user: string;
+  /** To filter "Actividad reciente" by this person. */
+  userId: string;
   cable: { id: string; code: string; deleted: boolean };
+  /** The tray the event left the loose end in, to link it from the sentence. */
+  tray: string | null;
+  /** The places of a move, to link them from the sentence. */
+  from: { id: string; name: string } | null;
+  to: { id: string; name: string } | null;
   /** Predicate after the user's name: "movió el cable de A a B". */
   summary: string;
   notes: string | null;
@@ -96,12 +103,21 @@ export async function listActivity(
     loadLookups(),
   ]);
 
+  const place = (id: string | null) => {
+    const name = id ? lookups.locations.get(id) : undefined;
+    return id && name ? { id, name } : null;
+  };
+
   return {
     entries: events.map((event) => ({
       id: event.id,
       at: event.createdAt,
       action: event.action,
       user: userName(event.user),
+      userId: event.userId,
+      tray: changedTray(event.changes),
+      from: place(event.fromLocationId),
+      to: place(event.toLocationId),
       cable: {
         id: event.cable.id,
         code: event.cable.code,
@@ -131,4 +147,10 @@ export async function listActivityUsers(): Promise<{ id: string; label: string }
     select: { id: true, name: true },
   });
   return users.map((user) => ({ id: user.id, label: user.name }));
+}
+
+/** The tray a loose end was left in by this event, if any. */
+function changedTray(changes: unknown): string | null {
+  const value = (changes as Record<string, { to?: unknown }> | null)?.looseEndTray?.to;
+  return typeof value === "string" && value !== "" ? value : null;
 }

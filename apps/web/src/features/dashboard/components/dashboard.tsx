@@ -8,6 +8,8 @@ import {
   INSTALLATION_STATUS_LABELS,
   ROLES,
   ROLE_LABELS,
+  TEST_STATUSES,
+  TEST_STATUS_LABELS,
 } from "@cables/shared";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +19,7 @@ import { CODE_LINK, TEXT_LINK_SM } from "@/components/ui/text-link";
 import {
   CONNECTION_VARIANT,
   INSTALLATION_VARIANT,
+  TEST_VARIANT,
 } from "@/features/cables/components/cable-status-badges";
 import { HealthCard } from "@/features/system/components/health-card";
 import type { ActivityEntry } from "@/server/activity/service";
@@ -208,6 +211,25 @@ function ProgressPanel({ progress }: { progress: CableProgress }) {
       </p>
       <Meter label="Tendidos" value={laid} total={total} barClassName="bg-primary" />
       <Meter label="Conectados" value={connected} total={total} barClassName="bg-success" />
+      <Meter
+        label="Timbrados"
+        value={progress.tested}
+        total={total}
+        barClassName="bg-muted-foreground"
+      />
+      {progress.test.TESTED_FAILED > 0 ? (
+        <p className="text-sm">
+          <Link
+            href="/cables?test=TESTED_FAILED"
+            className="text-destructive underline-offset-4 hover:underline"
+          >
+            {count(progress.test.TESTED_FAILED)}{" "}
+            {progress.test.TESTED_FAILED === 1
+              ? "cable timbrado con fallo"
+              : "cables timbrados con fallo"}
+          </Link>
+        </p>
+      ) : null}
       {installation.PARTIALLY_LAID > 0 ? (
         <p className="text-sm">
           <Link href="/cables?loose=1" className="text-warning underline-offset-4 hover:underline">
@@ -261,7 +283,7 @@ function Meter({
 function StatusPanel({ progress, trays }: { progress: CableProgress; trays: number }) {
   return (
     <Panel title="Estado de los cables">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatusList
           title="Instalación"
           rows={INSTALLATION_STATUSES.map((status) => ({
@@ -281,6 +303,17 @@ function StatusPanel({ progress, trays }: { progress: CableProgress; trays: numb
             variant: CONNECTION_VARIANT[status],
             value: progress.connection[status],
             href: `/cables?connection=${status}`,
+          }))}
+          total={progress.total}
+        />
+        <StatusList
+          title="Timbrado"
+          rows={TEST_STATUSES.map((status) => ({
+            key: status,
+            label: TEST_STATUS_LABELS[status],
+            variant: TEST_VARIANT[status],
+            value: progress.test[status],
+            href: `/cables?test=${status}`,
           }))}
           total={progress.total}
         />

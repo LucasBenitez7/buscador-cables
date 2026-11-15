@@ -17,8 +17,11 @@ export default async function LocationsPage() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Ubicaciones</h1>
         <p className="text-muted-foreground text-sm">
-          Planta → Área → Unidad → Sitio. Al filtrar cables por una ubicación se incluyen todas las
-          que contiene.
+          Planta → Área → Unidad → Sitio, con su código KKS: <code className="font-mono">80</code>{" "}
+          planta, <code className="font-mono">80UB</code> área,{" "}
+          <code className="font-mono">80UBA</code> edificio y{" "}
+          <code className="font-mono">80UBA04RA001</code> la sala donde empieza o termina un cable.
+          Pulsa «N cables» para verlos en el buscador (incluye todo lo que contiene).
         </p>
       </div>
       <LocationTree tree={tree} canManage={canManage} />

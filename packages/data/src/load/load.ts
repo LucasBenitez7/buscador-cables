@@ -1,5 +1,6 @@
 /**
- * Loads the extracted project data (`cables.json`, `trays.json`) into the database.
+ * Loads the extracted project data (`cables.json`, `trays.json`, `sheets.json`) into the
+ * database.
  *
  * Idempotent: it creates or updates by code and can run again with a new revision of the
  * lists without duplicating anything. It only writes **engineering** data (what the lists
@@ -22,11 +23,14 @@ import {
 import { z } from "zod";
 import {
   projectCableSchema,
+  projectSheetSchema,
   projectTraySchema,
   type ProjectCable,
   type ProjectRouteStep,
+  type ProjectSheet,
   type ProjectTray,
 } from "../extract/schema";
+import { sheetKey } from "../render/render-sheets";
 
 export type LoadOptions = {
   /** Who signs the events of the load. */
@@ -45,6 +49,7 @@ type Within = <T>(run: (tx: Db) => Promise<T>) => Promise<T>;
 export type LoadSummary = {
   locations: { created: number };
   cableTypes: { created: number };
+  sheets: { created: number; updated: number; removed: number };
   trays: { created: number; updated: number; unchanged: number };
   cables: { created: number; updated: number; unchanged: number; skipped: number };
   /** Cables loaded earlier from the lists that the new lists no longer include. */
@@ -114,14 +119,17 @@ const ROLLBACK = Symbol("dry run");
 
 export async function loadProjectData(
   client: PrismaClient,
-  input: { cables: unknown; trays: unknown },
+  /** `sheets` may be missing in an extraction made before the drawings had sheets. */
+  input: { cables: unknown; trays: unknown; sheets?: unknown },
   { userId, now = new Date(), onProgress = () => {}, dryRun = false }: LoadOptions,
 ): Promise<LoadSummary> {
   // The files come from disk: validate them again before writing anything.
   const cables = z.array(projectCableSchema).parse(input.cables);
   const trays = z.array(projectTraySchema).parse(input.trays);
+  const sheets =
+    input.sheets === undefined ? null : z.array(projectSheetSchema).parse(input.sheets);
   const run = (db: Db, within: Within) =>
-    loadValidated(db, within, { cables, trays }, { userId, now, onProgress });
+    loadValidated(db, within, { cables, trays, sheets }, { userId, now, onProgress });
 
   if (!dryRun) {
     return run(client, (write) => client.$transaction(write));
@@ -144,12 +152,17 @@ export async function loadProjectData(
 async function loadValidated(
   db: Db,
   within: Within,
-  { cables, trays }: { cables: ProjectCable[]; trays: ProjectTray[] },
+  {
+    cables,
+    trays,
+    sheets,
+  }: { cables: ProjectCable[]; trays: ProjectTray[]; sheets: ProjectSheet[] | null },
   { userId, now, onProgress }: Required<Pick<LoadOptions, "userId" | "now" | "onProgress">>,
 ): Promise<LoadSummary> {
   const summary: LoadSummary = {
     locations: { created: 0 },
     cableTypes: { created: 0 },
+    sheets: { created: 0, updated: 0, removed: 0 },
     trays: { created: 0, updated: 0, unchanged: 0 },
     cables: { created: 0, updated: 0, unchanged: 0, skipped: 0 },
     missingFromLists: [],
@@ -160,7 +173,12 @@ async function loadValidated(
   onProgress(`Ubicaciones: ${summary.locations.created} nuevas`);
   const typeIds = await ensureCableTypes(db, cables, summary);
   onProgress(`Tipos de cable: ${summary.cableTypes.created} nuevos`);
-  const trayIds = await loadTrays(db, within, trays, locations, summary);
+  const sheetIds = sheets ? await loadSheets(db, sheets, summary) : await currentSheetIds(db);
+  onProgress(
+    `Hojas de plano: ${summary.sheets.created} nuevas, ${summary.sheets.updated} actualizadas, ` +
+      `${summary.sheets.removed} retiradas`,
+  );
+  const trayIds = await loadTrays(db, within, trays, locations, sheetIds, summary);
   onProgress(`Bandejas: ${summary.trays.created} nuevas, ${summary.trays.updated} actualizadas`);
   await loadCables(
     db,
@@ -333,6 +351,67 @@ async function ensureCableTypes(
 }
 
 // ---------------------------------------------------------------------------
+// Drawing sheets
+// ---------------------------------------------------------------------------
+
+const drawingSheetKey = (sheet: { drawing: string; sheet: string }) =>
+  `${sheet.drawing}#${sheet.sheet}`;
+
+async function currentSheetIds(db: Db): Promise<Map<string, string>> {
+  const rows = await db.drawingSheet.findMany({ select: { id: true, drawing: true, sheet: true } });
+  return new Map(rows.map((row) => [drawingSheetKey(row), row.id]));
+}
+
+/**
+ * Creates or updates every sheet; the ones the drawings no longer have are removed (their
+ * trays keep the sheet name, without image). Sheets hold no field data.
+ */
+async function loadSheets(
+  db: Db,
+  sheets: readonly ProjectSheet[],
+  summary: LoadSummary,
+): Promise<Map<string, string>> {
+  const existing = await db.drawingSheet.findMany();
+  const byKey = new Map(existing.map((row) => [drawingSheetKey(row), row]));
+  const ids = new Map<string, string>();
+  for (const sheet of sheets) {
+    const key = drawingSheetKey(sheet);
+    const values = {
+      title: sheet.title,
+      sourcePage: sheet.page,
+      width: sheet.width,
+      height: sheet.height,
+      imageKey: sheetKey(sheet),
+      fingerprint: sheet.fingerprint,
+    };
+    const current = byKey.get(key);
+    if (!current) {
+      const created = await db.drawingSheet.create({
+        data: { drawing: sheet.drawing, sheet: sheet.sheet, ...values },
+        select: { id: true },
+      });
+      ids.set(key, created.id);
+      summary.sheets.created += 1;
+      continue;
+    }
+    ids.set(key, current.id);
+    const changed = (Object.keys(values) as (keyof typeof values)[]).some(
+      (field) => current[field] !== values[field],
+    );
+    if (changed) {
+      await db.drawingSheet.update({ where: { id: current.id }, data: values });
+      summary.sheets.updated += 1;
+    }
+  }
+  const gone = existing.filter((row) => !ids.has(drawingSheetKey(row)));
+  if (gone.length > 0) {
+    await db.drawingSheet.deleteMany({ where: { id: { in: gone.map((row) => row.id) } } });
+    summary.sheets.removed += gone.length;
+  }
+  return ids;
+}
+
+// ---------------------------------------------------------------------------
 // Trays and their drawing sheets
 // ---------------------------------------------------------------------------
 
@@ -341,6 +420,7 @@ async function loadTrays(
   within: Within,
   trays: readonly ProjectTray[],
   locations: Map<string, LocationRef>,
+  sheetIds: Map<string, string>,
   summary: LoadSummary,
 ): Promise<Map<string, string>> {
   const existing = await db.tray.findMany({
@@ -362,7 +442,14 @@ async function loadTrays(
   });
   const sheetsOf = (tray: ProjectTray) =>
     tray.drawings
-      .map((drawing) => ({ ...drawing }))
+      .map(({ drawing, sheet, title, sourcePage, marks }) => ({
+        drawing,
+        sheet,
+        title,
+        sourcePage,
+        marks,
+        sheetId: sheetIds.get(drawingSheetKey({ drawing, sheet })) ?? null,
+      }))
       .sort((a, b) => a.drawing.localeCompare(b.drawing) || a.sheet.localeCompare(b.sheet));
   const sameSheets = (a: readonly object[], b: readonly object[]) =>
     JSON.stringify(a) === JSON.stringify(b);
@@ -388,12 +475,16 @@ async function loadTrays(
     const values = valuesOf(tray);
     const changed = TRAY_FIELDS.some((field) => current[field] !== values[field]);
     const sheets = sheetsOf(tray);
-    const currentSheets = current.drawings.map(({ drawing, sheet, title, sourcePage }) => ({
-      drawing,
-      sheet,
-      title,
-      sourcePage,
-    }));
+    const currentSheets = current.drawings.map(
+      ({ drawing, sheet, title, sourcePage, marks, sheetId }) => ({
+        drawing,
+        sheet,
+        title,
+        sourcePage,
+        marks,
+        sheetId,
+      }),
+    );
     const sheetsChanged = !sameSheets(sheets, currentSheets);
     if (!changed && !sheetsChanged) {
       summary.trays.unchanged += 1;

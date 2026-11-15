@@ -46,6 +46,7 @@ async function main() {
   await Promise.all([
     write("cables.json", result.cables),
     write("trays.json", result.trays),
+    write("sheets.json", result.sheets),
     write("report.json", { stats: result.stats, issues: result.issues }),
     writeFile(path.join(out, "report.md"), formatReport(result), "utf8"),
   ]);

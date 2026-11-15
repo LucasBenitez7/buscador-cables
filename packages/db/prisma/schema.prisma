@@ -194,6 +194,13 @@ enum ConnectionStatus {
   CONNECTED
 }
 
+/// Timbrado: prueba de continuidad / identificación de los conductores del cable.
+enum TestStatus {
+  NOT_TESTED
+  TESTED_OK
+  TESTED_FAILED
+}
+
 enum CableAction {
   CREATED
   UPDATED
@@ -205,6 +212,7 @@ enum CableAction {
   MOVED
   RETIRED
   CORRECTION
+  TESTED // timbrado
   DELETED // baja lógica (deletedAt)
 }
 
@@ -291,6 +299,7 @@ model Cable {
   currentLocation    Location?          @relation("CableCurrent", fields: [currentLocationId], references: [id], onDelete: Restrict)
   installationStatus InstallationStatus @default(IN_STOCK)
   connectionStatus   ConnectionStatus   @default(DISCONNECTED)
+  testStatus         TestStatus         @default(NOT_TESTED)
 
   // Columnas resumen (desnormalizadas) para la tabla del buscador. Se actualizan
   // en la misma transacción que crea el CableEvent.
@@ -383,20 +392,49 @@ model Tray {
 
 /// Hoja de plano donde aparece una bandeja.
 model TrayDrawing {
-  id         String  @id @default(cuid())
-  trayId     String
-  tray       Tray    @relation(fields: [trayId], references: [id], onDelete: Restrict)
+  id           String        @id @default(cuid())
+  trayId       String
+  tray         Tray          @relation(fields: [trayId], references: [id], onDelete: Restrict)
   /// Número del plano.
-  drawing    String
+  drawing      String
   /// Hoja dentro del plano ("04").
-  sheet      String
+  sheet        String
   /// Área y cotas o planta que muestra la hoja.
-  title      String?
+  title        String?
   /// Página del PDF de planos.
-  sourcePage Int?
+  sourcePage   Int?
+  /// Dónde está la bandeja en la hoja, en fracción de la hoja desde la esquina superior
+  /// izquierda: [{ x, y, kind }] con kind "label" (su código dibujado), "flag" (la bandera de
+  /// su sección) o "table" (su fila en una tabla).
+  marks        Json          @default("[]")
+  sheetId      String?
+  drawingSheet DrawingSheet? @relation(fields: [sheetId], references: [id], onDelete: SetNull)
 
   @@unique([trayId, drawing, sheet])
+  @@index([sheetId])
   @@map("tray_drawing")
+}
+
+/// Hoja de los planos de recorrido. Su imagen son teselas (`<imageKey>.dzi`) que dibuja
+/// `pnpm data:render` en el almacén de planos, fuera de git.
+model DrawingSheet {
+  id          String        @id @default(cuid())
+  drawing     String
+  sheet       String
+  title       String?
+  /// Página del PDF de planos.
+  sourcePage  Int
+  /// Tamaño de la hoja en puntos: da la proporción para colocar las marcas.
+  width       Int
+  height      Int
+  imageKey    String        @unique
+  /// Cambia cuando cambia el texto de la hoja (otra revisión).
+  fingerprint String
+  updatedAt   DateTime      @updatedAt
+  trays       TrayDrawing[]
+
+  @@unique([drawing, sheet])
+  @@map("drawing_sheet")
 }
 
 /// Tramo del recorrido en los listados de instrumentación.
@@ -434,27 +472,27 @@ enum CableEventSource {
 /// Registro INMUTABLE de lo que hace cada usuario sobre un cable. Nunca se edita
 /// ni se borra: los errores se corrigen con un evento CORRECTION.
 model CableEvent {
-  id              String       @id @default(cuid())
+  id              String           @id @default(cuid())
   cableId         String
-  cable           Cable        @relation(fields: [cableId], references: [id], onDelete: Restrict)
+  cable           Cable            @relation(fields: [cableId], references: [id], onDelete: Restrict)
   userId          String
-  user            User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
   action          CableAction
   fromLocationId  String?
-  fromLocation    Location?    @relation("EventFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  fromLocation    Location?        @relation("EventFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
   toLocationId    String?
-  toLocation      Location?    @relation("EventToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
+  toLocation      Location?        @relation("EventToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
   /// { campo: { from, to } }
   changes         Json
   notes           String?
   correctsEventId String?
-  correctsEvent   CableEvent?  @relation("EventCorrection", fields: [correctsEventId], references: [id], onDelete: Restrict)
-  corrections     CableEvent[] @relation("EventCorrection")
+  correctsEvent   CableEvent?      @relation("EventCorrection", fields: [correctsEventId], references: [id], onDelete: Restrict)
+  corrections     CableEvent[]     @relation("EventCorrection")
   /// Quién escribió el evento: una persona en la app o la carga de los listados.
   source          CableEventSource @default(APP)
   /// Hora real en campo (acciones hechas sin conexión).
   clientCreatedAt DateTime?
-  createdAt       DateTime     @default(now())
+  createdAt       DateTime         @default(now())
 
   @@index([cableId, createdAt])
   @@index([userId, createdAt])

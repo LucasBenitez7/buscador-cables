@@ -131,6 +131,9 @@ const ACTION_FIELDS = [
   "looseEnd",
   "trayCode",
   "looseEndTray",
+  "confirmOffRoute",
+  "result",
+  "testStatus",
 ] as const;
 
 function isFieldAction(value: string): value is CableFieldAction {

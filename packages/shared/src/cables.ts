@@ -16,6 +16,8 @@ export const CONNECTION_STATUSES = [
   "DESTINATION_ONLY",
   "CONNECTED",
 ] as const;
+/** Timbrado: continuity / conductor identification test. */
+export const TEST_STATUSES = ["NOT_TESTED", "TESTED_OK", "TESTED_FAILED"] as const;
 export const CABLE_ACTIONS = [
   "CREATED",
   "UPDATED",
@@ -27,6 +29,7 @@ export const CABLE_ACTIONS = [
   "MOVED",
   "RETIRED",
   "CORRECTION",
+  "TESTED",
   "DELETED",
 ] as const;
 
@@ -36,6 +39,7 @@ export type CableEventSource = (typeof CABLE_EVENT_SOURCES)[number];
 
 export type InstallationStatus = (typeof INSTALLATION_STATUSES)[number];
 export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
+export type TestStatus = (typeof TEST_STATUSES)[number];
 export type CableAction = (typeof CABLE_ACTIONS)[number];
 
 export const INSTALLATION_STATUS_LABELS: Record<InstallationStatus, string> = {
@@ -54,6 +58,12 @@ export const CONNECTION_STATUS_LABELS: Record<ConnectionStatus, string> = {
   CONNECTED: "Conectado",
 };
 
+export const TEST_STATUS_LABELS: Record<TestStatus, string> = {
+  NOT_TESTED: "Sin timbrar",
+  TESTED_OK: "Timbrado",
+  TESTED_FAILED: "Timbrado con fallo",
+};
+
 export const CABLE_ACTION_LABELS: Record<CableAction, string> = {
   CREATED: "Alta",
   UPDATED: "Datos editados",
@@ -65,6 +75,7 @@ export const CABLE_ACTION_LABELS: Record<CableAction, string> = {
   MOVED: "Movido",
   RETIRED: "Retirado",
   CORRECTION: "Corrección",
+  TESTED: "Timbrado",
   DELETED: "Baja",
 };
 
@@ -91,6 +102,7 @@ export const CABLE_FIELD_LABELS: Record<
   | CableEditableField
   | "installationStatus"
   | "connectionStatus"
+  | "testStatus"
   | "currentLocationId"
   | "looseEnd"
   | "looseEndTray"
@@ -112,6 +124,7 @@ export const CABLE_FIELD_LABELS: Record<
   notes: "Notas",
   installationStatus: "Estado de instalación",
   connectionStatus: "Estado de conexión",
+  testStatus: "Timbrado",
   currentLocationId: "Ubicación actual",
   looseEnd: "Punta suelta",
   looseEndTray: "Bandeja de la punta suelta",

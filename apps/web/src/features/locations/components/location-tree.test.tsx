@@ -44,7 +44,13 @@ describe("LocationTree", () => {
 
     expect(screen.getByText("Planta Norte")).toBeInTheDocument();
     expect(screen.getByText("Reactor X")).toBeInTheDocument();
-    expect(screen.getByText("3 cables")).toBeInTheDocument();
+    // El recuento abre el buscador filtrado por esa ubicación (y lo que contiene).
+    expect(screen.getByRole("link", { name: "3 cables →" })).toHaveAttribute(
+      "href",
+      "/cables?location=a",
+    );
+    // Sin cables, no hay enlace.
+    expect(screen.queryByText(/0 cables/)).toBeNull();
     expect(screen.queryByRole("button", { name: /Editar|Eliminar|Nueva planta/ })).toBeNull();
   });
 

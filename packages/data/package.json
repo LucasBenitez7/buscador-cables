@@ -11,22 +11,25 @@
     "load": "tsx --env-file-if-exists=../../.env src/cli/load.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "render": "tsx src/cli/render.ts"
   },
   "dependencies": {
     "@cables/db": "workspace:*",
     "@cables/shared": "workspace:*",
+    "@napi-rs/canvas": "1.1.1",
     "pdfjs-dist": "6.4.299",
+    "sharp": "0.35.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@cables/config": "workspace:*",
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.1.0",
+    "dotenv": "^18.0.10",
     "eslint": "^9.39.5",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^5.1.0",
-    "dotenv": "^18.0.10"
+    "vitest": "^5.1.0"
   }
 }

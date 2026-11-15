@@ -58,7 +58,7 @@ beforeEach(async () => {
         looseEnd: "DESTINATION",
         looseEndTrayId: "t1",
       },
-      { id: "c4", code: "SH-4", installationStatus: "COILED" },
+      { id: "c4", code: "SH-4", installationStatus: "COILED", testStatus: "TESTED_FAILED" },
       // Dado de baja: no cuenta en nada.
       { id: "c5", code: "SH-5", installationStatus: "LAID", deletedAt: new Date() },
     ],
@@ -85,6 +85,8 @@ describe("getCableProgress", () => {
       RETIRED: 0,
     });
     expect(progress.connection).toMatchObject({ CONNECTED: 1, ORIGIN_ONLY: 1, DISCONNECTED: 2 });
+    expect(progress.tested).toBe(0);
+    expect(progress.test).toEqual({ NOT_TESTED: 3, TESTED_OK: 0, TESTED_FAILED: 1 });
   });
 });
 

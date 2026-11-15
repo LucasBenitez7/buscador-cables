@@ -94,6 +94,7 @@ const item = {
   state: {
     installationStatus: "LAID",
     connectionStatus: "CONNECTED",
+    testStatus: "NOT_TESTED",
     currentLocationId: null,
     looseEnd: null,
     looseEndTray: null,
@@ -109,11 +110,14 @@ const item = {
   lengthM: 120.5,
   installationStatus: "LAID",
   connectionStatus: "CONNECTED",
+  testStatus: "NOT_TESTED",
   level: null,
   originEquipment: null,
   destinationEquipment: null,
   origin: "Caldera 1 › Bandeja norte",
   destination: "Caldera 2 › Armario local",
+  originLocationId: "loc-o",
+  destinationLocationId: "loc-d",
   lastAction: "UPDATED",
   lastActionAt: new Date("2026-11-11T09:30:00Z"),
   lastActionBy: "Tomás",
@@ -137,6 +141,32 @@ describe("SearchResults", () => {
     expect(table.getByText("3×2,5 mm²")).toBeInTheDocument();
     expect(table.getByText("120,5 m")).toBeInTheDocument();
     expect(table.getByText(/Tomás · 11\/11\/26, 10:30/)).toBeInTheDocument();
+  });
+
+  it("labels origin and destination and links their equipment and location", () => {
+    render(
+      <SearchResults
+        search={{}}
+        result={{
+          items: [{ ...item, originEquipment: "+80BBA01" }],
+          total: 1,
+          page: 1,
+          pageCount: 1,
+        }}
+      />,
+    );
+    const table = within(screen.getByRole("table"));
+
+    expect(table.getByText("Origen")).toBeInTheDocument();
+    expect(table.getByText("Destino")).toBeInTheDocument();
+    expect(table.getByRole("link", { name: "+80BBA01" })).toHaveAttribute(
+      "href",
+      "/cables?equipment=%2B80BBA01",
+    );
+    expect(table.getByRole("link", { name: "Caldera 1 › Bandeja norte" })).toHaveAttribute(
+      "href",
+      "/locations/loc-o",
+    );
   });
 
   it("shows each cable as a card for phones", () => {

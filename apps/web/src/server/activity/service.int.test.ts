@@ -108,10 +108,23 @@ describe("listActivity", () => {
     expect(page.entries.map((entry) => entry.id)).toEqual(["e2", "e1", "e3"]);
     expect(page.entries[1]).toMatchObject({
       user: "Juan Pérez",
+      userId: "juan",
       cable: { id: "c1", code: "SH-50", deleted: false },
       summary: "movió el cable de Norte › Almacén a Norte › Patio",
+      // Para enlazar los sitios desde la frase.
+      from: { id: "alm", name: "Norte › Almacén" },
+      to: { id: "pat", name: "Norte › Patio" },
+      tray: null,
       notes: "Para la parada",
-      changes: [{ field: "Ubicación actual", from: "Norte › Almacén", to: "Norte › Patio" }],
+      changes: [
+        {
+          field: "Ubicación actual",
+          from: "Norte › Almacén",
+          to: "Norte › Patio",
+          fromHref: "/cables?location=alm",
+          toHref: "/cables?location=pat",
+        },
+      ],
     });
     expect(page.entries[0]?.summary).toBe("conectó el extremo de origen");
     expect(page.entries[2]?.cable.deleted).toBe(true);

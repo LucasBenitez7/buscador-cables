@@ -8,10 +8,14 @@ import {
 } from "@cables/shared";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
+import { INLINE_LINK, locationHref } from "@/lib/links";
+import { EquipmentLink } from "./equipment-link";
 import { CODE_LINK } from "@/components/ui/text-link";
 import type { CableDetail, CableEndDetail } from "@/server/cables/detail";
 
 export const trayHref = (code: string) => `/trays/${encodeURIComponent(code)}`;
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const looseEndText = (end: CableEndSide) =>
   end === "ORIGIN" ? "la punta de origen" : "la punta de destino";
@@ -41,13 +45,18 @@ function EndCard({
   end: CableEndDetail;
   looseTray: string | null;
 }) {
-  // [label, value, is a code]: codes in monospace; the location route reads as text.
-  const rows: [string, string | null, boolean][] = [
-    ["Cubículo", end.cubicle, true],
-    ["Prensaestopas", end.gland, true],
-    ["KKS de función", end.functionKks, true],
-    ["KKS de instalación", end.installationKks, true],
-    ["Sala", end.location ?? end.room, !end.location],
+  // [label, value, is a code, link]: codes in monospace; the room opens its location page.
+  const rows: [string, string | null, boolean, string | null][] = [
+    ["Cubículo", end.cubicle, true, null],
+    ["Prensaestopas", end.gland, true, null],
+    ["KKS de función", end.functionKks, true, null],
+    ["KKS de instalación", end.installationKks, true, null],
+    [
+      "Sala",
+      end.location ?? end.room,
+      !end.location,
+      end.locationId ? locationHref(end.locationId) : null,
+    ],
   ];
   return (
     <section
@@ -71,14 +80,28 @@ function EndCard({
           </Badge>
         ) : null}
       </div>
-      <p className="font-mono text-base font-medium">{end.equipment ?? "Equipo sin indicar"}</p>
+      <p className="text-base font-medium">
+        {end.equipment ? (
+          <EquipmentLink equipment={end.equipment} />
+        ) : (
+          <span className="text-muted-foreground">Equipo sin indicar</span>
+        )}
+      </p>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
         {rows
           .filter(([, value]) => value)
-          .map(([label, value, code]) => (
+          .map(([label, value, code, href]) => (
             <div key={label} className="contents">
               <dt className="text-muted-foreground">{label}</dt>
-              <dd className={code ? "font-mono break-all" : "break-words"}>{value}</dd>
+              <dd className={code ? "font-mono break-all" : "break-words"}>
+                {href ? (
+                  <Link href={href} className={INLINE_LINK}>
+                    {value}
+                  </Link>
+                ) : (
+                  value
+                )}
+              </dd>
             </div>
           ))}
       </dl>
@@ -106,6 +129,9 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
   }
   const { steps, looseIndex } = routeProgress(route, state);
   const looseStep = looseIndex === null ? null : route[looseIndex];
+  // Encontrado fuera de su recorrido previsto (el técnico lo confirmó al registrarlo).
+  const offRoute =
+    state.installationStatus === "PARTIALLY_LAID" && state.looseEndTray && looseIndex === null;
 
   return (
     <div className="space-y-3">
@@ -114,6 +140,15 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
           Tendido hasta la bandeja <span className="font-mono">{looseStep.trayCode}</span>, donde
           espera {looseEndText(state.looseEnd)}. Faltan{" "}
           {steps.filter((step) => step === "pending").length} tramos.
+        </p>
+      ) : null}
+      {offRoute && state.looseEnd ? (
+        <p className="border-warning/40 bg-warning/10 rounded-md border px-3 py-2 text-sm">
+          {capitalize(looseEndText(state.looseEnd))} está en la bandeja{" "}
+          <Link href={trayHref(state.looseEndTray!)} className={CODE_LINK}>
+            {state.looseEndTray}
+          </Link>
+          , que no está en su recorrido previsto.
         </p>
       ) : null}
       <ol aria-label="Tramos del recorrido" className="space-y-1 text-sm">

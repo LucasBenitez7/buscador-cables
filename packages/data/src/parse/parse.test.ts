@@ -146,7 +146,7 @@ describe("parseDrawingSheet", () => {
       }),
     );
 
-    expect(parseDrawingSheet(page)).toEqual({
+    expect(parseDrawingSheet(page)).toMatchObject({
       page: 1,
       drawing: "EJ-ELE-DRW-0024",
       sheet: "02",

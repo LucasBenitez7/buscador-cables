@@ -35,6 +35,31 @@ describe("readPdfPages", () => {
     expect(value!.x1).toBeGreaterThan(value!.x0 + 50);
   });
 
+  it("gives the centre and direction of each run, also when it is rotated", async () => {
+    const [page] = await readAll(
+      makePdf([
+        {
+          width: 600,
+          height: 800,
+          texts: [
+            { text: "AAAAAAAAAA", x: 100, top: 100, size: 10 },
+            { text: "BBBBBBBBBB", x: 300, top: 500, size: 10, angle: 90 },
+          ],
+        },
+      ]),
+    );
+    const [flat, upwards] = page!.runs;
+
+    expect(flat!.angle).toBe(0);
+    expect(flat!.cx).toBeCloseTo((flat!.x0 + flat!.x1) / 2, 0);
+    expect(flat!.cy).toBeCloseTo(105, 0);
+    // Written upwards from its baseline: the centre is above it and half a line to the left.
+    expect(upwards!.angle).toBe(90);
+    const length = upwards!.x1 - upwards!.x0;
+    expect(upwards!.cx).toBeCloseTo(300 - 5, 0);
+    expect(upwards!.cy).toBeCloseTo(800 - (800 - 500 - 10) - length / 2, 0);
+  });
+
   it("reads the pages in order and counts them", async () => {
     const data = makePdf(
       [1, 2, 3].map((number) => ({
@@ -52,10 +77,10 @@ describe("readPdfPages", () => {
 
 describe("layout helpers", () => {
   const runs = [
-    { text: "Equipment ID", x0: 10, x1: 60, top: 100, size: 10 },
-    { text: ":", x0: 61, x1: 63, top: 100, size: 10 },
-    { text: "99BMA", x0: 100, x1: 130, top: 100.5, size: 10 },
-    { text: "Gland:", x0: 30, x1: 60, top: 110, size: 10 },
+    { text: "Equipment ID", x0: 10, x1: 60, top: 100, size: 10, cx: 0, cy: 0, angle: 0 },
+    { text: ":", x0: 61, x1: 63, top: 100, size: 10, cx: 0, cy: 0, angle: 0 },
+    { text: "99BMA", x0: 100, x1: 130, top: 100.5, size: 10, cx: 0, cy: 0, angle: 0 },
+    { text: "Gland:", x0: 30, x1: 60, top: 110, size: 10, cx: 0, cy: 0, angle: 0 },
   ];
 
   it("groups runs into lines and compares labels without spaces or punctuation", () => {

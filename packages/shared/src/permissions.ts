@@ -20,6 +20,7 @@ export const PERMISSIONS = [
   "cable:connect",
   "cable:disconnect",
   "cable:move",
+  "cable:test",
   "cable:retire",
   "cable:correct",
   "activity:view",
@@ -51,6 +52,8 @@ const TECHNICIAN_PERMISSIONS: readonly Permission[] = [
   "cable:connect",
   "cable:disconnect",
   "cable:move",
+  // Timbrar: lo hace quien está en campo con el cable.
+  "cable:test",
 ];
 
 const SUPERVISOR_PERMISSIONS: readonly Permission[] = [
