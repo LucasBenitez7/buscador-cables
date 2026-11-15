@@ -56,6 +56,8 @@ export const changeRoleSchema = z.object({
 export const setUserActiveSchema = z.object({
   userId: z.string().min(1),
   active: z.boolean(),
+  /** Al aprobar una cuenta nueva: el rol con el que entra (si no, el que tiene). */
+  role: z.enum(ROLES, { error: "Rol no válido" }).optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

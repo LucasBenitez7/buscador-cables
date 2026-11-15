@@ -42,8 +42,38 @@ model User {
   lastActionCables Cable[]      @relation("CableLastActionBy")
   installedCables  Cable[]      @relation("CableInstalledBy")
   connectedCables  Cable[]      @relation("CableConnectedBy")
+  // Auditoría de cuentas (fase 10): lo que hizo cada administrador y a quién.
+  userEventsDone   UserEvent[]  @relation("UserEventActor")
+  userEvents       UserEvent[]  @relation("UserEventTarget")
 
   @@map("user")
+}
+
+enum UserEventAction {
+  CREATED
+  APPROVED
+  ROLE_CHANGED
+  DEACTIVATED
+  REACTIVATED
+}
+
+/// Auditoría de las cuentas: quién creó, aprobó, cambió de rol o desactivó a quién. Nunca se
+/// edita ni se borra desde la app.
+model UserEvent {
+  id        String          @id @default(cuid())
+  action    UserEventAction
+  actorId   String
+  actor     User            @relation("UserEventActor", fields: [actorId], references: [id], onDelete: Restrict)
+  targetId  String
+  target    User            @relation("UserEventTarget", fields: [targetId], references: [id], onDelete: Restrict)
+  /// Rol antes y después (`ROLE_CHANGED`) o con el que entra (`CREATED`, `APPROVED`).
+  fromRole  Role?
+  toRole    Role?
+  createdAt DateTime        @default(now())
+
+  @@index([createdAt])
+  @@index([targetId, createdAt])
+  @@map("user_event")
 }
 
 model Session {

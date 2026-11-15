@@ -84,6 +84,7 @@ export async function setUserActiveAction(formData: FormData): Promise<ActionRes
   const parsed = setUserActiveSchema.safeParse({
     userId: formValue(formData, "userId"),
     active: formValue(formData, "active") === "true",
+    role: formValue(formData, "role") || undefined,
   });
   if (!parsed.success) {
     return { ok: false, message: "Datos no válidos." };

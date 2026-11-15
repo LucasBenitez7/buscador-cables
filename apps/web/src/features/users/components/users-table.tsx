@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ROLES, ROLE_LABELS, canManageActor, isRole, type Role } from "@cables/shared";
+import {
+  ROLES,
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+  canManageActor,
+  isRole,
+  type Role,
+} from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { changeRoleAction, setUserActiveAction, type ActionResult } from "@/features/users/actions";
@@ -62,6 +69,8 @@ function UserRowView({
   const [pending, startTransition] = useTransition();
   const manageable = !isSelf && canManageActor(currentRole, user.role);
   const assignable = ROLES.filter((role) => canManageActor(currentRole, role));
+  // Una cuenta nueva: el rol elegido no se guarda hasta aprobarla, y se aprueba con él.
+  const approving = manageable && user.pending;
 
   function run(
     action: (formData: FormData) => Promise<ActionResult>,
@@ -82,6 +91,10 @@ function UserRowView({
   }
 
   function changeRole(next: Role) {
+    if (approving) {
+      setRole(next);
+      return;
+    }
     const previous = role;
     setRole(next);
     run(changeRoleAction, { userId: user.id, role: next }, () => setRole(previous));
@@ -122,6 +135,11 @@ function UserRowView({
         ) : (
           ROLE_LABELS[user.role]
         )}
+        {approving ? (
+          <p className="text-muted-foreground mt-1 max-w-56 text-xs">
+            {ROLE_DESCRIPTIONS[role].summary}
+          </p>
+        ) : null}
       </td>
       <td data-label="Estado" className={CELL}>
         <span
@@ -133,16 +151,24 @@ function UserRowView({
         </span>
       </td>
       <td className="block pt-2 md:table-cell md:px-4 md:py-3">
-        {manageable ? (
+        {approving ? (
           <Button
-            variant={user.pending ? "default" : "outline"}
+            size="sm"
+            disabled={pending}
+            onClick={() => run(setUserActiveAction, { userId: user.id, active: "true", role })}
+          >
+            Aprobar como {ROLE_LABELS[role]}
+          </Button>
+        ) : manageable ? (
+          <Button
+            variant="outline"
             size="sm"
             disabled={pending}
             onClick={() =>
               run(setUserActiveAction, { userId: user.id, active: String(!user.active) })
             }
           >
-            {user.active ? "Desactivar" : user.pending ? "Aprobar" : "Reactivar"}
+            {user.active ? "Desactivar" : "Reactivar"}
           </Button>
         ) : null}
         {message ? (
