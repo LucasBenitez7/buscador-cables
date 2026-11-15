@@ -10,7 +10,10 @@ const osd = vi.hoisted(() => {
   const state = {
     options: null as null | { tileSources: string },
     overlays: [] as { element: HTMLElement; location: { x: number; y: number } }[],
-    handlers: {} as Record<string, () => void>,
+    handlers: {} as Record<
+      string,
+      (event?: { originalEvent: { code: string }; preventDefaultAction: boolean }) => void
+    >,
     fitted: [] as { x: number; y: number }[],
   };
   class Point {
@@ -31,7 +34,7 @@ const osd = vi.hoisted(() => {
     (options: { tileSources: string }) => {
       state.options = options;
       return {
-        addHandler: (name: string, handler: () => void) => {
+        addHandler: (name: string, handler: (typeof state.handlers)[string]) => {
           state.handlers[name] = handler;
         },
         addOverlay: (overlay: (typeof state.overlays)[number]) => state.overlays.push(overlay),
@@ -64,6 +67,32 @@ beforeEach(() => {
 });
 
 describe("DrawingViewer", () => {
+  // Revisión F7.5, B8: era role="img" y solo se movía con el ratón y los dedos.
+  it("is an application moved with the keyboard too, but never rotated or flipped", async () => {
+    render(
+      <DrawingViewer
+        imageKey="EJ-ELE-DRW-0024_02"
+        width={2000}
+        height={1000}
+        marks={[]}
+        label="Plano EJ-ELE-DRW-0024, hoja 02"
+      />,
+    );
+    const viewer = screen.getByRole("application", { name: "Plano EJ-ELE-DRW-0024, hoja 02" });
+    expect(viewer).toHaveAccessibleDescription(/flechas para moverlo/);
+    await waitFor(() => expect(osd.state.handlers["canvas-key"]).toBeDefined());
+
+    const key = (code: string) => {
+      const event = { originalEvent: { code }, preventDefaultAction: false };
+      osd.state.handlers["canvas-key"]!(event);
+      return event.preventDefaultAction;
+    };
+    expect(key("ArrowLeft")).toBe(false);
+    expect(key("Digit0")).toBe(false);
+    expect(key("KeyR")).toBe(true);
+    expect(key("KeyF")).toBe(true);
+  });
+
   it("loads the sheet tiles from the private API and marks every point", async () => {
     render(
       <DrawingViewer
@@ -77,7 +106,9 @@ describe("DrawingViewer", () => {
         label="Plano EJ-ELE-DRW-0024, hoja 02"
       />,
     );
-    expect(screen.getByRole("img", { name: "Plano EJ-ELE-DRW-0024, hoja 02" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("application", { name: "Plano EJ-ELE-DRW-0024, hoja 02" }),
+    ).toBeInTheDocument();
     await waitFor(() => expect(osd.state.options).not.toBeNull());
     expect(osd.state.options!.tileSources).toBe("/api/drawings/EJ-ELE-DRW-0024_02.dzi");
 
@@ -159,7 +190,10 @@ describe("markFrame", () => {
     expect(arrows).toHaveLength(1);
     expect(osd.state.overlays.map((overlay) => overlay.element.textContent)).toContain("2");
     // Hoja entera en 800 px: solo se queda el número de lo buscado.
-    expect(screen.getByRole("img", { name: "Recorrido" })).toHaveAttribute("data-far", "true");
+    expect(screen.getByRole("application", { name: "Recorrido" })).toHaveAttribute(
+      "data-far",
+      "true",
+    );
     const label = (text: string) =>
       osd.state.overlays.find((overlay) => overlay.element.textContent === text)!.element;
     expect(label("2").className).toContain("group-data-[far=true]/viewer:invisible");
