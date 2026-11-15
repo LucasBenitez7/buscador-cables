@@ -198,7 +198,7 @@ export function SearchFilters({ search, options }: Props) {
                 id="equipment"
                 name="equipment"
                 defaultValue={search.equipment ?? ""}
-                placeholder="+80BBA01"
+                placeholder="+99BMA01"
                 autoComplete="off"
                 spellCheck={false}
                 className="font-mono uppercase"

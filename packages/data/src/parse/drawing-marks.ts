@@ -145,6 +145,6 @@ export function sectionFlags(page: PdfPage): SectionFlag[] {
     }));
 }
 
-/** The section of a tray: the last three digits of its code ("80UBA00L21014" → "014"). */
+/** The section of a tray: the last three digits of its code ("99UXA00L21014" → "014"). */
 export const traySection = (code: string): string | null =>
   parseTrayCode(code)?.orderNumber.slice(-3) ?? null;

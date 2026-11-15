@@ -295,7 +295,7 @@ export async function getLocationDetail(id: string): Promise<LocationDetail | nu
   });
   if (!location) return null;
   const subtree = await findSubtreeIds(id);
-  // The path is made of codes ("/80/80UB/80UBA"): each prefix is an ancestor.
+  // The path is made of codes ("/99/99UX/99UXA"): each prefix is an ancestor.
   const codes = location.path.split(PATH_SEPARATOR).filter(Boolean);
   const ancestorPaths = codes
     .slice(0, -1)

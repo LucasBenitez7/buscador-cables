@@ -40,6 +40,11 @@
       "dependsOn": ["^generate", "^test"],
       "outputs": ["coverage/**"]
     },
+    "@cables/shared#test": {
+      "dependsOn": ["^generate", "^test"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/**"],
+      "outputs": ["coverage/**"]
+    },
     "@cables/data#test": {
       "dependsOn": ["^generate", "^test", "@cables/web#test"],
       "outputs": ["coverage/**"]

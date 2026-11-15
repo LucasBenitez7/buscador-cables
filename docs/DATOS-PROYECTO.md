@@ -219,7 +219,7 @@ y escribe `sheets.json` (una entrada por plano y hoja). Hay dos tipos de plano:
 Un código se toma como fila de tabla cuando está en horizontal y tiene otro código justo
 encima o debajo en la misma columna, o **su propia** sección a la izquierda en la misma línea
 (una tabla de una fila). Otro número a la izquierda no cuenta: en instrumentación muchas
-etiquetas llevan delante el ancho de la bandeja (`U 600 80UHA01L10011`). Cada marca guarda
+etiquetas llevan delante el ancho de la bandeja (`U 600 99UXA01L10011`). Cada marca guarda
 también el tamaño del código: en el visor, una fila de tabla se enmarca entera. Las posiciones se
 guardan en fracción de la hoja (0 a 1 desde la esquina superior izquierda), sin depender de la
 resolución de la imagen. El informe dice cuántas bandejas se localizan de cada forma.

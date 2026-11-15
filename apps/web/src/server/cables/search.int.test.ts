@@ -165,19 +165,19 @@ describe("searchCables: filters", () => {
   it("finds the cables of an equipment exactly, at either end", async () => {
     await prisma.cable.update({
       where: { code: "SH-5" },
-      data: { originEquipment: "+80BBA01" },
+      data: { originEquipment: "+99BMA01" },
     });
     await prisma.cable.update({
       where: { code: "PW-50" },
-      data: { destinationEquipment: "+80bba01" },
+      data: { destinationEquipment: "+99bma01" },
     });
     await prisma.cable.update({
       where: { code: "SH-10" },
-      data: { originEquipment: "+80BBA011" },
+      data: { originEquipment: "+99BMA011" },
     });
 
-    // Exacto (sin distinguir mayúsculas): "+80BBA011" es otro equipo.
-    expect(await codes({ equipment: "+80BBA01" })).toEqual(["PW-50", "SH-5"]);
+    // Exacto (sin distinguir mayúsculas): "+99BMA011" es otro equipo.
+    expect(await codes({ equipment: "+99BMA01" })).toEqual(["PW-50", "SH-5"]);
   });
 
   it("never returns retired (soft-deleted) cables", async () => {
