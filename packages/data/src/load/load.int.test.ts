@@ -412,6 +412,22 @@ describe("loadProjectData: drawing sheets", () => {
     expect(summary.trays).toMatchObject({ created: 0, updated: 0, unchanged: 1 });
   });
 
+  // Revisión F7.5, B7: la clave de imagen es única y la carga fallaba entera.
+  it("loads only the first of two sheets that would share their image", async () => {
+    const summary = await loadSheets([
+      sheet("02", { drawing: "EJ-ELE-DRW.0024" }),
+      sheet("02", { drawing: "EJ-ELE-DRW-0024" }),
+    ]);
+
+    expect(summary.sheets.created).toBe(1);
+    expect(summary.issues).toEqual([
+      expect.stringContaining("misma clave de imagen (EJ-ELE-DRW-0024_02)"),
+    ]);
+    expect(await db.drawingSheet.findFirstOrThrow()).toMatchObject({
+      drawing: "EJ-ELE-DRW.0024",
+    });
+  });
+
   it("loads an older extraction without sheets and keeps the stored ones", async () => {
     await loadSheets([sheet("02")]);
 

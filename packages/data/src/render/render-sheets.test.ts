@@ -78,6 +78,21 @@ describe("renderSheets", () => {
     expect(unchanged).toEqual({ rendered: 0, unchanged: 1, removed: 0 });
   });
 
+  // Revisión F7.5, B7: como en `data:load`, la primera hoja con una clave es la que se dibuja.
+  it("draws the first of two sheets that would share their image", async () => {
+    const summary = await renderSheets({
+      sheets: [
+        sheet({ drawing: "EJ-ELE-DRW.0024", fingerprint: "primera" }),
+        sheet({ page: 2, width: 400, height: 600, fingerprint: "segunda" }),
+      ],
+      sourceDir: dir,
+      outDir: out(),
+    });
+
+    expect(summary.rendered).toBe(1);
+    expect((await manifest())["EJ-ELE-DRW-0024_02"]?.fingerprint).toBe("primera");
+  });
+
   it("keeps the key safe to use as a file name", () => {
     expect(sheetKey({ drawing: "EJ/../ELE DRW", sheet: "02" })).toBe("EJ----ELE-DRW_02");
   });

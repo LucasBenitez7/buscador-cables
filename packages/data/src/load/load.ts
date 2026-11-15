@@ -386,14 +386,27 @@ async function loadSheets(
   const existing = await db.drawingSheet.findMany();
   const byKey = new Map(existing.map((row) => [drawingSheetKey(row), row]));
   const ids = new Map<string, string>();
+  // The image key is unique: two sheets with the same one would share their tiles. The
+  // drawing numbers and sheets read today cannot give it, but a new format could
+  // (`A.1` and `A-1`). Only the first is loaded, as `data:render` only draws the first.
+  const imageKeys = new Map<string, string>();
   for (const sheet of sheets) {
     const key = drawingSheetKey(sheet);
+    const imageKey = sheetKey(sheet);
+    const other = imageKeys.get(imageKey);
+    if (other !== undefined && other !== key) {
+      summary.issues.push(
+        `La hoja ${sheet.sheet} del plano ${sheet.drawing} tiene la misma clave de imagen (${imageKey}) que otra hoja: no se carga.`,
+      );
+      continue;
+    }
+    imageKeys.set(imageKey, key);
     const values = {
       title: sheet.title,
       sourcePage: sheet.page,
       width: sheet.width,
       height: sheet.height,
-      imageKey: sheetKey(sheet),
+      imageKey,
       fingerprint: sheet.fingerprint,
     };
     const current = byKey.get(key);
