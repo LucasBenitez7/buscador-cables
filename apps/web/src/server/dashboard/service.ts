@@ -14,6 +14,7 @@ import {
   type TestStatus,
 } from "@cables/shared";
 import { listActivity, type ActivityEntry } from "@/server/activity/service";
+import { hasDrawingImage } from "@/server/drawings/store";
 import { getHealth, type HealthStatus } from "@/server/health";
 
 /** How far the works have got: what everybody sees on the home page. */
@@ -47,6 +48,11 @@ export type Dashboard = {
     pendingAccounts: number;
     activeUsers: Record<Role, number>;
     database: HealthStatus;
+    /**
+     * Sheets of the drawings loaded and how many have their tiles. Without tiles the tray
+     * and cable pages show no drawing, and nothing else says so (revisión F7.5, A2).
+     */
+    drawings: { sheets: number; drawn: number };
   } | null;
 };
 
@@ -87,15 +93,22 @@ async function getTeamSummary(): Promise<NonNullable<Dashboard["team"]>> {
 }
 
 async function getAdminSummary(): Promise<NonNullable<Dashboard["admin"]>> {
-  const [pendingAccounts, byRole, health] = await Promise.all([
+  const [pendingAccounts, byRole, health, drawings] = await Promise.all([
     // Registrada y nunca aprobada: la misma regla que la lista de usuarios.
     prisma.user.count({ where: { active: false, approvedAt: null } }),
     prisma.user.groupBy({ by: ["role"], where: { active: true }, _count: { _all: true } }),
     getHealth(),
+    getDrawingImages(),
   ]);
   const activeUsers = zeroes(ROLES);
   for (const row of byRole) activeUsers[row.role] = row._count._all;
-  return { pendingAccounts, activeUsers, database: health.database };
+  return { pendingAccounts, activeUsers, database: health.database, drawings };
+}
+
+async function getDrawingImages(): Promise<{ sheets: number; drawn: number }> {
+  const sheets = await prisma.drawingSheet.findMany({ select: { imageKey: true } });
+  const drawn = await Promise.all(sheets.map(({ imageKey }) => hasDrawingImage(imageKey)));
+  return { sheets: sheets.length, drawn: drawn.filter(Boolean).length };
 }
 
 export async function getDashboard(user: { id: string; role: Role }): Promise<Dashboard> {

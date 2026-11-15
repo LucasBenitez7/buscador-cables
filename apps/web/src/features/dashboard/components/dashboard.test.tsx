@@ -130,6 +130,7 @@ describe("Dashboard", () => {
             pendingAccounts: 2,
             activeUsers: { ADMIN: 1, SUPERVISOR: 2, TECHNICIAN: 5, VIEWER: 3 },
             database: "ok",
+            drawings: { sheets: 3, drawn: 3 },
           },
         }}
       />,
@@ -155,11 +156,33 @@ describe("Dashboard", () => {
             pendingAccounts: 0,
             activeUsers: { ADMIN: 1, SUPERVISOR: 0, TECHNICIAN: 0, VIEWER: 0 },
             database: "ok",
+            drawings: { sheets: 0, drawn: 0 },
           },
         }}
       />,
     );
 
     expect(screen.queryByRole("link", { name: "Revisar cuentas" })).toBeNull();
+    expect(screen.queryByText(/hojas? de los planos/)).toBeNull();
+  });
+
+  // Revisión F7.5, A2: desplegado sin las teselas, las fichas salían sin plano y sin aviso.
+  it("warns an administrator about drawing sheets loaded without their image", () => {
+    const admin = (drawn: number) => ({
+      pendingAccounts: 0,
+      activeUsers: { ADMIN: 1, SUPERVISOR: 0, TECHNICIAN: 0, VIEWER: 0 },
+      database: "ok" as const,
+      drawings: { sheets: 40, drawn },
+    });
+    const { rerender } = render(
+      <Dashboard data={{ ...viewer, team: { trays: 0, recentActivity: [] }, admin: admin(0) }} />,
+    );
+
+    expect(screen.getByText("Ninguna hoja de los planos tiene imagen")).toBeInTheDocument();
+
+    rerender(
+      <Dashboard data={{ ...viewer, team: { trays: 0, recentActivity: [] }, admin: admin(37) }} />,
+    );
+    expect(screen.getByText("3 de 40 hojas de los planos sin imagen")).toBeInTheDocument();
   });
 });

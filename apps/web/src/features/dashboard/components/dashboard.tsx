@@ -79,6 +79,8 @@ export function Dashboard({ data }: { data: DashboardData }) {
         </div>
       ) : null}
 
+      {admin ? <MissingDrawings drawings={admin.drawings} /> : null}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ProgressPanel progress={progress} />
@@ -414,6 +416,33 @@ function ActivityPanel({
         </ol>
       )}
     </Panel>
+  );
+}
+
+/** Sheets loaded without their tiles: the tray and cable pages show them without a drawing. */
+function MissingDrawings({
+  drawings,
+}: {
+  drawings: NonNullable<DashboardData["admin"]>["drawings"];
+}) {
+  const missing = drawings.sheets - drawings.drawn;
+  if (missing <= 0) return null;
+  return (
+    <div
+      role="status"
+      className="border-warning/40 bg-warning/10 rounded-lg border px-4 py-3 text-sm"
+    >
+      <p>
+        <span className="text-warning font-semibold">
+          {missing === drawings.sheets
+            ? "Ninguna hoja de los planos tiene imagen"
+            : `${count(missing)} de ${count(drawings.sheets)} hojas de los planos sin imagen`}
+        </span>
+        : las fichas de bandeja y de cable las muestran sin plano. Dibújalas con{" "}
+        <code className="font-mono">pnpm data:render</code> o revisa dónde se guardan las teselas (
+        <code className="font-mono">DRAWINGS_DIR</code>).
+      </p>
+    </div>
   );
 }
 
