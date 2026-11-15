@@ -36,12 +36,12 @@ export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char);
 }
 
-const dateFormat = new Intl.DateTimeFormat("es-ES", {
-  dateStyle: "long",
-  timeStyle: "short",
-  timeZone: TIME_ZONE,
-});
-export const formatEmailDate = (date: Date) => dateFormat.format(date);
+// Fecha y hora por separado: el separador entre ellas cambia según la versión de ICU de Node
+// (", " o " a las "), y así el texto es el mismo en todas partes.
+const dayFormat = new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeZone: TIME_ZONE });
+const timeFormat = new Intl.DateTimeFormat("es-ES", { timeStyle: "short", timeZone: TIME_ZONE });
+export const formatEmailDate = (date: Date) =>
+  `${dayFormat.format(date)}, a las ${timeFormat.format(date)}`;
 
 /** The logo of the emails: a public file of the app (`public/brand`), absolute for mail clients. */
 function logoUrl(): string {

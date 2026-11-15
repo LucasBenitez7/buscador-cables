@@ -92,7 +92,7 @@ describe("pendingApprovalEmail", () => {
     expect(email.to).toBe("admin@planta.example");
     expect(email.subject).toBe("Buscador de Cables: cuenta pendiente: Nico <b>");
     expect(email.text).toContain("Correo: nico@planta.example");
-    expect(email.text).toContain("Pedida el: 15 de noviembre de 2026, 10:30");
+    expect(email.text).toContain("Pedida el: 15 de noviembre de 2026, a las 10:30");
     expect(email.text).toContain("Pendientes ahora: 3");
     expect(email.text).toContain("https://cables.example/admin/users");
     expect(email.html).toContain("Nico &lt;b&gt;");
