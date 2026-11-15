@@ -16,7 +16,8 @@
     "BETTER_AUTH_URL",
     "SEED_ADMIN_EMAIL",
     "SEED_ADMIN_PASSWORD",
-    "SEED_ADMIN_NAME"
+    "SEED_ADMIN_NAME",
+    "DRAWINGS_DIR"
   ],
   "tasks": {
     "generate": {
