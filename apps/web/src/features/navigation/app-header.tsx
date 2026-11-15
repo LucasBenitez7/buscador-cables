@@ -29,6 +29,7 @@ type Props = {
 export function AppHeader({ items, user }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const waiting = items.reduce((sum, item) => sum + (item.badge?.count ?? 0), 0);
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
@@ -56,9 +57,18 @@ export function AppHeader({ items, user }: Props) {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             className="text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent/70 focus-visible:ring-ring/50 -mr-1.5 rounded-md p-2 outline-none focus-visible:ring-3 xl:hidden"
-            aria-label="Abrir menú"
+            aria-label={waiting > 0 ? `Abrir menú (${waiting} pendientes)` : "Abrir menú"}
           >
-            <MenuIcon className="size-6" />
+            <span className="relative block">
+              <MenuIcon className="size-6" />
+              {waiting > 0 ? (
+                // En el móvil el menú está cerrado: el punto avisa de que hay algo pendiente.
+                <span
+                  aria-hidden
+                  className="bg-warning ring-background absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2"
+                />
+              ) : null}
+            </span>
           </SheetTrigger>
           <SheetContent>
             <SheetTitle>Menú</SheetTitle>
@@ -100,9 +110,14 @@ function NavLink({
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
+      aria-label={
+        item.badge && item.badge.count > 0
+          ? `${item.label}, ${item.badge.count} ${item.badge.label}`
+          : undefined
+      }
       onClick={onNavigate}
       className={cn(
-        "focus-visible:ring-ring/50 rounded-md font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3",
+        "focus-visible:ring-ring/50 inline-flex items-center gap-2 rounded-md font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3",
         large ? "border-l-2 px-3 py-3 text-base" : "px-3 py-1.5 text-sm",
         active
           ? "bg-accent text-foreground border-primary"
@@ -110,6 +125,15 @@ function NavLink({
       )}
     >
       {item.label}
+      {item.badge && item.badge.count > 0 ? (
+        <span
+          aria-hidden
+          className="bg-warning text-primary-foreground min-w-5 rounded-full px-1.5 text-center text-xs leading-5 font-bold tabular-nums"
+          title={item.badge.label}
+        >
+          {item.badge.count}
+        </span>
+      ) : null}
     </Link>
   );
 }

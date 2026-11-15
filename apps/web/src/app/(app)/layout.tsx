@@ -3,10 +3,14 @@ import { hasPermission, ROLE_LABELS } from "@cables/shared";
 import { AppHeader } from "@/features/navigation/app-header";
 import type { NavItem } from "@/features/navigation/nav-items";
 import { requireUser } from "@/server/session";
+import { countPendingAccounts } from "@/server/users/service";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   // Comprobación real en servidor. El proxy solo mira si existe la cookie.
   const user = await requireUser();
+  const canManageUsers = hasPermission(user.role, "user:manage");
+  // Lo que espera a esta persona, siempre a la vista en el menú. Solo se consulta si le toca.
+  const pending = canManageUsers ? await countPendingAccounts() : 0;
 
   // Cada uno ve solo las secciones que su rol permite.
   const items: NavItem[] = [
@@ -21,8 +25,19 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     ...(hasPermission(user.role, "catalog:manage")
       ? [{ href: "/catalogs", label: "Catálogos", match: "prefix" } as const]
       : []),
-    ...(hasPermission(user.role, "user:manage")
-      ? [{ href: "/admin/users", label: "Usuarios", match: "prefix" } as const]
+    ...(canManageUsers
+      ? [
+          {
+            href: "/admin/users",
+            label: "Usuarios",
+            match: "prefix",
+            badge: {
+              count: pending,
+              label:
+                pending === 1 ? "cuenta pendiente de aprobar" : "cuentas pendientes de aprobar",
+            },
+          } as const,
+        ]
       : []),
   ];
 

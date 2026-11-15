@@ -66,6 +66,11 @@ export async function listUsers(): Promise<UserRow[]> {
   return [...rows.filter((user) => user.pending), ...rows.filter((user) => !user.pending)];
 }
 
+/** Self-registered accounts never approved: what the administrators have to answer. */
+export async function countPendingAccounts(): Promise<number> {
+  return prisma.user.count({ where: { active: false, approvedAt: null } });
+}
+
 type Transaction = Prisma.TransactionClient;
 
 /**
