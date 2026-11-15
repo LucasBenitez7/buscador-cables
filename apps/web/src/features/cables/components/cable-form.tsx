@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { SearchableSelect, toOptions } from "@/components/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createCableAction,
@@ -333,21 +334,26 @@ function SelectField({
   name: string;
   label: string;
   options: Option[];
-  field: (name: string) => React.ComponentProps<"select">;
+  field: (name: string) => {
+    id: string;
+    name: string;
+    value: unknown;
+    "aria-invalid"?: boolean;
+    "aria-describedby"?: string;
+  };
   set: (name: string, value: string) => void;
   error?: string;
   wide?: boolean;
 }) {
   return (
     <Field name={name} label={label} error={error} wide={wide}>
-      <NativeSelect {...field(name)} onChange={(event) => set(name, event.target.value)}>
-        <option value="">Sin indicar</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
-        ))}
-      </NativeSelect>
+      <SearchableSelect
+        {...field(name)}
+        value={String(field(name).value ?? "")}
+        onValueChange={(next) => set(name, next)}
+        options={toOptions(options)}
+        emptyLabel="Sin indicar"
+      />
     </Field>
   );
 }

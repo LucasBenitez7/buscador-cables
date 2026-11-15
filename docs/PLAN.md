@@ -631,6 +631,10 @@ planos, se sustituye el PDF y se repite `data:extract` → `data:render` → `da
 - [x] Marcas del plano ajustadas al texto marcado (bandera, código o fila de tabla): crecen y
       se encogen con el plano; la flecha y el número de lo buscado se ven a cualquier zoom, y
       los demás números se ocultan con la hoja entera a la vista.
+- [x] Selector con buscador (`SearchableSelect`) para las listas largas (tipo, ubicación,
+      color, fabricante, persona): escribir "2x2,5" filtra sin importar mayúsculas, tildes,
+      espacios ni coma decimal. Con menos de 12 opciones sigue el selector nativo, que en el
+      móvil abre el del sistema.
 - Fotos de los técnicos: mejora futura (necesitan almacenamiento privado).
 
 ## Fase 8 — Importación masiva y panel (mejora futura)

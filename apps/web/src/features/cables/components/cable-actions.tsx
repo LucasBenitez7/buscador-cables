@@ -41,6 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { SearchableSelect, toOptions } from "@/components/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { runCableActionAction, type CableFormResult } from "@/features/cables/actions";
 
@@ -678,15 +679,13 @@ function LocationSelect({
   emptyLabel?: string;
 }) {
   return (
-    <Select id="action-location" name={name} defaultValue={defaultValue}>
-      <option value="" disabled={!emptyLabel}>
-        {emptyLabel ?? "Elige una ubicación"}
-      </option>
-      {locations.map((location) => (
-        <option key={location.id} value={location.id}>
-          {location.label}
-        </option>
-      ))}
-    </Select>
+    <SearchableSelect
+      id="action-location"
+      name={name}
+      defaultValue={defaultValue}
+      options={toOptions(locations)}
+      emptyLabel={emptyLabel}
+      placeholder="Elige una ubicación"
+    />
   );
 }

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { SearchableSelect, toOptions } from "@/components/searchable-select";
 
 type Props = {
   basePath: string;
@@ -45,13 +46,13 @@ export function ActivityFilters({ basePath, search, users }: Props) {
       <div className={`grid gap-3 sm:grid-cols-2 ${users ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
         {users ? (
           <Field label="Quién" htmlFor="actor">
-            <Select id="actor" name="actor" defaultValue={search.actor}>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.label}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              id="actor"
+              name="actor"
+              defaultValue={search.actor}
+              options={toOptions(users)}
+              emptyLabel="Todos"
+            />
           </Field>
         ) : null}
         <Field label="Qué hizo" htmlFor="action">

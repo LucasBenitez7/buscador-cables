@@ -4,7 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { LOCATION_TYPE_LABELS, parentLocationType, type MoveTarget } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
+import { SearchableSelect, toOptions } from "@/components/searchable-select";
 import { moveLocationAction } from "@/features/locations/actions";
 import type { ActionResult } from "@/lib/action-result";
 import type { LocationWithCounts } from "@/server/locations/service";
@@ -49,21 +49,14 @@ export function LocationMoveForm({ location, targets, onDone }: Props) {
         {targets.length === 0 ? (
           <p className="text-muted-foreground text-sm">No hay otro destino posible.</p>
         ) : (
-          <NativeSelect
+          <SearchableSelect
             id={selectId}
             value={parentId}
-            onChange={(event) => setParentId(event.target.value)}
+            onValueChange={setParentId}
+            options={toOptions(targets)}
+            placeholder="Elige el destino…"
             required
-          >
-            <option value="" disabled>
-              Elige el destino…
-            </option>
-            {targets.map((target) => (
-              <option key={target.id} value={target.id}>
-                {target.label}
-              </option>
-            ))}
-          </NativeSelect>
+          />
         )}
       </div>
       <div className="flex gap-2">

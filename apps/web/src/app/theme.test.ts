@@ -54,6 +54,8 @@ describe("dark theme", () => {
     ]);
     const undefinedVariables = FILES.flatMap(({ name, content }) =>
       [...content.matchAll(/var\((--[a-z0-9-]+)\)/g)]
+        // Radix las pone en línea al abrir un popover (ancho del disparador, alto disponible).
+        .filter((match) => !match[1]!.startsWith("--radix-"))
         .filter((match) => !defined.has(match[1]))
         .map((match) => `${name}: ${match[1]}`),
     );
