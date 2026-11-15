@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import {
   DRAWING_ACCESS_COOKIE,
   createDrawingAccess,
@@ -19,9 +19,9 @@ type Params = Promise<{ path: string[] }>;
  *   checks the access before answering 304. After signing out on a shared tablet the tiles
  *   seen are not served from the cache (M4). Never in a shared cache (`private`).
  */
-export async function GET(request: Request, { params }: { params: Params }) {
+export async function GET(request: NextRequest, { params }: { params: Params }) {
   const segments = (await params).path;
-  const access = new NextRequest(request).cookies.get(DRAWING_ACCESS_COOKIE)?.value;
+  const access = request.cookies.get(DRAWING_ACCESS_COOKIE)?.value;
   const passed = !isDrawingDescriptor(segments) && hasDrawingAccess(access);
   if (!passed && !(await getCurrentUser())) {
     return NextResponse.json({ error: "Sin sesión" }, { status: 401 });

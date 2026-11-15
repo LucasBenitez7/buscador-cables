@@ -2,6 +2,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { NextRequest } from "next/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/drawings/[...path]/route";
 import { DRAWING_ACCESS_SECONDS, createDrawingAccess, hasDrawingAccess } from "./access";
@@ -79,7 +80,7 @@ describe("readDrawingFile", () => {
 describe("GET /api/drawings", () => {
   const TILE = ["EJ-ELE-DRW-0024_02_files", "12", "3_4.webp"];
   const get = (segments: string[], headers: Record<string, string> = {}) =>
-    GET(new Request("http://localhost/api/drawings", { headers }), {
+    GET(new NextRequest("http://localhost/api/drawings", { headers }), {
       params: Promise.resolve({ path: segments }),
     });
   const passFrom = (response: Response) =>
