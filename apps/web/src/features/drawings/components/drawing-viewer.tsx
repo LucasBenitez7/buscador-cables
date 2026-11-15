@@ -105,6 +105,7 @@ function labelElement(label: string, keep: boolean): HTMLElement {
 
 /** Keys of OpenSeadragon that are not used here: rotate and flip the sheet. */
 const NO_KEYS = new Set(["KeyR", "KeyF"]);
+const KEY_ZOOM = 1.25;
 
 /** Below this width on screen (pixels) the whole sheet is too small for every number. */
 const FAR_WIDTH = 2200;
@@ -209,7 +210,19 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
       // Teclado (con el plano seleccionado): flechas o WASD, + y −, 0. Girar (R) y voltear (F)
       // dejarían las marcas donde no toca y sin un botón para deshacerlo.
       instance.addHandler("canvas-key", (event) => {
-        if (NO_KEYS.has(event.originalEvent.code)) event.preventDefaultAction = true;
+        const { code, key } = event.originalEvent as KeyboardEvent;
+        if (NO_KEYS.has(code)) {
+          event.preventDefaultAction = true;
+          return;
+        }
+        // OpenSeadragon solo acerca y aleja con las teclas `=` y `-` de un teclado inglés: en
+        // uno español el «+» está en otra tecla.
+        const factor = key === "+" ? KEY_ZOOM : key === "-" ? 1 / KEY_ZOOM : null;
+        if (factor && code !== "Equal" && code !== "Minus") {
+          event.preventDefaultAction = true;
+          instance!.viewport.zoomBy(factor);
+          instance!.viewport.applyConstraints();
+        }
       });
     });
     return () => {

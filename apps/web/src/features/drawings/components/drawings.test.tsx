@@ -12,9 +12,13 @@ const osd = vi.hoisted(() => {
     overlays: [] as { element: HTMLElement; location: { x: number; y: number } }[],
     handlers: {} as Record<
       string,
-      (event?: { originalEvent: { code: string }; preventDefaultAction: boolean }) => void
+      (event?: {
+        originalEvent: { code: string; key: string };
+        preventDefaultAction: boolean;
+      }) => void
     >,
     fitted: [] as { x: number; y: number }[],
+    zoomed: [] as number[],
   };
   class Point {
     constructor(
@@ -44,7 +48,7 @@ const osd = vi.hoisted(() => {
         destroy: () => {},
         viewport: {
           fitBoundsWithConstraints: (rect: Rect) => state.fitted.push({ x: rect.x, y: rect.y }),
-          zoomBy: () => {},
+          zoomBy: (factor: number) => state.zoomed.push(factor),
           applyConstraints: () => {},
           goHome: () => {},
           getZoom: () => 1,
@@ -64,6 +68,7 @@ beforeEach(() => {
   osd.state.overlays = [];
   osd.state.handlers = {};
   osd.state.fitted = [];
+  osd.state.zoomed = [];
 });
 
 describe("DrawingViewer", () => {
@@ -82,15 +87,20 @@ describe("DrawingViewer", () => {
     expect(viewer).toHaveAccessibleDescription(/flechas para moverlo/);
     await waitFor(() => expect(osd.state.handlers["canvas-key"]).toBeDefined());
 
-    const key = (code: string) => {
-      const event = { originalEvent: { code }, preventDefaultAction: false };
+    const key = (code: string, value = "") => {
+      const event = { originalEvent: { code, key: value }, preventDefaultAction: false };
       osd.state.handlers["canvas-key"]!(event);
       return event.preventDefaultAction;
     };
     expect(key("ArrowLeft")).toBe(false);
-    expect(key("Digit0")).toBe(false);
-    expect(key("KeyR")).toBe(true);
-    expect(key("KeyF")).toBe(true);
+    expect(key("Digit0", "0")).toBe(false);
+    expect(key("KeyR", "r")).toBe(true);
+    expect(key("KeyF", "f")).toBe(true);
+    // «+» y «−» de un teclado español; `=` y `-` de uno inglés los hace OpenSeadragon.
+    expect(key("BracketRight", "+")).toBe(true);
+    expect(key("Slash", "-")).toBe(true);
+    expect(key("Equal", "=")).toBe(false);
+    expect(osd.state.zoomed).toEqual([1.25, 0.8]);
   });
 
   it("loads the sheet tiles from the private API and marks every point", async () => {
