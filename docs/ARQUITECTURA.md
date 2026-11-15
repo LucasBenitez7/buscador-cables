@@ -273,6 +273,48 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - Una punta suelta en una bandeja que no está en el recorrido previsto se acepta si quien la
   registra lo confirma (`confirmOffRoute`); las correcciones del supervisor no lo piden.
 
+## Marca, cargas y avisos
+
+- **Logo** (una lupa cuyo mango es un cable con su conector): `apps/web/public/brand/logo.svg`
+  y, igual en código, `components/brand-logo.tsx` (con los tokens del tema). De él salen el
+  favicon (`app/favicon.ico`, `app/icon.svg`), el icono de iPhone (`app/apple-icon.png`), los
+  del manifiesto (`public/brand/logo-192.png`, `logo-512.png`), el de los correos
+  (`public/brand/logo-email.png`) y la imagen al compartir el enlace
+  (`app/opengraph-image.png` y `twitter-image.png`, 1200 × 630). Si cambia el logo, se
+  regeneran las PNG desde el SVG con `sharp`. Todo esto es público: lo piden el navegador,
+  los clientes de correo y WhatsApp o X sin sesión (`PUBLIC_PATHS`).
+- **Cargas:** cada sección tiene su `loading.tsx` con el logo y un anillo que gira
+  (`BrandLoader`, sin girar si se prefiere menos movimiento) y cajas translúcidas con la
+  forma de la página (`Skeleton`, en `components/loading.tsx`).
+- **Contraseñas:** todos los campos usan `PasswordInput`, con un ojo para ver lo escrito.
+- **Lo pendiente, a la vista:** quien gestiona usuarios ve en el menú, junto a «Usuarios»,
+  cuántas cuentas esperan aprobación, y un punto en el botón del menú del móvil. Además, el
+  aviso del inicio y el de la página de Usuarios.
+
+### Correos y avisos
+
+Todos con el mismo aspecto (`lib/email-templates.ts`): logo y nombre arriba, tarjeta clara,
+los datos importantes en una tabla, un botón y versión en texto. Quién recibe qué lo decide
+`server/account-notifications.ts`:
+
+| Qué pasa                                        | A quién                           | Qué lleva                                                |
+| ----------------------------------------------- | --------------------------------- | -------------------------------------------------------- |
+| Alguien pide una cuenta                         | La persona                        | Enlace para confirmar el correo (24 h)                   |
+| Confirma el correo y queda pendiente            | Los administradores activos       | Nombre, correo, cuándo la pidió, cuántas esperan, enlace |
+| Intenta registrarse con un correo que ya existe | El dueño de ese correo            | Enlace para restablecer la contraseña                    |
+| Un administrador aprueba la cuenta              | La persona                        | Bienvenida, su rol y qué puede hacer, enlace para entrar |
+| Un administrador da de alta a alguien           | La persona                        | Bienvenida, rol, cómo cambiar la contraseña temporal     |
+| Cambia el rol                                   | La persona                        | Rol de antes y de ahora y qué puede hacer                |
+| Alguien pasa a ser administrador                | Los demás administradores activos | Quién, quién lo hizo, enlace a la auditoría              |
+| Se desactiva o se reactiva una cuenta           | La persona                        | Qué significa y qué hacer                                |
+| Pide restablecer la contraseña                  | La persona                        | Enlace (1 h, un solo uso)                                |
+| La contraseña cambia                            | La persona                        | Aviso de seguridad: si no fue ella, qué hacer            |
+
+**Sin correo, a propósito:** el trabajo de campo con los cables (tender, conectar, timbrar…)
+está en la actividad y el historial: un correo por movimiento sería ruido. Tampoco los
+inicios de sesión ni la limpieza diaria. Un administrador desactivado nunca recibe avisos.
+Si un envío falla, el cambio se hace igual y el fallo queda en el log (`scope: "email"`).
+
 ## Seguridad
 
 - Contraseñas con hash (gestionado por Better Auth, scrypt/argon2).

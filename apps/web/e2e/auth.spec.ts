@@ -36,7 +36,7 @@ test("registro, confirmación, aprobación de un administrador y entrada con el 
   );
 
   // El administrador recibe el aviso y la aprueba desde el panel.
-  await linkFromLatestEmail(USERS.admin.email, /pendiente de aprobación/);
+  await linkFromLatestEmail(USERS.admin.email, /cuenta pendiente: /);
   const adminContext = await browser.newContext({ storageState: storageStatePath("admin") });
   const adminPage = await adminContext.newPage();
   await adminPage.goto("/admin/users");
@@ -73,7 +73,7 @@ test("el login no redirige a otro sitio aunque lo pida el enlace", async ({ page
   resetRateLimits();
   await page.goto("/login?next=/%09/evil.example");
   await page.getByLabel("Correo electrónico").fill(USERS.viewer.email);
-  await page.getByLabel("Contraseña").fill(PASSWORD);
+  await page.getByLabel("Contraseña", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
 
   await expect(page.getByRole("heading", { name: "Inicio" })).toBeVisible();
@@ -98,7 +98,7 @@ test("demasiadas contraseñas incorrectas bloquean esa cuenta y no a las demás"
   }
 
   await page.getByLabel("Correo electrónico").fill(email);
-  await page.getByLabel("Contraseña").fill("no-es-la-clave-1");
+  await page.getByLabel("Contraseña", { exact: true }).fill("no-es-la-clave-1");
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(
     "Demasiados intentos fallidos con este correo. Espera 15 minutos o restablece la contraseña.",
@@ -106,7 +106,7 @@ test("demasiadas contraseñas incorrectas bloquean esa cuenta y no a las demás"
 
   // Otra persona entra sin problema desde la misma IP (sin vaciar los contadores).
   await page.getByLabel("Correo electrónico").fill(USERS.viewer.email);
-  await page.getByLabel("Contraseña").fill(PASSWORD);
+  await page.getByLabel("Contraseña", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
   await expect(page.getByRole("heading", { name: "Inicio" })).toBeVisible();
 });

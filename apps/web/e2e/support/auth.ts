@@ -8,7 +8,7 @@ export async function submitLogin(page: Page, email: string, password = PASSWORD
   resetRateLimits();
   await page.goto("/login");
   await page.getByLabel("Correo electrónico").fill(email);
-  await page.getByLabel("Contraseña").fill(password);
+  await page.getByLabel("Contraseña", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
 }
 
