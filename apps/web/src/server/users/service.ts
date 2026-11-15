@@ -11,6 +11,7 @@ import {
   type Role,
   type SetUserActiveInput,
 } from "@cables/shared";
+import type { AccountChange } from "@/server/account-notifications";
 import { isUniqueViolation } from "@/server/prisma-errors";
 import type { CurrentUser } from "@/server/session";
 
@@ -130,12 +131,16 @@ export async function createUser(actor: CurrentUser, input: CreateUserInput): Pr
   return toRow(user);
 }
 
-export async function changeUserRole(actor: CurrentUser, input: ChangeRoleInput): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+/** Changes the role of an account; null when it already had that role (nothing to tell). */
+export async function changeUserRole(
+  actor: CurrentUser,
+  input: ChangeRoleInput,
+): Promise<AccountChange | null> {
+  return prisma.$transaction(async (tx) => {
     const otherActiveAdmins = await countOtherActiveAdmins(tx, input.userId);
     const target = await tx.user.findUnique({
       where: { id: input.userId },
-      select: { id: true, role: true },
+      select: { id: true, role: true, name: true, email: true },
     });
     if (!target) {
       throw new UserServiceError("El usuario no existe.");
@@ -153,7 +158,7 @@ export async function changeUserRole(actor: CurrentUser, input: ChangeRoleInput)
       throw new UserServiceError(error);
     }
 
-    if (target.role === input.role) return;
+    if (target.role === input.role) return null;
     await tx.user.update({ where: { id: target.id }, data: { role: input.role } });
     await tx.userEvent.create({
       data: {
@@ -165,17 +170,23 @@ export async function changeUserRole(actor: CurrentUser, input: ChangeRoleInput)
       },
     });
     // Las sesiones existentes siguen válidas, pero el rol se relee en cada petición.
+    return {
+      action: "ROLE_CHANGED",
+      user: { id: target.id, name: target.name, email: target.email },
+      fromRole: target.role as Role,
+      toRole: input.role,
+    };
   });
 }
 
 /**
  * Activates or deactivates an account. The first activation of a self-registered account
- * is its approval: `approved` tells the caller whom to notify.
+ * is its approval. Returns what happened, for the emails.
  */
 export async function setUserActive(
   actor: CurrentUser,
   input: SetUserActiveInput,
-): Promise<{ approved: { name: string; email: string } | null }> {
+): Promise<AccountChange> {
   return prisma.$transaction(async (tx) => {
     const otherActiveAdmins = await countOtherActiveAdmins(tx, input.userId);
     const target = await tx.user.findUnique({
@@ -228,7 +239,11 @@ export async function setUserActive(
       // Al desactivar se cierran todas sus sesiones.
       await tx.session.deleteMany({ where: { userId: target.id } });
     }
-    return { approved: approving ? { name: target.name, email: target.email } : null };
+    return {
+      action,
+      user: { id: target.id, name: target.name, email: target.email },
+      toRole: approving ? role : null,
+    };
   });
 }
 

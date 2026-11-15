@@ -177,8 +177,8 @@ describe("setUserActive", () => {
     const result = await setUserActive(admin, { userId: viewer.id, active: true });
 
     expect((await prisma.user.findUniqueOrThrow({ where: { id: viewer.id } })).active).toBe(true);
-    // Ya estaba aprobada: reactivarla no es una aprobación y no hay que avisar a nadie.
-    expect(result.approved).toBeNull();
+    // Ya estaba aprobada: reactivarla no es una aprobación.
+    expect(result).toMatchObject({ action: "REACTIVATED", toRole: null });
   });
 
   // Revisión F0-F7 (A2): la cuenta registrada espera a que un administrador la apruebe.
@@ -188,7 +188,11 @@ describe("setUserActive", () => {
 
     const result = await setUserActive(admin, { userId: applicant.id, active: true });
 
-    expect(result.approved).toEqual({ name: applicant.name, email: applicant.email });
+    expect(result).toEqual({
+      action: "APPROVED",
+      user: { id: applicant.id, name: applicant.name, email: applicant.email },
+      toRole: "VIEWER",
+    });
     const stored = await prisma.user.findUniqueOrThrow({ where: { id: applicant.id } });
     expect(stored.active).toBe(true);
     expect(stored.approvedAt).not.toBeNull();
