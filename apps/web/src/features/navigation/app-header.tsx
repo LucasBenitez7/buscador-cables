@@ -12,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { BrandLogo } from "@/components/brand-logo";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { isActive, type NavItem } from "./nav-items";
 
@@ -35,8 +36,9 @@ export function AppHeader({ items, user }: Props) {
         <div className="flex min-w-0 items-center gap-6">
           <Link
             href="/"
-            className="focus-visible:ring-ring/50 rounded-md font-semibold whitespace-nowrap outline-none focus-visible:ring-3"
+            className="focus-visible:ring-ring/50 flex items-center gap-2 rounded-md font-semibold whitespace-nowrap outline-none focus-visible:ring-3"
           >
+            <BrandLogo className="size-7" />
             Buscador de Cables
           </Link>
           <nav aria-label="Principal" className="hidden items-center gap-1 xl:flex">
