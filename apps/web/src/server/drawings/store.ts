@@ -12,6 +12,7 @@ import {
   type DrawingsBucket,
   type DrawingsManifest,
 } from "@cables/shared";
+import { logError } from "@/server/log";
 
 /**
  * The drawing tiles drawn by `pnpm data:render` (`<key>.dzi` and `<key>_files/<level>/<x>_<y>.webp`).
@@ -159,7 +160,7 @@ export async function hasDrawingImage(key: string): Promise<boolean> {
       return (await remoteSheets(store)).has(key);
     } catch (error) {
       // Sin el almacenamiento, la ficha se ve igual, sin plano.
-      console.error("drawings: no se pudo leer el manifiesto", error);
+      logError("drawings", "No se pudo leer el manifiesto del almacenamiento", error);
       return false;
     }
   }

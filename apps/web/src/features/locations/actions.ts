@@ -16,6 +16,7 @@ import {
   updateLocation,
 } from "@/server/locations/service";
 import { authorize } from "@/server/session";
+import { logError } from "@/server/log";
 
 const LOCATIONS_PATH = "/locations";
 
@@ -23,7 +24,7 @@ function fail(error: unknown): ActionResult {
   if (error instanceof LocationServiceError) {
     return { ok: false, message: error.message };
   }
-  console.error("Error en la gestión de ubicaciones", error);
+  logError("locations", "Error en la gestión de ubicaciones", error);
   return { ok: false, message: "No se pudo completar la operación. Inténtalo de nuevo." };
 }
 

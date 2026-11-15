@@ -11,6 +11,7 @@ import {
   createUser,
   setUserActive,
 } from "@/server/users/service";
+import { logError } from "@/server/log";
 
 export type { ActionResult } from "@/lib/action-result";
 
@@ -20,7 +21,7 @@ function fail(error: unknown): ActionResult {
   if (error instanceof UserServiceError) {
     return { ok: false, message: error.message };
   }
-  console.error("Error en la gestión de usuarios", error);
+  logError("users", "Error en la gestión de usuarios", error);
   return { ok: false, message: "No se pudo completar la operación. Inténtalo de nuevo." };
 }
 

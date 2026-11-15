@@ -23,6 +23,22 @@ export const environmentSchema = z.object({
   DRAWINGS_S3_BUCKET: z.string().trim().optional(),
   DRAWINGS_S3_ACCESS_KEY_ID: z.string().trim().optional(),
   DRAWINGS_S3_SECRET_ACCESS_KEY: z.string().trim().optional(),
+  // Cabeceras de las que Better Auth toma la IP del cliente (límite de intentos), separadas por
+  // comas. Solo las que el proxy de delante pone siempre, sustituyendo lo que mande el cliente:
+  // en Vercel, `x-real-ip`. Por defecto, `x-forwarded-for`.
+  AUTH_IP_HEADERS: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) =>
+      (value || "x-forwarded-for")
+        .split(",")
+        .map((header) => header.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  // Secreto con el que Vercel Cron llama a las tareas periódicas (`/api/cron/*`).
+  // Vacío (como en .env.example) es lo mismo que no tenerlo.
+  CRON_SECRET: z.union([z.literal("").transform(() => undefined), z.string().min(32)]).optional(),
 });
 
 export type AppEnvironment = z.infer<typeof environmentSchema>;

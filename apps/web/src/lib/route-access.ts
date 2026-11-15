@@ -10,6 +10,9 @@ export const PUBLIC_PATHS = [
   "/reset-password",
   "/api/auth",
   "/api/health",
+  // Las tareas periódicas comprueban su propio secreto (`CRON_SECRET`).
+  "/api/cron",
+  "/robots.txt",
 ] as const;
 
 export function isPublicPath(pathname: string): boolean {
