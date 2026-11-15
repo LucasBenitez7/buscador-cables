@@ -1,6 +1,7 @@
 import "server-only";
 import nodemailer from "nodemailer";
 import { env } from "@/lib/env";
+import { logError } from "@/server/log";
 
 export type OutgoingEmail = {
   to: string;
@@ -35,6 +36,6 @@ export async function sendEmail(message: OutgoingEmail): Promise<void> {
       html: message.html,
     });
   } catch (error) {
-    console.error("No se pudo enviar el correo", error);
+    logError("email", "No se pudo enviar el correo", error);
   }
 }

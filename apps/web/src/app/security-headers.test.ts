@@ -15,9 +15,10 @@ describe("security headers", () => {
     const [rule] = (await nextConfig.headers?.()) ?? [];
     const headers = Object.fromEntries(rule?.headers.map(({ key, value }) => [key, value]) ?? []);
 
+    // La CSP (con `frame-ancestors 'none'`) la pone el proxy con su nonce: ver proxy.test.ts.
     expect(headers).toEqual({
-      "Content-Security-Policy": "frame-ancestors 'none'",
       "X-Frame-Options": "DENY",
+      "X-Robots-Tag": "noindex, nofollow",
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
     });

@@ -17,6 +17,28 @@ export const environmentSchema = z.object({
   BETTER_AUTH_URL: optionalUrl,
   // Teselas de los planos (`pnpm data:render`). Relativa a la raíz del monorepo o absoluta.
   DRAWINGS_DIR: z.string().trim().min(1).default("private-data/drawings"),
+  // Teselas en un almacenamiento privado compatible con S3 (Cloudflare R2) en producción. Sin
+  // ellas, la app las lee de DRAWINGS_DIR. Ver `drawingsBucket`.
+  DRAWINGS_S3_ENDPOINT: optionalUrl,
+  DRAWINGS_S3_BUCKET: z.string().trim().optional(),
+  DRAWINGS_S3_ACCESS_KEY_ID: z.string().trim().optional(),
+  DRAWINGS_S3_SECRET_ACCESS_KEY: z.string().trim().optional(),
+  // Cabeceras de las que Better Auth toma la IP del cliente (límite de intentos), separadas por
+  // comas. Solo las que el proxy de delante pone siempre, sustituyendo lo que mande el cliente:
+  // en Vercel, `x-real-ip`. Por defecto, `x-forwarded-for`.
+  AUTH_IP_HEADERS: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) =>
+      (value || "x-forwarded-for")
+        .split(",")
+        .map((header) => header.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  // Secreto con el que Vercel Cron llama a las tareas periódicas (`/api/cron/*`).
+  // Vacío (como en .env.example) es lo mismo que no tenerlo.
+  CRON_SECRET: z.union([z.literal("").transform(() => undefined), z.string().min(32)]).optional(),
 });
 
 export type AppEnvironment = z.infer<typeof environmentSchema>;

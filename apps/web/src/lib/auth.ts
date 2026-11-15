@@ -163,6 +163,9 @@ export const auth = betterAuth({
   },
 
   advanced: {
+    // Solo la cabecera que pone el proxy de delante (en Vercel, `x-real-ip`): con
+    // `X-Forwarded-For` tal cual, un cliente podía cambiar de IP para el límite de intentos.
+    ipAddress: { ipAddressHeaders: env.AUTH_IP_HEADERS },
     // Better Auth lanza el envío de correos como tarea en segundo plano para no
     // revelar por tiempos si un correo existe. `after` mantiene viva la función
     // serverless (Vercel) hasta que termina; con `void` el correo podía perderse.

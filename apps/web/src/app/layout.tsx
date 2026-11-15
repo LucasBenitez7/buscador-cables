@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { connection } from "next/server";
 import { env } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -30,7 +31,10 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  // Cada página se genera en cada petición: así lleva el nonce de la CSP del proxy en sus
+  // scripts (una página estática no lo tendría y el navegador la bloquearía).
+  await connection();
   return (
     // Tema único y oscuro: la clase "dark" activa las variantes `dark:` de shadcn/ui.
     <html lang="es" className="dark" suppressHydrationWarning>

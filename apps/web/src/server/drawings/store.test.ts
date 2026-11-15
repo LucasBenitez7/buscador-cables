@@ -33,7 +33,7 @@ describe("drawingFilePath", () => {
   it("accepts only a sheet descriptor or one of its tiles", () => {
     expect(drawingFilePath(["EJ-ELE-DRW-0024_02.dzi"])).toBe("EJ-ELE-DRW-0024_02.dzi");
     expect(drawingFilePath(["EJ-ELE-DRW-0024_02_files", "12", "3_4.webp"])).toBe(
-      path.join("EJ-ELE-DRW-0024_02_files", "12", "3_4.webp"),
+      "EJ-ELE-DRW-0024_02_files/12/3_4.webp",
     );
   });
 
@@ -163,5 +163,52 @@ describe("hasDrawingAccess", () => {
     expect(hasDrawingAccess(pass, now + (DRAWING_ACCESS_SECONDS - 1) * 1000)).toBe(true);
     expect(hasDrawingAccess(pass, now + DRAWING_ACCESS_SECONDS * 1000)).toBe(false);
     expect(hasDrawingAccess(undefined, now)).toBe(false);
+  });
+});
+
+// Fase 10: en producción las teselas están en un bucket privado de R2.
+describe("drawings in a bucket", () => {
+  const objects = new Map<string, string>([
+    ["planos/manifest.json", JSON.stringify({ "EJ-ELE-DRW-0024_02": { fingerprint: "a" } })],
+    ["planos/EJ-ELE-DRW-0024_02.dzi", "<Image/>"],
+    ["planos/EJ-ELE-DRW-0024_02_files/12/3_4.webp", "tesela"],
+  ]);
+  const requests: Request[] = [];
+
+  beforeAll(() => {
+    process.env.DRAWINGS_S3_ENDPOINT = "https://cuenta.r2.example";
+    process.env.DRAWINGS_S3_BUCKET = "planos";
+    process.env.DRAWINGS_S3_ACCESS_KEY_ID = "id";
+    process.env.DRAWINGS_S3_SECRET_ACCESS_KEY = "secreto";
+    vi.stubGlobal("fetch", async (input: Request) => {
+      requests.push(input);
+      const body = objects.get(new URL(input.url).pathname.slice(1));
+      return body === undefined ? new Response("", { status: 404 }) : new Response(body);
+    });
+  });
+
+  afterAll(() => {
+    for (const name of ["ENDPOINT", "BUCKET", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY"]) {
+      delete process.env[`DRAWINGS_S3_${name}`];
+    }
+    vi.unstubAllGlobals();
+  });
+
+  it("reads descriptors and tiles from the bucket with signed requests", async () => {
+    const tile = await readDrawingFile(["EJ-ELE-DRW-0024_02_files", "12", "3_4.webp"]);
+
+    expect(tile?.body.toString()).toBe("tesela");
+    expect(tile?.contentType).toBe("image/webp");
+    expect(requests.at(-1)!.headers.get("Authorization")).toMatch(/^AWS4-HMAC-SHA256 /);
+    await expect(readDrawingFile(["EJ-ELE-DRW-0024_03.dzi"])).resolves.toBeNull();
+  });
+
+  it("knows the drawn sheets from the manifest, asking for it once a minute", async () => {
+    requests.length = 0;
+
+    await expect(hasDrawingImage("EJ-ELE-DRW-0024_02")).resolves.toBe(true);
+    await expect(hasDrawingImage("EJ-ELE-DRW-0024_03")).resolves.toBe(false);
+
+    expect(requests.filter((request) => request.url.endsWith("manifest.json"))).toHaveLength(1);
   });
 });

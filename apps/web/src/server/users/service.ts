@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { prisma, type Prisma } from "@cables/db";
+import { prisma, type Prisma, type UserEventAction } from "@cables/db";
 import { hashPassword } from "better-auth/crypto";
 import {
   validateActiveChange,
@@ -115,6 +115,7 @@ export async function createUser(actor: CurrentUser, input: CreateUserInput): Pr
             password: passwordHash,
           },
         },
+        userEvents: { create: { action: "CREATED", actorId: actor.id, toRole: input.role } },
       },
       select: USER_SELECT,
     })
@@ -152,7 +153,17 @@ export async function changeUserRole(actor: CurrentUser, input: ChangeRoleInput)
       throw new UserServiceError(error);
     }
 
+    if (target.role === input.role) return;
     await tx.user.update({ where: { id: target.id }, data: { role: input.role } });
+    await tx.userEvent.create({
+      data: {
+        action: "ROLE_CHANGED",
+        actorId: actor.id,
+        targetId: target.id,
+        fromRole: target.role as Role,
+        toRole: input.role,
+      },
+    });
     // Las sesiones existentes siguen válidas, pero el rol se relee en cada petición.
   });
 }
@@ -188,9 +199,30 @@ export async function setUserActive(
     }
 
     const approving = input.active && target.approvedAt === null;
+    // Al aprobar, el administrador elige con qué rol entra (nunca uno superior al suyo).
+    const role = approving && input.role ? input.role : (target.role as Role);
+    if (role !== target.role) {
+      const roleError = validateCreateUser({ actorId: actor.id, actorRole: actor.role }, role);
+      if (roleError) {
+        throw new UserServiceError("No puedes asignar un rol superior al tuyo.");
+      }
+    }
     await tx.user.update({
       where: { id: target.id },
-      data: { active: input.active, ...(approving ? { approvedAt: new Date() } : {}) },
+      data: { active: input.active, role, ...(approving ? { approvedAt: new Date() } : {}) },
+    });
+    const action: UserEventAction = approving
+      ? "APPROVED"
+      : input.active
+        ? "REACTIVATED"
+        : "DEACTIVATED";
+    await tx.userEvent.create({
+      data: {
+        action,
+        actorId: actor.id,
+        targetId: target.id,
+        ...(approving ? { toRole: role } : {}),
+      },
     });
     if (!input.active) {
       // Al desactivar se cierran todas sus sesiones.
@@ -198,4 +230,38 @@ export async function setUserActive(
     }
     return { approved: approving ? { name: target.name, email: target.email } : null };
   });
+}
+
+export type UserEventRow = {
+  id: string;
+  action: UserEventAction;
+  actor: string;
+  target: string;
+  fromRole: Role | null;
+  toRole: Role | null;
+  createdAt: Date;
+};
+
+/** The latest changes to the accounts, newest first (users page). */
+export async function listUserEvents(limit = 50): Promise<UserEventRow[]> {
+  const events = await prisma.userEvent.findMany({
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit,
+    select: {
+      id: true,
+      action: true,
+      fromRole: true,
+      toRole: true,
+      createdAt: true,
+      actor: { select: { name: true } },
+      target: { select: { name: true } },
+    },
+  });
+  return events.map(({ actor, target, ...event }) => ({
+    ...event,
+    actor: actor.name,
+    target: target.name,
+    fromRole: event.fromRole as Role | null,
+    toRole: event.toRole as Role | null,
+  }));
 }

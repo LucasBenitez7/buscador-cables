@@ -25,18 +25,19 @@ Lee antes de trabajar: `docs/PLAN.md`, `docs/ARQUITECTURA.md` y `CONTRIBUTING.md
 
 En Windows PowerShell usa `pnpm.cmd` / `npm.cmd` si la política de ejecución bloquea los `.ps1`.
 
-| Comando                   | Acción                                                        |
-| ------------------------- | ------------------------------------------------------------- |
-| `docker compose up -d`    | Levanta Postgres + Mailpit                                    |
-| `pnpm dev`                | Arranca la app en http://localhost:3000                       |
-| `pnpm check`              | Lint + typecheck + tests unitarios/integración                |
-| `pnpm test:e2e`           | Tests E2E con Playwright                                      |
-| `pnpm db:migrate`         | Crea/aplica migraciones de Prisma                             |
-| `pnpm db:seed`            | Carga datos de ejemplo                                        |
-| `pnpm db:studio`          | Abre Prisma Studio                                            |
-| `pnpm db:check`           | Falla si `schema.prisma` no coincide con las migraciones      |
-| `pnpm data:extract`       | Lee los PDFs de `private-data/source/` (datos reales, fase 7) |
-| `pnpm data:render`        | Dibuja los planos en teselas en `private-data/drawings/`      |
-| `pnpm data:load`          | Carga lo extraído en la base de datos (`--as <correo>`)       |
-| `gh pr create --base dev` | Abre el PR de la rama actual contra `dev` (desde la fase 4.5) |
-| `gh pr checks --watch`    | Sigue el CI del PR hasta que termina                          |
+| Comando                   | Acción                                                         |
+| ------------------------- | -------------------------------------------------------------- |
+| `docker compose up -d`    | Levanta Postgres + Mailpit                                     |
+| `pnpm dev`                | Arranca la app en http://localhost:3000                        |
+| `pnpm check`              | Lint + typecheck + tests unitarios/integración                 |
+| `pnpm test:e2e`           | Tests E2E con Playwright                                       |
+| `pnpm db:migrate`         | Crea/aplica migraciones de Prisma                              |
+| `pnpm db:seed`            | Carga datos de ejemplo                                         |
+| `pnpm db:studio`          | Abre Prisma Studio                                             |
+| `pnpm db:check`           | Falla si `schema.prisma` no coincide con las migraciones       |
+| `pnpm data:extract`       | Lee los PDFs de `private-data/source/` (datos reales, fase 7)  |
+| `pnpm data:render`        | Dibuja los planos en teselas en `private-data/drawings/`       |
+| `pnpm data:load`          | Carga lo extraído en la base de datos (`--as <correo>`)        |
+| `pnpm data:upload`        | Sube las teselas al bucket de producción (R2, `DRAWINGS_S3_*`) |
+| `gh pr create --base dev` | Abre el PR de la rama actual contra `dev` (desde la fase 4.5)  |
+| `gh pr checks --watch`    | Sigue el CI del PR hasta que termina                           |

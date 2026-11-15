@@ -1,17 +1,62 @@
 # Registro de revisiones
 
-Revisiones de código hechas sobre el proyecto: qué se encontró, cómo se corrigió y qué queda
-pendiente. Las entradas más recientes van arriba. Cada corrección tiene su propio commit
-(Conventional Commits) y, si es un bug, un test que lo reproduce.
+Único registro de las revisiones de código del proyecto: qué se encontró, cómo se corrigió y
+qué queda pendiente. Las entradas más recientes van arriba. Cada corrección tiene su propio
+commit (Conventional Commits) y, si es un bug, un test que lo reproduce.
+
+Las dos revisiones completas (fases 0 a 7 y fase 7.5) tenían además una lista de trabajo
+detallada, hallazgo por hallazgo (`docs/REVISION-F0-F7.md` y `docs/REVISION-F7.5.md`). Se
+retiraron al cerrar la fase 10, con todo resuelto o pasado a la lista de abajo; siguen en el
+historial de git y en sus PR (#29 y #33). Los comentarios del código que citan un hallazgo
+("Revisión F7.5, M2") se refieren a ellas.
+
+## Pendiente
+
+Lo único abierto de todas las revisiones:
+
+- [ ] **Marcas de los planos en campo** (revisión F7.5, B2). Comprobar a mano una muestra de
+      bandejas de cada tipo de plano (por código dibujado y por bandera de sección) y anotar el
+      resultado. La ficha ya dice de qué tipo es cada marca.
+- [ ] **Consultas de la ficha** (revisión F0-F7, C3). `loadLookups()` carga todas las
+      ubicaciones y catálogos en cada ficha y página de actividad aunque solo use unos pocos;
+      resolver solo los ids de los eventos. Rendimiento, no un fallo.
+- [ ] **Índices de búsqueda** (revisión F0-F7, C4). `description`, `altCode` y el código sin
+      guiones se buscan con `ILIKE '%…%'` sin índice; con ~4.500 cables va sobrado. Índices
+      trigram si el volumen crece.
+- [ ] **Sentry** (fase 10). Hoy los errores van a los logs de Vercel; añadirlo si hace falta
+      que avisen solos.
+- [ ] **Contraseña temporal** (revisión F7.5). Las cuentas que da de alta un administrador no
+      obligan a cambiar la contraseña al entrar.
 
 ---
+
+## 2026-11-15 — Fase 10: producción y endurecimiento
+
+**Rama:** `feat/f10-production`. Lo que faltaba para desplegar, con la revisión F7.5 cerrada.
+
+**Decisiones del responsable:** Vercel (web) + Railway (Postgres) + Cloudflare R2 (planos);
+registro abierto con aprobación, eligiendo el rol al aprobar; errores en los logs (Sentry,
+más adelante); un solo documento de revisiones.
+
+| Hecho                                                                                                                                       | Dónde                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Teselas en un bucket privado de R2, servidas por la app con sesión; `pnpm data:upload` sube solo lo que cambió.                             | `server/drawings/store.ts`, `render/upload`  |
+| Aprobar una cuenta eligiendo su rol; guía de roles siempre a la vista en Usuarios.                                                          | `features/users`                             |
+| Auditoría de cuentas (`user_event`, inmutable por trigger) y su lista en Usuarios. Cierra la nota C6 de la revisión F0-F7.                  | `server/users/service.ts`                    |
+| CSP completa con nonce por petición; `noindex` y `robots.txt`; IP del límite de intentos solo de la cabecera del proxy (`AUTH_IP_HEADERS`). | `proxy.ts`, `lib/csp.ts`, `lib/auth.ts`      |
+| Limpieza diaria (Vercel Cron) de tokens, sesiones y contadores caducados.                                                                   | `app/api/cron/cleanup`                       |
+| Logs JSON de los errores del servidor.                                                                                                      | `instrumentation.ts`, `server/log.ts`        |
+| Build de Vercel con las migraciones antes; usuario de la base sin propiedad ni `TRUNCATE`; copias probadas.                                 | `apps/web/vercel.json`, `docs/DESPLIEGUE.md` |
+
+**Encontrado al hacerlo:** el log de información usaba `process.stdout`, que no existe en el
+runtime Edge de la instrumentación; el build lo avisó y se cambió a `console.log`.
 
 ## 2026-11-15 — Revisión antes de desplegar (fase 7.5)
 
 **Rama:** `fix/review-f7.5`. Revisión de lo que entró tras la de las fases 0 a 7: los repasos
 de interfaz y la fase 7.5 (planos y trabajo en campo). Lista completa en
-`docs/REVISION-F7.5.md`: 2 hallazgos altos, 4 medios, 8 bajos y la lista de lo que falta
-antes de desplegar.
+su lista de trabajo detallada (retirada en la fase 10; en el PR #33): 2 hallazgos altos, 4
+medios, 8 bajos y la lista de lo que faltaba antes de desplegar.
 
 **Decisiones del responsable:** el historial de git no se reescribe; dónde viven las teselas
 se decide al desplegar (fase 10); las teselas se revalidan siempre; el timbrado sobrevive a
@@ -42,8 +87,8 @@ lo de la fase 10 (planos en producción, conexiones, `noindex`, registro, correo
 
 **Rama:** `fix/review-f0-f7`. Revisión de todo el código tras cerrar la fase 7, buscando
 vulnerabilidades, bugs y código mejorable. La lista completa, con dónde está cada cosa, cómo
-se comprobó y qué se hizo, está en `docs/REVISION-F0-F7.md`: 2 hallazgos altos, 7 medios, 19
-bajos y 8 notas de calidad.
+se comprobó y qué se hizo, estaba en su lista de trabajo (retirada en la fase 10; en el PR
+#29): 2 hallazgos altos, 7 medios, 19 bajos y 8 notas de calidad.
 
 **Decisiones del responsable** (siguió la recomendación de la revisión):
 

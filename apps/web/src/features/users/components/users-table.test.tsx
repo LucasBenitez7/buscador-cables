@@ -67,11 +67,34 @@ describe("UsersTable", () => {
     );
 
     expect(screen.getByText("Pendiente de aprobación")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Aprobar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Aprobar como Consulta" }));
 
     await screen.findByText("Cuenta aprobada.");
     const formData = setUserActiveAction.mock.calls[0]?.[0] as FormData;
-    expect(Object.fromEntries(formData)).toEqual({ userId: "u2", active: "true" });
+    expect(Object.fromEntries(formData)).toEqual({ userId: "u2", active: "true", role: "VIEWER" });
+  });
+
+  // Fase 10: al aprobar se elige el rol, viendo qué puede hacer, y no se guarda antes.
+  it("approves a new account with the role chosen, explaining it first", async () => {
+    setUserActiveAction.mockResolvedValue({ ok: true, message: "Cuenta aprobada." });
+    render(
+      <UsersTable
+        users={[{ ...technician, role: "VIEWER", active: false, pending: true }]}
+        currentUserId="u1"
+        currentRole="ADMIN"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Rol de Ana Pérez"), {
+      target: { value: "TECHNICIAN" },
+    });
+
+    expect(changeRoleAction).not.toHaveBeenCalled();
+    expect(screen.getByText(/Trabajo en campo/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Aprobar como Técnico" }));
+    await screen.findByText("Cuenta aprobada.");
+    const formData = setUserActiveAction.mock.calls[0]?.[0] as FormData;
+    expect(formData.get("role")).toBe("TECHNICIAN");
   });
 
   it("offers to reactivate an account that was deactivated", () => {

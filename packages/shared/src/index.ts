@@ -15,3 +15,4 @@ export * from "./kks";
 export * from "./route";
 export { repage } from "./url-params";
 export * from "./drawings";
+export * from "./drawings-storage";

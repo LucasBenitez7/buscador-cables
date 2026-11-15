@@ -14,6 +14,7 @@ import {
   updateCatalogItem,
 } from "@/server/catalogs/service";
 import { authorize } from "@/server/session";
+import { logError } from "@/server/log";
 
 const CATALOGS_PATH = "/catalogs";
 
@@ -21,7 +22,7 @@ function fail(error: unknown): ActionResult {
   if (error instanceof CatalogServiceError) {
     return { ok: false, message: error.message };
   }
-  console.error("Error en la gestión de catálogos", error);
+  logError("catalogs", "Error en la gestión de catálogos", error);
   return { ok: false, message: "No se pudo completar la operación. Inténtalo de nuevo." };
 }
 

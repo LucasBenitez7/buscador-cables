@@ -1,13 +1,14 @@
 import type { NextConfig } from "next";
 
 /**
- * Cabeceras de seguridad que no dependen del despliegue. La CSP completa (scripts, estilos,
- * conexiones) se cierra en la fase 10, con el dominio y los servicios reales delante.
+ * Cabeceras de seguridad de todas las respuestas. La CSP completa, con un nonce por petición,
+ * la pone el proxy en las páginas (`src/lib/csp.ts`).
  */
 const SECURITY_HEADERS = [
   // La app nunca va dentro de un marco de otro sitio: evita el clickjacking.
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
   { key: "X-Frame-Options", value: "DENY" },
+  // Herramienta interna: que ningún buscador la indexe (además de robots.txt).
+  { key: "X-Robots-Tag", value: "noindex, nofollow" },
   // El navegador no adivina tipos de contenido.
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Los códigos de cable y los filtros de la URL no viajan a otros sitios.

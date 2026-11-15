@@ -4,7 +4,14 @@ import type { Role } from "@cables/shared";
 import { verifyPassword } from "better-auth/crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CurrentUser } from "@/server/session";
-import { UserServiceError, changeUserRole, createUser, listUsers, setUserActive } from "./service";
+import {
+  UserServiceError,
+  changeUserRole,
+  createUser,
+  listUserEvents,
+  listUsers,
+  setUserActive,
+} from "./service";
 
 const PASSWORD = "clave-temporal-1";
 
@@ -246,5 +253,120 @@ describe("listUsers", () => {
 
     expect(users.map((user) => user.name)).toEqual(["Nico", "Bea", "Zoe", "Ana"]);
     expect(users.map((user) => user.pending)).toEqual([true, false, false, false]);
+  });
+});
+
+// Fase 10: el administrador elige el rol al aprobar, y queda registro de cada cambio.
+describe("approval with a role", () => {
+  it("approves a new account with the role chosen", async () => {
+    const admin = await insertUser("ADMIN");
+    const pending = await insertUser("VIEWER", { active: false, approved: false });
+
+    await setUserActive(admin, { userId: pending.id, active: true, role: "TECHNICIAN" });
+
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: pending.id } })).toMatchObject({
+      active: true,
+      role: "TECHNICIAN",
+      approvedAt: expect.any(Date),
+    });
+  });
+
+  it("does not let a supervisor approve someone as administrator", async () => {
+    const supervisor = await insertUser("SUPERVISOR");
+    const pending = await insertUser("VIEWER", { active: false, approved: false });
+
+    await expect(
+      setUserActive(supervisor, { userId: pending.id, active: true, role: "ADMIN" }),
+    ).rejects.toThrow(UserServiceError);
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: pending.id } })).toMatchObject({
+      active: false,
+      role: "VIEWER",
+    });
+  });
+
+  it("only uses the role when approving, not when reactivating", async () => {
+    const admin = await insertUser("ADMIN");
+    const off = await insertUser("TECHNICIAN", { active: false });
+
+    await setUserActive(admin, { userId: off.id, active: true, role: "SUPERVISOR" });
+
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: off.id } })).role).toBe(
+      "TECHNICIAN",
+    );
+  });
+});
+
+describe("account audit", () => {
+  it("records who created, approved, changed the role of and deactivated whom", async () => {
+    const admin = await insertUser("ADMIN");
+    const pending = await insertUser("VIEWER", { active: false, approved: false });
+    const created = await createUser(admin, {
+      name: "Ana Pérez",
+      email: "ana@cables.test",
+      role: "TECHNICIAN",
+      password: PASSWORD,
+    });
+    await setUserActive(admin, { userId: pending.id, active: true, role: "TECHNICIAN" });
+    await changeUserRole(admin, { userId: created.id, role: "SUPERVISOR" });
+    // Sin cambio de rol no hay nada que registrar.
+    await changeUserRole(admin, { userId: created.id, role: "SUPERVISOR" });
+    await setUserActive(admin, { userId: created.id, active: false });
+    await setUserActive(admin, { userId: created.id, active: true });
+
+    const events = await listUserEvents();
+
+    expect(
+      events.reverse().map(({ action, actor, target, fromRole, toRole }) => ({
+        action,
+        actor,
+        target,
+        fromRole,
+        toRole,
+      })),
+    ).toEqual([
+      {
+        action: "CREATED",
+        actor: admin.name,
+        target: "Ana Pérez",
+        fromRole: null,
+        toRole: "TECHNICIAN",
+      },
+      {
+        action: "APPROVED",
+        actor: admin.name,
+        target: pending.name,
+        fromRole: null,
+        toRole: "TECHNICIAN",
+      },
+      {
+        action: "ROLE_CHANGED",
+        actor: admin.name,
+        target: "Ana Pérez",
+        fromRole: "TECHNICIAN",
+        toRole: "SUPERVISOR",
+      },
+      {
+        action: "DEACTIVATED",
+        actor: admin.name,
+        target: "Ana Pérez",
+        fromRole: null,
+        toRole: null,
+      },
+      {
+        action: "REACTIVATED",
+        actor: admin.name,
+        target: "Ana Pérez",
+        fromRole: null,
+        toRole: null,
+      },
+    ]);
+  });
+
+  it("records nothing when the change is refused", async () => {
+    const admin = await insertUser("ADMIN");
+
+    await expect(setUserActive(admin, { userId: admin.id, active: false })).rejects.toThrow();
+
+    expect(await listUserEvents()).toEqual([]);
   });
 });

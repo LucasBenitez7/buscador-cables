@@ -15,6 +15,7 @@ import { firstIssue, formValue, issuesByField } from "@/lib/action-result";
 import { runCableAction } from "@/server/cables/field-actions";
 import { CableServiceError, createCable, deleteCable, updateCable } from "@/server/cables/service";
 import { authorize } from "@/server/session";
+import { logError } from "@/server/log";
 
 export type CableFormResult =
   | { ok: true; message: string; id: string; changed?: boolean }
@@ -26,7 +27,7 @@ function fail(error: unknown): CableFormResult {
   if (error instanceof CableServiceError) {
     return { ok: false, message: error.message };
   }
-  console.error("Error en la gestión de cables", error);
+  logError("cables", "Error en la gestión de cables", error);
   return { ok: false, message: "No se pudo guardar. Inténtalo de nuevo." };
 }
 

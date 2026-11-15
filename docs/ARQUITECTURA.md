@@ -16,7 +16,7 @@
 | Offline (fase 9)   | Serwist (service worker) + Dexie (IndexedDB)    | Mejora futura, fuera de la v1.0.0                   |
 | Planos (fase 7.5)  | pdf.js + @napi-rs/canvas + sharp, OpenSeadragon | Teselas Deep Zoom servidas solo con sesión          |
 | CI                 | GitHub Actions + CodeQL + Dependabot            | Gratis en repo público; activo desde la fase 4.5    |
-| Despliegue         | Vercel + Railway                                | Docker solo en local (y opcional en producción)     |
+| Despliegue         | Vercel + Railway + Cloudflare R2 + Resend       | Docker solo en local; ver `docs/DESPLIEGUE.md`      |
 
 ### ¿Por qué Next.js "puro" y no una API separada?
 
@@ -247,8 +247,10 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   `drawingMarkSchema` de `packages/shared`) dice dónde está la bandeja en la hoja, y
   `TrayDrawing.sheetId` la enlaza con su `DrawingSheet`.
 - Las teselas viven fuera de git (`DRAWINGS_DIR`, por defecto `private-data/drawings`).
-  `apps/web/src/server/drawings/store.ts` es la única pieza que sabe dónde están: en
-  producción se cambia por un almacenamiento privado de objetos (fase 10). La ruta
+  `apps/web/src/server/drawings/store.ts` es la única pieza que sabe dónde están: en local,
+  esa carpeta; en producción (`DRAWINGS_S3_*`), un bucket privado de Cloudflare R2 que llena
+  `pnpm data:upload` y que la app lee con peticiones firmadas (`aws4fetch`). Qué hojas hay lo
+  dice el manifiesto del bucket, que cada instancia relee una vez por minuto. La ruta
   `GET /api/drawings/<clave>.dzi` y `…/<clave>_files/<nivel>/<x>_<y>.webp` solo acepta esas
   dos formas de ruta. El descriptor (`.dzi`) siempre comprueba la sesión y deja una cookie
   firmada de 10 minutos (`drawing_access`, `HttpOnly`, solo para `/api/drawings`, se borra al
@@ -281,8 +283,13 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   guarda los datos reales del cliente). La cuenta nueva es `VIEWER` e inactiva (lo fuerza un
   hook en el servidor, el cliente no puede elegir rol ni estado); `User.approvedAt` distingue
   "pendiente de aprobación" de "desactivada". Al confirmar el correo se avisa a los
-  administradores, y al aprobarla, al usuario. Registrarse con un correo que ya existe da la
-  misma respuesta y solo avisa por correo al dueño real.
+  administradores, y al aprobarla, al usuario. El administrador elige el rol al aprobarla
+  (nunca uno superior al suyo), con la guía de roles (`ROLE_DESCRIPTIONS`) a la vista.
+  Registrarse con un correo que ya existe da la misma respuesta y solo avisa por correo al
+  dueño real.
+- Auditoría de cuentas: cada alta, aprobación, cambio de rol, desactivación o reactivación
+  queda en `UserEvent` (quién, a quién, roles), en la misma transacción que el cambio. Un
+  trigger rechaza `UPDATE` y `DELETE`, como en `cable_event`.
 - Las cuentas pendientes o desactivadas no pueden abrir sesión (hook `session.create.before`).
 - Nadie cambia su propio nombre, correo o imagen: el historial enseña el nombre actual de
   quien hizo cada cosa, así que `POST /api/auth/update-user` se rechaza (hook
@@ -296,9 +303,24 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
     peticiones de recuperación;
   - **por cuenta**: 10 contraseñas incorrectas seguidas bloquean ese correo 15 minutos, venga
     de la IP que venga, exista o no la cuenta (`server/login-throttle.ts`).
+
+  La IP sale solo de las cabeceras de `AUTH_IP_HEADERS`, las que pone el proxy de delante
+  sustituyendo lo que mande el cliente (en Vercel, `x-real-ip`). Cada día, Vercel Cron llama a
+  `/api/cron/cleanup` (con `CRON_SECRET`), que borra tokens de verificación y sesiones
+  caducados y contadores de más de un día.
+
 - La redirección tras el login solo acepta rutas internas, resueltas como las resuelve el
   navegador (`safeNextPath`).
-- Cabeceras en todas las rutas: `frame-ancestors 'none'`, `X-Frame-Options: DENY`,
-  `X-Content-Type-Options: nosniff` y `Referrer-Policy`. La CSP completa queda para la fase 10.
+- Cabeceras en todas las rutas: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy` y `X-Robots-Tag: noindex, nofollow` (más `robots.txt`: herramienta
+  interna).
+- CSP completa en las páginas (`lib/csp.ts`, la pone el proxy): scripts solo de la propia app
+  y con el nonce de cada petición (`strict-dynamic`), nada de otros sitios, `frame-ancestors
+'none'`, `object-src 'none'`. Por eso todas las páginas se generan en cada petición (el
+  layout raíz llama a `connection()`): una página estática no llevaría el nonce.
+- Logs del servidor en JSON, una línea por evento (`server/log.ts`); los errores no
+  controlados llegan por `onRequestError` (`instrumentation.ts`), con la ruta sin la query.
+- La app usa en producción un usuario de la base sin propiedad de las tablas ni `TRUNCATE`
+  (no puede saltarse los triggers); las migraciones van con otro (`DATABASE_URL_MIGRATE`).
 - Ningún secreto en el repositorio; solo `.env.example`. El seed se niega a crear en
   producción el administrador con el correo o la contraseña de ejemplo.

@@ -12,7 +12,7 @@ const prisma = createPrismaClient(url);
 async function reset() {
   // TRUNCATE no dispara los triggers por fila, así que también limpia cable_event.
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "user_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
   );
 }
 
@@ -53,6 +53,29 @@ describe("cable_event immutability", () => {
       /inmutable/,
     );
     expect(await prisma.cableEvent.count()).toBe(1);
+  });
+});
+
+// Fase 10: la auditoría de cuentas tampoco se edita ni se borra.
+describe("user_event immutability", () => {
+  it("rejects updates and deletes", async () => {
+    const admin = await prisma.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Admin",
+        email: `${randomUUID()}@cables.test`,
+        role: "ADMIN",
+      },
+    });
+    const event = await prisma.userEvent.create({
+      data: { action: "APPROVED", actorId: admin.id, targetId: admin.id, toRole: "VIEWER" },
+    });
+
+    await expect(
+      prisma.userEvent.update({ where: { id: event.id }, data: { toRole: "ADMIN" } }),
+    ).rejects.toThrow(/inmutable/);
+    await expect(prisma.userEvent.delete({ where: { id: event.id } })).rejects.toThrow(/inmutable/);
+    expect(await prisma.userEvent.count()).toBe(1);
   });
 });
 
