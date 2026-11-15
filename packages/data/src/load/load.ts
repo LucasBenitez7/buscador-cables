@@ -115,6 +115,18 @@ const chunks = <T>(items: readonly T[], size = BATCH) =>
     items.slice(index * size, (index + 1) * size),
   );
 
+/**
+ * JSON with the object keys sorted: Postgres `jsonb` does not keep the key order, so what
+ * comes back from the database must not differ from the extraction only by that order.
+ */
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) =>
+    item && typeof item === "object" && !Array.isArray(item)
+      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : item,
+  );
+}
+
 const ROLLBACK = Symbol("dry run");
 
 export async function loadProjectData(
@@ -452,7 +464,7 @@ async function loadTrays(
       }))
       .sort((a, b) => a.drawing.localeCompare(b.drawing) || a.sheet.localeCompare(b.sheet));
   const sameSheets = (a: readonly object[], b: readonly object[]) =>
-    JSON.stringify(a) === JSON.stringify(b);
+    stableJson(a) === stableJson(b);
 
   const toCreate = trays.filter((tray) => !byCode.has(tray.code));
   for (const batch of chunks(toCreate)) {
