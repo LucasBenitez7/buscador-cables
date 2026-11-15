@@ -29,6 +29,12 @@ export default defineConfig({
         "src/app/layout.tsx",
         "src/lib/env.ts",
       ],
+      reporter: ["text-summary", "html"],
+      // Mínimo de CONTRIBUTING.md para la lógica de negocio: si baja, `pnpm test` (y el CI) fallan.
+      // Ramas al 75 % de momento (2026-11-11: 79 %); el objetivo es subirlas al 80 %.
+      thresholds: {
+        "src/server/**": { lines: 80, statements: 80, functions: 80, branches: 75 },
+      },
     },
     projects: [
       {

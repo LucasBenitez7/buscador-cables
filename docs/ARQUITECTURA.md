@@ -2,20 +2,21 @@
 
 ## Stack
 
-| Capa               | Tecnología                                   | Motivo                                              |
-| ------------------ | -------------------------------------------- | --------------------------------------------------- |
-| Monorepo           | pnpm workspaces + Turborepo                  | Paquetes compartidos, builds cacheados              |
-| Frontend + Backend | Next.js (App Router) + TypeScript estricto   | Un solo despliegue; Server Actions / Route Handlers |
-| UI                 | Tailwind CSS + shadcn/ui                     | Rápido, accesible y consistente                     |
-| Base de datos      | PostgreSQL 16 (+ extensión `pg_trgm`)        | Robusta; búsqueda tolerante a errores               |
-| ORM                | Prisma                                       | Migraciones y tipado                                |
-| Validación         | Zod (compartido cliente/servidor)            | Una sola fuente de verdad                           |
-| Autenticación      | Better Auth (email + contraseña)             | Sesiones, reset y verificación integrados           |
-| Email              | Mailpit (local) / Resend (producción)        |                                                     |
-| Tests              | Vitest + Testing Library + Playwright        | Unitarios, integración y E2E                        |
-| Offline (fase 7)   | Serwist (service worker) + Dexie (IndexedDB) |                                                     |
-| CI                 | GitHub Actions                               |                                                     |
-| Despliegue         | Vercel + Railway                             | Docker solo en local (y opcional en producción)     |
+| Capa               | Tecnología                                      | Motivo                                              |
+| ------------------ | ----------------------------------------------- | --------------------------------------------------- |
+| Monorepo           | pnpm workspaces + Turborepo                     | Paquetes compartidos, builds cacheados              |
+| Frontend + Backend | Next.js (App Router) + TypeScript estricto      | Un solo despliegue; Server Actions / Route Handlers |
+| UI                 | Tailwind CSS + shadcn/ui                        | Rápido, accesible y consistente                     |
+| Base de datos      | PostgreSQL 16 (+ extensión `pg_trgm`)           | Robusta; búsqueda tolerante a errores               |
+| ORM                | Prisma                                          | Migraciones y tipado                                |
+| Validación         | Zod (compartido cliente/servidor)               | Una sola fuente de verdad                           |
+| Autenticación      | Better Auth (email + contraseña)                | Sesiones, reset y verificación integrados           |
+| Email              | Mailpit (local) / Resend (producción)           |                                                     |
+| Tests              | Vitest + Testing Library + Playwright           | Unitarios, integración y E2E                        |
+| Offline (fase 9)   | Serwist (service worker) + Dexie (IndexedDB)    | Mejora futura, fuera de la v1.0.0                   |
+| Planos (fase 7.5)  | pdf.js + @napi-rs/canvas + sharp, OpenSeadragon | Teselas Deep Zoom servidas solo con sesión          |
+| CI                 | GitHub Actions + CodeQL + Dependabot            | Gratis en repo público; activo desde la fase 4.5    |
+| Despliegue         | Vercel + Railway + Cloudflare R2 + Resend       | Docker solo en local; ver `docs/DESPLIEGUE.md`      |
 
 ### ¿Por qué Next.js "puro" y no una API separada?
 
@@ -39,14 +40,14 @@ buscador-cables/
 │       │   ├── features/         # Módulos por dominio (cables, locations, users)
 │       │   │   └── cables/
 │       │   │       ├── components/
-│       │   │       ├── actions.ts    # Server Actions (capa fina)
-│       │   │       └── queries.ts
+│       │   │       └── actions.ts    # Server Actions (capa fina); las consultas van en server/
 │       │   ├── server/           # Lógica de negocio pura (services), permisos
 │       │   └── lib/              # auth, env, utilidades
 │       └── e2e/                  # Tests Playwright
 ├── packages/
 │   ├── db/                       # Prisma: schema, migraciones, seed, cliente
 │   ├── shared/                   # Esquemas Zod, tipos, constantes, normalizadores
+│   ├── data/                     # Extracción (y carga) de los datos reales desde los PDFs
 │   └── config/                   # eslint, tsconfig, prettier compartidos
 ├── docs/
 ├── docker-compose.yml
@@ -55,9 +56,56 @@ buscador-cables/
 ```
 
 Regla de dependencias: `app` → `features` → `server` → `packages/db` y `packages/shared`.
+`packages/data` usa `packages/shared` (y `packages/db` para la carga); la app no lo importa.
 Nunca al revés. Los componentes cliente no acceden a la base de datos.
 
-## Modelo de datos (borrador)
+## Interfaz: tema oscuro
+
+Decisión del 2026-11-11 (se aplica en la fase 4.5). La app tiene **un único tema, oscuro**:
+nada de fondos blancos, sin modo claro ni selector de tema.
+
+- Fondo: gris casi negro con un ligero tono azul, más agradable que el negro puro.
+- Texto: gris muy claro, no blanco puro (cansa menos la vista).
+- Acento: **azul** para botones, enlaces y foco.
+- El **verde esmeralda queda reservado** para "conectado / correcto", el ámbar para estados
+  intermedios y el rojo para errores y retirados. Por eso el acento no es verde: en la fase 5
+  los estados se distinguen de los botones a simple vista.
+
+Los tokens se definen en `apps/web/src/app/globals.css` (formato `oklch`, compatible con
+shadcn/ui). Los valores hex son aproximados, solo de referencia.
+
+| Token                  | Uso                               | `oklch`           | ≈ Hex     |
+| ---------------------- | --------------------------------- | ----------------- | --------- |
+| `--background`         | Fondo de la página                | `0.19 0.012 255`  | `#101419` |
+| `--card`, `--popover`  | Tarjetas, diálogos, menús         | `0.225 0.014 255` | `#171c22` |
+| `--muted`, `--accent`  | Filas alternas, hover, secundario | `0.27 0.016 255`  | `#21272e` |
+| `--border`, `--input`  | Bordes y campos                   | `0.34 0.018 255`  | `#323941` |
+| `--foreground`         | Texto principal                   | `0.93 0.008 255`  | `#e4e8ed` |
+| `--muted-foreground`   | Texto secundario                  | `0.72 0.015 255`  | `#9ea5ae` |
+| `--primary`, `--ring`  | Botones, enlaces, foco (azul)     | `0.70 0.14 245`   | `#46a6ef` |
+| `--primary-foreground` | Texto sobre el azul               | `0.17 0.02 255`   | `#091018` |
+| `--success` (nuevo)    | Conectado, activo, correcto       | `0.74 0.15 162`   | `#30c78d` |
+| `--warning` (nuevo)    | Estados intermedios               | `0.80 0.14 80`    | `#edb345` |
+| `--destructive`        | Errores, bajas, retirados         | `0.68 0.19 25`    | `#f75d59` |
+
+Contraste calculado (WCAG): texto principal sobre el fondo 15:1; texto secundario 7,4:1;
+azul sobre el fondo 7:1; texto sobre el botón azul 7,2:1; verde 8,5:1; ámbar 9,7:1; rojo
+5,9:1. Todo supera el mínimo AA (4,5:1). Los valores finales se ajustan al aplicarlos si alguna
+pantalla lo pide, sin bajar de AA.
+
+Reglas:
+
+- En los componentes, solo tokens (`bg-card`, `text-muted-foreground`, `text-success`…), nunca
+  colores fijos de Tailwind (`bg-white`, `text-black`, `text-emerald-600`). Un test lo vigila.
+- `color-scheme: dark` en `:root`, para que el navegador pinte oscuros los controles nativos
+  (scroll, selectores de fecha, autocompletado).
+
+## Modelo de datos
+
+> La fuente de verdad es `packages/db/prisma/schema.prisma`; lo de abajo es el diseño
+> original. Diferencias importantes: todas las referencias usan `ON DELETE RESTRICT`, la tabla
+> `cable_event` rechaza `UPDATE` y `DELETE` mediante un trigger, y `cable.code` tiene un índice
+> GIN trigram (`pg_trgm` lo crea la propia migración).
 
 ```prisma
 enum Role { ADMIN SUPERVISOR TECHNICIAN VIEWER }
@@ -135,7 +183,7 @@ model Cable {
 }
 
 enum CableAction {
-  CREATED UPDATED LAID COILED CONNECTED DISCONNECTED MOVED RETIRED CORRECTION
+  CREATED UPDATED LAID COILED CONNECTED DISCONNECTED MOVED RETIRED CORRECTION DELETED
 }
 
 // Registro INMUTABLE de lo que hace cada usuario sobre un cable (nunca se edita ni se borra).
@@ -158,15 +206,121 @@ model CableEvent {
 }
 ```
 
+### Datos reales del proyecto (fase 7)
+
+Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructura en
+`docs/DATOS-PROYECTO.md`). Resumen; el detalle está en `schema.prisma`:
+
+- `Cable` gana el **nivel** (`CableLevel`: `L1` instrumentación, `L2` BT, `L3` BT unipolar,
+  `L4` MT), número alternativo, revisión, circuito, composición, esquema, longitud pendiente y
+  el documento y la página de donde se cargó.
+- **Extremos**: `originEquipment`, `originCubicle`, `originGland`, `originFunctionKks`,
+  `originInstallationKks` y `originRoom` (y lo mismo con `destination…`). `originId` y
+  `destinationId` siguen apuntando al árbol de ubicaciones (sala o edificio). Los equipos tienen
+  índice trigram para buscarlos por subcadena.
+- `Tray`: bandeja, tubo o canalización. Código único (`99UXA00L22036`), tipo (`TrayKind`),
+  nivel de tensión y cota sacados del código, área, edificio y tamaño. `TrayDrawing` dice en qué
+  hojas de plano aparece. El código se interpreta con `parseTrayCode` (`packages/shared`).
+- `CableRouteStep`: recorrido **ordenado** de cada cable (`position` ≥ 1). Cada paso guarda el
+  texto del listado y, si es una bandeja conocida, la bandeja; en instrumentación, además, el
+  tramo (`FIELD` campo / `ROOM` sala).
+- Estado `UNVERIFIED` (sin revisar): el estado con que entran los cables de los listados, que
+  nadie ha comprobado en campo. Sin ubicación física; no se mueve ni se conecta hasta que alguien
+  registra cómo está (tendido, tendido a medias, enrollado o retirado).
+- Si un cable de los listados no tiene sala, el equipo de cada extremo cuenta como extremo
+  conocido para poder tenderlo (`originId ?? originEquipment` al construir el estado).
+- Estado `PARTIALLY_LAID` (tendido parcial) y acción del mismo nombre. `Cable.looseEnd`
+  (`ORIGIN`/`DESTINATION`) y `Cable.looseEndTrayId` dicen qué punta quedó suelta y en qué
+  bandeja espera; la restricción `cable_loose_end_check` exige que solo un cable tendido a
+  medias los tenga. El historial guarda el código de la bandeja, no su id.
+- `CableType.code`: código del tipo en el listado eléctrico (`C0802`). Los nombres de los tres
+  catálogos son únicos sin distinguir mayúsculas (índice único sobre `lower(name)`).
+- `CableEvent.source` (`APP` / `PROJECT_LOAD`): quién escribió el evento, una persona en la
+  app o la carga de los listados. La carga lo usa para no pisar lo que alguien corrigió a mano.
+- Los límites de longitud de los textos de un cable (`CABLE_TEXT_LIMITS` en `packages/shared`)
+  son los mismos en el formulario y en la carga.
+
+### Planos y timbrado (fase 7.5)
+
+- `DrawingSheet`: hoja de los planos de recorrido (plano, hoja, título, página, tamaño en
+  puntos, `imageKey` de sus teselas y `fingerprint`). `TrayDrawing.marks` (JSON validado con
+  `drawingMarkSchema` de `packages/shared`) dice dónde está la bandeja en la hoja, y
+  `TrayDrawing.sheetId` la enlaza con su `DrawingSheet`.
+- Las teselas viven fuera de git (`DRAWINGS_DIR`, por defecto `private-data/drawings`).
+  `apps/web/src/server/drawings/store.ts` es la única pieza que sabe dónde están: en local,
+  esa carpeta; en producción (`DRAWINGS_S3_*`), un bucket privado de Cloudflare R2 que llena
+  `pnpm data:upload` y que la app lee con peticiones firmadas (`aws4fetch`). Qué hojas hay lo
+  dice el manifiesto del bucket, que cada instancia relee una vez por minuto. La ruta
+  `GET /api/drawings/<clave>.dzi` y `…/<clave>_files/<nivel>/<x>_<y>.webp` solo acepta esas
+  dos formas de ruta. El descriptor (`.dzi`) siempre comprueba la sesión y deja una cookie
+  firmada de 10 minutos (`drawing_access`, `HttpOnly`, solo para `/api/drawings`, se borra al
+  cerrar sesión); las teselas solo comprueban esa firma, sin consultar la base cada una
+  (`server/drawings/access.ts`). Todo va con `Cache-Control: private, no-cache` y `ETag`: el
+  navegador las guarda pero pregunta siempre, y el 304 llega después de comprobar el acceso.
+  Si hay hojas cargadas sin imagen, el inicio del administrador lo avisa.
+- El visor es OpenSeadragon (BSD), cargado solo en el navegador: zoom con rueda, dos dedos o
+  teclado (flechas, + y −, 0; sin girar ni voltear), pantalla completa y marcas superpuestas
+  en HTML. Es `role="application"`, con la ayuda de las teclas para los lectores de pantalla. Cada marca es un marco en coordenadas del
+  plano (ajustado al texto que marca, con `w`/`h` guardados en la extracción); la flecha y el
+  número van a tamaño fijo en pantalla.
+- Enlaces: `apps/web/src/lib/links.ts` dice a dónde lleva cada cosa (ubicación → su página,
+  equipo o nivel → el buscador filtrado, bandeja → su ficha), para que todas las páginas
+  enlacen igual.
+- `Cable.testStatus` (`NOT_TESTED`, `TESTED_OK`, `TESTED_FAILED`) y la acción `TESTED`
+  ("Timbrar", permiso `cable:test` para técnico, supervisor y administrador). Es
+  independiente del tendido y la conexión: tender, enrollar o mover no lo cambian; solo otro
+  timbrado o una corrección. Un fallo exige una nota.
+- Una punta suelta en una bandeja que no está en el recorrido previsto se acepta si quien la
+  registra lo confirma (`confirmOffRoute`); las correcciones del supervisor no lo piden.
+
 ## Seguridad
 
 - Contraseñas con hash (gestionado por Better Auth, scrypt/argon2).
 - Tokens de recuperación de un solo uso, con caducidad y almacenados con hash.
 - La respuesta de "olvidé mi contraseña" es siempre la misma, exista o no el email (no revela usuarios).
-- Registro abierto con verificación de email obligatoria. Toda cuenta nueva es `VIEWER` activa
-  (lo fuerza un hook en el servidor, el cliente no puede elegir rol). Registrarse con un correo
-  que ya existe da la misma respuesta y solo avisa por correo al dueño real.
-- Las cuentas desactivadas no pueden abrir sesión (hook `session.create.before`).
+- Cualquiera puede **pedir** una cuenta, con verificación de email obligatoria, pero no entra
+  hasta que un administrador la **aprueba** en `/admin/users` (decisión del 2026-11-13: la app
+  guarda los datos reales del cliente). La cuenta nueva es `VIEWER` e inactiva (lo fuerza un
+  hook en el servidor, el cliente no puede elegir rol ni estado); `User.approvedAt` distingue
+  "pendiente de aprobación" de "desactivada". Al confirmar el correo se avisa a los
+  administradores, y al aprobarla, al usuario. El administrador elige el rol al aprobarla
+  (nunca uno superior al suyo), con la guía de roles (`ROLE_DESCRIPTIONS`) a la vista.
+  Registrarse con un correo que ya existe da la misma respuesta y solo avisa por correo al
+  dueño real.
+- Auditoría de cuentas: cada alta, aprobación, cambio de rol, desactivación o reactivación
+  queda en `UserEvent` (quién, a quién, roles), en la misma transacción que el cambio. Un
+  trigger rechaza `UPDATE` y `DELETE`, como en `cable_event`.
+- Las cuentas pendientes o desactivadas no pueden abrir sesión (hook `session.create.before`).
+- Nadie cambia su propio nombre, correo o imagen: el historial enseña el nombre actual de
+  quien hizo cada cosa, así que `POST /api/auth/update-user` se rechaza (hook
+  `user.update.before`). Los nombres los fija el registro o un administrador.
 - Toda Server Action / Route Handler valida la sesión, el rol y la entrada (Zod) en el servidor.
-- Rate limiting en endpoints de autenticación, con contadores en base de datos (tabla `rateLimit`).
-- Ningún secreto en el repositorio; solo `.env.example`.
+  Los cargadores que comparten `generateMetadata` y la página pasan por `whenSignedIn`: el
+  proxy solo comprueba que exista la cookie.
+- Límite de intentos en los endpoints de autenticación, con contadores en base de datos (tabla
+  `rateLimit`), en dos niveles:
+  - **por IP**: 30 inicios de sesión por minuto (toda la planta comparte IP), 3 registros y 3
+    peticiones de recuperación;
+  - **por cuenta**: 10 contraseñas incorrectas seguidas bloquean ese correo 15 minutos, venga
+    de la IP que venga, exista o no la cuenta (`server/login-throttle.ts`).
+
+  La IP sale solo de las cabeceras de `AUTH_IP_HEADERS`, las que pone el proxy de delante
+  sustituyendo lo que mande el cliente (en Vercel, `x-real-ip`). Cada día, Vercel Cron llama a
+  `/api/cron/cleanup` (con `CRON_SECRET`), que borra tokens de verificación y sesiones
+  caducados y contadores de más de un día.
+
+- La redirección tras el login solo acepta rutas internas, resueltas como las resuelve el
+  navegador (`safeNextPath`).
+- Cabeceras en todas las rutas: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy` y `X-Robots-Tag: noindex, nofollow` (más `robots.txt`: herramienta
+  interna).
+- CSP completa en las páginas (`lib/csp.ts`, la pone el proxy): scripts solo de la propia app
+  y con el nonce de cada petición (`strict-dynamic`), nada de otros sitios, `frame-ancestors
+'none'`, `object-src 'none'`. Por eso todas las páginas se generan en cada petición (el
+  layout raíz llama a `connection()`): una página estática no llevaría el nonce.
+- Logs del servidor en JSON, una línea por evento (`server/log.ts`); los errores no
+  controlados llegan por `onRequestError` (`instrumentation.ts`), con la ruta sin la query.
+- La app usa en producción un usuario de la base sin propiedad de las tablas ni `TRUNCATE`
+  (no puede saltarse los triggers); las migraciones van con otro (`DATABASE_URL_MIGRATE`).
+- Ningún secreto en el repositorio; solo `.env.example`. El seed se niega a crear en
+  producción el administrador con el correo o la contraseña de ejemplo.

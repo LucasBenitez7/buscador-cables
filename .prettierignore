@@ -11,3 +11,6 @@ apps/web/AGENTS.md
 apps/web/next-env.d.ts
 # Configuración local de herramientas (ignorada por git)
 .claude/settings.local.json
+
+# Configuración local de herramientas (no se versiona).
+.claude

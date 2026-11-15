@@ -4,11 +4,21 @@ import type { Role } from "@cables/shared";
 import { verifyPassword } from "better-auth/crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CurrentUser } from "@/server/session";
-import { UserServiceError, changeUserRole, createUser, listUsers, setUserActive } from "./service";
+import {
+  UserServiceError,
+  changeUserRole,
+  createUser,
+  listUserEvents,
+  listUsers,
+  setUserActive,
+} from "./service";
 
 const PASSWORD = "clave-temporal-1";
 
-async function insertUser(role: Role, overrides: { active?: boolean } = {}): Promise<CurrentUser> {
+async function insertUser(
+  role: Role,
+  overrides: { active?: boolean; approved?: boolean } = {},
+): Promise<CurrentUser> {
   const id = randomUUID();
   const user = await prisma.user.create({
     data: {
@@ -17,6 +27,7 @@ async function insertUser(role: Role, overrides: { active?: boolean } = {}): Pro
       email: `${id}@cables.test`,
       role,
       active: overrides.active ?? true,
+      approvedAt: (overrides.approved ?? true) ? new Date() : null,
     },
   });
   return { id: user.id, name: user.name, email: user.email, role };
@@ -34,8 +45,11 @@ async function insertSession(userId: string): Promise<void> {
 }
 
 beforeEach(async () => {
-  // Sesiones y cuentas se borran en cascada.
-  await prisma.user.deleteMany();
+  // Otros tests dejan cables y eventos que apuntan a usuarios (el historial usa RESTRICT):
+  // se vacía todo lo que depende de "user". Sesiones y cuentas caen en cascada.
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+  );
 });
 
 describe("createUser", () => {
@@ -49,7 +63,15 @@ describe("createUser", () => {
       password: PASSWORD,
     });
 
-    expect(created).toMatchObject({ email: "ana@cables.test", role: "TECHNICIAN", active: true });
+    expect(created).toMatchObject({
+      email: "ana@cables.test",
+      role: "TECHNICIAN",
+      active: true,
+      pending: false,
+    });
+    // Un alta hecha por un administrador ya está aprobada.
+    const stored = await prisma.user.findUniqueOrThrow({ where: { id: created.id } });
+    expect(stored.approvedAt).not.toBeNull();
     const account = await prisma.account.findFirstOrThrow({ where: { userId: created.id } });
     expect(account.providerId).toBe("credential");
     expect(account.accountId).toBe(created.id);
@@ -152,9 +174,39 @@ describe("setUserActive", () => {
     const admin = await insertUser("ADMIN");
     const viewer = await insertUser("VIEWER", { active: false });
 
-    await setUserActive(admin, { userId: viewer.id, active: true });
+    const result = await setUserActive(admin, { userId: viewer.id, active: true });
 
     expect((await prisma.user.findUniqueOrThrow({ where: { id: viewer.id } })).active).toBe(true);
+    // Ya estaba aprobada: reactivarla no es una aprobación y no hay que avisar a nadie.
+    expect(result.approved).toBeNull();
+  });
+
+  // Revisión F0-F7 (A2): la cuenta registrada espera a que un administrador la apruebe.
+  it("approves a self-registered account the first time it is activated", async () => {
+    const admin = await insertUser("ADMIN");
+    const applicant = await insertUser("VIEWER", { active: false, approved: false });
+
+    const result = await setUserActive(admin, { userId: applicant.id, active: true });
+
+    expect(result.approved).toEqual({ name: applicant.name, email: applicant.email });
+    const stored = await prisma.user.findUniqueOrThrow({ where: { id: applicant.id } });
+    expect(stored.active).toBe(true);
+    expect(stored.approvedAt).not.toBeNull();
+  });
+
+  // Revisión F0-F7 (B6): la comprobación y la escritura iban en consultas separadas y dos
+  // administradores que se desactivaban el uno al otro a la vez dejaban la app sin ninguno.
+  it("never leaves the app without an active admin when two admins act at once", async () => {
+    const first = await insertUser("ADMIN");
+    const second = await insertUser("ADMIN");
+
+    const results = await Promise.allSettled([
+      setUserActive(first, { userId: second.id, active: false }),
+      setUserActive(second, { userId: first.id, active: false }),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(await prisma.user.count({ where: { role: "ADMIN", active: true } })).toBe(1);
   });
 
   it("refuses to deactivate yourself", async () => {
@@ -178,18 +230,143 @@ describe("setUserActive", () => {
 });
 
 describe("listUsers", () => {
-  it("lists active users first, then by name", async () => {
+  it("lists accounts waiting for approval first, then active users, then by name", async () => {
     const id = () => randomUUID();
+    const approvedAt = new Date();
     await prisma.user.createMany({
       data: [
-        { id: id(), name: "Zoe", email: "zoe@cables.test", role: "VIEWER" },
-        { id: id(), name: "Ana", email: "ana@cables.test", role: "VIEWER", active: false },
-        { id: id(), name: "Bea", email: "bea@cables.test", role: "TECHNICIAN" },
+        { id: id(), name: "Zoe", email: "zoe@cables.test", role: "VIEWER", approvedAt },
+        {
+          id: id(),
+          name: "Ana",
+          email: "ana@cables.test",
+          role: "VIEWER",
+          active: false,
+          approvedAt,
+        },
+        { id: id(), name: "Bea", email: "bea@cables.test", role: "TECHNICIAN", approvedAt },
+        { id: id(), name: "Nico", email: "nico@cables.test", role: "VIEWER", active: false },
       ],
     });
 
     const users = await listUsers();
 
-    expect(users.map((user) => user.name)).toEqual(["Bea", "Zoe", "Ana"]);
+    expect(users.map((user) => user.name)).toEqual(["Nico", "Bea", "Zoe", "Ana"]);
+    expect(users.map((user) => user.pending)).toEqual([true, false, false, false]);
+  });
+});
+
+// Fase 10: el administrador elige el rol al aprobar, y queda registro de cada cambio.
+describe("approval with a role", () => {
+  it("approves a new account with the role chosen", async () => {
+    const admin = await insertUser("ADMIN");
+    const pending = await insertUser("VIEWER", { active: false, approved: false });
+
+    await setUserActive(admin, { userId: pending.id, active: true, role: "TECHNICIAN" });
+
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: pending.id } })).toMatchObject({
+      active: true,
+      role: "TECHNICIAN",
+      approvedAt: expect.any(Date),
+    });
+  });
+
+  it("does not let a supervisor approve someone as administrator", async () => {
+    const supervisor = await insertUser("SUPERVISOR");
+    const pending = await insertUser("VIEWER", { active: false, approved: false });
+
+    await expect(
+      setUserActive(supervisor, { userId: pending.id, active: true, role: "ADMIN" }),
+    ).rejects.toThrow(UserServiceError);
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: pending.id } })).toMatchObject({
+      active: false,
+      role: "VIEWER",
+    });
+  });
+
+  it("only uses the role when approving, not when reactivating", async () => {
+    const admin = await insertUser("ADMIN");
+    const off = await insertUser("TECHNICIAN", { active: false });
+
+    await setUserActive(admin, { userId: off.id, active: true, role: "SUPERVISOR" });
+
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: off.id } })).role).toBe(
+      "TECHNICIAN",
+    );
+  });
+});
+
+describe("account audit", () => {
+  it("records who created, approved, changed the role of and deactivated whom", async () => {
+    const admin = await insertUser("ADMIN");
+    const pending = await insertUser("VIEWER", { active: false, approved: false });
+    const created = await createUser(admin, {
+      name: "Ana Pérez",
+      email: "ana@cables.test",
+      role: "TECHNICIAN",
+      password: PASSWORD,
+    });
+    await setUserActive(admin, { userId: pending.id, active: true, role: "TECHNICIAN" });
+    await changeUserRole(admin, { userId: created.id, role: "SUPERVISOR" });
+    // Sin cambio de rol no hay nada que registrar.
+    await changeUserRole(admin, { userId: created.id, role: "SUPERVISOR" });
+    await setUserActive(admin, { userId: created.id, active: false });
+    await setUserActive(admin, { userId: created.id, active: true });
+
+    const events = await listUserEvents();
+
+    expect(
+      events.reverse().map(({ action, actor, target, fromRole, toRole }) => ({
+        action,
+        actor,
+        target,
+        fromRole,
+        toRole,
+      })),
+    ).toEqual([
+      {
+        action: "CREATED",
+        actor: admin.name,
+        target: "Ana Pérez",
+        fromRole: null,
+        toRole: "TECHNICIAN",
+      },
+      {
+        action: "APPROVED",
+        actor: admin.name,
+        target: pending.name,
+        fromRole: null,
+        toRole: "TECHNICIAN",
+      },
+      {
+        action: "ROLE_CHANGED",
+        actor: admin.name,
+        target: "Ana Pérez",
+        fromRole: "TECHNICIAN",
+        toRole: "SUPERVISOR",
+      },
+      {
+        action: "DEACTIVATED",
+        actor: admin.name,
+        target: "Ana Pérez",
+        fromRole: null,
+        toRole: null,
+      },
+      {
+        action: "REACTIVATED",
+        actor: admin.name,
+        target: "Ana Pérez",
+        fromRole: null,
+        toRole: null,
+      },
+    ]);
+  });
+
+  it("records nothing when the change is refused", async () => {
+    const admin = await insertUser("ADMIN");
+
+    await expect(setUserActive(admin, { userId: admin.id, active: false })).rejects.toThrow();
+
+    expect(await listUserEvents()).toEqual([]);
   });
 });

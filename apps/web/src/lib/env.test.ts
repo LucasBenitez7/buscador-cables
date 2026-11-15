@@ -11,7 +11,18 @@ describe("environment contract used by lib/env", () => {
       SMTP_HOST: "localhost",
       SMTP_PORT: 1025,
       EMAIL_FROM: "no-reply@cables.local",
+      DRAWINGS_DIR: "private-data/drawings",
+      AUTH_IP_HEADERS: ["x-forwarded-for"],
     });
+  });
+
+  // Fase 10: la IP del límite de intentos sale solo de la cabecera que pone el proxy.
+  it("reads the trusted IP headers as a list and an empty cron secret as none", () => {
+    const parsed = parseEnvironment({ AUTH_IP_HEADERS: " X-Real-IP, ", CRON_SECRET: "" });
+
+    expect(parsed.AUTH_IP_HEADERS).toEqual(["x-real-ip"]);
+    expect(parsed.CRON_SECRET).toBeUndefined();
+    expect(() => parseEnvironment({ CRON_SECRET: "corto" })).toThrow();
   });
 
   it("keeps DATABASE_URL undefined when absent so lib/env can reject it", () => {

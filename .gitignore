@@ -18,3 +18,24 @@ apps/web/next-env.d.ts
 Thumbs.db
 .vercel
 packages/db/src/generated/
+
+# Sesiones guardadas por los E2E
+apps/web/e2e/.auth/
+
+# Datos reales del proyecto (PDFs del cliente y lo que se extrae de ellos). El repo es
+# público: nunca se suben. Solo se versiona el README de la carpeta.
+/private-data/*
+!/private-data/README.md
+# Por si acaso, ningún PDF, Excel o CSV fuera de las carpetas de ejemplos de los tests. La
+# excepción es por extensión: reabrir la carpeta entera dejaría subir también un .env.
+*.pdf
+*.xlsx
+*.xls
+*.csv
+!**/__fixtures__/**/*.pdf
+!**/__fixtures__/**/*.xlsx
+!**/__fixtures__/**/*.xls
+!**/__fixtures__/**/*.csv
+
+# Configuración local de Claude Code (permisos, servidores de vista previa).
+/.claude/

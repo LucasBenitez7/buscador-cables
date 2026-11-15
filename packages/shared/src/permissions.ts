@@ -20,8 +20,10 @@ export const PERMISSIONS = [
   "cable:connect",
   "cable:disconnect",
   "cable:move",
+  "cable:test",
   "cable:retire",
   "cable:correct",
+  "activity:view",
   "location:manage",
   "catalog:manage",
   "import:run",
@@ -39,6 +41,45 @@ export const ROLE_LABELS: Record<Role, string> = {
   VIEWER: "Consulta",
 };
 
+/**
+ * What each role can do, in the words of the people who use the app: the administrator reads
+ * it to choose a role (users page, approval of an account). Each role can also do everything
+ * of the roles below it. Kept in step with `ROLE_PERMISSIONS` by the tests.
+ */
+export const ROLE_DESCRIPTIONS: Record<Role, { summary: string; can: readonly string[] }> = {
+  VIEWER: {
+    summary: "Consulta sin cambiar nada.",
+    can: [
+      "Buscar cables y ver su ficha, su recorrido y su historial.",
+      "Ver bandejas, ubicaciones y los planos con la bandeja marcada.",
+    ],
+  },
+  TECHNICIAN: {
+    summary: "Trabajo en campo: lo de Consulta y registrar lo que hace con cada cable.",
+    can: [
+      "Tender (también a medias, indicando dónde está), enrollar y mover cables.",
+      "Conectar, desconectar y timbrar.",
+      "Dar de alta y editar cables.",
+    ],
+  },
+  SUPERVISOR: {
+    summary: "Coordina la obra: lo de Técnico y supervisar y ordenar los datos.",
+    can: [
+      "Ver la actividad de todo el equipo.",
+      "Dar de baja cables y corregir su estado.",
+      "Gestionar ubicaciones y catálogos (tipos, colores, fabricantes).",
+    ],
+  },
+  ADMIN: {
+    summary: "Gestiona la aplicación: lo de Supervisor y las cuentas.",
+    can: [
+      "Aprobar cuentas nuevas, cambiar roles y desactivar o reactivar cuentas.",
+      "Dar de alta usuarios.",
+      "Eliminar cables.",
+    ],
+  },
+};
+
 const VIEWER_PERMISSIONS: readonly Permission[] = ["cable:read", "export:run"];
 
 const TECHNICIAN_PERMISSIONS: readonly Permission[] = [
@@ -50,12 +91,16 @@ const TECHNICIAN_PERMISSIONS: readonly Permission[] = [
   "cable:connect",
   "cable:disconnect",
   "cable:move",
+  // Timbrar: lo hace quien está en campo con el cable.
+  "cable:test",
 ];
 
 const SUPERVISOR_PERMISSIONS: readonly Permission[] = [
   ...TECHNICIAN_PERMISSIONS,
   "cable:retire",
   "cable:correct",
+  // "Actividad reciente": todas las acciones de todos. Cada uno ve siempre la suya.
+  "activity:view",
   "location:manage",
   "catalog:manage",
   "import:run",

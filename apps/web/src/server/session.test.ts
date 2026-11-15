@@ -14,7 +14,8 @@ vi.mock("@/lib/auth", () => ({ auth: { api: { getSession } } }));
 
 // `cache` de React solo deduplica dentro de una petición de React; fuera de ella
 // se comporta como la función original, que es lo que queremos probar aquí.
-const { authorize, getCurrentUser, requirePermission, requireUser } = await import("./session");
+const { authorize, getCurrentUser, requirePermission, requireUser, whenSignedIn } =
+  await import("./session");
 
 function sessionFor(user: { role: string; active: boolean }) {
   return {
@@ -27,6 +28,31 @@ describe("session helpers", () => {
   beforeEach(() => {
     getSession.mockReset();
     redirect.mockClear();
+  });
+
+  // Revisión F0-F7 (B1): generateMetadata leía el cable o la bandeja sin comprobar la sesión.
+  describe("whenSignedIn", () => {
+    it("does not run the loader without a valid session", async () => {
+      getSession.mockResolvedValue(null);
+      const load = vi.fn(async () => "datos");
+
+      await expect(whenSignedIn(load)).resolves.toBeNull();
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it("does not run the loader for a deactivated account", async () => {
+      getSession.mockResolvedValue(sessionFor({ role: "ADMIN", active: false }));
+      const load = vi.fn(async () => "datos");
+
+      await expect(whenSignedIn(load)).resolves.toBeNull();
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it("returns what the loader returns for a signed-in user", async () => {
+      getSession.mockResolvedValue(sessionFor({ role: "VIEWER", active: true }));
+
+      await expect(whenSignedIn(async () => "datos")).resolves.toBe("datos");
+    });
   });
 
   describe("getCurrentUser", () => {

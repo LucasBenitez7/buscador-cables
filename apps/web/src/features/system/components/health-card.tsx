@@ -20,7 +20,7 @@ export function HealthCard({ database }: { database: HealthStatus }) {
           data-testid="health-database"
           data-status={database}
           className={
-            isOk ? "text-sm font-medium text-emerald-600" : "text-destructive text-sm font-medium"
+            isOk ? "text-success text-sm font-medium" : "text-destructive text-sm font-medium"
           }
         >
           {LABELS[database]}

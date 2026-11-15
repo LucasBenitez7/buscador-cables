@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TEXT_LINK_SM } from "@/components/ui/text-link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { PASSWORD_MIN_LENGTH } from "@cables/shared";
@@ -26,7 +27,7 @@ export function ResetPasswordForm({
         <p role="alert" className="text-destructive text-sm">
           El enlace no es válido o ha caducado. Pide uno nuevo.
         </p>
-        <Link href="/forgot-password" className="text-sm underline underline-offset-4">
+        <Link href="/forgot-password" className={TEXT_LINK_SM}>
           Solicitar un enlace nuevo
         </Link>
       </div>

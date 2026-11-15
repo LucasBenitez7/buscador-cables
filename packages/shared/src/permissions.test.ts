@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   PERMISSIONS,
   ROLES,
+  ROLE_DESCRIPTIONS,
   ROLE_PERMISSIONS,
   canManageActor,
   hasAnyPermission,
   hasPermission,
   isRole,
+  type Permission,
+  type Role,
 } from "./permissions";
 
 describe("isRole", () => {
@@ -120,6 +123,39 @@ describe("role hierarchy is monotonic", () => {
       for (const permission of lower) {
         expect(higher).toContain(permission);
       }
+    }
+  });
+});
+
+// Fase 10: lo que el administrador lee para elegir un rol tiene que ser verdad.
+describe("ROLE_DESCRIPTIONS", () => {
+  const says = (role: Role, text: RegExp) =>
+    ROLE_DESCRIPTIONS[role].can.some((line) => text.test(line));
+  const firstWith = (permission: Permission) =>
+    [...ROLES].reverse().find((role) => hasPermission(role, permission));
+
+  it("describes every role", () => {
+    for (const role of ROLES) {
+      expect(ROLE_DESCRIPTIONS[role].summary).not.toBe("");
+      expect(ROLE_DESCRIPTIONS[role].can.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("names each power in the first role that has it", () => {
+    const powers: [Permission, RegExp][] = [
+      ["cable:read", /Buscar cables/],
+      ["cable:lay", /Tender/],
+      ["cable:test", /timbrar/],
+      ["cable:create", /alta y editar cables/],
+      ["activity:view", /actividad de todo el equipo/],
+      ["cable:retire", /Dar de baja cables/],
+      ["catalog:manage", /catálogos/],
+      ["location:manage", /ubicaciones y catálogos/],
+      ["user:manage", /Aprobar cuentas/],
+      ["cable:delete", /Eliminar cables/],
+    ];
+    for (const [permission, text] of powers) {
+      expect(says(firstWith(permission)!, text), permission).toBe(true);
     }
   });
 });

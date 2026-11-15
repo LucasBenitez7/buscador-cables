@@ -9,6 +9,8 @@ describe("parseEnvironment", () => {
       SMTP_HOST: "localhost",
       SMTP_PORT: 1025,
       EMAIL_FROM: "no-reply@cables.local",
+      DRAWINGS_DIR: "private-data/drawings",
+      AUTH_IP_HEADERS: ["x-forwarded-for"],
     });
   });
 

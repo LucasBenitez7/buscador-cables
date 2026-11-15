@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@cables/db";
+import { logError } from "@/server/log";
 
 export type HealthStatus = "ok" | "error";
 
@@ -21,7 +22,7 @@ export async function getHealth(): Promise<HealthReport> {
     return { ...base, status: "ok", database: "ok" };
   } catch (error) {
     // `/api/health` es público: el detalle (host, usuario, motivo) solo va al log.
-    console.error("Health check: la base de datos no responde", error);
+    logError("health", "La base de datos no responde", error);
     return { ...base, status: "error", database: "error" };
   }
 }

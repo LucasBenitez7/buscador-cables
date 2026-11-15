@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ROLES, ROLE_LABELS, canManageActor, isRole, type Role } from "@cables/shared";
+import {
+  ROLES,
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+  canManageActor,
+  isRole,
+  type Role,
+} from "@cables/shared";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import { changeRoleAction, setUserActiveAction, type ActionResult } from "@/features/users/actions";
 import type { UserRow } from "@/server/users/service";
 
@@ -12,11 +20,15 @@ type Props = {
   currentRole: Role;
 };
 
+/** Etiqueta de cada dato en el móvil, donde la tabla se apila como tarjetas. */
+const CELL =
+  "flex items-center justify-between gap-3 py-1 before:text-muted-foreground before:content-[attr(data-label)] md:table-cell md:px-4 md:py-3 md:before:content-none";
+
 export function UsersTable({ users, currentUserId, currentRole }: Props) {
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-muted/50 text-muted-foreground">
+    <div className="rounded-lg border md:overflow-x-auto">
+      <table className="block w-full text-left text-sm md:table">
+        <thead className="bg-muted/50 text-muted-foreground hidden text-xs tracking-wide uppercase md:table-header-group">
           <tr>
             <th className="px-4 py-2 font-medium">Nombre</th>
             <th className="px-4 py-2 font-medium">Correo</th>
@@ -25,10 +37,12 @@ export function UsersTable({ users, currentUserId, currentRole }: Props) {
             <th className="px-4 py-2 font-medium">Acciones</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="block md:table-row-group">
           {users.map((user) => (
             <UserRowView
-              key={user.id}
+              // La clave incluye el rol: si otro administrador lo cambia y la tabla se
+              // revalida, la fila se vuelve a montar con el rol real.
+              key={`${user.id}:${user.role}`}
               user={user}
               isSelf={user.id === currentUserId}
               currentRole={currentRole}
@@ -55,6 +69,8 @@ function UserRowView({
   const [pending, startTransition] = useTransition();
   const manageable = !isSelf && canManageActor(currentRole, user.role);
   const assignable = ROLES.filter((role) => canManageActor(currentRole, role));
+  // Una cuenta nueva: el rol elegido no se guarda hasta aprobarla, y se aprueba con él.
+  const approving = manageable && user.pending;
 
   function run(
     action: (formData: FormData) => Promise<ActionResult>,
@@ -75,21 +91,27 @@ function UserRowView({
   }
 
   function changeRole(next: Role) {
+    if (approving) {
+      setRole(next);
+      return;
+    }
     const previous = role;
     setRole(next);
     run(changeRoleAction, { userId: user.id, role: next }, () => setRole(previous));
   }
 
   return (
-    <tr className="border-t align-top">
-      <td className="px-4 py-3 font-medium">
+    <tr className="hover:bg-muted/40 block border-t p-3 align-top transition-colors first:border-t-0 md:table-row md:p-0 md:first:border-t">
+      <td className="block pb-1 text-base font-medium md:table-cell md:px-4 md:py-3 md:text-sm">
         {user.name}
         {isSelf ? <span className="text-muted-foreground ml-2 text-xs">(tú)</span> : null}
       </td>
-      <td className="px-4 py-3">{user.email}</td>
-      <td className="px-4 py-3">
+      <td data-label="Correo" className={`${CELL} break-all`}>
+        {user.email}
+      </td>
+      <td data-label="Rol" className={CELL}>
         {manageable ? (
-          <select
+          <NativeSelect
             aria-label={`Rol de ${user.name}`}
             value={role}
             disabled={pending}
@@ -99,7 +121,7 @@ function UserRowView({
                 changeRole(next);
               }
             }}
-            className="border-input bg-background h-8 rounded-lg border px-2 text-sm"
+            className="w-auto"
           >
             {assignable.includes(user.role) ? null : (
               <option value={user.role}>{ROLE_LABELS[user.role]}</option>
@@ -109,18 +131,35 @@ function UserRowView({
                 {ROLE_LABELS[role]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         ) : (
           ROLE_LABELS[user.role]
         )}
+        {approving ? (
+          <p className="text-muted-foreground mt-1 max-w-56 text-xs">
+            {ROLE_DESCRIPTIONS[role].summary}
+          </p>
+        ) : null}
       </td>
-      <td className="px-4 py-3">
-        <span className={user.active ? "text-emerald-600" : "text-muted-foreground"}>
-          {user.active ? "Activo" : "Desactivado"}
+      <td data-label="Estado" className={CELL}>
+        <span
+          className={
+            user.active ? "text-success" : user.pending ? "text-warning" : "text-muted-foreground"
+          }
+        >
+          {user.active ? "Activo" : user.pending ? "Pendiente de aprobación" : "Desactivado"}
         </span>
       </td>
-      <td className="px-4 py-3">
-        {manageable ? (
+      <td className="block pt-2 md:table-cell md:px-4 md:py-3">
+        {approving ? (
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() => run(setUserActiveAction, { userId: user.id, active: "true", role })}
+          >
+            Aprobar como {ROLE_LABELS[role]}
+          </Button>
+        ) : manageable ? (
           <Button
             variant="outline"
             size="sm"
