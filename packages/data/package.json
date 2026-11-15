@@ -12,12 +12,14 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
-    "render": "tsx src/cli/render.ts"
+    "render": "tsx src/cli/render.ts",
+    "upload": "tsx --env-file-if-exists=../../.env src/cli/upload.ts"
   },
   "dependencies": {
     "@cables/db": "workspace:*",
     "@cables/shared": "workspace:*",
     "@napi-rs/canvas": "1.1.1",
+    "aws4fetch": "1.0.20",
     "pdfjs-dist": "6.4.299",
     "sharp": "0.35.5",
     "zod": "^4.6.7"

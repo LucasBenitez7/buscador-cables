@@ -24,6 +24,7 @@
     "data:extract": "pnpm --filter @cables/data extract",
     "data:render": "pnpm --filter @cables/data render",
     "data:load": "pnpm --filter @cables/data load",
+    "data:upload": "pnpm --filter @cables/data upload",
     "prepare": "husky"
   },
   "lint-staged": {

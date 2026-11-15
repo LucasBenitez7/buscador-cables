@@ -17,6 +17,12 @@ export const environmentSchema = z.object({
   BETTER_AUTH_URL: optionalUrl,
   // Teselas de los planos (`pnpm data:render`). Relativa a la raíz del monorepo o absoluta.
   DRAWINGS_DIR: z.string().trim().min(1).default("private-data/drawings"),
+  // Teselas en un almacenamiento privado compatible con S3 (Cloudflare R2) en producción. Sin
+  // ellas, la app las lee de DRAWINGS_DIR. Ver `drawingsBucket`.
+  DRAWINGS_S3_ENDPOINT: optionalUrl,
+  DRAWINGS_S3_BUCKET: z.string().trim().optional(),
+  DRAWINGS_S3_ACCESS_KEY_ID: z.string().trim().optional(),
+  DRAWINGS_S3_SECRET_ACCESS_KEY: z.string().trim().optional(),
 });
 
 export type AppEnvironment = z.infer<typeof environmentSchema>;
