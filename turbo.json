@@ -5,6 +5,7 @@
     "NODE_ENV",
     "DATABASE_URL",
     "DATABASE_URL_TEST",
+    "DATABASE_POOL_MAX",
     "APP_URL",
     "SMTP_HOST",
     "SMTP_PORT",
