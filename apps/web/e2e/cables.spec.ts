@@ -62,6 +62,9 @@ test("alta, edición y baja de un cable", async ({ page }) => {
 test("avisa si otra persona ha editado el cable mientras tanto", async ({ page, context }) => {
   await openCable(page, CABLES.concurrency.code);
   await page.getByRole("link", { name: "Editar datos" }).click();
+  // Esperar al formulario: `page.url()` justo tras el clic aún era la ficha, y la segunda
+  // pestaña abría la ficha en lugar del formulario (fallo intermitente en el CI de main).
+  await expect(page).toHaveURL(/\/cables\/[^/]+\/edit$/);
   const other = await context.newPage();
   await other.goto(page.url());
 
