@@ -9,7 +9,11 @@ estado de instalación (enrollado / tendido), estado de conexión y trazabilidad
 ## Documentación
 
 - [Plan y fases](docs/PLAN.md)
+- [Manual de usuario](docs/MANUAL-USUARIO.md)
+- [Manual de despliegue](docs/DESPLIEGUE.md)
 - [Arquitectura y modelo de datos](docs/ARQUITECTURA.md)
+- [Datos reales del proyecto (extracción y carga)](docs/DATOS-PROYECTO.md)
+- [Registro de revisiones](docs/REVISIONES.md)
 - [Reglas de trabajo (ramas, commits, tests)](CONTRIBUTING.md)
 - [Instrucciones para agentes de IA](AGENTS.md)
 
@@ -20,7 +24,7 @@ estado de instalación (enrollado / tendido), estado de conexión y trazabilidad
 - Docker Desktop
 - GitHub CLI (`gh`) con sesión iniciada, para abrir los Pull Requests (desde la fase 4.5)
 
-## Puesta en marcha (disponible tras la fase 0)
+## Puesta en marcha en local
 
 ```bash
 cp .env.example .env
@@ -33,3 +37,8 @@ pnpm dev
 
 - App: http://localhost:3000
 - Mailpit (emails de prueba): http://localhost:8025
+
+## Producción
+
+Vercel (web) + Railway (PostgreSQL) + Cloudflare R2 (planos) + Resend (correo). Se despliega
+desde `main`; todo el proceso, en el [manual de despliegue](docs/DESPLIEGUE.md).

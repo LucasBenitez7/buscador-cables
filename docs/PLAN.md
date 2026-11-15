@@ -555,7 +555,7 @@ cliente cuando se decida.
 ### Revisión de las fases 0 a 7 (2026-11-13)
 
 Rama `fix/review-f0-f7`. Lista de hallazgos y lo que se hizo con cada uno en
-`docs/REVISION-F0-F7.md`; resumen en `docs/REVISIONES.md`.
+el PR #29; resumen en `docs/REVISIONES.md`.
 
 - [x] Hallazgos altos y medios corregidos, con tests: redirección tras el login, aprobación
       de cuentas por un administrador, bloqueo del cambio de nombre, coherencia del estado al
@@ -640,7 +640,7 @@ planos, se sustituye el PDF y se repite `data:extract` → `data:render` → `da
 ### Revisión antes de desplegar (2026-11-15)
 
 Rama `fix/review-f7.5`. Lista de hallazgos y lo que se hizo con cada uno en
-`docs/REVISION-F7.5.md`; resumen en `docs/REVISIONES.md`.
+el PR #33; resumen en `docs/REVISIONES.md`.
 
 - [x] Códigos reales sustituidos por inventados y test que vigila todo el repositorio.
 - [x] Recarga idempotente de las marcas; teselas con un pase firmado por hoja y revalidadas
@@ -675,40 +675,52 @@ Viene de la fase 6, de donde salió el 2026-11-13.
 
 ## Fase 10 — Producción y endurecimiento (v1.0.0)
 
-- [ ] Despliegue: **Vercel** (web) + **Railway** (PostgreSQL gestionado).
-      Alternativa preparada: `Dockerfile` de producción por si se requiere servidor propio/intranet.
-- [ ] Planos en producción: elegir dónde viven las teselas (almacenamiento privado de objetos,
-      S3/R2 o similar, con la app de intermediaria; o servidor propio con un volumen para
-      `DRAWINGS_DIR`), adaptar `apps/web/src/server/drawings/store.ts` y añadir a
-      `data:render` el paso de subirlas. En Vercel no hay disco: sin esto la fase 7.5 no se ve
-      (el inicio del administrador avisa de las hojas sin imagen). Revisión F7.5, A2.
-- [ ] Conexiones a la base: `DATABASE_URL` por el pooler del proveedor y
-      `DATABASE_POOL_MAX` bajo (1-3) en un despliegue sin servidor; migraciones por la conexión
-      directa (ver `.env.example`). La migración `add_cable_event_source` necesita que el
-      usuario que migra sea dueño de la tabla.
-- [ ] Migraciones automáticas en el despliegue (`prisma migrate deploy`).
-- [ ] CSP completa y revisión OWASP básica. _(Las cabeceras que no dependen del despliegue
-      —`frame-ancestors`, `nosniff`, `Referrer-Policy`— están desde la revisión F0-F7.)_
-- [ ] Registro de auditoría de acciones de administración: quién aprobó, desactivó o cambió
-      el rol de cada cuenta. Con la aprobación de cuentas conviene no retrasarlo.
-- [ ] Límite de intentos: configurar las cabeceras de IP de confianza de Better Auth según el
-      proxy real (hoy la IP se podría falsear con `X-Forwarded-For`).
-- [ ] Usuario de base de datos de la app sin permiso `TRUNCATE` ni propiedad de las tablas: el
-      trigger de inmutabilidad de `cable_event` cubre `UPDATE` y `DELETE`, no `TRUNCATE`.
-- [ ] Limpieza periódica de las tablas `verification` y `rateLimit` (los contadores de login
-      por cuenta ya se limpian solos).
-- [ ] Backups automáticos de la base de datos y procedimiento de restauración probado.
-- [ ] Monitorización de errores (Sentry) y logs.
-- [ ] Manual de usuario y manual de despliegue.
-- [ ] Que la web no salga en buscadores: `robots.txt` que lo prohíba todo y cabecera
-      `X-Robots-Tag: noindex`.
-- [ ] Registro público: decidir si se cierra y las altas se dan desde el panel (con la web en
-      internet, cualquiera puede pedir cuenta y hacer que se envíen correos).
-- [ ] Correo real: proveedor SMTP y remitente con dominio propio; comprobar que llegan los
-      avisos de cuenta pendiente y de cuenta aprobada.
-- [ ] Primer administrador: `pnpm db:seed` con `NODE_ENV=production` y credenciales propias.
-- [ ] Llevar `dev` a `main` (merge por PR) antes de desplegar producción: la tabla de entornos
-      despliega producción desde `main`, que sigue en la fase 1.
+Rama `feat/f10-production`. Decisiones del 2026-11-15: **Vercel** (web) + **Railway**
+(PostgreSQL) + **Cloudflare R2** (planos) + **Resend** (correo); registro abierto con
+aprobación, eligiendo el rol al aprobar; errores en los logs (Sentry, más adelante). Cómo se
+despliega, paso a paso: `docs/DESPLIEGUE.md`.
+
+### En el código
+
+- [x] Planos en producción: teselas en un bucket privado de R2 (`DRAWINGS_S3_*`), servidas por
+      la app con sesión; `pnpm data:upload` sube solo las hojas que cambian. El inicio del
+      administrador avisa de las hojas sin imagen.
+- [x] Migraciones automáticas en el despliegue: `apps/web/vercel.json` aplica
+      `prisma migrate deploy` (con `DATABASE_URL_MIGRATE`) antes de compilar.
+- [x] CSP completa con un nonce por petición, y revisión OWASP básica (cabeceras, cookies,
+      validación y autorización ya revisadas en F0-F7 y F7.5).
+- [x] Registro de auditoría de las cuentas (`user_event`, inmutable): quién creó, aprobó,
+      cambió de rol, desactivó o reactivó a quién. Visible en Usuarios.
+- [x] Aprobar una cuenta eligiendo su rol, con la guía de qué puede hacer cada rol siempre a
+      la vista en Usuarios.
+- [x] Límite de intentos: IP del cliente solo de la cabecera que pone el proxy
+      (`AUTH_IP_HEADERS`; en Vercel, `x-real-ip`).
+- [x] Limpieza diaria (Vercel Cron, `/api/cron/cleanup` con `CRON_SECRET`) de tokens de
+      verificación, sesiones caducadas y contadores de intentos.
+- [x] Que la web no salga en buscadores: `robots.txt` y `X-Robots-Tag: noindex`.
+- [x] Conexiones a la base: `DATABASE_POOL_MAX` (3 en Vercel).
+- [x] Logs de errores del servidor en JSON (`instrumentation.ts`). Sentry queda como mejora.
+- [x] Copia y restauración de la base probadas (`pg_dump` / `pg_restore`, ver el manual).
+- [x] Manual de usuario (`docs/MANUAL-USUARIO.md`) y manual de despliegue
+      (`docs/DESPLIEGUE.md`).
+- [x] Documentación unificada: un solo registro de revisiones (`docs/REVISIONES.md`).
+- No se hace el `Dockerfile` de servidor propio: el despliegue es en Vercel. Se puede añadir si
+  algún día hace falta una intranet.
+
+### Lo que hace el responsable (cuentas y claves)
+
+- [ ] Llevar `dev` a `main` por PR (producción sale de `main`).
+- [ ] Railway: base de datos, migraciones y usuario `cables_app` sin propiedad ni `TRUNCATE`.
+- [ ] Cloudflare R2: bucket privado, tokens de escritura (local) y de lectura (Vercel);
+      `pnpm data:upload`.
+- [ ] Resend: dominio verificado y API key.
+- [ ] Vercel (plan Pro: es para un cliente): proyecto con raíz `apps/web`, rama de producción
+      `main`, variables de entorno y dominio.
+- [ ] Primer administrador (`pnpm db:seed` con `NODE_ENV=production`) y carga de los datos
+      reales (`pnpm data:load`).
+- [ ] Comprobaciones del manual (salud, planos, correos de alta y aprobación, cron).
+- [ ] Copias de seguridad: automáticas en Railway si el plan las tiene, y la manual semanal.
+- [ ] Publicar la **v1.0.0** (tag) cuando producción funcione.
 
 ---
 
