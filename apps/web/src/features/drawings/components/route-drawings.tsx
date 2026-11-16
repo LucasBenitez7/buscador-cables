@@ -1,9 +1,9 @@
 "use client";
 
-import { cn } from "cn";
 import { useState } from "react";
 import type { RouteSheet } from "@/server/drawings/route-sheets";
 import { DrawingViewer } from "./drawing-viewer";
+import { SheetPicker } from "./sheet-picker";
 
 /**
  * The cable's route on the drawings: on each sheet, its trays numbered in route order, green
@@ -17,28 +17,19 @@ export function RouteDrawings({ sheets }: { sheets: RouteSheet[] }) {
 
   return (
     <div className="space-y-3">
-      {sheets.length > 1 ? (
-        <div role="group" aria-label="Hojas del recorrido" className="flex flex-wrap gap-1.5">
-          {sheets.map((item, index) => (
-            <button
-              key={item.key}
-              type="button"
-              aria-pressed={index === selected}
-              onClick={() => setSelected(index)}
-              className={cn(
-                "focus-visible:ring-ring/50 rounded-md border px-2.5 py-1 text-xs transition-colors outline-none focus-visible:ring-3",
-                index === selected
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "hover:bg-muted bg-background",
-              )}
-            >
-              <span className="font-mono">{item.drawing}</span> · hoja {item.sheet} · {item.trays}{" "}
-              {item.trays === 1 ? "bandeja" : "bandejas"}
-              {item.hasLooseEnd ? " · está aquí" : ""}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <SheetPicker
+        label="Hojas del recorrido"
+        selected={selected}
+        onSelect={setSelected}
+        sheets={sheets.map((item) => ({
+          key: item.key,
+          drawing: item.drawing,
+          sheet: item.sheet,
+          title: item.title,
+          detail: `${item.trays} ${item.trays === 1 ? "bandeja del recorrido" : "bandejas del recorrido"}`,
+          accent: item.hasLooseEnd ? "Aquí está la punta suelta" : null,
+        }))}
+      />
       <DrawingViewer
         key={sheet.key}
         imageKey={sheet.key}

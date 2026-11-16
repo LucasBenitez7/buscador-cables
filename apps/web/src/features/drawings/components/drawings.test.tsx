@@ -259,9 +259,13 @@ describe("TrayDrawings", () => {
       />,
     );
 
-    const list = screen.getByRole("list", { name: "Hojas donde aparece" });
-    expect(within(list).getAllByRole("button")[0]).toHaveTextContent("sin imagen");
-    expect(within(list).getAllByRole("button")[1]).toHaveAttribute("aria-current", "true");
+    // Fase 10: las hojas, con título y cada una con su número en grande.
+    expect(screen.getByRole("heading", { name: "Hojas donde aparece (2)" })).toBeInTheDocument();
+    const list = screen.getByRole("group", { name: "Hojas donde aparece" });
+    expect(within(list).getAllByRole("button")[0]).toHaveTextContent("Hoja 03");
+    expect(within(list).getAllByRole("button")[0]).toHaveTextContent("Sin imagen todavía");
+    expect(within(list).getAllByRole("button")[1]).toHaveAttribute("aria-pressed", "true");
+    expect(within(list).getAllByRole("button")[1]).toHaveTextContent("TABLAS");
     await waitFor(() => expect(osd.state.options?.tileSources).toContain("EJ-ELE-DRW-0024_02"));
 
     fireEvent.click(within(list).getAllByRole("button")[0]!);
