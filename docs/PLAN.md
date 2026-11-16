@@ -797,7 +797,7 @@ web para conectar cada cable, con la hoja original del listado siempre a la vist
 - [x] Actividad: resumen de una línea y página de detalle de cada evento.
 - [x] Equipos: página por equipo agrupada por regletero, enlazada desde la ficha y el
       buscador.
-- [ ] Tests (extracción, carga, edición, permisos) y E2E; manual de usuario y
+- [x] Tests (extracción, carga, edición, permisos) y E2E; manual de usuario y
       `docs/DATOS-PROYECTO.md`.
 
 Hecho también: permiso nuevo `cable:wiring` («corregir bornas», técnico y superiores; en la

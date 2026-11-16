@@ -26,7 +26,9 @@ test.describe("técnico", () => {
 
     await page.getByRole("switch", { name: "Modo editar" }).click();
     await page.getByLabel("Borna de origen del hilo BU").fill("11");
-    await expect(page.getByRole("alert")).toContainText("Origen: el BN y el BU van a X51 · 11.");
+    // `filter`: Next tiene su propio role="alert" oculto para anunciar la página.
+    const warning = page.getByRole("alert").filter({ hasText: "Dos o más hilos" });
+    await expect(warning).toContainText("Origen: el BN y el BU van a X51 · 11.");
 
     await page.getByLabel("Nota (opcional)").fill("Borna 12 dañada en campo");
     await page.getByRole("button", { name: "Guardar 1 hilo" }).click();
