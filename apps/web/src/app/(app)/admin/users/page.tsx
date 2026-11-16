@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import {
-  ROLES,
-  ROLE_LABELS,
+  hasPermission,
   USER_SORT_LABELS,
   USER_STATUS_LABELS,
   listQuery,
@@ -16,6 +15,7 @@ import { RoleGuide } from "@/features/users/components/role-guide";
 import { UserEvents } from "@/features/users/components/user-events";
 import { UsersTable } from "@/features/users/components/users-table";
 import { requirePermission } from "@/server/session";
+import { listRoles } from "@/server/roles/service";
 import { countPendingAccounts, listUserEvents, searchUsers } from "@/server/users/service";
 
 export const metadata: Metadata = { title: "Usuarios" };
@@ -29,10 +29,11 @@ const pageHref = (search: UserListSearch, page: number) =>
 export default async function AdminUsersPage({ searchParams }: { searchParams: SearchParams }) {
   const current = await requirePermission("user:manage");
   const search = parseUserListSearch(await searchParams);
-  const [users, events, pendingCount] = await Promise.all([
+  const [users, events, pendingCount, roles] = await Promise.all([
     searchUsers(search),
     listUserEvents(10),
     countPendingAccounts(),
+    listRoles(),
   ]);
   const filtered = Boolean(search.q || search.role || search.status || search.sort);
 
@@ -85,7 +86,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                   name: "role",
                   label: "Rol",
                   value: search.role,
-                  options: ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
+                  options: roles.map((role) => ({ value: role.id, label: role.name })),
                 },
                 {
                   kind: "select",
@@ -110,11 +111,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                 Ninguna cuenta cumple estos filtros.
               </p>
             ) : (
-              <UsersTable
-                users={users.rows}
-                currentUserId={current.id}
-                currentRole={current.role}
-              />
+              <UsersTable users={users.rows} currentUserId={current.id} roles={roles} />
             )}
             <Pagination
               page={users.page}
@@ -125,7 +122,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
 
           <section className="space-y-3">
             <h2 className="text-base font-medium">Dar de alta un usuario</h2>
-            <CreateUserForm currentRole={current.role} />
+            <CreateUserForm roles={roles} />
           </section>
 
           <UserEvents events={events} />
@@ -133,7 +130,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
 
         {/* Siempre a la vista: en el escritorio se queda fija al bajar por la página. */}
         <aside className="lg:sticky lg:top-20 lg:self-start">
-          <RoleGuide />
+          <RoleGuide roles={roles} canEdit={hasPermission(current, "role:manage")} />
         </aside>
       </div>
     </div>

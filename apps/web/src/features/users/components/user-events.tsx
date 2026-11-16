@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ROLE_LABELS, type Role } from "@cables/shared";
+import { PERMISSION_LABELS, isPermission } from "@cables/shared";
 import { INLINE_LINK } from "@/lib/links";
 import type { UserEventRow } from "@/server/users/service";
 
@@ -9,21 +9,45 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
 });
 
-const role = (value: Role | null) => (value ? ROLE_LABELS[value] : "");
+const permissionList = (permissions: readonly string[] | undefined) =>
+  (permissions ?? [])
+    .map((permission) =>
+      isPermission(permission) ? PERMISSION_LABELS[permission].toLowerCase() : permission,
+    )
+    .join(", ");
+
+/** "añadió conectar, timbrar; quitó retirar". */
+function changeText(details: UserEventRow["details"]): string {
+  const parts = [
+    details?.added?.length ? `añadió: ${permissionList(details.added)}` : "",
+    details?.removed?.length ? `quitó: ${permissionList(details.removed)}` : "",
+  ].filter(Boolean);
+  return parts.length > 0 ? ` (${parts.join("; ")})` : "";
+}
 
 /** "Admin aprobó a Ana como Técnico". */
 export function describeUserEvent(event: UserEventRow): string {
+  const role = (value: string | null) => value ?? "";
+  const target = event.target ?? "(cuenta borrada)";
   switch (event.action) {
     case "CREATED":
-      return `${event.actor} dio de alta a ${event.target} como ${role(event.toRole)}`;
+      return `${event.actor} dio de alta a ${target} como ${role(event.toRole)}`;
     case "APPROVED":
-      return `${event.actor} aprobó a ${event.target} como ${role(event.toRole)}`;
+      return `${event.actor} aprobó a ${target} como ${role(event.toRole)}`;
     case "ROLE_CHANGED":
-      return `${event.actor} cambió a ${event.target} de ${role(event.fromRole)} a ${role(event.toRole)}`;
+      return `${event.actor} cambió a ${target} de ${role(event.fromRole)} a ${role(event.toRole)}`;
     case "DEACTIVATED":
-      return `${event.actor} desactivó a ${event.target}`;
+      return `${event.actor} desactivó a ${target}`;
     case "REACTIVATED":
-      return `${event.actor} reactivó a ${event.target}`;
+      return `${event.actor} reactivó a ${target}`;
+    case "PERMISSIONS_CHANGED":
+      return `${event.actor} cambió los permisos extra de ${target}${changeText(event.details)}`;
+    case "ROLE_CREATED":
+      return `${event.actor} creó el rol ${event.details?.role ?? ""}`;
+    case "ROLE_UPDATED":
+      return `${event.actor} editó el rol ${event.details?.role ?? ""}${changeText(event.details)}`;
+    case "ROLE_DELETED":
+      return `${event.actor} borró el rol ${event.details?.role ?? ""}`;
   }
 }
 

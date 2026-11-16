@@ -1,17 +1,17 @@
 "use client";
 
 import { startTransition, useActionState, useState, type FormEvent } from "react";
-import { ROLES, ROLE_LABELS, canManageActor, type Role } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { createUserAction, type ActionResult } from "@/features/users/actions";
+import type { RoleOption } from "./users-table";
 
 const EMPTY = { name: "", email: "", role: "VIEWER", password: "" };
 
-export function CreateUserForm({ currentRole }: { currentRole: Role }) {
+export function CreateUserForm({ roles }: { roles: RoleOption[] }) {
   // Con `<form action>` React 19 resetea el formulario al terminar la acción, también
   // si el servidor devuelve un error, y un <select> volvía a su primera opción
   // (Administrador). Se envía con onSubmit y solo se vacía tras un alta correcta.
@@ -42,8 +42,6 @@ export function CreateUserForm({ currentRole }: { currentRole: Role }) {
     };
   }
 
-  const assignable = ROLES.filter((role) => canManageActor(currentRole, role));
-
   return (
     <form onSubmit={onSubmit} className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
       <div className="space-y-2">
@@ -57,9 +55,9 @@ export function CreateUserForm({ currentRole }: { currentRole: Role }) {
       <div className="space-y-2">
         <Label htmlFor="role">Rol</Label>
         <NativeSelect id="role" {...field("role")}>
-          {assignable.map((role) => (
-            <option key={role} value={role}>
-              {ROLE_LABELS[role]}
+          {roles.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
             </option>
           ))}
         </NativeSelect>
