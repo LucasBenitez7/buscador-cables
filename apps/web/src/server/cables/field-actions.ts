@@ -6,7 +6,6 @@ import {
   canRunCableAction,
   toCableActionInput,
   type CableActionRequest,
-  type Role,
 } from "@cables/shared";
 import { CableServiceError } from "./service";
 
@@ -14,7 +13,8 @@ const CONFLICT =
   "Otra persona ha registrado un movimiento en este cable mientras tanto. Recarga la página y vuelve a intentarlo.";
 const NOT_FOUND = "El cable no existe.";
 
-type Actor = { id: string; role: Role };
+/** Who acts: their id and what they can do (role plus extras, see `getCurrentUser`). */
+type Actor = { id: string; permissions: readonly string[] };
 
 /**
  * Runs a field action (lay, coil, connect…) on a cable. In one transaction it updates the
@@ -27,7 +27,7 @@ export async function runCableAction(
   request: CableActionRequest,
 ): Promise<{ cableId: string; message: string }> {
   // Defense in depth: the Server Action already checked the permission.
-  if (!canRunCableAction(actor.role, request.action)) {
+  if (!canRunCableAction(actor, request.action)) {
     throw new CableServiceError("No tienes permiso para realizar esta acción.");
   }
 

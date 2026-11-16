@@ -3,6 +3,7 @@ import { prisma, type Prisma } from "@cables/db";
 import {
   ACTIVITY_PAGE_SIZE,
   describeCableEvent,
+  hasPermission,
   wiringChanges,
   type ActivitySearch,
   type CableAction,
@@ -83,17 +84,34 @@ function toEntry(event: StoredEvent, lookups: Lookups): ActivityEntry {
   };
 }
 
+/** A movement of a cable: its author, the team's activity, or the cable's own history. */
+export function canSeeCableEvent(
+  viewer: { id: string; permissions: readonly string[] },
+  authorId: string,
+): boolean {
+  return (
+    viewer.id === authorId ||
+    hasPermission(viewer, "activity:view") ||
+    hasPermission(viewer, "cable:read")
+  );
+}
+
 /**
  * One event and all it changed. Like the history of a cable, any signed-in user may read it;
  * an id that does not exist gives null.
  */
-export async function getActivityEvent(id: string): Promise<ActivityEventDetail | null> {
+export async function getActivityEvent(
+  id: string,
+  viewer: { id: string; permissions: readonly string[] },
+): Promise<ActivityEventDetail | null> {
   if (!/^[a-z0-9]{10,40}$/.test(id)) return null;
   const [event, lookups] = await Promise.all([
     prisma.cableEvent.findUnique({ where: { id }, include: EVENT_INCLUDE }),
     loadLookups(),
   ]);
-  if (!event) return null;
+  // Quién ve un movimiento (fase 12): quien lo hizo, quien ve la actividad del equipo y quien
+  // ve los cables (es una entrada del historial de su ficha). Lo que no puede ver no existe.
+  if (!event || !canSeeCableEvent(viewer, event.userId)) return null;
   return { ...toEntry(event, lookups), wiring: wiringChanges(event.changes) };
 }
 

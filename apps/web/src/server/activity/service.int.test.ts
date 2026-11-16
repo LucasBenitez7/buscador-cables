@@ -1,8 +1,12 @@
+import { permissionsOfRole } from "@cables/shared";
 import { prisma } from "@cables/db";
 import { parseActivitySearch } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSearchOptions } from "@/server/cables/search";
 import { getActivityEvent, listActivity, listActivityUsers } from "./service";
+
+/** Somebody who can read cables: sees the history of any cable (fase 12). */
+const VIEWER = { id: "nadie", ...permissionsOfRole("VIEWER") };
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
@@ -182,7 +186,7 @@ describe("getActivityEvent", () => {
       detailHref: "/activity/ewiring000000001",
     });
 
-    const event = await getActivityEvent("ewiring000000001");
+    const event = await getActivityEvent("ewiring000000001", VIEWER);
     expect(
       event?.wiring.map((change) => [change.wire, change.field, change.from, change.to]),
     ).toEqual([
@@ -193,7 +197,7 @@ describe("getActivityEvent", () => {
   });
 
   it("gives null for unknown or malformed ids", async () => {
-    expect(await getActivityEvent("cnoexiste0000000000000000")).toBeNull();
-    expect(await getActivityEvent("../../etc")).toBeNull();
+    expect(await getActivityEvent("cnoexiste0000000000000000", VIEWER)).toBeNull();
+    expect(await getActivityEvent("../../etc", VIEWER)).toBeNull();
   });
 });

@@ -19,7 +19,7 @@ import {
   type InstallationStatus,
   type TestStatus,
 } from "./cables";
-import { hasPermission, type Permission, type Role } from "./permissions";
+import { hasPermission, type Permission, type PermissionHolder } from "./permissions";
 import { normalizeTrayCode } from "./trays";
 
 export const CABLE_FIELD_ACTIONS = [
@@ -414,8 +414,8 @@ export function applyCableAction(state: CableState, input: CableActionInput): Ca
   };
 }
 
-export function canRunCableAction(role: Role, action: CableFieldAction): boolean {
-  return hasPermission(role, CABLE_ACTION_PERMISSIONS[action]);
+export function canRunCableAction(who: PermissionHolder, action: CableFieldAction): boolean {
+  return hasPermission(who, CABLE_ACTION_PERMISSIONS[action]);
 }
 
 export type CableActionAvailability = {
@@ -430,8 +430,11 @@ export type CableActionAvailability = {
  * is disabled in the cable's current state (if any). Actions that need extra input are
  * checked with the least demanding value (any location, the first end not yet connected…).
  */
-export function cableActionAvailability(role: Role, state: CableState): CableActionAvailability[] {
-  return CABLE_FIELD_ACTIONS.filter((action) => canRunCableAction(role, action)).map((action) => ({
+export function cableActionAvailability(
+  who: PermissionHolder,
+  state: CableState,
+): CableActionAvailability[] {
+  return CABLE_FIELD_ACTIONS.filter((action) => canRunCableAction(who, action)).map((action) => ({
     action,
     label: CABLE_FIELD_ACTION_LABELS[action],
     disabledReason: probe(state, action),

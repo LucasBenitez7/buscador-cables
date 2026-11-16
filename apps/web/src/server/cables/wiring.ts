@@ -6,7 +6,6 @@ import {
   hasPermission,
   wiringChangeKey,
   type DuplicateTerminal,
-  type Role,
   type WireTerminals,
   type WiringChange,
   type WiringEdit,
@@ -16,7 +15,8 @@ import { CableServiceError } from "./service";
 const CONFLICT =
   "Otra persona ha cambiado este cable mientras editabas. Recarga la página y vuelve a hacer los cambios.";
 
-type Actor = { id: string; role: Role };
+/** Who acts: their id and what they can do (role plus extras, see `getCurrentUser`). */
+type Actor = { id: string; permissions: readonly string[] };
 
 export type WiringEditResult =
   | { status: "saved"; cableId: string; changedWires: number }
@@ -34,7 +34,7 @@ export type WiringEditResult =
  */
 export async function editWiring(actor: Actor, edit: WiringEdit): Promise<WiringEditResult> {
   // Defense in depth: the Server Action already checked the permission.
-  if (!hasPermission(actor.role, "cable:wiring")) {
+  if (!hasPermission(actor, "cable:wiring")) {
     throw new CableServiceError("No tienes permiso para corregir bornas.");
   }
 

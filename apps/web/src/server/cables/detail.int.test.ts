@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { permissionsOfRole } from "@cables/shared";
 import { prisma } from "@cables/db";
 import { cableActionSchema, createCableSchema, updateCableSchema } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -138,7 +139,7 @@ describe("getCableDetail", () => {
 
   it("tells each field action as a sentence with its changes in a stable order", async () => {
     const { id } = await newCable();
-    const supervisor = { id: actor.id, role: "ADMIN" as const };
+    const supervisor = { id: actor.id, ...permissionsOfRole("ADMIN") };
     const run = async (fields: Record<string, string>) => {
       const { version } = await prisma.cable.findUniqueOrThrow({ where: { id } });
       await runCableAction(
@@ -213,7 +214,7 @@ describe("getCableDetail: route and loose end", () => {
       ],
     });
     await runCableAction(
-      { id: actor.id, role: "ADMIN" },
+      { id: actor.id, ...permissionsOfRole("ADMIN") },
       cableActionSchema.parse({
         cableId: created.id,
         version: "1",

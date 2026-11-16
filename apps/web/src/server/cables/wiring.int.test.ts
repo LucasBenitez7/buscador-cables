@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { permissionsOfRole } from "@cables/shared";
 import { prisma } from "@cables/db";
 import { wiringEditSchema, type Role, type WiringEditInput } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CableServiceError } from "./service";
 import { editWiring } from "./wiring";
 
-type Actor = { id: string; role: Role };
+type Actor = { id: string; role: Role; permissions: readonly string[] };
 
 let technician: Actor;
 let viewer: Actor;
@@ -33,8 +34,8 @@ beforeEach(async () => {
       }),
     ),
   );
-  technician = { id: tech!.id, role: "TECHNICIAN" };
-  viewer = { id: view!.id, role: "VIEWER" };
+  technician = { id: tech!.id, role: "TECHNICIAN", ...permissionsOfRole("TECHNICIAN") };
+  viewer = { id: view!.id, role: "VIEWER", ...permissionsOfRole("VIEWER") };
   const cable = await prisma.cable.create({
     data: {
       code: "99XAT10W2005",

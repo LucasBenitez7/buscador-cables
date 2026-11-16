@@ -30,8 +30,9 @@ hizo qué y cuándo.
 | 9    | Modo sin conexión (PWA)       | —       | _Mejora futura_: consulta offline + cola de cambios   |
 | 10   | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
 | 11   | Conexionado                   | v1.1.0  | Hilos y bornas, hoja original, edición, equipos       |
+| 12   | Roles y permisos              | v1.2.0  | Roles editables y permisos extra desde la web         |
 
-**Total: 13 fases (0 a 11, más la 4.5 añadida el 2026-11-11; la 11, el 2026-11-16).** El 2026-11-13 la fase 6 se
+**Total: 14 fases (0 a 12, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
@@ -827,6 +828,53 @@ vez de teselas (≈4.460 ficheros en lugar de más de 150.000).
 - [ ] Las migraciones se aplican solas en el despliegue (`vercel.json`).
 - [ ] `pnpm data:extract` → `pnpm data:render` (dibuja también las hojas de cable) →
       `pnpm data:upload` → `pnpm data:load --as <correo>` contra producción.
+
+## Fase 12 — Roles y permisos desde la web (v1.2.0)
+
+Añadida el 2026-11-16. Rama `feat/f12-roles`. Objetivo: que el administrador decida desde la
+web qué puede hacer cada rol, cree roles nuevos y dé permisos extra a una persona concreta, sin
+tocar el código y sin abrir ningún agujero de seguridad.
+
+### Decisiones (2026-11-16)
+
+- **Las acciones siguen en el código; lo que cambia es quién las tiene.** El catálogo de
+  permisos (`PERMISSIONS`) es fijo: un permiso solo existe si el código lo comprueba. El admin
+  asigna permisos a roles y a personas; nunca inventa uno nuevo.
+- **Roles en la base de datos** (`Role`: nombre, descripción y permisos). Los cuatro de hoy
+  (Administrador, Supervisor, Técnico, Consulta) se crean en la migración con los permisos que
+  tienen ahora, así que nadie nota el cambio. Cada usuario apunta a un rol (`User.roleId`).
+- **Permisos extra por persona** (`UserPermissionGrant`): lo que su rol no trae. Lo que puede
+  hacer una persona es su rol más sus extras. En Usuarios se ve como «Técnico +2».
+- **Nadie se sube de nivel.** Gestionar usuarios y gestionar roles solo los tiene el rol
+  Administrador: no se pueden dar a otro rol ni como extra. El rol Administrador no se edita ni
+  se borra, y siempre queda al menos un administrador activo.
+- **Siempre en el servidor.** Cada petición lee de la base los permisos de quien la hace (sin
+  esperar a que cierre sesión); cada cambio pasa por Zod, por el permiso `role:manage` y por la
+  `version` del rol (dos admins a la vez no se pisan). Ver cables es obligatorio en todo rol.
+- **No se borra un rol con personas**: primero se les cambia de rol.
+- **Auditoría inmutable**: crear, editar o borrar un rol y dar o quitar extras quedan en
+  «Cambios en las cuentas», con quién, qué y cuándo.
+- **Pantallas solo del admin**, en Gestión → «Roles y permisos»: lista de roles con cuántas
+  personas tienen; ficha del rol con los permisos agrupados por tema y explicados en palabras
+  de obra; «Crear rol» copiando otro. En Usuarios, la ficha de cada persona con lo que puede
+  hacer y sus extras.
+
+### Tareas
+
+- [x] Modelo: `Role`, `UserPermissionGrant`, `User.roleId`; migración que crea los cuatro
+      roles con sus permisos actuales y pasa cada usuario a su rol; auditoría ampliada.
+- [x] Permisos efectivos: sesión con los permisos de la base; `hasPermission` sobre ellos en
+      todo el código (páginas, Server Actions y servicios); reglas de no subir de nivel.
+- [x] Página «Roles y permisos»: lista, ficha con permisos por tema, crear (copiando), editar,
+      borrar sin personas.
+- [x] Usuarios: rol con «+N», ficha de la persona con lo que puede hacer y sus extras.
+- [x] Tests (reglas de seguridad, servicios, permisos efectivos, intentos de saltarse las
+      reglas con peticiones a mano) y E2E; manual de usuario y arquitectura.
+
+Hecho también: «Quién ve qué» en el manual (la auditoría de cuentas y de roles es solo del
+administrador; la actividad del equipo, de quien tenga ese permiso; el detalle de un
+movimiento, de su autor o de quien ve el cable) y triggers en la base que impiden dar la
+gestión de cuentas o de roles fuera del rol Administrador.
 
 ---
 

@@ -1,30 +1,26 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  ROLES,
-  ROLE_DESCRIPTIONS,
-  ROLE_LABELS,
-  canManageActor,
-  isRole,
-  type Role,
-} from "@cables/shared";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { changeRoleAction, setUserActiveAction, type ActionResult } from "@/features/users/actions";
 import type { UserRow } from "@/server/users/service";
 
+/** A role as the pickers show it (fase 12: roles live in the database). */
+export type RoleOption = { id: string; name: string; description: string | null };
+
 type Props = {
   users: UserRow[];
   currentUserId: string;
-  currentRole: Role;
+  roles: RoleOption[];
 };
 
 /** Etiqueta de cada dato en el móvil, donde la tabla se apila como tarjetas. */
 const CELL =
   "flex items-center justify-between gap-3 py-1 before:text-muted-foreground before:content-[attr(data-label)] md:table-cell md:px-4 md:py-3 md:before:content-none";
 
-export function UsersTable({ users, currentUserId, currentRole }: Props) {
+export function UsersTable({ users, currentUserId, roles }: Props) {
   return (
     <div className="rounded-lg border md:overflow-x-auto">
       <table className="block w-full text-left text-sm md:table">
@@ -45,7 +41,7 @@ export function UsersTable({ users, currentUserId, currentRole }: Props) {
               key={`${user.id}:${user.role}`}
               user={user}
               isSelf={user.id === currentUserId}
-              currentRole={currentRole}
+              roles={roles}
             />
           ))}
         </tbody>
@@ -57,18 +53,21 @@ export function UsersTable({ users, currentUserId, currentRole }: Props) {
 function UserRowView({
   user,
   isSelf,
-  currentRole,
+  roles,
 }: {
   user: UserRow;
   isSelf: boolean;
-  currentRole: Role;
+  roles: RoleOption[];
 }) {
   const [message, setMessage] = useState<ActionResult | null>(null);
   // Controlado: si el servidor rechaza el cambio, el selector vuelve al rol real.
-  const [role, setRole] = useState<Role>(user.role);
+  const [role, setRole] = useState(user.role);
   const [pending, startTransition] = useTransition();
-  const manageable = !isSelf && canManageActor(currentRole, user.role);
-  const assignable = ROLES.filter((role) => canManageActor(currentRole, role));
+  // Esta página es solo de quien gestiona cuentas (el administrador): gestiona a todos menos
+  // a sí mismo. El servidor lo vuelve a comprobar todo.
+  const manageable = !isSelf;
+  const nameOf = (id: string) => roles.find((item) => item.id === id)?.name ?? user.roleName;
+  const chosen = roles.find((item) => item.id === role);
   // Una cuenta nueva: el rol elegido no se guarda hasta aprobarla, y se aprueba con él.
   const approving = manageable && user.pending;
 
@@ -90,7 +89,7 @@ function UserRowView({
     });
   }
 
-  function changeRole(next: Role) {
+  function changeRole(next: string) {
     if (approving) {
       setRole(next);
       return;
@@ -103,7 +102,12 @@ function UserRowView({
   return (
     <tr className="hover:bg-muted/40 block border-t p-3 align-top transition-colors first:border-t-0 md:table-row md:p-0 md:first:border-t">
       <td className="block pb-1 text-base font-medium md:table-cell md:px-4 md:py-3 md:text-sm">
-        {user.name}
+        <Link
+          href={`/admin/users/${user.id}`}
+          className="hover:text-primary focus-visible:ring-ring/50 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+        >
+          {user.name}
+        </Link>
         {isSelf ? <span className="text-muted-foreground ml-2 text-xs">(tú)</span> : null}
       </td>
       <td data-label="Correo" className={`${CELL} break-all`}>
@@ -115,30 +119,30 @@ function UserRowView({
             aria-label={`Rol de ${user.name}`}
             value={role}
             disabled={pending}
-            onChange={(event) => {
-              const next = event.currentTarget.value;
-              if (isRole(next)) {
-                changeRole(next);
-              }
-            }}
+            onChange={(event) => changeRole(event.currentTarget.value)}
             className="w-auto"
           >
-            {assignable.includes(user.role) ? null : (
-              <option value={user.role}>{ROLE_LABELS[user.role]}</option>
-            )}
-            {assignable.map((role) => (
-              <option key={role} value={role}>
-                {ROLE_LABELS[role]}
+            {roles.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
               </option>
             ))}
           </NativeSelect>
         ) : (
-          ROLE_LABELS[user.role]
+          user.roleName
         )}
-        {approving ? (
-          <p className="text-muted-foreground mt-1 max-w-56 text-xs">
-            {ROLE_DESCRIPTIONS[role].summary}
-          </p>
+        {user.extras.length > 0 ? (
+          <Link
+            href={`/admin/users/${user.id}`}
+            title={`Permisos extra: ${user.extras.length}`}
+            className="bg-primary/15 text-primary ml-2 rounded-full px-2 py-0.5 text-xs font-semibold"
+          >
+            +{user.extras.length}
+            <span className="sr-only"> permisos extra</span>
+          </Link>
+        ) : null}
+        {approving && chosen?.description ? (
+          <p className="text-muted-foreground mt-1 max-w-56 text-xs">{chosen.description}</p>
         ) : null}
       </td>
       <td data-label="Estado" className={CELL}>
@@ -157,7 +161,7 @@ function UserRowView({
             disabled={pending}
             onClick={() => run(setUserActiveAction, { userId: user.id, active: "true", role })}
           >
-            Aprobar como {ROLE_LABELS[role]}
+            Aprobar como {nameOf(role)}
           </Button>
         ) : manageable ? (
           <Button

@@ -6,7 +6,6 @@
  */
 import { z } from "zod";
 import { CABLE_ACTIONS } from "./cables";
-import { ROLES } from "./permissions";
 import { daySchema, firstParams, pageSchema, type RawSearchParams } from "./url-params";
 
 const text = z
@@ -62,7 +61,8 @@ export const USERS_PAGE_SIZE = 25;
 
 export const userListSearchSchema = z.object({
   q: text,
-  role: oneOf(ROLES),
+  /** A role id (the four starting ones or one made on the web). */
+  role: text,
   status: oneOf(USER_STATUSES),
   sort: oneOf(USER_SORTS),
   page: pageSchema,
@@ -82,6 +82,10 @@ export const USER_EVENT_ACTIONS = [
   "ROLE_CHANGED",
   "DEACTIVATED",
   "REACTIVATED",
+  "PERMISSIONS_CHANGED",
+  "ROLE_CREATED",
+  "ROLE_UPDATED",
+  "ROLE_DELETED",
 ] as const;
 export type UserEventActionName = (typeof USER_EVENT_ACTIONS)[number];
 
@@ -91,6 +95,10 @@ export const USER_EVENT_ACTION_LABELS: Record<UserEventActionName, string> = {
   ROLE_CHANGED: "Cambio de rol",
   DEACTIVATED: "Desactivación",
   REACTIVATED: "Reactivación",
+  PERMISSIONS_CHANGED: "Permisos extra",
+  ROLE_CREATED: "Rol creado",
+  ROLE_UPDATED: "Rol editado",
+  ROLE_DELETED: "Rol borrado",
 };
 
 export const DATE_SORTS = ["newest", "oldest"] as const;

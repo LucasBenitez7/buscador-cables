@@ -26,7 +26,7 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
   // Solo un código de cable: cualquier otro texto de la URL saldría dentro de un aviso.
   const deleted = deletedCableCode(params.deleted);
   // Solo quien puede registrar alguna acción ve la columna "Acción" (los VIEWER, no).
-  const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user.role, action));
+  const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user, action));
   const [result, options, locations] = await Promise.all([
     searchCables(search),
     getSearchOptions(),
@@ -37,7 +37,7 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Cables</h1>
-        {hasPermission(user.role, "cable:create") ? (
+        {hasPermission(user, "cable:create") ? (
           <Button asChild>
             <Link href="/cables/new">Nuevo cable</Link>
           </Button>
@@ -54,7 +54,7 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
       <SearchResults
         search={search}
         result={result}
-        actions={canAct ? { role: user.role, locations } : undefined}
+        actions={canAct ? { permissions: user.permissions, locations } : undefined}
       />
     </div>
   );

@@ -19,7 +19,10 @@ describe("list filters", () => {
         page: "2",
       }),
     ).toEqual({ q: "ana", role: "TECHNICIAN", status: "pending", sort: "name", page: 2 });
-    expect(parseUserListSearch({ role: "ROOT", status: "x", sort: "y", page: "-1" })).toEqual({});
+    // El rol es un id (fase 12): uno desconocido no encuentra a nadie, no rompe la página.
+    expect(parseUserListSearch({ role: "ROOT", status: "x", sort: "y", page: "-1" })).toEqual({
+      role: "ROOT",
+    });
   });
 
   it("reads the account changes filters, with real dates only", () => {

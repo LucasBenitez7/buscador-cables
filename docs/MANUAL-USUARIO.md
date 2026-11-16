@@ -178,8 +178,41 @@ administrador con los datos de la persona.
   página, con filtros por tipo de cambio, persona (quien lo hizo o quien lo recibió) y fechas.
   No se pueden editar ni borrar.
 
-Nadie puede gestionar a alguien de su mismo rol o superior (salvo los administradores entre
-sí), ni cambiarse el rol, ni desactivarse. Siempre queda al menos un administrador activo.
+Solo el rol Administrador gestiona cuentas. Nadie puede cambiarse el rol ni desactivarse, y
+siempre queda al menos un administrador activo.
+
+### Roles y permisos (administrador)
+
+En **Gestión → Roles y permisos**:
+
+- La lista de roles, con cuántas personas tiene cada uno. Los cuatro de siempre
+  (Administrador, Supervisor, Técnico, Consulta) no se borran; **Administrador** tampoco se
+  edita.
+- **Crear rol**: elige un rol del que copiar, ponle nombre y marca o desmarca lo que puede
+  hacer. Cada permiso está explicado. Un rol nuevo aparece al momento en Usuarios.
+- En la ficha de un rol se cambian sus permisos: **afecta al momento** a todas las personas que
+  lo tienen. Un rol solo se borra si nadie lo tiene.
+
+**Permisos extra de una persona**: en Usuarios, pulsa su nombre. Su ficha dice lo que puede
+hacer y si le viene de su rol o es un extra. Marca lo que necesite además de su rol y guarda.
+En la lista de cuentas se ve como «Técnico **+2**».
+
+«Gestionar cuentas» y «Gestionar roles» son solo del rol Administrador: no se pueden dar a
+otro rol ni como extra.
+
+### Quién ve qué
+
+| Qué                                   | Quién lo ve                                                           |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| Cables, bandejas, equipos e historial | Todo el mundo (ver cables va en todos los roles)                      |
+| Mi actividad                          | Cada persona, la suya                                                 |
+| Actividad del equipo                  | Quien tenga «Ver la actividad del equipo» (Supervisor, Administrador) |
+| Detalle de un movimiento              | Quien lo hizo, quien ve la actividad del equipo o quien ve el cable   |
+| Usuarios y cambios en las cuentas     | Solo el Administrador                                                 |
+| Roles, permisos y sus cambios         | Solo el Administrador                                                 |
+
+Todos los cambios de cuentas, roles y permisos extra quedan en **Cambios en las cuentas**, con
+quién, qué y cuándo, y no se pueden editar ni borrar.
 
 **Catálogos** (supervisor y administrador): tipos de cable, colores y fabricantes.
 

@@ -1,6 +1,5 @@
 import "server-only";
 import { prisma, type UserEventAction } from "@cables/db";
-import type { Role } from "@cables/shared";
 import {
   accountCreatedEmail,
   accountDeactivatedEmail,
@@ -30,9 +29,21 @@ const appUrl = (path: string) => new URL(path, env.APP_URL).toString();
 export type AccountChange = {
   action: UserEventAction;
   user: { id: string; name: string; email: string };
-  fromRole?: Role | null;
-  toRole?: Role | null;
+  /** Role ids (fase 12): the emails look up their name and what they allow. */
+  fromRole?: string | null;
+  toRole?: string | null;
 };
+
+/** The roles of a change, by id, as the emails show them. */
+async function roleSummaries(ids: readonly (string | null | undefined)[]) {
+  const roles = await prisma.role.findMany({
+    where: { id: { in: ids.filter((id): id is string => Boolean(id)) } },
+    select: { id: true, name: true, description: true, permissions: true },
+  });
+  const byId = new Map(roles.map((role) => [role.id, role]));
+  // Un rol borrado entre medias: el correo sale igual, con su id.
+  return (id: string) => byId.get(id) ?? { name: id, description: null, permissions: [] };
+}
 
 async function activeAdmins(except: readonly string[] = []) {
   return prisma.user.findMany({
@@ -93,6 +104,7 @@ export async function notifyAccountChange(
 ): Promise<void> {
   const { user } = change;
   const loginUrl = appUrl("/login");
+  const role = await roleSummaries([change.fromRole, change.toRole]);
   const emails = [];
   switch (change.action) {
     case "CREATED":
@@ -100,7 +112,7 @@ export async function notifyAccountChange(
         accountCreatedEmail({
           to: user.email,
           name: user.name,
-          role: change.toRole!,
+          role: role(change.toRole!),
           createdBy: actor.name,
           loginUrl,
           forgotPasswordUrl: appUrl("/forgot-password"),
@@ -109,7 +121,7 @@ export async function notifyAccountChange(
       break;
     case "APPROVED":
       emails.push(
-        welcomeEmail({ to: user.email, name: user.name, role: change.toRole!, loginUrl }),
+        welcomeEmail({ to: user.email, name: user.name, role: role(change.toRole!), loginUrl }),
       );
       break;
     case "ROLE_CHANGED":
@@ -117,8 +129,8 @@ export async function notifyAccountChange(
         roleChangedEmail({
           to: user.email,
           name: user.name,
-          fromRole: change.fromRole!,
-          toRole: change.toRole!,
+          fromRole: role(change.fromRole!),
+          toRole: role(change.toRole!),
           changedBy: actor.name,
           loginUrl,
         }),

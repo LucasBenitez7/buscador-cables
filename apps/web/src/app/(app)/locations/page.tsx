@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function LocationsPage() {
   const user = await requireUser();
   const tree = await listLocationTree();
-  const canManage = hasPermission(user.role, "location:manage");
+  const canManage = hasPermission(user, "location:manage");
 
   return (
     <div className="space-y-6">
