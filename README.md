@@ -118,3 +118,7 @@ Ramas `feat/*`, `fix/*`, `chore/*` o `docs/*` desde `dev`, commits en
 [Conventional Commits](https://www.conventionalcommits.org/es/) y Pull Request a `dev` con el
 CI en verde. `main` es producción: recibe `dev` por PR. Todo en
 [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Licencia
+
+[MIT](LICENSE). Solo cubre el código: los datos del proyecto real no están en este repositorio.

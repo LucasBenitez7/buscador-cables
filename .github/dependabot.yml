@@ -20,6 +20,10 @@ updates:
       # Se suben a mano cuando se cambie de Node.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # TypeScript 7 (el compilador nuevo) aún no lo soporta typescript-eslint: el lint falla
+      # con "typescript-eslint does not support TS 7.0". Se sube a mano cuando lo soporte.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       # Menores y parches de todo el monorepo juntos en un PR.
       npm-minor-patch:
