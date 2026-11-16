@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import "./shadcn-tailwind.css";
 
 /*
  * Tema único y oscuro (decisión del 2026-11-11, ver docs/ARQUITECTURA.md → "Interfaz: tema
