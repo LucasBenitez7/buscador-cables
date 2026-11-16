@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@cables/db";
-import type { Role } from "@cables/shared";
+import { ROLE_PERMISSIONS, type Role } from "@cables/shared";
 import { verifyPassword } from "better-auth/crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CurrentUser } from "@/server/session";
@@ -32,7 +32,15 @@ async function insertUser(
       approvedAt: (overrides.approved ?? true) ? new Date() : null,
     },
   });
-  return { id: user.id, name: user.name, email: user.email, role };
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role,
+    roleName: role,
+    permissions: [...ROLE_PERMISSIONS[role]],
+    extraCount: 0,
+  };
 }
 
 async function insertSession(userId: string): Promise<void> {
@@ -335,21 +343,21 @@ describe("account audit", () => {
         actor: admin.name,
         target: "Ana Pérez",
         fromRole: null,
-        toRole: "TECHNICIAN",
+        toRole: "Técnico",
       },
       {
         action: "APPROVED",
         actor: admin.name,
         target: pending.name,
         fromRole: null,
-        toRole: "TECHNICIAN",
+        toRole: "Técnico",
       },
       {
         action: "ROLE_CHANGED",
         actor: admin.name,
         target: "Ana Pérez",
-        fromRole: "TECHNICIAN",
-        toRole: "SUPERVISOR",
+        fromRole: "Técnico",
+        toRole: "Supervisor",
       },
       {
         action: "DEACTIVATED",

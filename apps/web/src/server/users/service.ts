@@ -10,7 +10,6 @@ import {
   validateRoleChange,
   type ChangeRoleInput,
   type CreateUserInput,
-  type Role,
   type SetUserActiveInput,
   type UserEventSearch,
   type UserListSearch,
@@ -24,7 +23,11 @@ export type UserRow = {
   id: string;
   name: string;
   email: string;
-  role: Role;
+  /** Role id, and its name today. */
+  role: string;
+  roleName: string;
+  /** Permissions this person has besides their role's (fase 12). */
+  extras: string[];
   active: boolean;
   /** Self-registered and waiting for an administrator: never approved yet. */
   pending: boolean;
@@ -43,21 +46,16 @@ const USER_SELECT = {
   active: true,
   approvedAt: true,
   createdAt: true,
+  roleInfo: { select: { name: true } },
+  permissionGrants: { select: { permission: true }, orderBy: { permission: "asc" } },
 } as const;
 
-type SelectedUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  active: boolean;
-  approvedAt: Date | null;
-  createdAt: Date;
-};
+type SelectedUser = Prisma.UserGetPayload<{ select: typeof USER_SELECT }>;
 
-const toRow = ({ approvedAt, ...user }: SelectedUser): UserRow => ({
+const toRow = ({ approvedAt, roleInfo, permissionGrants, ...user }: SelectedUser): UserRow => ({
   ...user,
-  role: user.role as Role,
+  roleName: roleInfo.name,
+  extras: permissionGrants.map((grant) => grant.permission),
   pending: !user.active && approvedAt === null,
 });
 
@@ -78,6 +76,12 @@ export async function countPendingAccounts(): Promise<number> {
 
 type Transaction = Prisma.TransactionClient;
 
+/** The role must exist: a hand-made request could send any id. */
+async function requireRole(db: Transaction, roleId: string) {
+  const role = await db.role.findUnique({ where: { id: roleId }, select: { id: true } });
+  if (!role) throw new UserServiceError("Ese rol no existe.");
+}
+
 /**
  * Active administrators other than `excludeUserId`, with their rows locked until the
  * transaction ends. Without the lock, two administrators demoting or deactivating each
@@ -94,10 +98,11 @@ async function countOtherActiveAdmins(tx: Transaction, excludeUserId: string): P
  * the user can change it later through "olvidé mi contraseña".
  */
 export async function createUser(actor: CurrentUser, input: CreateUserInput): Promise<UserRow> {
-  const error = validateCreateUser({ actorId: actor.id, actorRole: actor.role }, input.role);
+  const error = validateCreateUser({ actorId: actor.id, actor });
   if (error) {
     throw new UserServiceError(error);
   }
+  await requireRole(prisma, input.role);
 
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
@@ -158,15 +163,16 @@ export async function changeUserRole(
 
     const error = validateRoleChange({
       actorId: actor.id,
-      actorRole: actor.role,
+      actor,
       targetId: target.id,
-      targetRole: target.role as Role,
+      targetRole: target.role,
       newRole: input.role,
       otherActiveAdmins,
     });
     if (error) {
       throw new UserServiceError(error);
     }
+    await requireRole(tx, input.role);
 
     if (target.role === input.role) return null;
     await tx.user.update({ where: { id: target.id }, data: { role: input.role } });
@@ -175,7 +181,7 @@ export async function changeUserRole(
         action: "ROLE_CHANGED",
         actorId: actor.id,
         targetId: target.id,
-        fromRole: target.role as Role,
+        fromRole: target.role,
         toRole: input.role,
       },
     });
@@ -183,7 +189,7 @@ export async function changeUserRole(
     return {
       action: "ROLE_CHANGED",
       user: { id: target.id, name: target.name, email: target.email },
-      fromRole: target.role as Role,
+      fromRole: target.role,
       toRole: input.role,
     };
   });
@@ -209,9 +215,9 @@ export async function setUserActive(
 
     const error = validateActiveChange({
       actorId: actor.id,
-      actorRole: actor.role,
+      actor,
       targetId: target.id,
-      targetRole: target.role as Role,
+      targetRole: target.role,
       active: input.active,
       otherActiveAdmins,
     });
@@ -220,14 +226,9 @@ export async function setUserActive(
     }
 
     const approving = input.active && target.approvedAt === null;
-    // Al aprobar, el administrador elige con qué rol entra (nunca uno superior al suyo).
-    const role = approving && input.role ? input.role : (target.role as Role);
-    if (role !== target.role) {
-      const roleError = validateCreateUser({ actorId: actor.id, actorRole: actor.role }, role);
-      if (roleError) {
-        throw new UserServiceError("No puedes asignar un rol superior al tuyo.");
-      }
-    }
+    // Al aprobar, el administrador elige con qué rol entra.
+    const role = approving && input.role ? input.role : target.role;
+    if (role !== target.role) await requireRole(tx, role);
     await tx.user.update({
       where: { id: target.id },
       data: { active: input.active, role, ...(approving ? { approvedAt: new Date() } : {}) },
@@ -261,9 +262,13 @@ export type UserEventRow = {
   id: string;
   action: UserEventAction;
   actor: string;
-  target: string;
-  fromRole: Role | null;
-  toRole: Role | null;
+  /** The person changed; null for a change to a role. */
+  target: string | null;
+  /** Role names (today's name; a deleted role shows as such). */
+  fromRole: string | null;
+  toRole: string | null;
+  /** For `ROLE_*` and `PERMISSIONS_CHANGED`: the role and the permissions added and removed. */
+  details: { role?: string; added?: string[]; removed?: string[] } | null;
   createdAt: Date;
 };
 
@@ -272,6 +277,7 @@ const EVENT_SELECT = {
   action: true,
   fromRole: true,
   toRole: true,
+  details: true,
   createdAt: true,
   actor: { select: { name: true } },
   target: { select: { name: true } },
@@ -279,13 +285,39 @@ const EVENT_SELECT = {
 
 type SelectedEvent = Prisma.UserEventGetPayload<{ select: typeof EVENT_SELECT }>;
 
-const toEventRow = ({ actor, target, ...event }: SelectedEvent): UserEventRow => ({
-  ...event,
-  actor: actor.name,
-  target: target.name,
-  fromRole: event.fromRole as Role | null,
-  toRole: event.toRole as Role | null,
-});
+/** Role names by id, for the account changes (they store ids). */
+async function roleNames(): Promise<Map<string, string>> {
+  const roles = await prisma.role.findMany({ select: { id: true, name: true } });
+  return new Map(roles.map((role) => [role.id, role.name]));
+}
+
+const roleName = (names: Map<string, string>, id: string | null) =>
+  id === null ? null : (names.get(id) ?? "(rol borrado)");
+
+function readDetails(value: unknown): UserEventRow["details"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const details = value as Record<string, unknown>;
+  const list = (key: string) =>
+    Array.isArray(details[key])
+      ? (details[key] as unknown[]).filter((item): item is string => typeof item === "string")
+      : undefined;
+  return {
+    ...(typeof details.role === "string" ? { role: details.role } : {}),
+    ...(list("added") ? { added: list("added") } : {}),
+    ...(list("removed") ? { removed: list("removed") } : {}),
+  };
+}
+
+const toEventRow =
+  (names: Map<string, string>) =>
+  ({ actor, target, details, ...event }: SelectedEvent): UserEventRow => ({
+    ...event,
+    actor: actor.name,
+    target: target?.name ?? null,
+    fromRole: roleName(names, event.fromRole),
+    toRole: roleName(names, event.toRole),
+    details: readDetails(details),
+  });
 
 /** The latest changes to the accounts, newest first (users page). */
 export async function listUserEvents(limit = 50): Promise<UserEventRow[]> {
@@ -294,7 +326,7 @@ export async function listUserEvents(limit = 50): Promise<UserEventRow[]> {
     take: limit,
     select: EVENT_SELECT,
   });
-  return events.map(toEventRow);
+  return events.map(toEventRow(await roleNames()));
 }
 
 export type Paged<T> = { rows: T[]; total: number; page: number; pageCount: number };
@@ -396,7 +428,7 @@ export async function searchUserEvents(search: UserEventSearch): Promise<Paged<U
     take: USER_EVENTS_PAGE_SIZE,
     select: EVENT_SELECT,
   });
-  return { rows: events.map(toEventRow), total, page, pageCount };
+  return { rows: events.map(toEventRow(await roleNames())), total, page, pageCount };
 }
 
 /** Everybody, by name: who can be picked in the "Persona" filter of the account changes. */

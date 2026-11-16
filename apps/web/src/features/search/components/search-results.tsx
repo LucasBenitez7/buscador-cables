@@ -8,7 +8,6 @@ import {
   SEARCH_PAGE_SIZES,
   type CableSearch,
   type CableSort,
-  type Role,
 } from "@cables/shared";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
@@ -29,8 +28,8 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
 type Props = {
   search: CableSearch;
   result: CableSearchResult;
-  /** When set, each row gets an "Acción" button for what this role can do. */
-  actions?: { role: Role; locations: ActionOption[] };
+  /** When set, each row gets an "Acción" button for what this person can do. */
+  actions?: { permissions: readonly string[]; locations: ActionOption[] };
 };
 
 /** Tabla de resultados. Ordenación y paginación son enlaces: todo vive en la URL. */
@@ -149,7 +148,7 @@ export function SearchResults({ search, result, actions }: Props) {
                   code={cable.code}
                   version={cable.version}
                   state={cable.state}
-                  availability={cableActionAvailability(actions.role, cable.state)}
+                  availability={cableActionAvailability(actions, cable.state)}
                   locations={actions.locations}
                 />
               ) : null}
@@ -244,7 +243,7 @@ export function SearchResults({ search, result, actions }: Props) {
                       code={cable.code}
                       version={cable.version}
                       state={cable.state}
-                      availability={cableActionAvailability(actions.role, cable.state)}
+                      availability={cableActionAvailability(actions, cable.state)}
                       locations={actions.locations}
                     />
                   </td>

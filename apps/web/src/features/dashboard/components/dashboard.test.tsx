@@ -130,6 +130,12 @@ describe("Dashboard", () => {
           admin: {
             pendingAccounts: 2,
             activeUsers: { ADMIN: 1, SUPERVISOR: 2, TECHNICIAN: 5, VIEWER: 3 },
+            roleNames: {
+              ADMIN: "Administrador",
+              SUPERVISOR: "Supervisor",
+              TECHNICIAN: "Técnico",
+              VIEWER: "Consulta",
+            },
             database: "ok",
             drawings: { sheets: 3, drawn: 3 },
           },
@@ -156,6 +162,12 @@ describe("Dashboard", () => {
           admin: {
             pendingAccounts: 0,
             activeUsers: { ADMIN: 1, SUPERVISOR: 0, TECHNICIAN: 0, VIEWER: 0 },
+            roleNames: {
+              ADMIN: "Administrador",
+              SUPERVISOR: "Supervisor",
+              TECHNICIAN: "Técnico",
+              VIEWER: "Consulta",
+            },
             database: "ok",
             drawings: { sheets: 0, drawn: 0 },
           },
@@ -172,6 +184,12 @@ describe("Dashboard", () => {
     const admin = (drawn: number) => ({
       pendingAccounts: 0,
       activeUsers: { ADMIN: 1, SUPERVISOR: 0, TECHNICIAN: 0, VIEWER: 0 },
+      roleNames: {
+        ADMIN: "Administrador",
+        SUPERVISOR: "Supervisor",
+        TECHNICIAN: "Técnico",
+        VIEWER: "Consulta",
+      },
       database: "ok" as const,
       drawings: { sheets: 40, drawn },
     });

@@ -1,3 +1,4 @@
+import { permissionsOfRole } from "./permissions";
 import { describe, expect, it } from "vitest";
 import {
   CABLE_FIELD_ACTIONS,
@@ -294,17 +295,18 @@ describe("PARTIALLY_LAID (tender a medias)", () => {
   });
 
   it("is offered to technicians with the reason when it cannot be used", () => {
-    expect(canRunCableAction("TECHNICIAN", "PARTIALLY_LAID")).toBe(true);
-    expect(canRunCableAction("VIEWER", "PARTIALLY_LAID")).toBe(false);
+    expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "PARTIALLY_LAID")).toBe(true);
+    expect(canRunCableAction(permissionsOfRole("VIEWER"), "PARTIALLY_LAID")).toBe(false);
 
     const actions = Object.fromEntries(
-      cableActionAvailability("TECHNICIAN", { ...laid, connectionStatus: "CONNECTED" }).map(
-        (item) => [item.action, item.disabledReason],
-      ),
+      cableActionAvailability(permissionsOfRole("TECHNICIAN"), {
+        ...laid,
+        connectionStatus: "CONNECTED",
+      }).map((item) => [item.action, item.disabledReason]),
     );
     expect(actions.PARTIALLY_LAID).toMatch(/desconéctala/);
     // A partially laid cable can move its loose end to another tray.
-    const fromPartial = cableActionAvailability("TECHNICIAN", partial);
+    const fromPartial = cableActionAvailability(permissionsOfRole("TECHNICIAN"), partial);
     expect(fromPartial.find((item) => item.action === "PARTIALLY_LAID")?.disabledReason).toBeNull();
   });
 });
@@ -550,8 +552,8 @@ describe("TESTED (timbrar)", () => {
   });
 
   it("is a technician's action, not a viewer's", () => {
-    expect(canRunCableAction("TECHNICIAN", "TESTED")).toBe(true);
-    expect(canRunCableAction("VIEWER", "TESTED")).toBe(false);
+    expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "TESTED")).toBe(true);
+    expect(canRunCableAction(permissionsOfRole("VIEWER"), "TESTED")).toBe(false);
   });
 
   it("requires a note saying what failed", () => {
@@ -586,17 +588,17 @@ describe("validateCableState", () => {
 
 describe("permissions", () => {
   it("lets technicians do field work but not retire or correct", () => {
-    expect(canRunCableAction("TECHNICIAN", "CONNECTED")).toBe(true);
-    expect(canRunCableAction("TECHNICIAN", "MOVED")).toBe(true);
-    expect(canRunCableAction("TECHNICIAN", "RETIRED")).toBe(false);
-    expect(canRunCableAction("TECHNICIAN", "CORRECTION")).toBe(false);
+    expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "CONNECTED")).toBe(true);
+    expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "MOVED")).toBe(true);
+    expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "RETIRED")).toBe(false);
+    expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "CORRECTION")).toBe(false);
   });
 
   it("lets supervisors and admins run every action and viewers none", () => {
     for (const action of CABLE_FIELD_ACTIONS) {
-      expect(canRunCableAction("SUPERVISOR", action)).toBe(true);
-      expect(canRunCableAction("ADMIN", action)).toBe(true);
-      expect(canRunCableAction("VIEWER", action)).toBe(false);
+      expect(canRunCableAction(permissionsOfRole("SUPERVISOR"), action)).toBe(true);
+      expect(canRunCableAction(permissionsOfRole("ADMIN"), action)).toBe(true);
+      expect(canRunCableAction(permissionsOfRole("VIEWER"), action)).toBe(false);
     }
   });
 });
@@ -604,11 +606,14 @@ describe("permissions", () => {
 describe("cableActionAvailability", () => {
   const byAction = (role: Role, state: CableState) =>
     Object.fromEntries(
-      cableActionAvailability(role, state).map((item) => [item.action, item.disabledReason]),
+      cableActionAvailability(permissionsOfRole(role), state).map((item) => [
+        item.action,
+        item.disabledReason,
+      ]),
     );
 
   it("shows nothing to viewers", () => {
-    expect(cableActionAvailability("VIEWER", laid)).toEqual([]);
+    expect(cableActionAvailability(permissionsOfRole("VIEWER"), laid)).toEqual([]);
   });
 
   it("enables only what makes sense for a laid, disconnected cable", () => {

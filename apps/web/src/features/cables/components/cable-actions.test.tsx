@@ -1,6 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cableActionAvailability, type CableState, type Role } from "@cables/shared";
+import {
+  cableActionAvailability,
+  permissionsOfRole,
+  type CableState,
+  type Role,
+} from "@cables/shared";
 import { CableActions } from "./cable-actions";
 import { CableStatusBadges } from "./cable-status-badges";
 
@@ -32,7 +37,7 @@ function renderActions(role: Role, state: CableState = laid, routeTrays: string[
       code="SH-50"
       version={3}
       state={state}
-      availability={cableActionAvailability(role, state)}
+      availability={cableActionAvailability(permissionsOfRole(role), state)}
       locations={locations}
       events={[{ id: "e1", label: "Tendido · Tomás · 11/11/26" }]}
       routeTrays={routeTrays}

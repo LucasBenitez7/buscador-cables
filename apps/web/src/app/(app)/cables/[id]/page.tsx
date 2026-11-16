@@ -84,15 +84,15 @@ export default async function CablePage({
     notFound();
   }
   const sheetKey = cableSheetKey(cable.code);
-  const canEdit = !cable.deleted && hasPermission(user.role, "cable:update");
+  const canEdit = !cable.deleted && hasPermission(user, "cable:update");
   // Dados de baja: sin acciones. El resto ve solo lo que su rol permite.
-  const availability = cable.deleted ? [] : cableActionAvailability(user.role, cable.state);
+  const availability = cable.deleted ? [] : cableActionAvailability(user, cable.state);
   const [locations, routeSheets, hasSheet] = await Promise.all([
     availability.length > 0 ? listLocationOptions() : Promise.resolve([]),
     view === "recorrido" ? getRouteSheets(cable.route, cable.state) : Promise.resolve([]),
     view === "conexionado" ? hasDrawingImage(sheetKey) : Promise.resolve(false),
   ]);
-  const correctableEvents = canRunCableAction(user.role, "CORRECTION")
+  const correctableEvents = canRunCableAction(user, "CORRECTION")
     ? cable.history.map((entry) => ({
         id: entry.id,
         label: `${CABLE_ACTION_LABELS[entry.action]} · ${entry.user} · ${dateFormat.format(entry.at)}`,
@@ -328,7 +328,7 @@ export default async function CablePage({
                 origin: cable.ends.origin.equipment,
                 destination: cable.ends.destination.equipment,
               }}
-              canEdit={!cable.deleted && hasPermission(user.role, "cable:wiring")}
+              canEdit={!cable.deleted && hasPermission(user, "cable:wiring")}
             />
           </Section>
 

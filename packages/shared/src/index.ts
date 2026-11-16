@@ -1,6 +1,7 @@
 export * from "./cable-code";
 export * from "./environment";
 export * from "./permissions";
+export * from "./roles";
 export * from "./users";
 export * from "./locations";
 export * from "./catalogs";

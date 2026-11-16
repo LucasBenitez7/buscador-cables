@@ -6,8 +6,6 @@ import {
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUSES,
   INSTALLATION_STATUS_LABELS,
-  ROLES,
-  ROLE_LABELS,
   TEST_STATUSES,
   TEST_STATUS_LABELS,
 } from "@cables/shared";
@@ -447,7 +445,10 @@ function MissingDrawings({
 }
 
 function AdminPanel({ admin }: { admin: NonNullable<DashboardData["admin"]> }) {
-  const active = ROLES.reduce((sum, role) => sum + admin.activeUsers[role], 0);
+  const roles = Object.keys(admin.activeUsers).sort(
+    (a, b) => (admin.activeUsers[b] ?? 0) - (admin.activeUsers[a] ?? 0),
+  );
+  const active = roles.reduce((sum, role) => sum + (admin.activeUsers[role] ?? 0), 0);
   return (
     <div className="space-y-6">
       <Panel title="Usuarios activos" href="/admin/users" linkLabel="Gestionar">
@@ -455,9 +456,9 @@ function AdminPanel({ admin }: { admin: NonNullable<DashboardData["admin"]> }) {
           <span className="text-3xl font-semibold tabular-nums">{count(active)}</span>
         </p>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          {ROLES.map((role) => (
+          {roles.map((role) => (
             <div key={role} className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">{ROLE_LABELS[role]}</dt>
+              <dt className="text-muted-foreground">{admin.roleNames[role] ?? role}</dt>
               <dd className="font-medium tabular-nums">{admin.activeUsers[role]}</dd>
             </div>
           ))}

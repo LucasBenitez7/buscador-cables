@@ -5,7 +5,6 @@ import { createAuthMiddleware, isAPIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { after } from "next/server";
-import { ROLES } from "@cables/shared";
 import { env } from "@/lib/env";
 import { authRateLimit } from "@/lib/auth-rate-limit";
 import { accountExistsEmail, passwordResetEmail, verificationEmail } from "@/lib/email-templates";
@@ -91,8 +90,9 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       // Campos controlados por el servidor: el cliente nunca puede escribirlos.
+      // Id del rol (fase 12): los de siempre o uno creado en la web. Entra como Consulta.
       role: {
-        type: [...ROLES],
+        type: "string",
         required: false,
         defaultValue: "VIEWER",
         input: false,

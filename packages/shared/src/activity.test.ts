@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { activityQuery, parseActivitySearch } from "./activity";
-import { hasPermission } from "./permissions";
+import { hasPermission, permissionsOfRole } from "./permissions";
 
 describe("parseActivitySearch", () => {
   it("reads valid filters and ignores the rest", () => {
@@ -34,9 +34,9 @@ describe("activityQuery", () => {
 
 describe("activity:view permission", () => {
   it("lets supervisors and admins see everyone's activity, not technicians or viewers", () => {
-    expect(hasPermission("ADMIN", "activity:view")).toBe(true);
-    expect(hasPermission("SUPERVISOR", "activity:view")).toBe(true);
-    expect(hasPermission("TECHNICIAN", "activity:view")).toBe(false);
-    expect(hasPermission("VIEWER", "activity:view")).toBe(false);
+    expect(hasPermission(permissionsOfRole("ADMIN"), "activity:view")).toBe(true);
+    expect(hasPermission(permissionsOfRole("SUPERVISOR"), "activity:view")).toBe(true);
+    expect(hasPermission(permissionsOfRole("TECHNICIAN"), "activity:view")).toBe(false);
+    expect(hasPermission(permissionsOfRole("VIEWER"), "activity:view")).toBe(false);
   });
 });

@@ -15,7 +15,7 @@ import { CODE_LINK } from "@/components/ui/text-link";
 import { actionVariant } from "@/features/activity/components/activity-list";
 import { INLINE_LINK } from "@/lib/links";
 import { getActivityEvent } from "@/server/activity/service";
-import { requireUser, whenSignedIn } from "@/server/session";
+import { getCurrentUser, requireUser } from "@/server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,10 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
 });
 
-const loadEvent = cache((id: string) => whenSignedIn(() => getActivityEvent(id)));
+const loadEvent = cache(async (id: string) => {
+  const viewer = await getCurrentUser();
+  return viewer ? getActivityEvent(id, viewer) : null;
+});
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const event = await loadEvent((await params).id);

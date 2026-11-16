@@ -16,6 +16,13 @@ import {
 
 const url = "https://cables.example/reset-password?token=abc123";
 
+/** A role as the database has it (fase 12). */
+const TECHNICIAN = {
+  name: "Técnico",
+  description: "Trabajo en campo.",
+  permissions: ["cable:read", "cable:connect", "cable:disconnect", "cable:test"],
+};
+
 describe("passwordResetEmail", () => {
   it("is addressed to the user, in Spanish, and includes the link", () => {
     const email = passwordResetEmail({ to: "ana@planta.example", name: "Ana", url });
@@ -121,14 +128,16 @@ describe("account emails to the person", () => {
     const email = welcomeEmail({
       to: "nico@planta.example",
       name: "Nico",
-      role: "TECHNICIAN",
+      role: TECHNICIAN,
       loginUrl,
     });
 
     expect(email.subject).toMatch(/aprobada/i);
     expect(email.text).toContain("Bienvenido/a, Nico");
     expect(email.text).toContain("Tu rol: Técnico");
-    expect(email.text).toContain("- Conectar, desconectar y timbrar.");
+    expect(email.text).toContain("Trabajo en campo.");
+    expect(email.text).toContain("- Conectar");
+    expect(email.text).toContain("- Timbrar");
     expect(email.text).toContain(`Entrar: ${loginUrl}`);
   });
 
@@ -136,7 +145,7 @@ describe("account emails to the person", () => {
     const email = accountCreatedEmail({
       to: "ana@planta.example",
       name: "Ana",
-      role: "SUPERVISOR",
+      role: { name: "Supervisor", description: null, permissions: [] },
       createdBy: "Ada",
       loginUrl,
       forgotPasswordUrl: forgot,
@@ -152,8 +161,8 @@ describe("account emails to the person", () => {
     const email = roleChangedEmail({
       to: "ana@planta.example",
       name: "Ana",
-      fromRole: "VIEWER",
-      toRole: "TECHNICIAN",
+      fromRole: { name: "Consulta", description: null, permissions: ["cable:read"] },
+      toRole: TECHNICIAN,
       changedBy: "Ada",
       loginUrl,
     });

@@ -9,6 +9,7 @@ import {
   validateCreateUser,
   validateRoleChange,
 } from "./users";
+import { permissionsOfRole } from "./permissions";
 
 const validUser = {
   name: "Ana Pérez",
@@ -36,8 +37,10 @@ describe("createUserSchema", () => {
     expect(createUserSchema.safeParse({ ...validUser, password: "corta" }).success).toBe(false);
   });
 
-  it("rejects an unknown role", () => {
-    expect(createUserSchema.safeParse({ ...validUser, role: "ROOT" }).success).toBe(false);
+  // Fase 12: el rol es un id (que el servidor busca en la base); aquí solo su forma.
+  it("rejects a malformed role id", () => {
+    expect(createUserSchema.safeParse({ ...validUser, role: "../ROOT" }).success).toBe(false);
+    expect(createUserSchema.safeParse({ ...validUser, role: "" }).success).toBe(false);
   });
 
   it("rejects an invalid email", () => {
@@ -102,80 +105,44 @@ describe("changeRoleSchema and setUserActiveSchema", () => {
   });
 });
 
-describe("validateCreateUser", () => {
-  it("lets a supervisor create technicians but not supervisors", () => {
-    expect(validateCreateUser({ actorId: "s", actorRole: "SUPERVISOR" }, "TECHNICIAN")).toBeNull();
-    expect(
-      validateCreateUser({ actorId: "s", actorRole: "SUPERVISOR" }, "SUPERVISOR"),
-    ).not.toBeNull();
-  });
+const admin = permissionsOfRole("ADMIN");
+const supervisor = permissionsOfRole("SUPERVISOR");
 
-  it("lets an admin create admins", () => {
-    expect(validateCreateUser({ actorId: "a", actorRole: "ADMIN" }, "ADMIN")).toBeNull();
+// Fase 12: sin escalera de roles. Solo quien gestiona cuentas (el rol Administrador, y nadie
+// más puede tenerlo) las toca.
+describe("validateCreateUser", () => {
+  it("lets only who manages accounts create users", () => {
+    expect(validateCreateUser({ actorId: "a", actor: admin })).toBeNull();
+    expect(validateCreateUser({ actorId: "s", actor: supervisor })).toMatch(/permiso/);
   });
 });
 
 describe("validateRoleChange", () => {
   const base = {
     actorId: "admin",
-    actorRole: "ADMIN" as const,
-    targetId: "other",
-    targetRole: "TECHNICIAN" as const,
-    newRole: "SUPERVISOR" as const,
-    otherActiveAdmins: 1,
+    actor: admin,
+    targetId: "tec",
+    targetRole: "TECHNICIAN",
+    newRole: "SUPERVISOR",
+    otherActiveAdmins: 0,
   };
 
-  it("allows an admin to promote a technician", () => {
+  it("lets an admin change the role of someone else, to any role", () => {
     expect(validateRoleChange(base)).toBeNull();
+    expect(validateRoleChange({ ...base, newRole: "rol-a-medida" })).toBeNull();
   });
 
-  it("forbids changing your own role", () => {
+  it("forbids changing your own role, and anyone without the permission", () => {
     expect(validateRoleChange({ ...base, targetId: "admin" })).toMatch(/propio rol/);
+    expect(validateRoleChange({ ...base, actorId: "s", actor: supervisor })).toMatch(/permiso/);
   });
 
-  it("forbids a supervisor from touching a supervisor", () => {
+  it("keeps at least one active admin", () => {
     expect(
-      validateRoleChange({
-        ...base,
-        actorId: "s",
-        actorRole: "SUPERVISOR",
-        targetRole: "SUPERVISOR",
-        newRole: "VIEWER",
-      }),
-    ).toMatch(/permiso/);
-  });
-
-  it("forbids a supervisor from promoting someone above them", () => {
-    expect(
-      validateRoleChange({
-        ...base,
-        actorId: "s",
-        actorRole: "SUPERVISOR",
-        targetRole: "VIEWER",
-        newRole: "ADMIN",
-      }),
-    ).toMatch(/superior/);
-  });
-
-  it("keeps at least one active admin when demoting the last one", () => {
-    expect(
-      validateRoleChange({
-        ...base,
-        targetRole: "ADMIN",
-        newRole: "VIEWER",
-        otherActiveAdmins: 0,
-      }),
+      validateRoleChange({ ...base, targetRole: "ADMIN", newRole: "VIEWER", otherActiveAdmins: 0 }),
     ).toMatch(/al menos un administrador/);
-  });
-
-  it("allows demoting an admin when another active admin exists", () => {
     expect(
-      validateRoleChange({
-        ...base,
-        targetRole: "ADMIN",
-        newRole: "VIEWER",
-        otherActiveAdmins: 1,
-      }),
+      validateRoleChange({ ...base, targetRole: "ADMIN", newRole: "VIEWER", otherActiveAdmins: 1 }),
     ).toBeNull();
   });
 });
@@ -183,28 +150,23 @@ describe("validateRoleChange", () => {
 describe("validateActiveChange", () => {
   const base = {
     actorId: "admin",
-    actorRole: "ADMIN" as const,
-    targetId: "other",
-    targetRole: "TECHNICIAN" as const,
+    actor: admin,
+    targetId: "tec",
+    targetRole: "TECHNICIAN",
     active: false,
-    otherActiveAdmins: 1,
+    otherActiveAdmins: 0,
   };
 
-  it("allows deactivating another technician", () => {
+  it("allows deactivating and reactivating someone else", () => {
     expect(validateActiveChange(base)).toBeNull();
+    expect(validateActiveChange({ ...base, active: true })).toBeNull();
   });
 
-  it("forbids deactivating yourself", () => {
+  it("forbids deactivating yourself, the last admin, or acting without the permission", () => {
     expect(validateActiveChange({ ...base, targetId: "admin" })).toMatch(/propia cuenta/);
-  });
-
-  it("forbids deactivating the last active admin", () => {
-    expect(validateActiveChange({ ...base, targetRole: "ADMIN", otherActiveAdmins: 0 })).toMatch(
+    expect(validateActiveChange({ ...base, targetRole: "ADMIN" })).toMatch(
       /al menos un administrador/,
     );
-  });
-
-  it("allows reactivating anyone the actor can manage", () => {
-    expect(validateActiveChange({ ...base, active: true })).toBeNull();
+    expect(validateActiveChange({ ...base, actor: supervisor })).toMatch(/permiso/);
   });
 });

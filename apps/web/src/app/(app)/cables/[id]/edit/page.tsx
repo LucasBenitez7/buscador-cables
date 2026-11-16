@@ -49,7 +49,7 @@ export default async function EditCablePage({
       ) : null}
       {/* La clave fuerza a recargar los valores tras guardar (nueva versión). */}
       <CableForm key={cable.version} mode="edit" options={options} cable={cable} />
-      {hasPermission(user.role, "cable:delete") ? (
+      {hasPermission(user, "cable:delete") ? (
         <DeleteCableForm id={cable.id} code={cable.code} version={cable.version} />
       ) : null}
     </div>

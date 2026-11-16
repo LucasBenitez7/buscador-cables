@@ -1,161 +1,143 @@
 import { describe, expect, it } from "vitest";
 import {
   PERMISSIONS,
+  PERMISSION_GROUPS,
+  PERMISSION_LABELS,
+  PROTECTED_PERMISSIONS,
   ROLES,
-  ROLE_DESCRIPTIONS,
   ROLE_PERMISSIONS,
-  canManageActor,
+  effectivePermissions,
   hasAnyPermission,
   hasPermission,
+  isPermission,
   isRole,
-  type Permission,
-  type Role,
+  permissionsOfRole,
 } from "./permissions";
+import { createRoleSchema, diffPermissions, updateRoleSchema, userGrantsSchema } from "./roles";
 
-describe("isRole", () => {
-  it("accepts every declared role", () => {
-    for (const role of ROLES) {
-      expect(isRole(role)).toBe(true);
-    }
-  });
-
-  it("rejects unknown values", () => {
+describe("isRole and isPermission", () => {
+  it("accept the declared values only", () => {
+    for (const role of ROLES) expect(isRole(role)).toBe(true);
     expect(isRole("ROOT")).toBe(false);
-    expect(isRole(undefined)).toBe(false);
-    expect(isRole(42)).toBe(false);
+    expect(isPermission("cable:read")).toBe(true);
+    expect(isPermission("cable:fly")).toBe(false);
+    expect(isPermission(42)).toBe(false);
   });
 });
 
-describe("hasPermission", () => {
-  it("gives VIEWER read-only access", () => {
-    expect(hasPermission("VIEWER", "cable:read")).toBe(true);
-    expect(hasPermission("VIEWER", "export:run")).toBe(true);
-    expect(hasPermission("VIEWER", "cable:create")).toBe(false);
-    expect(hasPermission("VIEWER", "cable:retire")).toBe(false);
-    expect(hasPermission("VIEWER", "user:manage")).toBe(false);
+describe("starting roles", () => {
+  const can = (role: (typeof ROLES)[number], permission: (typeof PERMISSIONS)[number]) =>
+    hasPermission(permissionsOfRole(role), permission);
+
+  it("keep what each role could do before fase 12", () => {
+    expect(can("VIEWER", "cable:read")).toBe(true);
+    expect(can("VIEWER", "cable:create")).toBe(false);
+    expect(can("TECHNICIAN", "cable:wiring")).toBe(true);
+    expect(can("TECHNICIAN", "cable:retire")).toBe(false);
+    expect(can("SUPERVISOR", "activity:view")).toBe(true);
+    expect(can("SUPERVISOR", "user:manage")).toBe(false);
+    for (const permission of PERMISSIONS) expect(can("ADMIN", permission)).toBe(true);
   });
 
-  it("lets TECHNICIAN run field actions but not retire or correct", () => {
-    for (const permission of [
-      "cable:lay",
-      "cable:coil",
-      "cable:connect",
-      "cable:disconnect",
-      "cable:move",
-      "cable:create",
-      "cable:update",
-    ] as const) {
-      expect(hasPermission("TECHNICIAN", permission)).toBe(true);
-    }
-
-    expect(hasPermission("TECHNICIAN", "cable:retire")).toBe(false);
-    expect(hasPermission("TECHNICIAN", "cable:correct")).toBe(false);
-    expect(hasPermission("TECHNICIAN", "user:manage")).toBe(false);
-  });
-
-  it("lets SUPERVISOR retire, correct and manage catalogs", () => {
-    expect(hasPermission("SUPERVISOR", "cable:retire")).toBe(true);
-    expect(hasPermission("SUPERVISOR", "cable:correct")).toBe(true);
-    expect(hasPermission("SUPERVISOR", "location:manage")).toBe(true);
-    expect(hasPermission("SUPERVISOR", "catalog:manage")).toBe(true);
-    expect(hasPermission("SUPERVISOR", "import:run")).toBe(true);
-    expect(hasPermission("SUPERVISOR", "cable:delete")).toBe(false);
-    expect(hasPermission("SUPERVISOR", "user:manage")).toBe(false);
-  });
-
-  it("gives ADMIN every declared permission", () => {
-    for (const permission of PERMISSIONS) {
-      expect(hasPermission("ADMIN", permission)).toBe(true);
+  it("give the protected permissions to the administrator role only", () => {
+    for (const role of ROLES.filter((role) => role !== "ADMIN")) {
+      for (const permission of PROTECTED_PERMISSIONS) expect(can(role, permission)).toBe(false);
     }
   });
 
-  it("never grants a permission outside the declared catalog", () => {
-    for (const role of ROLES) {
-      for (const permission of ROLE_PERMISSIONS[role]) {
-        expect(PERMISSIONS).toContain(permission);
+  it("each include every permission of the role below", () => {
+    const ordered = ["VIEWER", "TECHNICIAN", "SUPERVISOR", "ADMIN"] as const;
+    for (let i = 1; i < ordered.length; i += 1) {
+      for (const permission of ROLE_PERMISSIONS[ordered[i - 1]!]) {
+        expect(ROLE_PERMISSIONS[ordered[i]!]).toContain(permission);
       }
     }
   });
 });
 
 describe("hasAnyPermission", () => {
-  it("is true when at least one permission matches", () => {
-    expect(hasAnyPermission("VIEWER", ["cable:create", "cable:read"])).toBe(true);
-  });
-
-  it("is false when none match", () => {
-    expect(hasAnyPermission("VIEWER", ["cable:create", "user:manage"])).toBe(false);
-  });
-
-  it("is false for an empty list", () => {
-    expect(hasAnyPermission("ADMIN", [])).toBe(false);
+  it("is true when one matches and false for none or an empty list", () => {
+    const viewer = permissionsOfRole("VIEWER");
+    expect(hasAnyPermission(viewer, ["cable:create", "cable:read"])).toBe(true);
+    expect(hasAnyPermission(viewer, ["cable:create", "user:manage"])).toBe(false);
+    expect(hasAnyPermission(permissionsOfRole("ADMIN"), [])).toBe(false);
   });
 });
 
-describe("canManageActor", () => {
-  it("lets ADMIN manage anyone, including other admins", () => {
-    for (const target of ROLES) {
-      expect(canManageActor("ADMIN", target)).toBe(true);
-    }
+describe("effectivePermissions", () => {
+  it("joins the role and the extras, in catalogue order, always with cable:read", () => {
+    expect(
+      effectivePermissions({
+        roleId: "custom",
+        rolePermissions: ["cable:connect"],
+        grants: ["cable:test", "cable:connect"],
+      }),
+    ).toEqual(["cable:read", "cable:connect", "cable:test"]);
   });
 
-  it("lets a role manage only strictly lower ranks", () => {
-    expect(canManageActor("SUPERVISOR", "TECHNICIAN")).toBe(true);
-    expect(canManageActor("SUPERVISOR", "VIEWER")).toBe(true);
-    expect(canManageActor("SUPERVISOR", "SUPERVISOR")).toBe(false);
-    expect(canManageActor("SUPERVISOR", "ADMIN")).toBe(false);
-  });
-
-  it("never lets VIEWER manage anyone", () => {
-    for (const target of ROLES) {
-      expect(canManageActor("VIEWER", target)).toBe(false);
-    }
-  });
-});
-
-describe("role hierarchy is monotonic", () => {
-  it("each role includes every permission of the role below it", () => {
-    const ordered = ["VIEWER", "TECHNICIAN", "SUPERVISOR", "ADMIN"] as const;
-
-    for (let i = 1; i < ordered.length; i += 1) {
-      const lower = ROLE_PERMISSIONS[ordered[i - 1]!];
-      const higher = ROLE_PERMISSIONS[ordered[i]!];
-      for (const permission of lower) {
-        expect(higher).toContain(permission);
-      }
-    }
+  it("drops unknown permissions and the protected ones outside the administrator role", () => {
+    expect(
+      effectivePermissions({
+        roleId: "SUPERVISOR",
+        rolePermissions: ["cable:read", "user:manage", "cable:fly"],
+        grants: ["role:manage"],
+      }),
+    ).toEqual(["cable:read"]);
+    expect(
+      effectivePermissions({ roleId: "ADMIN", rolePermissions: ROLE_PERMISSIONS.ADMIN }),
+    ).toContain("role:manage");
   });
 });
 
-// Fase 10: lo que el administrador lee para elegir un rol tiene que ser verdad.
-describe("ROLE_DESCRIPTIONS", () => {
-  const says = (role: Role, text: RegExp) =>
-    ROLE_DESCRIPTIONS[role].can.some((line) => text.test(line));
-  const firstWith = (permission: Permission) =>
-    [...ROLES].reverse().find((role) => hasPermission(role, permission));
+describe("permission catalogue for the screens", () => {
+  it("explains every permission exactly once", () => {
+    const listed = PERMISSION_GROUPS.flatMap((group) => group.permissions.map((item) => item.id));
+    expect([...listed].sort()).toEqual([...PERMISSIONS].sort());
+    for (const permission of PERMISSIONS) expect(PERMISSION_LABELS[permission]).toBeTruthy();
+  });
+});
 
-  it("describes every role", () => {
-    for (const role of ROLES) {
-      expect(ROLE_DESCRIPTIONS[role].summary).not.toBe("");
-      expect(ROLE_DESCRIPTIONS[role].can.length).toBeGreaterThan(0);
-    }
+describe("role and grant schemas", () => {
+  it("cleans a role: trims, orders the permissions and always adds cable:read", () => {
+    expect(
+      createRoleSchema.parse({
+        name: "  Conexionista ",
+        description: "",
+        permissions: ["cable:test", "cable:connect", "cable:test"],
+      }),
+    ).toEqual({
+      name: "Conexionista",
+      description: null,
+      permissions: ["cable:read", "cable:connect", "cable:test"],
+    });
   });
 
-  it("names each power in the first role that has it", () => {
-    const powers: [Permission, RegExp][] = [
-      ["cable:read", /Buscar cables/],
-      ["cable:lay", /Tender/],
-      ["cable:test", /timbrar/],
-      ["cable:create", /alta y editar cables/],
-      ["activity:view", /actividad de todo el equipo/],
-      ["cable:retire", /Dar de baja cables/],
-      ["catalog:manage", /catálogos/],
-      ["location:manage", /ubicaciones y catálogos/],
-      ["user:manage", /Aprobar cuentas/],
-      ["cable:delete", /Eliminar cables/],
-    ];
-    for (const [permission, text] of powers) {
-      expect(says(firstWith(permission)!, text), permission).toBe(true);
-    }
+  it("refuses protected or unknown permissions, markup and bad versions", () => {
+    const base = { name: "Jefe", permissions: ["cable:read"] };
+    expect(createRoleSchema.safeParse({ ...base, permissions: ["user:manage"] }).success).toBe(
+      false,
+    );
+    expect(createRoleSchema.safeParse({ ...base, permissions: ["cable:fly"] }).success).toBe(false);
+    expect(createRoleSchema.safeParse({ ...base, name: "<b>x</b>" }).success).toBe(false);
+    expect(createRoleSchema.safeParse({ ...base, name: "x" }).success).toBe(false);
+    expect(updateRoleSchema.safeParse({ ...base, id: "../x", version: 1 }).success).toBe(false);
+    expect(updateRoleSchema.safeParse({ ...base, id: "r1", version: 0 }).success).toBe(false);
+  });
+
+  it("refuses protected extras", () => {
+    expect(userGrantsSchema.safeParse({ userId: "u", permissions: ["role:manage"] }).success).toBe(
+      false,
+    );
+    expect(userGrantsSchema.parse({ userId: "u", permissions: ["cable:test"] })).toEqual({
+      userId: "u",
+      permissions: ["cable:test"],
+    });
+  });
+
+  it("says what was added and removed", () => {
+    expect(diffPermissions(["cable:read", "cable:test"], ["cable:read", "cable:lay"])).toEqual({
+      added: ["cable:lay"],
+      removed: ["cable:test"],
+    });
   });
 });

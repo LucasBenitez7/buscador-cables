@@ -1,14 +1,23 @@
 /**
- * Roles and permissions for the cable inventory.
+ * Roles and permissions for the cable inventory (fase 12).
  *
- * Pure data + pure functions so they can be unit tested and reused from the
- * server, the client and the database seed. The Prisma `Role` enum must list
- * exactly the same members as `ROLES`.
+ * The catalogue of permissions is code: a permission only exists if the code checks it. Which
+ * permissions each role has, the roles themselves and the extra permissions of each person live
+ * in the database and are edited from the web by an administrator. What a person can do is
+ * `effectivePermissions` of their role and extras, read again on every request.
+ *
+ * Pure data + pure functions so they can be unit tested and reused from the server, the client
+ * and the database seed.
  */
 
+/** The four roles every installation starts with: their id in the database is their key. */
 export const ROLES = ["ADMIN", "SUPERVISOR", "TECHNICIAN", "VIEWER"] as const;
 
+/** One of the four starting roles. A role created on the web has a generated id instead. */
 export type Role = (typeof ROLES)[number];
+
+/** The administrator role: locked, and the only one that manages accounts and roles. */
+export const ADMIN_ROLE: Role = "ADMIN";
 
 export const PERMISSIONS = [
   "cable:read",
@@ -30,11 +39,27 @@ export const PERMISSIONS = [
   "import:run",
   "export:run",
   "user:manage",
+  "role:manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
 
-/** Spanish labels, used by the UI. */
+/**
+ * Only the administrator role has them: they cannot be given to another role nor as an extra
+ * (the database refuses it too). Whoever could give them could make themselves administrator.
+ */
+export const PROTECTED_PERMISSIONS: readonly Permission[] = ["user:manage", "role:manage"];
+
+/** Every role can look at the cables: without it the app shows nothing. */
+export const REQUIRED_PERMISSIONS: readonly Permission[] = ["cable:read"];
+
+export const isPermission = (value: unknown): value is Permission =>
+  typeof value === "string" && (PERMISSIONS as readonly string[]).includes(value);
+
+export const isProtectedPermission = (permission: string) =>
+  (PROTECTED_PERMISSIONS as readonly string[]).includes(permission);
+
+/** Names of the four starting roles (the database keeps the current name of every role). */
 export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: "Administrador",
   SUPERVISOR: "Supervisor",
@@ -43,45 +68,121 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 /**
- * What each role can do, in the words of the people who use the app: the administrator reads
- * it to choose a role (users page, approval of an account). Each role can also do everything
- * of the roles below it. Kept in step with `ROLE_PERMISSIONS` by the tests.
+ * Every permission in the words of the people who use the app, by topic: the administrator
+ * reads it to decide what a role or a person can do.
  */
-export const ROLE_DESCRIPTIONS: Record<Role, { summary: string; can: readonly string[] }> = {
-  VIEWER: {
-    summary: "Consulta sin cambiar nada.",
-    can: [
-      "Buscar cables y ver su ficha, su recorrido y su historial.",
-      "Ver bandejas, ubicaciones y los planos con la bandeja marcada.",
+export const PERMISSION_GROUPS: readonly {
+  title: string;
+  permissions: readonly { id: Permission; label: string; help: string }[];
+}[] = [
+  {
+    title: "Consultar",
+    permissions: [
+      {
+        id: "cable:read",
+        label: "Ver cables, bandejas, equipos y planos",
+        help: "Buscar, abrir fichas, ver el historial de cada cable y los planos. Todo rol lo tiene.",
+      },
+      {
+        id: "export:run",
+        label: "Exportar listados",
+        help: "Descargar los resultados de una búsqueda.",
+      },
     ],
   },
-  TECHNICIAN: {
-    summary: "Trabajo en campo: lo de Consulta y registrar lo que hace con cada cable.",
-    can: [
-      "Tender (también a medias, indicando dónde está), enrollar y mover cables.",
-      "Conectar, desconectar y timbrar.",
-      "Corregir las bornas de un cable cuando en campo no coinciden con el listado.",
-      "Dar de alta y editar cables.",
+  {
+    title: "Trabajo en campo",
+    permissions: [
+      {
+        id: "cable:lay",
+        label: "Tender cables",
+        help: "También a medias, con dónde quedó la punta.",
+      },
+      { id: "cable:coil", label: "Enrollar cables", help: "Dejar un cable enrollado en un sitio." },
+      {
+        id: "cable:move",
+        label: "Mover cables",
+        help: "Cambiar de sitio un cable enrollado o en almacén.",
+      },
+      { id: "cable:connect", label: "Conectar", help: "Marcar conectada una punta o las dos." },
+      {
+        id: "cable:disconnect",
+        label: "Desconectar",
+        help: "Marcar desconectada una punta o las dos.",
+      },
+      { id: "cable:test", label: "Timbrar", help: "Registrar el timbrado, correcto o con fallo." },
+      {
+        id: "cable:wiring",
+        label: "Corregir bornas",
+        help: "Cambiar el regletero o la borna de un hilo cuando en campo no coincide con el listado.",
+      },
     ],
   },
-  SUPERVISOR: {
-    summary: "Coordina la obra: lo de Técnico y supervisar y ordenar los datos.",
-    can: [
-      "Ver la actividad de todo el equipo.",
-      "Dar de baja cables y corregir su estado.",
-      "Gestionar ubicaciones y catálogos (tipos, colores, fabricantes).",
+  {
+    title: "Datos de los cables",
+    permissions: [
+      { id: "cable:create", label: "Dar de alta cables", help: "Crear cables nuevos a mano." },
+      { id: "cable:update", label: "Editar cables", help: "Cambiar los datos de un cable." },
+      {
+        id: "cable:retire",
+        label: "Retirar cables",
+        help: "Dar un cable por retirado, con el motivo.",
+      },
+      {
+        id: "cable:correct",
+        label: "Corregir movimientos",
+        help: "Corregir el estado de un cable o un movimiento mal registrado.",
+      },
+      {
+        id: "cable:delete",
+        label: "Dar de baja cables",
+        help: "Quitar un cable de la lista (no se borra su historial).",
+      },
+      { id: "import:run", label: "Importar listados", help: "Cargar datos desde ficheros." },
     ],
   },
-  ADMIN: {
-    summary: "Gestiona la aplicación: lo de Supervisor y las cuentas.",
-    can: [
-      "Aprobar cuentas nuevas, cambiar roles y desactivar o reactivar cuentas.",
-      "Dar de alta usuarios.",
-      "Eliminar cables.",
+  {
+    title: "Organización",
+    permissions: [
+      {
+        id: "activity:view",
+        label: "Ver la actividad del equipo",
+        help: "Lo que ha hecho cada persona con los cables. Cada uno ve siempre la suya.",
+      },
+      {
+        id: "location:manage",
+        label: "Gestionar ubicaciones",
+        help: "Crear y ordenar el árbol de la planta.",
+      },
+      {
+        id: "catalog:manage",
+        label: "Gestionar catálogos",
+        help: "Tipos de cable, colores y fabricantes.",
+      },
     ],
   },
-};
+  {
+    title: "Administración (solo el rol Administrador)",
+    permissions: [
+      {
+        id: "user:manage",
+        label: "Gestionar cuentas",
+        help: "Aprobar, dar de alta, cambiar de rol y desactivar cuentas, y ver sus cambios.",
+      },
+      {
+        id: "role:manage",
+        label: "Gestionar roles y permisos",
+        help: "Crear y editar roles y dar permisos extra, y ver sus cambios.",
+      },
+    ],
+  },
+];
 
+export const PERMISSION_LABELS: Record<Permission, string> = Object.fromEntries(
+  PERMISSION_GROUPS.flatMap((group) => group.permissions.map((item) => [item.id, item.label])),
+) as Record<Permission, string>;
+
+/** What each starting role can do: the migration creates them with these permissions. */
 const VIEWER_PERMISSIONS: readonly Permission[] = ["cable:read", "export:run"];
 
 const TECHNICIAN_PERMISSIONS: readonly Permission[] = [
@@ -93,9 +194,7 @@ const TECHNICIAN_PERMISSIONS: readonly Permission[] = [
   "cable:connect",
   "cable:disconnect",
   "cable:move",
-  // Timbrar: lo hace quien está en campo con el cable.
   "cable:test",
-  // Corregir bornas (fase 11): el conexionista deja la tabla como está en campo.
   "cable:wiring",
 ];
 
@@ -103,7 +202,6 @@ const SUPERVISOR_PERMISSIONS: readonly Permission[] = [
   ...TECHNICIAN_PERMISSIONS,
   "cable:retire",
   "cable:correct",
-  // "Actividad reciente": todas las acciones de todos. Cada uno ve siempre la suya.
   "activity:view",
   "location:manage",
   "catalog:manage",
@@ -114,6 +212,7 @@ const ADMIN_PERMISSIONS: readonly Permission[] = [
   ...SUPERVISOR_PERMISSIONS,
   "cable:delete",
   "user:manage",
+  "role:manage",
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
@@ -127,29 +226,39 @@ export function isRole(value: unknown): value is Role {
   return typeof value === "string" && (ROLES as readonly string[]).includes(value);
 }
 
-export function hasPermission(role: Role, permission: Permission): boolean {
-  return ROLE_PERMISSIONS[role].includes(permission);
+/** Who asks: anything that carries the permissions it has (the current user, an actor). */
+export type PermissionHolder = { permissions: readonly string[] };
+
+export function hasPermission(who: PermissionHolder, permission: Permission): boolean {
+  return who.permissions.includes(permission);
 }
 
-export function hasAnyPermission(role: Role, permissions: readonly Permission[]): boolean {
-  return permissions.some((permission) => hasPermission(role, permission));
+export function hasAnyPermission(who: PermissionHolder, permissions: readonly Permission[]) {
+  return permissions.some((permission) => hasPermission(who, permission));
 }
+
+/** The permissions of a starting role, as a holder (seeds, tests, the load CLI). */
+export const permissionsOfRole = (role: Role): PermissionHolder => ({
+  permissions: ROLE_PERMISSIONS[role],
+});
 
 /**
- * Roles ordered from most to least privileged. Used to decide whether a user may
- * manage another one: nobody can manage a role equal to or above their own,
- * except ADMIN, who can manage any other ADMIN.
+ * What a person can do: their role's permissions plus their extras, only known permissions,
+ * always "cable:read", and the protected ones only for the administrator role, whatever the
+ * database says (defence in depth).
  */
-export const ROLE_RANK: Record<Role, number> = {
-  ADMIN: 4,
-  SUPERVISOR: 3,
-  TECHNICIAN: 2,
-  VIEWER: 1,
-};
-
-export function canManageActor(actor: Role, target: Role): boolean {
-  if (actor === "ADMIN") {
-    return true;
-  }
-  return ROLE_RANK[actor] > ROLE_RANK[target];
+export function effectivePermissions({
+  roleId,
+  rolePermissions,
+  grants = [],
+}: {
+  roleId: string;
+  rolePermissions: readonly string[];
+  grants?: readonly string[];
+}): Permission[] {
+  const wanted = new Set<string>([...REQUIRED_PERMISSIONS, ...rolePermissions, ...grants]);
+  return PERMISSIONS.filter(
+    (permission) =>
+      wanted.has(permission) && (!isProtectedPermission(permission) || roleId === ADMIN_ROLE),
+  );
 }

@@ -1,3 +1,4 @@
+import { permissionsOfRole } from "@cables/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CableSearchResult, SearchOptions } from "@/server/cables/search";
@@ -267,7 +268,11 @@ describe("SearchResults", () => {
     expect(screen.queryByRole("button", { name: "Acción" })).toBeNull();
 
     rerender(
-      <SearchResults search={{}} result={result} actions={{ role: "TECHNICIAN", locations: [] }} />,
+      <SearchResults
+        search={{}}
+        result={result}
+        actions={{ ...permissionsOfRole("TECHNICIAN"), locations: [] }}
+      />,
     );
     fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Acción" }));
 

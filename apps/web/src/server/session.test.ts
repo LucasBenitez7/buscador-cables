@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getSession, redirect } = vi.hoisted(() => ({
+const { getSession, redirect, findUnique } = vi.hoisted(() => ({
   getSession: vi.fn(),
+  findUnique: vi.fn(),
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
   }),
@@ -11,13 +12,45 @@ const { getSession, redirect } = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession } } }));
+vi.mock("@cables/db", () => ({ prisma: { user: { findUnique } } }));
 
 // `cache` de React solo deduplica dentro de una petición de React; fuera de ella
 // se comporta como la función original, que es lo que queremos probar aquí.
+const { PERMISSIONS, ROLE_PERMISSIONS } = await import("@cables/shared");
+type Role = keyof typeof ROLE_PERMISSIONS;
+
 const { authorize, getCurrentUser, requirePermission, requireUser, whenSignedIn } =
   await import("./session");
 
-function sessionFor(user: { role: string; active: boolean }) {
+const ROLE_NAMES: Record<string, string> = {
+  ADMIN: "Administrador",
+  SUPERVISOR: "Supervisor",
+  TECHNICIAN: "Técnico",
+  VIEWER: "Consulta",
+};
+
+/**
+ * A session and, behind it, the row the session re-reads (fase 12): the role with its
+ * permissions in the database, and the extras of the person.
+ */
+function sessionFor(
+  user: { role: string; active: boolean },
+  extras: { rolePermissions?: string[]; grants?: string[] } = {},
+) {
+  findUnique.mockResolvedValue({
+    id: "u1",
+    name: "Ana",
+    email: "ana@cables.test",
+    active: user.active,
+    role: user.role,
+    roleInfo: {
+      name: ROLE_NAMES[user.role] ?? user.role,
+      permissions: extras.rolePermissions ?? [
+        ...(ROLE_PERMISSIONS[user.role as Role] ?? ["cable:read"]),
+      ],
+    },
+    permissionGrants: (extras.grants ?? []).map((permission) => ({ permission })),
+  });
   return {
     session: { id: "s1" },
     user: { id: "u1", name: "Ana", email: "ana@cables.test", ...user },
@@ -27,6 +60,7 @@ function sessionFor(user: { role: string; active: boolean }) {
 describe("session helpers", () => {
   beforeEach(() => {
     getSession.mockReset();
+    findUnique.mockReset();
     redirect.mockClear();
   });
 
@@ -70,17 +104,43 @@ describe("session helpers", () => {
         name: "Ana",
         email: "ana@cables.test",
         role: "TECHNICIAN",
+        roleName: "Técnico",
+        permissions: PERMISSIONS.filter((p) => ROLE_PERMISSIONS.TECHNICIAN.includes(p)),
+        extraCount: 0,
       });
     });
 
-    it("treats deactivated accounts as anonymous", async () => {
-      getSession.mockResolvedValue(sessionFor({ role: "ADMIN", active: false }));
+    // Fase 12: lo que puede hacer sale de la base en cada petición, rol más extras.
+    it("adds the extras of the person and counts them", async () => {
+      getSession.mockResolvedValue(
+        sessionFor({ role: "TECHNICIAN", active: true }, { grants: ["cable:retire"] }),
+      );
+
+      const user = await getCurrentUser();
+      expect(user?.permissions).toContain("cable:retire");
+      expect(user?.extraCount).toBe(1);
+    });
+
+    it("never gives account or role management outside the administrator role", async () => {
+      getSession.mockResolvedValue(
+        sessionFor(
+          { role: "r-hecho-a-mano", active: true },
+          { rolePermissions: ["cable:read", "user:manage"], grants: ["role:manage"] },
+        ),
+      );
+
+      expect((await getCurrentUser())?.permissions).toEqual(["cable:read"]);
+    });
+
+    it("treats an account deactivated since the session started as anonymous", async () => {
+      getSession.mockResolvedValue(sessionFor({ role: "ADMIN", active: true }));
+      findUnique.mockResolvedValue(null);
 
       await expect(getCurrentUser()).resolves.toBeNull();
     });
 
-    it("treats unknown roles as anonymous", async () => {
-      getSession.mockResolvedValue(sessionFor({ role: "ROOT", active: true }));
+    it("treats deactivated accounts as anonymous", async () => {
+      getSession.mockResolvedValue(sessionFor({ role: "ADMIN", active: false }));
 
       await expect(getCurrentUser()).resolves.toBeNull();
     });
