@@ -1,18 +1,40 @@
 import type { Metadata } from "next";
+import {
+  ROLES,
+  ROLE_LABELS,
+  USER_SORT_LABELS,
+  USER_STATUS_LABELS,
+  listQuery,
+  optionsOf,
+  parseUserListSearch,
+  type UserListSearch,
+} from "@cables/shared";
+import { FilterForm } from "@/components/filter-form";
+import { Pagination } from "@/components/pagination";
 import { CreateUserForm } from "@/features/users/components/create-user-form";
 import { RoleGuide } from "@/features/users/components/role-guide";
 import { UserEvents } from "@/features/users/components/user-events";
 import { UsersTable } from "@/features/users/components/users-table";
 import { requirePermission } from "@/server/session";
-import { listUserEvents, listUsers } from "@/server/users/service";
+import { countPendingAccounts, listUserEvents, searchUsers } from "@/server/users/service";
 
 export const metadata: Metadata = { title: "Usuarios" };
 export const dynamic = "force-dynamic";
 
-export default async function AdminUsersPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+const pageHref = (search: UserListSearch, page: number) =>
+  `/admin/users${listQuery({ ...search, page }, { page: 1, sort: "priority" })}`;
+
+export default async function AdminUsersPage({ searchParams }: { searchParams: SearchParams }) {
   const current = await requirePermission("user:manage");
-  const [users, events] = await Promise.all([listUsers(), listUserEvents()]);
-  const pendingCount = users.filter((user) => user.pending).length;
+  const search = parseUserListSearch(await searchParams);
+  const [users, events, pendingCount] = await Promise.all([
+    searchUsers(search),
+    listUserEvents(10),
+    countPendingAccounts(),
+  ]);
+  const filtered = Boolean(search.q || search.role || search.status || search.sort);
 
   return (
     <div className="space-y-8">
@@ -37,8 +59,68 @@ export default async function AdminUsersPage() {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-8">
           <section className="space-y-3">
-            <h2 className="text-base font-medium">Cuentas ({users.length})</h2>
-            <UsersTable users={users} currentUserId={current.id} currentRole={current.role} />
+            <h2 className="text-base font-medium">
+              Cuentas ({users.total.toLocaleString("es-ES")})
+              {users.pageCount > 1 ? (
+                <span className="text-muted-foreground text-sm font-normal">
+                  {" "}
+                  · página {users.page} de {users.pageCount}
+                </span>
+              ) : null}
+            </h2>
+            <FilterForm
+              action="/admin/users"
+              label="Filtrar cuentas"
+              active={filtered}
+              fields={[
+                {
+                  kind: "text",
+                  name: "q",
+                  label: "Nombre o correo",
+                  value: search.q,
+                  placeholder: "Ana, @empresa…",
+                },
+                {
+                  kind: "select",
+                  name: "role",
+                  label: "Rol",
+                  value: search.role,
+                  options: ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
+                },
+                {
+                  kind: "select",
+                  name: "status",
+                  label: "Estado",
+                  value: search.status,
+                  options: optionsOf(USER_STATUS_LABELS),
+                  emptyLabel: "Todas",
+                },
+                {
+                  kind: "select",
+                  name: "sort",
+                  label: "Orden",
+                  value: search.sort,
+                  options: optionsOf(USER_SORT_LABELS),
+                  emptyLabel: null,
+                },
+              ]}
+            />
+            {users.rows.length === 0 ? (
+              <p role="status" className="text-muted-foreground rounded-lg border p-4 text-sm">
+                Ninguna cuenta cumple estos filtros.
+              </p>
+            ) : (
+              <UsersTable
+                users={users.rows}
+                currentUserId={current.id}
+                currentRole={current.role}
+              />
+            )}
+            <Pagination
+              page={users.page}
+              pageCount={users.pageCount}
+              href={(page) => pageHref(search, page)}
+            />
           </section>
 
           <section className="space-y-3">

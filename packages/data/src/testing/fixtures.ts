@@ -13,6 +13,24 @@ type End = Partial<{
   location: string;
 }>;
 
+/** A row of a wiring table: wire, then block / point at the origin and at the destination. */
+type WireRow = [
+  wire: string,
+  fromBlock: string,
+  fromPoint: string,
+  toBlock: string,
+  toPoint: string,
+];
+/** A row of the instrumentation wiring table: wire, colour, then strip / terminal of each end. */
+type InstrumentWireRow = [
+  wire: string,
+  colour: string,
+  fromStrip: string,
+  fromTerminal: string,
+  toStrip: string,
+  toTerminal: string,
+];
+
 export type PowerSheetSpec = {
   code: string;
   footer?: string;
@@ -30,7 +48,59 @@ export type PowerSheetSpec = {
   to?: End;
   route?: string[];
   observations?: string;
+  /** Rows of the INTERCONNECTION table; `null` leaves the table out. Empty cells: "". */
+  wires?: WireRow[] | null;
+  /** Rows of the JUMPERS table (code first); none by default. */
+  jumpers?: WireRow[];
+  wiringRevision?: string;
 };
+
+const POWER_WIRES: WireRow[] = [
+  ["BN", "X51", "11", "-", "+"],
+  ["BU", "X51", "12", "-", "-"],
+  ["SH", "-", "PE", "-", "PE"],
+];
+
+/** The INTERCONNECTION and JUMPERS tables of a power sheet, where the real lists print them. */
+function powerWiring(spec: PowerSheetSpec): PdfText[] {
+  const size = 9;
+  const t = (text: string, x: number, top: number): PdfText[] =>
+    text ? [{ text, x, top, size }] : [];
+  const wires = spec.wires === undefined ? POWER_WIRES : spec.wires;
+  if (wires === null) return [];
+  const jumpers = spec.jumpers ?? [];
+  const row = (columns: number[], top: number) => (cells: string[]) =>
+    cells.flatMap((text, i) => t(text, columns[i]!, top));
+  return [
+    ...t("INTERCONNECTION", 360, 424),
+    ...t("R.", 524, 423.7),
+    ...t(spec.wiringRevision ?? "0", 540, 423.7),
+    ...t("ORIGIN", 391.8, 449.9),
+    ...t("DESTINATION", 530.4, 449.9),
+    ...t("WIRE", 296.5, 463.2),
+    ...["BLOCK", "POINT", "BLOCK", "POINT"].flatMap((text, i) =>
+      t(text, [353.3, 432.1, 507.5, 586.3][i]!, 462.8),
+    ),
+    ...wires.flatMap((cells, i) => row([304, 361, 443, 517, 597], 477.1 + i * 13.2)(cells)),
+    // Without jumpers the lists still print the revision box of the empty JUMPERS table.
+    ...(jumpers.length === 0
+      ? t("0", 540, 700.3)
+      : [
+          ...t("JUMPERS", 360, 700.6),
+          ...t("R.", 524, 700.3),
+          ...t("0", 540, 700.3),
+          ...t("ORIGIN", 417, 726.5),
+          ...t("DESTINATION", 555.2, 726.5),
+          ...t("JUMPER", 289.1, 740.2),
+          ...["BLOCK", "POINT", "BLOCK", "POINT"].flatMap((text, i) =>
+            t(text, [379.3, 458.2, 533.5, 612.3][i]!, 739.9),
+          ),
+          ...jumpers.flatMap((cells, i) =>
+            row([283.1, 386.4, 469.3, 540.7, 623.5], 753.8 + i * 13.1)(cells),
+          ),
+        ]),
+  ];
+}
 
 /** A power cable sheet (L2-L4), A4-ish at 839 × 1184 points, 10-point text. */
 export function powerSheet(spec: PowerSheetSpec): PdfPageSpec {
@@ -83,6 +153,7 @@ export function powerSheet(spec: PowerSheetSpec): PdfPageSpec {
       ...(spec.route ?? []).flatMap((step, index) => t(step, 95, 451 + index * 13.2, 9)),
       ...t("Observations :", 154, 1000),
       ...t(spec.observations, 260, 1000),
+      ...powerWiring(spec),
       ...t("ORIGIN CONNECTION", 160, 1040),
       ...t(spec.footer ?? spec.code, 72, 1110, 7),
     ],
@@ -102,7 +173,39 @@ export type InstrumentSheetSpec = {
   to?: End;
   route?: string[];
   observations?: string;
+  /** Rows of the INTERCONNECTION table; `null` leaves the table out. Empty cells: "". */
+  wires?: InstrumentWireRow[] | null;
 };
+
+const INSTRUMENT_WIRES: InstrumentWireRow[] = [
+  ["1", "1.Blue", "-Direct", "POS", "JB-TB1", "22"],
+  ["2", "1.Red", "-Direct", "NEG", "JB-TB1", "24"],
+  ["SH", "SH", "Direct", "Shield", "JB-TB1", "Shield"],
+];
+
+/** The INTERCONNECTION table of an instrumentation sheet, where the real lists print it. */
+function instrumentWiring(spec: InstrumentSheetSpec, size: number): PdfText[] {
+  const t = (text: string, x: number, top: number): PdfText[] =>
+    text ? [{ text, x, top, size }] : [];
+  const wires = spec.wires === undefined ? INSTRUMENT_WIRES : spec.wires;
+  if (wires === null) return [];
+  const headers: [string, number][] = [
+    ["Wire No.", 125.3],
+    ["Colour", 178.3],
+    ["Terminal Strip (End 1)", 233.9],
+    ["T.B. (End 1)", 332.1],
+    ["Terminal Strip (End 2)", 404.2],
+    ["T.B. (End 2)", 502.4],
+  ];
+  const columns = [133.3, 175, 254, 342, 418.7, 514.7];
+  return [
+    ...t("INTERCONNECTION", 253, 184.7),
+    ...t("ORIGIN", 287, 197),
+    ...t("DESTINATION", 448.1, 197),
+    ...headers.flatMap(([text, x]) => t(text, x, 204.6)),
+    ...wires.flatMap((cells, i) => cells.flatMap((text, c) => t(text, columns[c]!, 212.1 + i * 7))),
+  ];
+}
 
 /** An instrumentation cable sheet (L1), 595 × 842 points, 5.8-point text. */
 export function instrumentSheet(spec: InstrumentSheetSpec): PdfPageSpec {
@@ -145,7 +248,7 @@ export function instrumentSheet(spec: InstrumentSheetSpec): PdfPageSpec {
       ),
       ...t("ROUTING", 19.8, 184.7),
       ...(spec.route ?? []).flatMap((step, index) => t(step, 24.7, 198.7 + index * 7)),
-      ...t("INTERCONNECTION", 253, 184.7),
+      ...instrumentWiring(spec, size),
       ...t("Observations :", 60, 700),
       ...t(spec.observations, 110, 700),
       ...t(spec.footer ?? spec.code, 18, 800),

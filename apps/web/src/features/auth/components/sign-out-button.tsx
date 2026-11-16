@@ -5,19 +5,25 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
-export function SignOutButton() {
+/** Signs out and goes to the login page; `pending` while it happens. */
+export function useSignOut() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
-  async function onClick() {
+  async function signOut() {
     setPending(true);
     await authClient.signOut();
     router.replace("/login");
     router.refresh();
   }
 
+  return { signOut, pending };
+}
+
+export function SignOutButton() {
+  const { signOut, pending } = useSignOut();
   return (
-    <Button variant="outline" size="sm" onClick={onClick} disabled={pending}>
+    <Button variant="outline" size="sm" onClick={signOut} disabled={pending}>
       {pending ? "Saliendo…" : "Cerrar sesión"}
     </Button>
   );

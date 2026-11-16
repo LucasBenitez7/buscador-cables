@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { coverPage, drawingSheet, instrumentSheet, powerSheet } from "../testing/fixtures";
 import { makePdf } from "../testing/make-pdf";
 import { extractProjectData } from "./extract";
-import { compareRevisions, readLength, readRoute, type IssueDraft } from "./normalize";
+import { compareRevisions, readLength, readRoute, readWiring, type IssueDraft } from "./normalize";
 import { formatReport } from "./report";
 
 describe("readLength", () => {
@@ -19,6 +19,72 @@ describe("compareRevisions", () => {
     const sorted = ["3", "2_RX01", "1", "03_RX00", "2", "2_RX00"].sort(compareRevisions);
     expect(sorted).toEqual(["1", "2", "2_RX00", "2_RX01", "3", "03_RX00"]);
     expect(compareRevisions(null, "0")).toBeLessThan(0);
+  });
+});
+
+describe("readWiring", () => {
+  const terminal = (block: string | null, point: string | null) => ({ block, point });
+
+  it("numbers the wires, empties '-' and '.' cells and keeps notes as printed", () => {
+    const issues: IssueDraft[] = [];
+    const wiring = readWiring(
+      {
+        wires: [
+          {
+            wire: " 1+ ",
+            colour: "1.Blue",
+            from: terminal("-Direct", "POS"),
+            to: terminal("JB-TB1", "22"),
+          },
+          { wire: null, colour: null, from: terminal(null, null), to: terminal(null, null) },
+          { wire: "SH", colour: null, from: terminal("-", "PE"), to: terminal(".", "Note 1") },
+        ],
+        jumpers: [
+          { code: "99XAT10-J01", from: terminal("XT03", "13"), to: terminal("XT03", "21") },
+        ],
+      },
+      issues,
+    );
+
+    expect(wiring).toEqual({
+      wires: [
+        {
+          position: 1,
+          wire: "1+",
+          colour: "1.Blue",
+          originBlock: "-Direct",
+          originPoint: "POS",
+          destinationBlock: "JB-TB1",
+          destinationPoint: "22",
+        },
+        {
+          position: 2,
+          wire: "SH",
+          colour: null,
+          originBlock: null,
+          originPoint: "PE",
+          destinationBlock: null,
+          destinationPoint: "Note 1",
+        },
+      ],
+      jumpers: [
+        {
+          position: 1,
+          code: "99XAT10-J01",
+          fromBlock: "XT03",
+          fromPoint: "13",
+          toBlock: "XT03",
+          toPoint: "21",
+        },
+      ],
+    });
+    expect(issues).toEqual([]);
+  });
+
+  it("warns when the sheet has no readable wiring table", () => {
+    const issues: IssueDraft[] = [];
+    expect(readWiring({ wires: null, jumpers: [] }, issues)).toEqual({ wires: [], jumpers: [] });
+    expect(issues).toEqual([{ severity: "warning", message: "Sin tabla de conexionado legible." }]);
   });
 });
 
@@ -129,6 +195,9 @@ describe("extractProjectData", () => {
       { name: "electrico.pdf", pages: 6, cableSheets: 5, drawingSheets: 0 },
     ]);
     expect(result.stats.cablesByLevel).toEqual({ L1: 2, L2: 2 });
+    // The invented sheets print three wires each (see testing/fixtures.ts).
+    expect(result.stats.wiring).toEqual({ cables: 4, wires: 12, jumpers: 0 });
+    expect(result.cables.every((cable) => cable.sourceFingerprint.length === 16)).toBe(true);
   });
 
   it("normalizes a power cable and keeps its highest revision", async () => {

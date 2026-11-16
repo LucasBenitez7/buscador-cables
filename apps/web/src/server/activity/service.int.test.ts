@@ -2,7 +2,7 @@ import { prisma } from "@cables/db";
 import { parseActivitySearch } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSearchOptions } from "@/server/cables/search";
-import { listActivity, listActivityUsers } from "./service";
+import { getActivityEvent, listActivity, listActivityUsers } from "./service";
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
@@ -155,5 +155,45 @@ describe("listActivity", () => {
       page: 1,
       pageCount: 0,
     });
+  });
+});
+
+describe("getActivityEvent", () => {
+  it("sums a terminal correction up in one line and keeps every cell for its page", async () => {
+    await prisma.cableEvent.create({
+      data: {
+        id: "ewiring000000001",
+        cableId: "c1",
+        userId: "juan",
+        action: "WIRING_EDITED",
+        changes: {
+          "wire.2.originPoint": { from: "12", to: "14", wire: "BU" },
+          "wire.1.originBlock": { from: "X51", to: "X52", wire: "BN" },
+          "wire.1.destinationPoint": { from: "21", to: null, wire: "BN" },
+        },
+        createdAt: new Date("2026-11-12T09:00:00Z"),
+      },
+    });
+
+    const listed = (await list({})).entries.find((entry) => entry.id === "ewiring000000001");
+    expect(listed).toMatchObject({
+      summary: "corrigió las bornas de 2 hilos en origen y 1 en destino",
+      changes: [],
+      detailHref: "/activity/ewiring000000001",
+    });
+
+    const event = await getActivityEvent("ewiring000000001");
+    expect(
+      event?.wiring.map((change) => [change.wire, change.field, change.from, change.to]),
+    ).toEqual([
+      ["BN", "originBlock", "X51", "X52"],
+      ["BN", "destinationPoint", "21", null],
+      ["BU", "originPoint", "12", "14"],
+    ]);
+  });
+
+  it("gives null for unknown or malformed ids", async () => {
+    expect(await getActivityEvent("cnoexiste0000000000000000")).toBeNull();
+    expect(await getActivityEvent("../../etc")).toBeNull();
   });
 });

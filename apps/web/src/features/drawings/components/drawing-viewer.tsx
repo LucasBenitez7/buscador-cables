@@ -5,7 +5,7 @@ import { Maximize2Icon, Minimize2Icon, MinusIcon, PlusIcon, ScanIcon } from "luc
 import { useEffect, useId, useRef, useState } from "react";
 import type OpenSeadragon from "openseadragon";
 import type { Viewer } from "openseadragon";
-import type { DrawingMark } from "@cables/shared";
+import { isCableSheetKey, type DrawingMark } from "@cables/shared";
 import { BrandLoader } from "@/components/loading";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +24,8 @@ type Props = {
   marks: ViewerMark[];
   /** Accessible name of the drawing ("Plano EJ-ELE-DRW-0024, hoja 03"). */
   label: string;
+  /** What is shown, for the texts: a drawing ("plano") or the page of a list ("hoja"). */
+  noun?: "plano" | "hoja";
 };
 
 type OpenSeadragonModule = typeof OpenSeadragon;
@@ -114,10 +116,12 @@ const KEY_ZOOM = 1.25;
 const FAR_WIDTH = 2200;
 
 /**
- * A sheet of the drawings with pan and zoom (also with two fingers), opened centred on the
- * first mark. The tiles come from `/api/drawings`, which only answers signed-in users.
+ * A sheet of the drawings, or the original page of a cable, with pan and zoom (also with two
+ * fingers), opened centred on the first mark. The images come from `/api/drawings`, which only
+ * answers signed-in users.
  */
-export function DrawingViewer({ imageKey, width, height, marks, label }: Props) {
+export function DrawingViewer({ imageKey, width, height, marks, label, noun = "plano" }: Props) {
+  const frame = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const viewer = useRef<Viewer | null>(null);
   const library = useRef<OpenSeadragonModule | null>(null);
@@ -188,7 +192,10 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
       library.current = OSD;
       instance = OSD({
         element: container.current,
-        tileSources: `/api/drawings/${imageKey}.dzi`,
+        // The page of a cable is one image; a drawing sheet, Deep Zoom tiles.
+        tileSources: isCableSheetKey(imageKey)
+          ? { type: "image", url: `/api/drawings/${imageKey}.webp` }
+          : `/api/drawings/${imageKey}.dzi`,
         showNavigationControl: false,
         gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true },
         gestureSettingsTouch: { pinchRotate: false },
@@ -246,14 +253,45 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marksKey]);
 
+  // Pantalla completa del navegador cuando la hay (oculta también sus barras). Si no (iPhone),
+  // el visor ocupa la ventana y la página de detrás no se desplaza.
+  const [native, setNative] = useState(false);
   useEffect(() => {
-    if (!fullScreen) return;
+    const sync = () => {
+      const active = document.fullscreenElement === frame.current;
+      setNative(active);
+      if (!active) setFullScreen((value) => (value && document.fullscreenEnabled ? false : value));
+    };
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!fullScreen || native) return;
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") setFullScreen(false);
     };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [fullScreen]);
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener("keydown", close);
+    };
+  }, [fullScreen, native]);
+
+  async function toggleFullScreen() {
+    if (fullScreen) {
+      if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+      setFullScreen(false);
+      return;
+    }
+    setFullScreen(true);
+    if (frame.current?.requestFullscreen && document.fullscreenEnabled) {
+      // Si el navegador la rechaza, se queda la de la ventana.
+      await frame.current.requestFullscreen().catch(() => {});
+    }
+  }
 
   const zoom = (factor: number) => {
     viewer.current?.viewport.zoomBy(factor);
@@ -262,6 +300,7 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
 
   return (
     <div
+      ref={frame}
       className={cn(
         "bg-muted relative overflow-hidden rounded-lg border",
         fullScreen ? "fixed inset-0 z-50 rounded-none border-0" : "h-[28rem] md:h-[34rem]",
@@ -271,25 +310,29 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
       <div
         ref={container}
         role="application"
-        aria-roledescription="plano"
+        aria-roledescription={noun}
         aria-label={label}
         aria-describedby={hintId}
         className="group/viewer has-[:focus-visible]:ring-ring/50 absolute inset-0 touch-none has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-inset [&_:focus-visible]:outline-none"
         data-testid="drawing-viewer"
       />
       <p id={hintId} className="sr-only">
-        Con el plano seleccionado: flechas para moverlo, + y − para acercar o alejar, y 0 para verlo
-        entero.
+        Con {noun === "hoja" ? "la hoja seleccionada" : "el plano seleccionado"}: flechas para
+        moverlo, + y − para acercar o alejar, y 0 para verlo entero.
       </p>
       {status === "loading" ? (
-        <BrandLoader label="Cargando el plano…" className="absolute inset-0 justify-center" />
+        <BrandLoader
+          label={`Cargando ${noun === "hoja" ? "la hoja" : "el plano"}…`}
+          className="absolute inset-0 justify-center"
+        />
       ) : null}
       {status === "error" ? (
         <p
           role="alert"
           className="text-muted-foreground absolute inset-0 flex items-center justify-center p-6 text-center text-sm"
         >
-          No se ha podido cargar el plano. Vuelve a intentarlo más tarde.
+          No se ha podido cargar {noun === "hoja" ? "la hoja" : "el plano"}. Vuelve a intentarlo más
+          tarde.
         </p>
       ) : null}
 
@@ -313,11 +356,22 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
           variant="secondary"
           aria-label={fullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
           aria-pressed={fullScreen}
-          onClick={() => setFullScreen((value) => !value)}
+          onClick={() => void toggleFullScreen()}
         >
           {fullScreen ? <Minimize2Icon /> : <Maximize2Icon />}
         </Button>
       </div>
+
+      {fullScreen ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="absolute top-2 left-2"
+          onClick={() => void toggleFullScreen()}
+        >
+          <Minimize2Icon aria-hidden /> Salir de pantalla completa
+        </Button>
+      ) : null}
 
       {focusable.length > 0 ? (
         <div className="absolute bottom-2 left-2 flex flex-wrap items-center gap-2">

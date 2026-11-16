@@ -264,7 +264,7 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   plano (ajustado al texto que marca, con `w`/`h` guardados en la extracción); la flecha y el
   número van a tamaño fijo en pantalla.
 - Enlaces: `apps/web/src/lib/links.ts` dice a dónde lleva cada cosa (ubicación → su página,
-  equipo o nivel → el buscador filtrado, bandeja → su ficha), para que todas las páginas
+  equipo → su página (fase 11), nivel → el buscador filtrado, bandeja → su ficha), para que todas las páginas
   enlacen igual.
 - `Cable.testStatus` (`NOT_TESTED`, `TESTED_OK`, `TESTED_FAILED`) y la acción `TESTED`
   ("Timbrar", permiso `cable:test` para técnico, supervisor y administrador). Es
@@ -272,6 +272,27 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   timbrado o una corrección. Un fallo exige una nota.
 - Una punta suelta en una bandeja que no está en el recorrido previsto se acepta si quien la
   registra lo confirma (`confirmOffRoute`); las correcciones del supervisor no lo piden.
+
+### Conexionado (fase 11)
+
+- `CableWire`: un hilo del cable (`position`, `wire`, `colour`) con regletero y borna en cada
+  punta (`originBlock`, `originPoint`, `destinationBlock`, `destinationPoint`) y lo que dice el
+  listado en los campos `pdf…`. Una celda está «corregida en campo» si difiere de su `pdf…`.
+  `CableJumper`: puentes del listado eléctrico, solo lectura. `Cable.wiringRevision`.
+- Modo editar: `editWiringAction` (Server Action) → `server/cables/wiring.ts`. Permiso
+  `cable:wiring` (técnico, supervisor, administrador), Zod (`wiringEditSchema`: texto de hasta
+  120 caracteres sin caracteres de control ni `<>`), la `version` del cable que abrió el
+  usuario y la misma lista de hilos que en la base; si no, conflicto. Bornas repetidas en una
+  punta (`findDuplicateTerminals`, solo las que tocan un hilo cambiado) no se guardan sin
+  `confirmDuplicates`. Todo en una transacción: los hilos, `version + 1` y un único
+  `CableEvent` `WIRING_EDITED` con una entrada por celda (`wire.<n>.<campo>`).
+- Actividad: `describeWiringEdit` resume el evento en una línea; `/activity/[id]` enseña cada
+  celda. Cualquier usuario con sesión la puede abrir, igual que el historial de la ficha.
+- Hoja original: imagen única `cable_<código>.webp` en el almacén de los planos, servida por
+  `/api/drawings/<clave>.webp` (solo claves `cable_…`, siempre con sesión) y abierta en el
+  mismo visor (`type: "image"`).
+- Equipos: `/equipment` (búsqueda por parte del código) y `/equipment/[código]`, con los
+  cables por regletero (`server/equipment/group.ts`, funciones puras) y el estado de esa punta.
 
 ## Marca, cargas y avisos
 

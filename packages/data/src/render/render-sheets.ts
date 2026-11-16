@@ -12,6 +12,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { createCanvas } from "@napi-rs/canvas";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { isCableSheetKey } from "@cables/shared";
 import sharp from "sharp";
 import type { ProjectSheet } from "../extract/schema";
 
@@ -36,11 +37,11 @@ export const sheetKey = (sheet: { drawing: string; sheet: string }) =>
 
 const require = createRequire(import.meta.url);
 /** pdf.js needs the standard fonts for drawings that do not embed theirs. */
-const standardFontDataUrl = `${path
+export const standardFontDataUrl = `${path
   .join(path.dirname(require.resolve("pdfjs-dist/package.json")), "standard_fonts")
   .replaceAll("\\", "/")}/`;
 
-async function readManifest(outDir: string): Promise<Manifest> {
+export async function readManifest(outDir: string): Promise<Manifest> {
   try {
     return JSON.parse(await readFile(path.join(outDir, "manifest.json"), "utf8")) as Manifest;
   } catch {
@@ -68,7 +69,8 @@ export async function renderSheets(options: {
     if (!wanted.has(sheetKey(sheet))) wanted.set(sheetKey(sheet), sheet);
   }
   for (const key of Object.keys(manifest)) {
-    if (wanted.has(key)) continue;
+    // The cable pages share the manifest: `renderCablePages` looks after them.
+    if (wanted.has(key) || isCableSheetKey(key)) continue;
     await removeTiles(outDir, key);
     delete manifest[key];
     summary.removed += 1;
@@ -90,22 +92,10 @@ export async function renderSheets(options: {
     const document = await task.promise;
     try {
       for (const [key, sheet] of entries) {
-        const page = await document.getPage(sheet.page);
-        const base = page.getViewport({ scale: 1 });
-        const scale = Math.min(MAX_SCALE, MAX_SIDE / Math.max(base.width, base.height));
-        const viewport = page.getViewport({ scale });
-        const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-        const context = canvas.getContext("2d");
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        // @napi-rs/canvas follows the browser canvas API that pdf.js expects.
-        type RenderParameters = Parameters<typeof page.render>[0];
-        await page.render({
-          canvasContext: context as unknown as RenderParameters["canvasContext"],
-          canvas: canvas as unknown as RenderParameters["canvas"],
-          viewport,
-        }).promise;
-        page.cleanup();
+        const canvas = await drawPage(document, sheet.page, {
+          maxSide: MAX_SIDE,
+          maxScale: MAX_SCALE,
+        });
 
         await removeTiles(outDir, key);
         await sharp(canvas.toBuffer("image/png"), { limitInputPixels: false })
@@ -131,6 +121,33 @@ export async function renderSheets(options: {
   }
   await writeFile(path.join(outDir, "manifest.json"), `${JSON.stringify(manifest, null, 1)}\n`);
   return summary;
+}
+
+type PdfDocument = Awaited<ReturnType<typeof getDocument>["promise"]>;
+
+/** Draws one page of an open PDF on a white canvas, at most `maxSide` pixels long. */
+export async function drawPage(
+  document: PdfDocument,
+  pageNumber: number,
+  { maxSide, maxScale }: { maxSide: number; maxScale: number },
+) {
+  const page = await document.getPage(pageNumber);
+  const base = page.getViewport({ scale: 1 });
+  const scale = Math.min(maxScale, maxSide / Math.max(base.width, base.height));
+  const viewport = page.getViewport({ scale });
+  const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  // @napi-rs/canvas follows the browser canvas API that pdf.js expects.
+  type RenderParameters = Parameters<typeof page.render>[0];
+  await page.render({
+    canvasContext: context as unknown as RenderParameters["canvasContext"],
+    canvas: canvas as unknown as RenderParameters["canvas"],
+    viewport,
+  }).promise;
+  page.cleanup();
+  return canvas;
 }
 
 async function removeTiles(outDir: string, key: string) {

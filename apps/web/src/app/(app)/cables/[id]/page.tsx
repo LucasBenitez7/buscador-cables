@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -6,15 +7,25 @@ import {
   CABLE_ACTION_LABELS,
   CABLE_LEVEL_LABELS,
   cableActionAvailability,
+  cableSheetKey,
   canRunCableAction,
+  CABLE_ACTIONS,
+  DATE_SORT_LABELS,
   formatDecimal,
   hasPermission,
+  optionsOf,
+  parseCableHistorySearch,
+  type CableHistorySearch,
 } from "@cables/shared";
+import { FilterForm } from "@/components/filter-form";
 import { ChangeList } from "@/components/change-list";
 import { INLINE_LINK, levelCablesHref, locationHref } from "@/lib/links";
-import { DataList, Item, Section } from "@/components/detail";
+import { DataList, Item, JumpLinks, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
+import { CableWiring } from "@/features/cables/components/cable-wiring";
+import { DrawingViewer } from "@/features/drawings/components/drawing-viewer";
+import { hasDrawingImage } from "@/server/drawings/store";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
 import { RouteDrawings } from "@/features/drawings/components/route-drawings";
 import { getRouteSheets } from "@/server/drawings/route-sheets";
@@ -26,6 +37,14 @@ import { requireUser, whenSignedIn } from "@/server/session";
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/** The two ways to look at a cable: who lays it (route) and who connects it (wiring). */
+const VIEWS = [
+  { id: "recorrido", label: "Recorrido" },
+  { id: "conexionado", label: "Conexionado" },
+] as const;
+type View = (typeof VIEWS)[number]["id"];
 
 const dateFormat = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "medium",
@@ -35,7 +54,9 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
 
 // generateMetadata y la página piden el mismo cable: una sola consulta por petición, y
 // ninguna sin sesión (generateMetadata se ejecuta aparte de la comprobación de la página).
-const loadCable = cache((id: string) => whenSignedIn(() => getCableDetail(id)));
+const loadCable = cache((id: string, history = "{}") =>
+  whenSignedIn(() => getCableDetail(id, JSON.parse(history) as CableHistorySearch)),
+);
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params;
@@ -46,19 +67,30 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 const withUnit = (value: number | null, unit: string) =>
   value === null ? null : `${formatDecimal(value)} ${unit}`;
 
-export default async function CablePage({ params }: { params: Params }) {
+export default async function CablePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const user = await requireUser();
   const { id } = await params;
-  const cable = await loadCable(id);
+  const query = await searchParams;
+  const view: View = query.vista === "conexionado" ? "conexionado" : "recorrido";
+  const historySearch = parseCableHistorySearch(query);
+  const cable = await loadCable(id, JSON.stringify(historySearch));
   if (!cable) {
     notFound();
   }
+  const sheetKey = cableSheetKey(cable.code);
   const canEdit = !cable.deleted && hasPermission(user.role, "cable:update");
   // Dados de baja: sin acciones. El resto ve solo lo que su rol permite.
   const availability = cable.deleted ? [] : cableActionAvailability(user.role, cable.state);
-  const [locations, routeSheets] = await Promise.all([
+  const [locations, routeSheets, hasSheet] = await Promise.all([
     availability.length > 0 ? listLocationOptions() : Promise.resolve([]),
-    getRouteSheets(cable.route, cable.state),
+    view === "recorrido" ? getRouteSheets(cable.route, cable.state) : Promise.resolve([]),
+    view === "conexionado" ? hasDrawingImage(sheetKey) : Promise.resolve(false),
   ]);
   const correctableEvents = canRunCableAction(user.role, "CORRECTION")
     ? cable.history.map((entry) => ({
@@ -128,6 +160,45 @@ export default async function CablePage({ params }: { params: Params }) {
         ]}
       />
 
+      <nav aria-label="Vista del cable" className="flex gap-1 border-b">
+        {VIEWS.map((item) => (
+          <Link
+            key={item.id}
+            href={`/cables/${cable.id}?vista=${item.id}`}
+            aria-current={view === item.id ? "page" : undefined}
+            className={
+              view === item.id
+                ? "border-primary text-foreground -mb-px border-b-2 px-4 py-2 text-sm font-semibold"
+                : "text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mb-px rounded-t-md border-b-2 border-transparent px-4 py-2 text-sm font-medium outline-none focus-visible:ring-3"
+            }
+          >
+            {item.label}
+            {item.id === "conexionado" && cable.wiring.wires.length > 0 ? (
+              <span className="text-muted-foreground ml-1.5 text-xs">
+                {cable.wiring.wires.length}
+              </span>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
+
+      <JumpLinks
+        links={
+          view === "recorrido"
+            ? [
+                { id: "tramos", label: "Tramos" },
+                ...(routeSheets.length > 0 ? [{ id: "planos", label: "Planos" }] : []),
+                { id: "datos", label: "Datos" },
+                { id: "historial", label: "Historial" },
+              ]
+            : [
+                { id: "hilos", label: "Tabla de hilos" },
+                { id: "hoja", label: "Hoja original" },
+                { id: "historial", label: "Historial" },
+              ]
+        }
+      />
+
       <Section title="Extremos">
         <CableEnds ends={cable.ends} state={cable.state} />
         {cable.currentLocation ? (
@@ -144,99 +215,149 @@ export default async function CablePage({ params }: { params: Params }) {
         ) : null}
       </Section>
 
-      <Section
-        title={`Recorrido por bandejas${cable.route.length > 0 ? ` (${cable.route.length} tramos)` : ""}`}
-      >
-        {routeSheets.length > 0 ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+      {view === "recorrido" ? (
+        <>
+          <Section
+            title={`Recorrido por bandejas${cable.route.length > 0 ? ` (${cable.route.length} tramos)` : ""}`}
+            collapsible
+            id="tramos"
+          >
             <CableRoute route={cable.route} state={cable.state} />
-            <RouteDrawings sheets={routeSheets} />
-          </div>
-        ) : (
-          <CableRoute route={cable.route} state={cable.state} />
-        )}
-      </Section>
+          </Section>
 
-      <Section title="Datos">
-        <DataList>
-          <Item label="Tipo">
-            {cable.type && cable.typeId ? (
-              <Link
-                href={`/cables?type=${encodeURIComponent(cable.typeId)}`}
-                className={INLINE_LINK}
-              >
-                {cable.type}
-              </Link>
-            ) : (
-              cable.type
-            )}
-          </Item>
-          <Item label="Color">
-            {cable.color ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span
-                  aria-hidden
-                  className="border-foreground/40 size-3 rounded-full border"
-                  style={{ backgroundColor: cable.color.hex ?? "transparent" }}
-                />
-                {cable.colorId ? (
+          {routeSheets.length > 0 ? (
+            <Section title="Recorrido en los planos" collapsible id="planos">
+              <RouteDrawings sheets={routeSheets} />
+            </Section>
+          ) : null}
+
+          <Section title="Datos" collapsible id="datos">
+            <DataList>
+              <Item label="Tipo">
+                {cable.type && cable.typeId ? (
                   <Link
-                    href={`/cables?color=${encodeURIComponent(cable.colorId)}`}
+                    href={`/cables?type=${encodeURIComponent(cable.typeId)}`}
                     className={INLINE_LINK}
                   >
-                    {cable.color.name}
+                    {cable.type}
                   </Link>
                 ) : (
-                  cable.color.name
+                  cable.type
                 )}
-              </span>
+              </Item>
+              <Item label="Color">
+                {cable.color ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="border-foreground/40 size-3 rounded-full border"
+                      style={{ backgroundColor: cable.color.hex ?? "transparent" }}
+                    />
+                    {cable.colorId ? (
+                      <Link
+                        href={`/cables?color=${encodeURIComponent(cable.colorId)}`}
+                        className={INLINE_LINK}
+                      >
+                        {cable.color.name}
+                      </Link>
+                    ) : (
+                      cable.color.name
+                    )}
+                  </span>
+                ) : null}
+              </Item>
+              <Item label="Fabricante">
+                {cable.manufacturer && cable.manufacturerId ? (
+                  <Link
+                    href={`/cables?manufacturer=${encodeURIComponent(cable.manufacturerId)}`}
+                    className={INLINE_LINK}
+                  >
+                    {cable.manufacturer}
+                  </Link>
+                ) : (
+                  cable.manufacturer
+                )}
+              </Item>
+              <Item label="Nº de conductores">{cable.conductors}</Item>
+              <Item label="Sección">{withUnit(cable.crossSectionMm2, "mm²")}</Item>
+              <Item label="Diámetro exterior">{withUnit(cable.outerDiameterMm, "mm")}</Item>
+              <Item label="Longitud">
+                {cable.lengthM === null && !cable.lengthPending
+                  ? null
+                  : `${withUnit(cable.lengthM, "m") ?? "Sin longitud"}${cable.lengthPending ? " (pendiente)" : ""}`}
+              </Item>
+              <Item label="Tensión nominal">{cable.voltageRating}</Item>
+              <Item label="Composición">{cable.composition}</Item>
+              <Item label="Circuito">
+                {cable.circuit
+                  ? `${cable.circuit}${cable.cablesPerCircuit ? ` · ${cable.cablesPerCircuit} cables por circuito` : ""}`
+                  : null}
+              </Item>
+              <Item label="Esquema">{cable.diagram}</Item>
+              <Item label="Revisión">{cable.revision}</Item>
+              <Item label="Listado de origen">
+                {cable.source
+                  ? [cable.source.document, cable.source.page ? `pág. ${cable.source.page}` : null]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : null}
+              </Item>
+              <Item label="Alta">{dateFormat.format(cable.createdAt)}</Item>
+            </DataList>
+            {cable.notes ? (
+              <div className="space-y-1 text-sm">
+                <h3 className="text-muted-foreground">Notas</h3>
+                <p className="whitespace-pre-line">{cable.notes}</p>
+              </div>
             ) : null}
-          </Item>
-          <Item label="Fabricante">
-            {cable.manufacturer && cable.manufacturerId ? (
-              <Link
-                href={`/cables?manufacturer=${encodeURIComponent(cable.manufacturerId)}`}
-                className={INLINE_LINK}
-              >
-                {cable.manufacturer}
-              </Link>
+          </Section>
+        </>
+      ) : (
+        <>
+          <Section
+            title={`Conexionado${cable.wiring.revision ? ` (revisión ${cable.wiring.revision})` : ""}`}
+            collapsible
+            id="hilos"
+          >
+            <CableWiring
+              cableId={cable.id}
+              version={cable.version}
+              wires={cable.wiring.wires}
+              jumpers={cable.wiring.jumpers}
+              equipment={{
+                origin: cable.ends.origin.equipment,
+                destination: cable.ends.destination.equipment,
+              }}
+              canEdit={!cable.deleted && hasPermission(user.role, "cable:wiring")}
+            />
+          </Section>
+
+          <Section title="Hoja original del listado" collapsible id="hoja">
+            {hasSheet ? (
+              <div className="space-y-2">
+                <p className="text-muted-foreground text-sm">
+                  {cable.source?.document ?? "Listado"}
+                  {cable.source?.page ? `, pág. ${cable.source.page}` : ""}
+                  {cable.revision ? ` · revisión ${cable.revision}` : ""}. En caso de duda, manda la
+                  hoja original.
+                </p>
+                <DrawingViewer
+                  imageKey={sheetKey}
+                  width={1000}
+                  height={1414}
+                  marks={[]}
+                  label={`Hoja original del cable ${cable.code}`}
+                  noun="hoja"
+                />
+              </div>
             ) : (
-              cable.manufacturer
+              <p className="text-muted-foreground text-sm">
+                La hoja original de este cable todavía no está disponible.
+              </p>
             )}
-          </Item>
-          <Item label="Nº de conductores">{cable.conductors}</Item>
-          <Item label="Sección">{withUnit(cable.crossSectionMm2, "mm²")}</Item>
-          <Item label="Diámetro exterior">{withUnit(cable.outerDiameterMm, "mm")}</Item>
-          <Item label="Longitud">
-            {cable.lengthM === null && !cable.lengthPending
-              ? null
-              : `${withUnit(cable.lengthM, "m") ?? "Sin longitud"}${cable.lengthPending ? " (pendiente)" : ""}`}
-          </Item>
-          <Item label="Tensión nominal">{cable.voltageRating}</Item>
-          <Item label="Composición">{cable.composition}</Item>
-          <Item label="Circuito">
-            {cable.circuit
-              ? `${cable.circuit}${cable.cablesPerCircuit ? ` · ${cable.cablesPerCircuit} cables por circuito` : ""}`
-              : null}
-          </Item>
-          <Item label="Esquema">{cable.diagram}</Item>
-          <Item label="Revisión">{cable.revision}</Item>
-          <Item label="Listado de origen">
-            {cable.source
-              ? [cable.source.document, cable.source.page ? `pág. ${cable.source.page}` : null]
-                  .filter(Boolean)
-                  .join(" · ")
-              : null}
-          </Item>
-          <Item label="Alta">{dateFormat.format(cable.createdAt)}</Item>
-        </DataList>
-        {cable.notes ? (
-          <div className="space-y-1 text-sm">
-            <h3 className="text-muted-foreground">Notas</h3>
-            <p className="whitespace-pre-line">{cable.notes}</p>
-          </div>
-        ) : null}
-      </Section>
+          </Section>
+        </>
+      )}
 
       <Section title="Último movimiento">
         {cable.lastAction ? (
@@ -249,22 +370,78 @@ export default async function CablePage({ params }: { params: Params }) {
         )}
       </Section>
 
-      <Section title="Historial (más reciente primero)">
+      <section id="historial" className="scroll-mt-20 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
+          <h2 className="text-base font-semibold">
+            Historial
+            <span className="text-muted-foreground text-sm font-normal">
+              {" "}
+              · {historySearch.sort === "oldest" ? "más antiguo primero" : "más reciente primero"}
+            </span>
+          </h2>
+        </div>
+        <FilterForm
+          action={`/cables/${cable.id}`}
+          label="Filtrar el historial"
+          anchor="historial"
+          keep={{ vista: view }}
+          active={Boolean(historySearch.action || historySearch.person || historySearch.sort)}
+          fields={[
+            {
+              kind: "select",
+              name: "action",
+              label: "Qué se hizo",
+              value: historySearch.action,
+              options: CABLE_ACTIONS.map((action) => ({
+                value: action,
+                label: CABLE_ACTION_LABELS[action],
+              })),
+            },
+            {
+              kind: "select",
+              name: "person",
+              label: "Quién",
+              value: historySearch.person,
+              options: cable.historyPeople.map((person) => ({
+                value: person.id,
+                label: person.label,
+              })),
+            },
+            {
+              kind: "select",
+              name: "sort",
+              label: "Orden",
+              value: historySearch.sort,
+              options: optionsOf(DATE_SORT_LABELS),
+              emptyLabel: null,
+            },
+          ]}
+        />
+        {cable.historyTotal !== cable.historyAll ? (
+          <p role="status" className="text-muted-foreground text-sm">
+            {cable.historyTotal} de {cable.historyAll} movimientos cumplen los filtros.
+          </p>
+        ) : null}
         {cable.historyTotal > cable.history.length ? (
           <p role="note" className="text-muted-foreground text-sm">
-            Se muestran los {cable.history.length} movimientos más recientes de {cable.historyTotal}
-            . Los anteriores siguen guardados.
+            Se muestran {cable.history.length} de {cable.historyTotal}. Los demás siguen guardados:
+            usa los filtros o el orden para verlos.
           </p>
         ) : null}
         {cable.history.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Sin historial.</p>
+          <p className="text-muted-foreground text-sm">
+            {cable.historyAll === 0 ? "Sin historial." : "Ningún movimiento cumple los filtros."}
+          </p>
         ) : (
-          <ol className="space-y-5 border-l pl-4">
-            {cable.history.map((entry, index) => (
+          <ShowMore
+            as="ol"
+            className="space-y-5 border-l pl-4"
+            noun="movimientos"
+            items={cable.history.map((entry, index) => (
               <li key={entry.id} className="relative space-y-1 text-sm">
                 <span
                   aria-hidden
-                  className={`absolute top-1.5 -left-[1.3125rem] size-2 rounded-full ${index === 0 ? "bg-primary" : "bg-border"}`}
+                  className={`absolute top-1.5 -left-[1.3125rem] size-2 rounded-full ${index === 0 && historySearch.sort !== "oldest" ? "bg-primary" : "bg-border"}`}
                 />
                 <p className="text-muted-foreground text-xs">
                   <time dateTime={entry.at.toISOString()}>{dateFormat.format(entry.at)}</time> ·{" "}
@@ -281,11 +458,16 @@ export default async function CablePage({ params }: { params: Params }) {
                 </p>
                 {entry.notes ? <p className="italic">“{entry.notes}”</p> : null}
                 <ChangeList changes={entry.changes} />
+                {entry.detailHref ? (
+                  <Link href={entry.detailHref} className={INLINE_LINK}>
+                    Ver qué cambió
+                  </Link>
+                ) : null}
               </li>
             ))}
-          </ol>
+          />
         )}
-      </Section>
+      </section>
     </article>
   );
 }

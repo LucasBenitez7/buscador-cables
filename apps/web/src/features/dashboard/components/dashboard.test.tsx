@@ -34,6 +34,7 @@ const entry: ActivityEntry = {
   summary: "tendió el cable",
   notes: null,
   changes: [],
+  detailHref: null,
 };
 
 const viewer: DashboardData = { progress, myActivity: null, team: null, admin: null };

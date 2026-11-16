@@ -29,8 +29,9 @@ hizo qué y cuándo.
 | 8    | Importación masiva y panel    | —       | _Mejora futura_: CSV/Excel masivo, dashboard          |
 | 9    | Modo sin conexión (PWA)       | —       | _Mejora futura_: consulta offline + cola de cambios   |
 | 10   | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
+| 11   | Conexionado                   | v1.1.0  | Hilos y bornas, hoja original, edición, equipos       |
 
-**Total: 12 fases (0 a 10, más la 4.5 añadida el 2026-11-11).** El 2026-11-13 la fase 6 se
+**Total: 13 fases (0 a 11, más la 4.5 añadida el 2026-11-11; la 11, el 2026-11-16).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
@@ -746,6 +747,86 @@ Rama `feat/drawings-sheets-security-readme`.
 - [ ] Comprobaciones del manual (salud, planos, correos de alta y aprobación, cron).
 - [ ] Copias de seguridad: automáticas en Railway si el plan las tiene, y la manual semanal.
 - [ ] Publicar la **v1.0.0** (tag) cuando producción funcione.
+
+## Fase 11 — Conexionado (v1.1.0)
+
+Añadida el 2026-11-16. Rama `feat/f11-conexionado`. Objetivo: que los conexionistas usen la
+web para conectar cada cable, con la hoja original del listado siempre a la vista.
+
+### Decisiones (2026-11-16)
+
+- **Los datos ya están en los listados.** Cada ficha de cable de los dos listados trae la
+  tabla de conexionado: por cada hilo (número y color, o código de color), el regletero o
+  bloque y la borna o punto en origen y en destino. Los eléctricos traen además los puentes
+  (`JUMPERS`). Hasta ahora no se cargaba.
+- **La hoja original manda.** La página del PDF de cada cable se muestra como imagen, con el
+  mismo visor con zoom que los planos (`data:render` → R2 → servida con sesión), para que el
+  conexionista compruebe siempre contra el papel. Imagen y no PDF: Android no muestra PDFs en
+  la página y cada hoja pesa cientos de KB, no los 20-30 MB del listado.
+- **El cable es el mismo.** El conexionado es otra pestaña de la ficha del cable, con los
+  mismos estados: si alguien timbró el cable, el conexionista lo ve timbrado. Conectar no
+  exige timbrar antes, ni al revés: en campo unos timbran y otros conectan.
+- **Se marca por punta, no por hilo.** Como ahora: conectado en origen, conectado en
+  destino. Los hilos y las bornas se muestran, pero no se marcan uno a uno.
+- **Modo editar bornas.** Si en campo un hilo está en otra borna que la del listado, el
+  conexionista activa el modo editar (interruptor), corrige el regletero o la borna y
+  guarda. Se avisa antes de guardar si dos hilos de la misma punta quedan en la misma borna
+  (se puede guardar igual, confirmando). Cada celda guarda también el valor del listado, y la
+  tabla marca lo que se ha cambiado en campo. Una recarga de los listados actualiza los
+  valores del listado, pero no pisa lo corregido en campo.
+- **Actividad clara.** Un guardado es una sola línea en la actividad ("cambió 3 bornas del
+  origen"), y cada evento tiene una página de detalle con el antes y el después de cada
+  hilo.
+- **Equipos.** Página por equipo (cuadro, caja, armario) con los cables que llegan a él,
+  agrupados por regletero, con el estado de esa punta. Es como trabaja el conexionista:
+  armario a armario.
+
+### Tareas
+
+- [x] Extracción: tabla de hilos (y puentes) de las fichas de instrumentación y eléctricas,
+      revisión del conexionado, con tests sobre PDFs inventados e informe. Con los listados
+      reales: 4.458 cables con tabla, 34.027 hilos, 105 puentes y 0 errores.
+- [x] Modelo: hilos del cable (`CableWire`, con valor de campo y valor del listado) y
+      puentes (`CableJumper`); migración; carga idempotente que respeta lo corregido.
+- [x] Hojas originales: `data:render` y `data:upload` de la página de cada cable; visor en la
+      ficha con revisión y fecha.
+- [x] Ficha del cable: pestañas Recorrido y Conexionado; tabla por punta con puentes y los
+      botones de siempre (conectar origen/destino, timbrar).
+- [x] Modo editar bornas: validación con Zod en el servidor, aviso de bornas repetidas,
+      permisos (técnico, supervisor, administrador) y evento en el historial.
+- [x] Actividad: resumen de una línea y página de detalle de cada evento.
+- [x] Equipos: página por equipo agrupada por regletero, enlazada desde la ficha y el
+      buscador.
+- [x] Tests (extracción, carga, edición, permisos) y E2E; manual de usuario y
+      `docs/DATOS-PROYECTO.md`.
+
+Hecho también: permiso nuevo `cable:wiring` («corregir bornas», técnico y superiores; en la
+fase 12 se podrá dar o quitar desde la web) y hojas de cable como **una imagen** por cable en
+vez de teselas (≈4.460 ficheros en lugar de más de 150.000).
+
+### Repaso antes del merge (2026-11-16)
+
+- [x] Menú del escritorio: ya no cabía con «Equipos». Fila principal, menú **Gestión**
+      (Catálogos, Usuarios y, en la fase 12, Roles) y menú con el nombre (Mi actividad, Cerrar
+      sesión).
+- [x] Filtros y orden en las URL (Zod, `packages/shared/src/list-filters.ts`) y un único
+      componente `FilterForm`: cuentas (25 por página), cambios en las cuentas (página propia
+      `/admin/users/events`), historial de la ficha del cable, equipos y actividad; filtros
+      del conexionado en la propia tabla (hilo o borna, solo corregidos, orden por borna).
+- [x] Pantalla completa del navegador en todos los visores (planos y hoja original), con la
+      de la ventana donde no la hay (iPhone), botón «Salir» visible y la página quieta detrás.
+
+- [x] Conexionado directo desde el buscador (enlace en cada cable) y el equipo de cada punta
+      encima de la tabla de hilos.
+- [x] Fichas largas: barra «Ir a» fija, bloques plegables (sin recordar el estado: siempre
+      empiezan abiertos) y listas largas cortadas a 10 filas con «Ver los N» (hilos, tramos,
+      historial, cables de bandeja, equipo y ubicación).
+
+### Lo que hace el responsable al desplegar la fase 11
+
+- [ ] Las migraciones se aplican solas en el despliegue (`vercel.json`).
+- [ ] `pnpm data:extract` → `pnpm data:render` (dibuja también las hojas de cable) →
+      `pnpm data:upload` → `pnpm data:load --as <correo>` contra producción.
 
 ---
 

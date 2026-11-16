@@ -113,3 +113,54 @@ describe("AppHeader", () => {
     expect(screen.getByRole("button", { name: "Abrir menú" })).toBeInTheDocument();
   });
 });
+
+// La fila del escritorio no cabía con todas las secciones (fase 11): la administración va en
+// "Gestión" y lo de cada uno en el menú con su nombre.
+describe("AppHeader: menus on a computer", () => {
+  const manageItems: NavItem[] = [
+    ...items.filter((item) => item.href !== "/activity/me"),
+    { href: "/activity/me", label: "Mi actividad", match: "prefix", place: "user" },
+    { href: "/catalogs", label: "Catálogos", match: "prefix", place: "manage" },
+    {
+      href: "/admin/users",
+      label: "Usuarios",
+      match: "prefix",
+      place: "manage",
+      badge: { count: 3, label: "cuentas pendientes de aprobar" },
+    },
+  ];
+
+  beforeEach(() => {
+    mocks.pathname = "/admin/users";
+  });
+
+  it("keeps only the main sections in the row, and Gestión with what waits in it", () => {
+    render(<AppHeader items={manageItems} user={{ name: "Ada", role: "Administrador" }} />);
+    const row = screen.getAllByRole("navigation", { name: "Principal" })[0]!;
+
+    expect(
+      within(row)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Inicio", "Cables", "Actividad"]);
+    const manage = within(row).getByRole("button", { name: "Gestión, 3 pendientes" });
+    fireEvent.keyDown(manage, { key: "Enter" });
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Catálogos" })).toBeInTheDocument();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Usuarios, 3 cuentas pendientes de aprobar" }),
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  it("opens the person's menu with their activity and sign out", () => {
+    render(<AppHeader items={manageItems} user={{ name: "Ada", role: "Administrador" }} />);
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Menú de Ada" }), { key: "Enter" });
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Mi actividad" })).toHaveAttribute(
+      "href",
+      "/activity/me",
+    );
+    expect(within(menu).getByRole("menuitem", { name: "Cerrar sesión" })).toBeInTheDocument();
+  });
+});

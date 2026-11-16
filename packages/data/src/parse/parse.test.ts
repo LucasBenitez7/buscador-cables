@@ -76,7 +76,80 @@ describe("parseCableSheet: power sheet", () => {
       },
       route: ["99UXA00L22036", "99UXA00L22051", "CONTIGUOUS PANEL", "99UZA00L22001"],
       observations: "Shields connected to earthing on both sides",
+      wires: [
+        {
+          wire: "BN",
+          colour: null,
+          from: { block: "X51", point: "11" },
+          to: { block: "-", point: "+" },
+        },
+        {
+          wire: "BU",
+          colour: null,
+          from: { block: "X51", point: "12" },
+          to: { block: "-", point: "-" },
+        },
+        {
+          wire: "SH",
+          colour: null,
+          from: { block: "-", point: "PE" },
+          to: { block: "-", point: "PE" },
+        },
+      ],
+      jumpers: [],
+      wiringRevision: "0",
     });
+  });
+
+  it("reads the wiring table with empty cells, and the jumpers under it", async () => {
+    const page = await pageOf(
+      powerSheet({
+        code: "99XAT10W2007",
+        wiringRevision: "5",
+        wires: [
+          ["BK-1", "XT03", "13", "X14", "1"],
+          ["BK-2", "", "", "X14", "10"],
+        ],
+        jumpers: [
+          ["99XAT10-J01", "XT03", "13", "XT03", "21"],
+          ["99XAT10-J02", "XT04", "02", "XT03", "09"],
+        ],
+      }),
+    );
+
+    expect(parseCableSheet(page)).toMatchObject({
+      wiringRevision: "5",
+      wires: [
+        { wire: "BK-1", from: { block: "XT03", point: "13" }, to: { block: "X14", point: "1" } },
+        { wire: "BK-2", from: { block: null, point: null }, to: { block: "X14", point: "10" } },
+      ],
+      jumpers: [
+        {
+          code: "99XAT10-J01",
+          from: { block: "XT03", point: "13" },
+          to: { block: "XT03", point: "21" },
+        },
+        {
+          code: "99XAT10-J02",
+          from: { block: "XT04", point: "02" },
+          to: { block: "XT03", point: "09" },
+        },
+      ],
+    });
+  });
+
+  it("does not take the empty jumpers revision box for a wire", async () => {
+    const page = await pageOf(
+      powerSheet({ code: "99XAT10W2008", wires: [["BN", "X1", "1", "X2", "2"]] }),
+    );
+
+    expect(parseCableSheet(page)?.wires).toHaveLength(1);
+  });
+
+  it("has no wiring when the sheet has no INTERCONNECTION table", async () => {
+    const page = await pageOf(powerSheet({ code: "99XAT10W2009", wires: null }));
+
+    expect(parseCableSheet(page)).toMatchObject({ wires: null, jumpers: [], wiringRevision: null });
   });
 
   it("does not take a long cable type as the number of circuits", async () => {
@@ -120,7 +193,54 @@ describe("parseCableSheet: instrumentation sheet", () => {
       to: { equipment: "99CXJ11", gland: "M-20", location: "99UXB23RA052" },
       route: ["FIELD_TRAY", "99UX_01L10002", "99UXT_2D12070", "ROOM_TRAY", "99UXB01L10030"],
       observations: "Supplied by the vendor",
+      wires: [
+        {
+          wire: "1",
+          colour: "1.Blue",
+          from: { block: "-Direct", point: "POS" },
+          to: { block: "JB-TB1", point: "22" },
+        },
+        {
+          wire: "2",
+          colour: "1.Red",
+          from: { block: "-Direct", point: "NEG" },
+          to: { block: "JB-TB1", point: "24" },
+        },
+        {
+          wire: "SH",
+          colour: "SH",
+          from: { block: "Direct", point: "Shield" },
+          to: { block: "JB-TB1", point: "Shield" },
+        },
+      ],
+      jumpers: [],
+      wiringRevision: null,
     });
+  });
+
+  it("reads every wire of a multi-pair cable, notes included", async () => {
+    const pairs = Array.from(
+      { length: 30 },
+      (_, i): [string, string, string, string, string, string] => [
+        `${i + 1}+`,
+        `${i + 1}.White(1)`,
+        "TB1",
+        String(i + 1).padStart(3, "0"),
+        i % 2 === 0 ? "Note 2" : "2C1A",
+        i % 2 === 0 ? "Note 2" : String(i),
+      ],
+    );
+    const page = await pageOf(instrumentSheet({ code: "99XAB10T1-W8002", wires: pairs }));
+
+    const wires = parseCableSheet(page)?.wires ?? [];
+    expect(wires).toHaveLength(30);
+    expect(wires[29]).toEqual({
+      wire: "30+",
+      colour: "30.White(1)",
+      from: { block: "TB1", point: "030" },
+      to: { block: "2C1A", point: "29" },
+    });
+    expect(wires[0]?.to).toEqual({ block: "Note 2", point: "Note 2" });
   });
 
   it("ignores pages that are not cable sheets", async () => {

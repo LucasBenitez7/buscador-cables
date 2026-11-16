@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Item, Section } from "./detail";
+import { Item, JumpLinks, Section } from "./detail";
 
 describe("Section", () => {
   it("puts its action next to the title, before the content", () => {
@@ -35,5 +35,49 @@ describe("Item", () => {
     expect(screen.getByText("113 m")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.getByText("0")).toBeInTheDocument();
+  });
+});
+
+describe("Section: collapsible and jump links", () => {
+  it("folds with its title and starts open", () => {
+    const { container } = render(
+      <Section title="Tabla de hilos" collapsible id="hilos">
+        <p>BN · X51 · 11</p>
+      </Section>,
+    );
+    const details = container.querySelector("details#hilos") as HTMLDetailsElement;
+
+    expect(details.open).toBe(true);
+    fireEvent.click(screen.getByText("Tabla de hilos"));
+    expect(details.open).toBe(false);
+  });
+
+  it("opens a folded section when a jump link points to it", () => {
+    window.location.hash = "#hoja";
+    const { container } = render(
+      <Section title="Hoja original" collapsible defaultOpen={false} id="hoja">
+        <p>Imagen</p>
+      </Section>,
+    );
+
+    expect((container.querySelector("details#hoja") as HTMLDetailsElement).open).toBe(true);
+    window.location.hash = "";
+  });
+
+  it("links to the sections of the page", () => {
+    render(
+      <JumpLinks
+        links={[
+          { id: "hilos", label: "Tabla de hilos" },
+          { id: "hoja", label: "Hoja original" },
+        ]}
+      />,
+    );
+
+    const nav = screen.getByRole("navigation", { name: "Ir a" });
+    expect(within(nav).getByRole("link", { name: "Hoja original" })).toHaveAttribute(
+      "href",
+      "#hoja",
+    );
   });
 });

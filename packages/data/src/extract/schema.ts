@@ -35,6 +35,33 @@ export const projectRouteStepSchema = z
     message: "El texto del paso debe empezar por el código de su bandeja",
   });
 
+/**
+ * Terminal strip / block and terminal / point as printed ("X51", "1B2A TBAI", "-Direct",
+ * "Note 1"). Generous limit: a long cell must not drop the whole cable.
+ */
+const terminalText = optionalText(120);
+
+/** A wire of the cable and where it goes at each end (the INTERCONNECTION table). */
+export const projectWireSchema = z.object({
+  position: z.number().int().positive(),
+  wire: text(40),
+  colour: optionalText(60),
+  originBlock: terminalText,
+  originPoint: terminalText,
+  destinationBlock: terminalText,
+  destinationPoint: terminalText,
+});
+
+/** A bridge between two terminals (the JUMPERS table of the power lists). */
+export const projectJumperSchema = z.object({
+  position: z.number().int().positive(),
+  code: text(80),
+  fromBlock: terminalText,
+  fromPoint: terminalText,
+  toBlock: terminalText,
+  toPoint: terminalText,
+});
+
 export const projectCableSchema = z.object({
   code: z
     .string()
@@ -60,9 +87,14 @@ export const projectCableSchema = z.object({
   sourceDocument: optionalText(80),
   sourceFile: text(255),
   sourcePage: z.number().int().positive(),
+  /** Changes when the text of the cable's page changes: `data:render` draws it again. */
+  sourceFingerprint: text(64),
   origin: projectCableEndSchema,
   destination: projectCableEndSchema,
   route: z.array(projectRouteStepSchema),
+  wiringRevision: optionalText(20),
+  wires: z.array(projectWireSchema),
+  jumpers: z.array(projectJumperSchema),
 });
 
 /**
@@ -107,6 +139,8 @@ export const projectSheetSchema = z.object({
 export type ProjectCable = z.infer<typeof projectCableSchema>;
 export type ProjectCableEnd = z.infer<typeof projectCableEndSchema>;
 export type ProjectRouteStep = z.infer<typeof projectRouteStepSchema>;
+export type ProjectWire = z.infer<typeof projectWireSchema>;
+export type ProjectJumper = z.infer<typeof projectJumperSchema>;
 export type ProjectTray = z.infer<typeof projectTraySchema>;
 export type ProjectSheet = z.infer<typeof projectSheetSchema>;
 export type TrayMark = z.infer<typeof trayMarkSchema>;
@@ -134,5 +168,7 @@ export type ExtractionResult = {
     traysOnlyInRoutes: number;
     /** How the trays were found on the plans (see `locateTrays`). */
     trayMarks: { label: number; flag: number; tableOnly: number };
+    /** Cables with a wiring table, and the wires and jumpers read. */
+    wiring: { cables: number; wires: number; jumpers: number };
   };
 };
