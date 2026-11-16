@@ -11,7 +11,13 @@ import {
   type RouteSection,
 } from "@cables/shared";
 import type { RawCableEnd, RawCableSheet } from "../parse/cable-page";
-import type { ProjectCable, ProjectCableEnd, ProjectRouteStep } from "./schema";
+import type {
+  ProjectCable,
+  ProjectCableEnd,
+  ProjectWire,
+  ProjectJumper,
+  ProjectRouteStep,
+} from "./schema";
 
 export type IssueDraft = { severity: "error" | "warning"; message: string };
 
@@ -123,9 +129,51 @@ export function readRoute(route: readonly string[], issues: IssueDraft[]): Proje
   return steps;
 }
 
+/**
+ * The wires of the INTERCONNECTION table, numbered from 1 in the order printed. A cell with
+ * only "-" or "." is empty; anything else ("-Direct", "Note 1") is kept as printed.
+ */
+export function readWiring(
+  raw: Pick<RawCableSheet, "wires" | "jumpers">,
+  issues: IssueDraft[],
+): { wires: ProjectWire[]; jumpers: ProjectJumper[] } {
+  if (raw.wires === null) {
+    issues.push({ severity: "warning", message: "Sin tabla de conexionado legible." });
+  }
+  const wires: ProjectWire[] = [];
+  for (const wire of raw.wires ?? []) {
+    const label = clean(wire.wire);
+    if (!label) continue;
+    wires.push({
+      position: wires.length + 1,
+      wire: label,
+      colour: cell(wire.colour),
+      originBlock: cell(wire.from.block),
+      originPoint: cell(wire.from.point),
+      destinationBlock: cell(wire.to.block),
+      destinationPoint: cell(wire.to.point),
+    });
+  }
+  const jumpers: ProjectJumper[] = [];
+  for (const jumper of raw.jumpers) {
+    const code = clean(jumper.code);
+    if (!code) continue;
+    jumpers.push({
+      position: jumpers.length + 1,
+      code,
+      fromBlock: cell(jumper.from.block),
+      fromPoint: cell(jumper.from.point),
+      toBlock: cell(jumper.to.block),
+      toPoint: cell(jumper.to.point),
+    });
+  }
+  return { wires, jumpers };
+}
+
 export function normalizeCableSheet(
   raw: RawCableSheet,
   sourceFile: string,
+  sourceFingerprint: string,
 ): { cable: ProjectCable | null; code: string | null; issues: IssueDraft[] } {
   const issues: IssueDraft[] = [];
   const rawCode = clean(raw.code);
@@ -192,9 +240,12 @@ export function normalizeCableSheet(
       sourceDocument: clean(raw.document),
       sourceFile,
       sourcePage: raw.page,
+      sourceFingerprint,
       origin: readEnd(raw.from, raw.layout),
       destination: readEnd(raw.to, raw.layout),
       route: readRoute(raw.route, issues),
+      wiringRevision: clean(raw.wiringRevision),
+      ...readWiring(raw, issues),
     },
   };
 }

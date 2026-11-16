@@ -50,6 +50,7 @@ function instrumentCable(overrides: Partial<ProjectCable> = {}): ProjectCable {
     sourceDocument: "EJ-ICO-LST-0100",
     sourceFile: "instrumentacion.pdf",
     sourcePage: 8,
+    sourceFingerprint: "0123456789abcdef",
     origin: end({ equipment: "99XAB10CT001", gland: "M-20ARM", room: "99UYC14RA001" }),
     destination: end({ equipment: "99CXJ11", gland: "M-20", room: "99UXB23RA052" }),
     route: [
@@ -57,6 +58,9 @@ function instrumentCable(overrides: Partial<ProjectCable> = {}): ProjectCable {
       { label: "(NOTE 1)", trayCode: null, section: "FIELD" },
       { label: "99UXB01L10030", trayCode: "99UXB01L10030", section: "ROOM" },
     ],
+    wiringRevision: null,
+    wires: [],
+    jumpers: [],
     ...overrides,
   };
 }

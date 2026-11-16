@@ -25,6 +25,9 @@ export type SourcePdf = { name: string; data: Uint8Array | (() => Promise<Uint8A
 
 type DrawingSheetOf = RawDrawingSheet & { file: string };
 
+/** Where a sheet is, not what it says: two identical sheets differ only in these. */
+const NOT_COMPARED = { sourcePage: 0, sourceFile: "", sourceDocument: "", sourceFingerprint: "" };
+
 export async function extractProjectData(
   files: readonly SourcePdf[],
   onProgress: (message: string) => void = () => {},
@@ -38,6 +41,7 @@ export async function extractProjectData(
     traysInDrawings: 0,
     traysOnlyInRoutes: 0,
     trayMarks: { label: 0, flag: 0, tableOnly: 0 },
+    wiring: { cables: 0, wires: 0, jumpers: 0 },
   };
 
   for (const file of files) {
@@ -51,7 +55,11 @@ export async function extractProjectData(
       const raw = parseCableSheet(page);
       if (raw) {
         fileStats.cableSheets += 1;
-        const { cable, code, issues: found } = normalizeCableSheet(raw, file.name);
+        const {
+          cable,
+          code,
+          issues: found,
+        } = normalizeCableSheet(raw, file.name, page.fingerprint);
         for (const issue of found) {
           issues.push({ ...issue, file: file.name, page: page.number, code });
         }
@@ -92,8 +100,8 @@ export async function extractProjectData(
     const order = compareRevisions(cable.revision, existing.revision);
     const newer = order > 0;
     const same =
-      JSON.stringify({ ...cable, sourcePage: 0, sourceFile: "", sourceDocument: "" }) ===
-      JSON.stringify({ ...existing, sourcePage: 0, sourceFile: "", sourceDocument: "" });
+      JSON.stringify({ ...cable, ...NOT_COMPARED }) ===
+      JSON.stringify({ ...existing, ...NOT_COMPARED });
     // Same revision, different data: nothing says which sheet is the good one.
     const tie = !same && order === 0;
     issues.push({
@@ -115,6 +123,9 @@ export async function extractProjectData(
   const cables = [...cablesByCode.values()];
   for (const cable of cables) {
     stats.cablesByLevel[cable.level] = (stats.cablesByLevel[cable.level] ?? 0) + 1;
+    if (cable.wires.length > 0) stats.wiring.cables += 1;
+    stats.wiring.wires += cable.wires.length;
+    stats.wiring.jumpers += cable.jumpers.length;
   }
   const sheets = buildSheets(drawingSheets);
   const trays = buildTrays(drawingSheets, cables, issues, stats);

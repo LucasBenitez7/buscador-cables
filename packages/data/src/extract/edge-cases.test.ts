@@ -46,7 +46,7 @@ describe("cable sheets with missing blocks", () => {
     );
 
     expect(raw).toMatchObject({ typeCode: null, typeText: null, composition: null });
-    expect(normalizeCableSheet(raw!, "electrico.pdf")).toMatchObject({
+    expect(normalizeCableSheet(raw!, "electrico.pdf", "f1")).toMatchObject({
       cable: null,
       issues: [{ severity: "error", message: "Ficha sin tipo de cable." }],
     });
@@ -55,7 +55,7 @@ describe("cable sheets with missing blocks", () => {
   it("drops a sheet without a code", async () => {
     const raw = parseCableSheet(await pageOf(instrumentSheet({ code: "99XAB10T1-W8001" })))!;
 
-    expect(normalizeCableSheet({ ...raw, code: "  " }, "instrumentacion.pdf")).toEqual({
+    expect(normalizeCableSheet({ ...raw, code: "  " }, "instrumentacion.pdf", "f1")).toEqual({
       cable: null,
       code: null,
       issues: [{ severity: "error", message: "Ficha sin código de cable." }],
@@ -130,6 +130,7 @@ describe("formatReport", () => {
         traysInDrawings: 0,
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
+        wiring: { cables: 0, wires: 0, jumpers: 0 },
       },
     });
 
@@ -157,6 +158,7 @@ describe("formatReport", () => {
         traysInDrawings: 0,
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
+        wiring: { cables: 0, wires: 0, jumpers: 0 },
       },
     };
 
@@ -262,6 +264,7 @@ describe("what the extraction leaves out is reported", () => {
         traysInDrawings: 0,
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
+        wiring: { cables: 0, wires: 0, jumpers: 0 },
       },
     });
 
