@@ -5,6 +5,11 @@ export type NavItem = {
   match: "exact" | "prefix";
   /** Something waiting there for this person (accounts to approve…): shown as a count. */
   badge?: { count: number; label: string };
+  /**
+   * Where it goes in the header on a computer: the main row, the "Gestión" menu (administration)
+   * or the user menu. On a phone they are all in the side panel.
+   */
+  place?: "main" | "manage" | "user";
 };
 
 /** Whether a nav link is the current section, given the current path. */

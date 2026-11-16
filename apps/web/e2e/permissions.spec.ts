@@ -67,12 +67,21 @@ test.describe("administrador", () => {
       "Bandejas",
       "Equipos",
       "Ubicaciones",
-      "Mi actividad",
       "Actividad",
-      "Catálogos",
-      // Con cuentas pendientes de aprobar, el enlace lleva su número.
-      /^Usuarios\d*$/,
     ]);
+    // La administración va en "Gestión" (con el número de cuentas pendientes, si las hay) y
+    // "Mi actividad" en el menú con su nombre: la fila cabe siempre.
+    await nav(page)
+      .getByRole("button", { name: /^Gestión/ })
+      .click();
+    const manage = page.getByRole("menu");
+    await expect(manage.getByRole("menuitem", { name: "Catálogos" })).toBeVisible();
+    await expect(manage.getByRole("menuitem", { name: /^Usuarios/ })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: `Menú de ${USERS.admin.name}` }).click();
+    await expect(page.getByRole("menuitem", { name: "Mi actividad" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Cerrar sesión" })).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(nav(page).getByRole("link", { name: "Cables" })).toHaveAttribute(
       "aria-current",
       "page",

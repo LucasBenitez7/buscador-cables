@@ -13,18 +13,22 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const pending = canManageUsers ? await countPendingAccounts() : 0;
 
   // Cada uno ve solo las secciones que su rol permite.
+  const seesTeamActivity = hasPermission(user.role, "activity:view");
   const items: NavItem[] = [
     { href: "/", label: "Inicio", match: "exact" },
     { href: "/cables", label: "Cables", match: "prefix" },
     { href: "/trays", label: "Bandejas", match: "prefix" },
     { href: "/equipment", label: "Equipos", match: "prefix" },
     { href: "/locations", label: "Ubicaciones", match: "prefix" },
-    { href: "/activity/me", label: "Mi actividad", match: "prefix" },
-    ...(hasPermission(user.role, "activity:view")
-      ? [{ href: "/activity", label: "Actividad", match: "exact" } as const]
-      : []),
+    // Quien ve la de todos tiene la suya en su menú; el resto, en la fila principal.
+    ...(seesTeamActivity
+      ? [
+          { href: "/activity", label: "Actividad", match: "exact" } as const,
+          { href: "/activity/me", label: "Mi actividad", match: "prefix", place: "user" } as const,
+        ]
+      : [{ href: "/activity/me", label: "Mi actividad", match: "prefix" } as const]),
     ...(hasPermission(user.role, "catalog:manage")
-      ? [{ href: "/catalogs", label: "Catálogos", match: "prefix" } as const]
+      ? [{ href: "/catalogs", label: "Catálogos", match: "prefix", place: "manage" } as const]
       : []),
     ...(canManageUsers
       ? [
@@ -32,6 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             href: "/admin/users",
             label: "Usuarios",
             match: "prefix",
+            place: "manage",
             badge: {
               count: pending,
               label:
