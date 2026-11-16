@@ -161,7 +161,7 @@ describe("SearchResults", () => {
     expect(table.getByText("Destino")).toBeInTheDocument();
     expect(table.getByRole("link", { name: "+99BMA01" })).toHaveAttribute(
       "href",
-      "/cables?equipment=%2B99BMA01",
+      "/equipment/%2B99BMA01",
     );
     expect(table.getByRole("link", { name: "Caldera 1 › Bandeja norte" })).toHaveAttribute(
       "href",

@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { INLINE_LINK, equipmentCablesHref } from "@/lib/links";
+import { INLINE_LINK, equipmentHref } from "@/lib/links";
 
-/** An equipment tag that opens every cable starting or ending at it; a dash when unknown. */
+/**
+ * An equipment tag that opens its page (every cable that lands in it, by terminal strip);
+ * a dash when unknown.
+ */
 export function EquipmentLink({
   equipment,
   className = "",
@@ -12,8 +15,8 @@ export function EquipmentLink({
   if (!equipment) return <span>—</span>;
   return (
     <Link
-      href={equipmentCablesHref(equipment)}
-      title={`Cables del equipo ${equipment}`}
+      href={equipmentHref(equipment)}
+      title={`Equipo ${equipment}: sus cables y bornas`}
       className={`${INLINE_LINK} font-mono ${className}`}
     >
       {equipment}
