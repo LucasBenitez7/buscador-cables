@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -11,7 +12,7 @@ import {
   optionsOf,
   parseEquipmentSearch,
 } from "@cables/shared";
-import { Section } from "@/components/detail";
+import { JumpLinks, Section } from "@/components/detail";
 import { FilterForm } from "@/components/filter-form";
 import { Badge } from "@/components/ui/badge";
 import { TEST_VARIANT } from "@/features/cables/components/cable-status-badges";
@@ -41,6 +42,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const equipment = await loadEquipment(tagOf((await params).code));
   return { title: equipment ? `Equipo ${equipment.equipment}` : "Equipo" };
 }
+
+/** Anchor of a terminal strip on the page ("regletero-X51"). */
+const stripId = (block: string | null) =>
+  `regletero-${(block ?? "sin-regletero").replace(/[^A-Za-z0-9_-]+/g, "-")}`;
 
 /** "11–14", or the list when they are not a run of numbers. */
 function pointsText(points: readonly string[]): string {
@@ -156,6 +161,15 @@ export default async function EquipmentPage({
         </p>
       ) : null}
 
+      {groups.length > 1 ? (
+        <JumpLinks
+          links={groups.map((group) => ({
+            id: stripId(group.block),
+            label: group.block ?? "Sin regletero",
+          }))}
+        />
+      ) : null}
+
       {groups.length === 0 ? (
         <p
           role="status"
@@ -167,10 +181,15 @@ export default async function EquipmentPage({
         groups.map((group) => (
           <Section
             key={group.block ?? "—"}
+            id={stripId(group.block)}
+            collapsible
             title={`${group.block ? `Regletero ${group.block}` : "Sin regletero en el listado"} · ${group.ends.length} ${group.ends.length === 1 ? "cable" : "cables"}`}
           >
-            <ul className="bg-card divide-y rounded-lg border">
-              {group.ends.map((end) => (
+            <ShowMore
+              as="ul"
+              className="bg-card divide-y rounded-lg border"
+              noun="cables"
+              items={group.ends.map((end) => (
                 <li
                   key={`${end.cableId}-${end.end}`}
                   className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5 px-4 py-3 text-sm"
@@ -208,7 +227,7 @@ export default async function EquipmentPage({
                   </div>
                 </li>
               ))}
-            </ul>
+            />
           </Section>
         ))
       )}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -19,7 +20,7 @@ import {
 import { FilterForm } from "@/components/filter-form";
 import { ChangeList } from "@/components/change-list";
 import { INLINE_LINK, levelCablesHref, locationHref } from "@/lib/links";
-import { DataList, Item, Section } from "@/components/detail";
+import { DataList, Item, JumpLinks, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableWiring } from "@/features/cables/components/cable-wiring";
@@ -163,11 +164,7 @@ export default async function CablePage({
         {VIEWS.map((item) => (
           <Link
             key={item.id}
-            href={
-              item.id === "recorrido"
-                ? `/cables/${cable.id}`
-                : `/cables/${cable.id}?vista=${item.id}`
-            }
+            href={`/cables/${cable.id}?vista=${item.id}`}
             aria-current={view === item.id ? "page" : undefined}
             className={
               view === item.id
@@ -184,6 +181,23 @@ export default async function CablePage({
           </Link>
         ))}
       </nav>
+
+      <JumpLinks
+        links={
+          view === "recorrido"
+            ? [
+                { id: "tramos", label: "Tramos" },
+                ...(routeSheets.length > 0 ? [{ id: "planos", label: "Planos" }] : []),
+                { id: "datos", label: "Datos" },
+                { id: "historial", label: "Historial" },
+              ]
+            : [
+                { id: "hilos", label: "Tabla de hilos" },
+                { id: "hoja", label: "Hoja original" },
+                { id: "historial", label: "Historial" },
+              ]
+        }
+      />
 
       <Section title="Extremos">
         <CableEnds ends={cable.ends} state={cable.state} />
@@ -205,18 +219,19 @@ export default async function CablePage({
         <>
           <Section
             title={`Recorrido por bandejas${cable.route.length > 0 ? ` (${cable.route.length} tramos)` : ""}`}
+            collapsible
+            id="tramos"
           >
-            {routeSheets.length > 0 ? (
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-                <CableRoute route={cable.route} state={cable.state} />
-                <RouteDrawings sheets={routeSheets} />
-              </div>
-            ) : (
-              <CableRoute route={cable.route} state={cable.state} />
-            )}
+            <CableRoute route={cable.route} state={cable.state} />
           </Section>
 
-          <Section title="Datos">
+          {routeSheets.length > 0 ? (
+            <Section title="Recorrido en los planos" collapsible id="planos">
+              <RouteDrawings sheets={routeSheets} />
+            </Section>
+          ) : null}
+
+          <Section title="Datos" collapsible id="datos">
             <DataList>
               <Item label="Tipo">
                 {cable.type && cable.typeId ? (
@@ -301,17 +316,23 @@ export default async function CablePage({
         <>
           <Section
             title={`Conexionado${cable.wiring.revision ? ` (revisión ${cable.wiring.revision})` : ""}`}
+            collapsible
+            id="hilos"
           >
             <CableWiring
               cableId={cable.id}
               version={cable.version}
               wires={cable.wiring.wires}
               jumpers={cable.wiring.jumpers}
+              equipment={{
+                origin: cable.ends.origin.equipment,
+                destination: cable.ends.destination.equipment,
+              }}
               canEdit={!cable.deleted && hasPermission(user.role, "cable:wiring")}
             />
           </Section>
 
-          <Section title="Hoja original del listado">
+          <Section title="Hoja original del listado" collapsible id="hoja">
             {hasSheet ? (
               <div className="space-y-2">
                 <p className="text-muted-foreground text-sm">
@@ -363,7 +384,7 @@ export default async function CablePage({
           action={`/cables/${cable.id}`}
           label="Filtrar el historial"
           anchor="historial"
-          keep={view === "conexionado" ? { vista: "conexionado" } : {}}
+          keep={{ vista: view }}
           active={Boolean(historySearch.action || historySearch.person || historySearch.sort)}
           fields={[
             {
@@ -412,8 +433,11 @@ export default async function CablePage({
             {cable.historyAll === 0 ? "Sin historial." : "Ningún movimiento cumple los filtros."}
           </p>
         ) : (
-          <ol className="space-y-5 border-l pl-4">
-            {cable.history.map((entry, index) => (
+          <ShowMore
+            as="ol"
+            className="space-y-5 border-l pl-4"
+            noun="movimientos"
+            items={cable.history.map((entry, index) => (
               <li key={entry.id} className="relative space-y-1 text-sm">
                 <span
                   aria-hidden
@@ -441,7 +465,7 @@ export default async function CablePage({
                 ) : null}
               </li>
             ))}
-          </ol>
+          />
         )}
       </section>
     </article>

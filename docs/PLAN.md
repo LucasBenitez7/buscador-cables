@@ -816,6 +816,12 @@ vez de teselas (≈4.460 ficheros en lugar de más de 150.000).
 - [x] Pantalla completa del navegador en todos los visores (planos y hoja original), con la
       de la ventana donde no la hay (iPhone), botón «Salir» visible y la página quieta detrás.
 
+- [x] Conexionado directo desde el buscador (enlace en cada cable) y el equipo de cada punta
+      encima de la tabla de hilos.
+- [x] Fichas largas: barra «Ir a» fija, bloques plegables (sin recordar el estado: siempre
+      empiezan abiertos) y listas largas cortadas a 10 filas con «Ver los N» (hilos, tramos,
+      historial, cables de bandeja, equipo y ubicación).
+
 ### Lo que hace el responsable al desplegar la fase 11
 
 - [ ] Las migraciones se aplican solas en el despliegue (`vercel.json`).

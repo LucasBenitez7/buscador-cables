@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShowMore } from "@/components/show-more";
 import {
   CABLE_END_SIDE_LABELS,
   ROUTE_SECTION_LABELS,
@@ -151,8 +152,12 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
           , que no está en su recorrido previsto.
         </p>
       ) : null}
-      <ol aria-label="Tramos del recorrido" className="space-y-1 text-sm">
-        {route.map((step, index) => {
+      <ShowMore
+        as="ol"
+        label="Tramos del recorrido"
+        className="space-y-1 text-sm"
+        noun="tramos"
+        items={route.map((step, index) => {
           const progress = steps[index]!;
           const newSection = step.section && step.section !== route[index - 1]?.section;
           return (
@@ -198,7 +203,7 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
             </li>
           );
         })}
-      </ol>
+      />
     </div>
   );
 }

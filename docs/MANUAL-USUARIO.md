@@ -21,6 +21,11 @@ En el ordenador, el menú de arriba tiene las secciones principales; **Gestión*
 Catálogos y Usuarios (con el número de cuentas pendientes), y el botón con **tu nombre** abre
 «Mi actividad» y «Cerrar sesión». En el móvil está todo en el botón ☰.
 
+**Fichas largas.** Arriba de cada ficha (cable, bandeja, equipo) hay una barra **«Ir a»**
+que se queda fija al bajar: un toque y vas a la tabla, al plano, a la hoja original o al
+historial. Cada bloque se pliega pulsando su título (siempre empieza abierto), y las listas
+largas enseñan las 10 primeras filas con un botón «Ver los N».
+
 **Filtros y orden.** Las listas largas (cuentas, cambios en las cuentas, historial de un cable,
 equipos, actividad, conexionado) tienen arriba sus filtros y un «Orden». Los filtros quedan en
 la dirección de la página: se puede guardar o compartir el enlace. «Quitar filtros» vuelve a
@@ -78,6 +83,10 @@ mismo historial arriba y abajo:
 - **Conexionado** (quien conecta): la tabla de hilos con el regletero y la borna de cada uno
   en origen y en destino, los puentes y la **hoja original del listado**, con zoom. En caso de
   duda, manda la hoja original.
+
+En el buscador, cada cable tiene debajo de su código el enlace **Conexionado**, que abre la
+ficha directamente en esa pestaña. En la tabla de hilos, encima de «Origen» y «Destino» está
+el equipo de cada punta (enlaza a su página).
 
 El cable es el mismo en las dos: si alguien lo timbró, se ve timbrado también en Conexionado.
 Conectar no exige haber timbrado antes, ni al revés.
