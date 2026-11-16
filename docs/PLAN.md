@@ -720,6 +720,18 @@ Rama `feat/brand-notifications`.
       qué: `docs/ARQUITECTURA.md`, «Correos y avisos».
 - [x] Número de cuentas pendientes junto a «Usuarios» en el menú, y un punto en el móvil.
 
+### Planos, seguridad del CI y README (2026-11-16)
+
+Rama `feat/drawings-sheets-security-readme`.
+
+- [x] Marcas del plano ajustadas al código también cuando está escrito en vertical (el
+      recuadro se comía las columnas vecinas) y número debajo, sin tapar el código de al lado.
+- [x] Selector de hojas con título y una tarjeta por hoja, igual en la ficha del cable y en
+      la de bandeja; en el móvil se desliza de lado.
+- [x] CI de seguridad: secretos en todo el historial (gitleaks), `pnpm audit` de producción y
+      OpenSSF Scorecard; `SECURITY.md`.
+- [x] README nuevo.
+
 ### Lo que hace el responsable (cuentas y claves)
 
 - [ ] Llevar `dev` a `main` por PR (producción sale de `main`).

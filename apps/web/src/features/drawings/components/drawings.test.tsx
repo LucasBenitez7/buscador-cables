@@ -180,6 +180,20 @@ describe("markFrame", () => {
     expect(frame.y + frame.height / 2).toBeCloseTo(0.25);
   });
 
+  // Fase 10: en los códigos escritos en vertical el margen salía del alto (el largo del
+  // código) y el recuadro se comía las columnas de al lado.
+  it("frames a vertical code tightly, without the neighbouring columns", () => {
+    // Hoja apaisada (alto = 0,7 del ancho); el código mide 0,006 de ancho y 0,05 de alto.
+    const frame = markFrame({ x: 0.5, y: 0.5, w: 0.006, h: 0.05, kind: "label" }, 0.7);
+
+    expect(frame.width).toBeLessThan(0.006 * 2);
+    expect(frame.width).toBeGreaterThan(0.006);
+    expect(frame.height).toBeGreaterThan(0.05 * 0.7);
+    expect(frame.height).toBeLessThan(0.05 * 0.7 + 0.006 * 2);
+    expect(frame.x + frame.width / 2).toBeCloseTo(0.5);
+    expect(frame.y + frame.height / 2).toBeCloseTo(0.35);
+  });
+
   it("only points the arrow at what is being looked for", async () => {
     render(
       <DrawingViewer
@@ -245,9 +259,13 @@ describe("TrayDrawings", () => {
       />,
     );
 
-    const list = screen.getByRole("list", { name: "Hojas donde aparece" });
-    expect(within(list).getAllByRole("button")[0]).toHaveTextContent("sin imagen");
-    expect(within(list).getAllByRole("button")[1]).toHaveAttribute("aria-current", "true");
+    // Fase 10: las hojas, con título y cada una con su número en grande.
+    expect(screen.getByRole("heading", { name: "Hojas donde aparece (2)" })).toBeInTheDocument();
+    const list = screen.getByRole("group", { name: "Hojas donde aparece" });
+    expect(within(list).getAllByRole("button")[0]).toHaveTextContent("Hoja 03");
+    expect(within(list).getAllByRole("button")[0]).toHaveTextContent("Sin imagen todavía");
+    expect(within(list).getAllByRole("button")[1]).toHaveAttribute("aria-pressed", "true");
+    expect(within(list).getAllByRole("button")[1]).toHaveTextContent("TABLAS");
     await waitFor(() => expect(osd.state.options?.tileSources).toContain("EJ-ELE-DRW-0024_02"));
 
     fireEvent.click(within(list).getAllByRole("button")[0]!);

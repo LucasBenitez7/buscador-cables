@@ -1,0 +1,57 @@
+name: Seguridad
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  schedule:
+    # Lunes a las 05:17 UTC: avisos nuevos de dependencias aunque el código no cambie.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+# Mínimo privilegio: solo leer el repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: "24"
+
+jobs:
+  secrets:
+    name: secretos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Todo el historial: un secreto borrado en un commit posterior sigue publicado.
+          fetch-depth: 0
+
+      # Gitleaks desde su imagen oficial (sin action de terceros). Excepciones: .gitleaks.toml.
+      - name: Buscar secretos en el historial
+        run: >-
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1
+          git /repo --config /repo/.gitleaks.toml --redact --no-banner --exit-code 1
+
+  audit:
+    name: dependencias
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Lo que llega a producción, con gravedad alta o crítica. Las de desarrollo y las bajas
+      # las cubren Dependabot y la revisión de dependencias de cada PR.
+      - name: Vulnerabilidades conocidas en dependencias de producción
+        run: pnpm audit --prod --audit-level high
