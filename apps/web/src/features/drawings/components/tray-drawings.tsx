@@ -1,10 +1,10 @@
 "use client";
 
-import { cn } from "cn";
 import { useState } from "react";
 import { drawingMarkRank, traySectionOf, type DrawingMark } from "@cables/shared";
 import type { TraySheet } from "@/server/trays/service";
 import { DrawingViewer } from "./drawing-viewer";
+import { SheetPicker } from "./sheet-picker";
 
 /** What the sheet says about where the tray is, in words. */
 export function sheetHint(code: string, marks: readonly DrawingMark[]): string {
@@ -35,6 +35,20 @@ export function TrayDrawings({ code, sheets }: { code: string; sheets: TraySheet
 
   return (
     <div className="space-y-3">
+      <SheetPicker
+        label="Hojas donde aparece"
+        selected={selected}
+        onSelect={setSelected}
+        sheets={sheets.map((item) => ({
+          key: `${item.drawing}-${item.sheet}`,
+          drawing: item.drawing,
+          sheet: item.sheet,
+          title: item.title,
+          detail: sheetHint(code, item.marks),
+          accent: drawingMarkRank(item.marks) === 0 ? "La bandeja está dibujada" : null,
+          missingImage: !item.image,
+        }))}
+      />
       {sheet.image ? (
         <>
           <DrawingViewer
@@ -55,40 +69,6 @@ export function TrayDrawings({ code, sheets }: { code: string; sheets: TraySheet
           La imagen de este plano todavía no está disponible.
         </p>
       )}
-
-      {sheets.length > 1 ? (
-        <ul aria-label="Hojas donde aparece" className="bg-card divide-y rounded-lg border">
-          {sheets.map((item, index) => (
-            <li key={`${item.drawing}-${item.sheet}`}>
-              <button
-                type="button"
-                aria-current={index === selected ? "true" : undefined}
-                onClick={() => setSelected(index)}
-                className={cn(
-                  "focus-visible:ring-ring/50 flex w-full flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2 text-left text-sm transition-colors outline-none focus-visible:ring-3",
-                  index === selected ? "bg-muted" : "hover:bg-muted/50",
-                )}
-              >
-                <span>
-                  <span className="font-mono font-medium">{item.drawing}</span> · hoja {item.sheet}
-                  {item.title ? (
-                    <span className="text-muted-foreground"> · {item.title}</span>
-                  ) : null}
-                </span>
-                <span
-                  className={cn(
-                    "text-xs",
-                    drawingMarkRank(item.marks) <= 1 ? "text-warning" : "text-muted-foreground",
-                  )}
-                >
-                  {sheetHint(code, item.marks)}
-                  {item.image ? "" : " · sin imagen"}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </div>
   );
 }
