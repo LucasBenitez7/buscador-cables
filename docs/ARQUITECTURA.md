@@ -294,6 +294,31 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - Equipos: `/equipment` (búsqueda por parte del código) y `/equipment/[código]`, con los
   cables por regletero (`server/equipment/group.ts`, funciones puras) y el estado de esa punta.
 
+### Roles y permisos (fase 12)
+
+- El catálogo de permisos es código (`PERMISSIONS`, con su explicación en `PERMISSION_GROUPS`):
+  un permiso solo existe si el código lo comprueba. Lo que se edita desde la web es su
+  reparto: `Role` (nombre, descripción, `permissions`, `locked`, `system`, `version`) y
+  `UserPermissionGrant` (extras de una persona). `User.role` es el id de su rol; los cuatro de
+  siempre tienen como id su clave (`ADMIN`…), creados por la migración con los permisos que
+  tenían en el código.
+- `getCurrentUser` lee en cada petición el rol y los extras y calcula `permissions` con
+  `effectivePermissions`: solo permisos conocidos, siempre `cable:read`, y `user:manage` y
+  `role:manage` solo para el rol `ADMIN` diga lo que diga la base. Todo `hasPermission` recibe
+  a la persona (`{ permissions }`), no un rol.
+- Barreras contra subir de nivel: Zod (`roleFormSchema`, `userGrantsSchema` rechazan los
+  permisos protegidos), los servicios (`server/roles/service.ts` exige `role:manage`; el rol
+  Administrador no se edita), y triggers de la base (`role_protected_permissions`,
+  `grant_protected_permissions`) que rechazan esos permisos fuera de `ADMIN` aunque se escriba
+  directamente en la base. Las reglas de cuentas ya no usan una escalera de roles: solo quien
+  tiene `user:manage` gestiona cuentas.
+- Concurrencia: `Role.version` (dos administradores editando el mismo rol no se pisan).
+- Auditoría: `UserEvent` admite `PERMISSIONS_CHANGED`, `ROLE_CREATED`, `ROLE_UPDATED` y
+  `ROLE_DELETED`, con `roleId` y `details` (rol, permisos añadidos y quitados); `targetId` es
+  opcional. Solo la ve quien gestiona cuentas.
+- Detalle de un movimiento (`/activity/[id]`): `canSeeCableEvent` (su autor, `activity:view`
+  o `cable:read`).
+
 ## Marca, cargas y avisos
 
 - **Logo** (una lupa cuyo mango es un cable con su conector): `apps/web/public/brand/logo.svg`

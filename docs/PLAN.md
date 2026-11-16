@@ -861,15 +861,20 @@ tocar el código y sin abrir ningún agujero de seguridad.
 
 ### Tareas
 
-- [ ] Modelo: `Role`, `UserPermissionGrant`, `User.roleId`; migración que crea los cuatro
+- [x] Modelo: `Role`, `UserPermissionGrant`, `User.roleId`; migración que crea los cuatro
       roles con sus permisos actuales y pasa cada usuario a su rol; auditoría ampliada.
-- [ ] Permisos efectivos: sesión con los permisos de la base; `hasPermission` sobre ellos en
+- [x] Permisos efectivos: sesión con los permisos de la base; `hasPermission` sobre ellos en
       todo el código (páginas, Server Actions y servicios); reglas de no subir de nivel.
-- [ ] Página «Roles y permisos»: lista, ficha con permisos por tema, crear (copiando), editar,
+- [x] Página «Roles y permisos»: lista, ficha con permisos por tema, crear (copiando), editar,
       borrar sin personas.
-- [ ] Usuarios: rol con «+N», ficha de la persona con lo que puede hacer y sus extras.
-- [ ] Tests (reglas de seguridad, servicios, permisos efectivos, intentos de saltarse las
+- [x] Usuarios: rol con «+N», ficha de la persona con lo que puede hacer y sus extras.
+- [x] Tests (reglas de seguridad, servicios, permisos efectivos, intentos de saltarse las
       reglas con peticiones a mano) y E2E; manual de usuario y arquitectura.
+
+Hecho también: «Quién ve qué» en el manual (la auditoría de cuentas y de roles es solo del
+administrador; la actividad del equipo, de quien tenga ese permiso; el detalle de un
+movimiento, de su autor o de quien ve el cable) y triggers en la base que impiden dar la
+gestión de cuentas o de roles fuera del rol Administrador.
 
 ---
 
