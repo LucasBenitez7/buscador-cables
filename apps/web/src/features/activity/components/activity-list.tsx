@@ -12,6 +12,7 @@ import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
 import { Badge } from "@/components/ui/badge";
 import { CODE_LINK } from "@/components/ui/text-link";
+import { INLINE_LINK } from "@/lib/links";
 import type { ActivityEntry, ActivityPage } from "@/server/activity/service";
 
 const TIME_ZONE = "Europe/Madrid";
@@ -195,6 +196,11 @@ function Entry({
           </blockquote>
         ) : null}
         <ChangeList changes={entry.changes} />
+        {entry.detailHref ? (
+          <Link href={entry.detailHref} className={`${INLINE_LINK} text-sm`}>
+            Ver qué cambió
+          </Link>
+        ) : null}
       </div>
     </li>
   );

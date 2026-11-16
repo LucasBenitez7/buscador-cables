@@ -21,6 +21,7 @@ const activity: ActivityPage = {
       to: { id: "l-pat", name: "Patio" },
       summary: "movió el cable de Almacén a Patio",
       notes: "Para la parada",
+      detailHref: null,
       changes: [
         {
           field: "Ubicación actual",
@@ -44,6 +45,7 @@ const activity: ActivityPage = {
       summary: "tendió el cable a medias: la punta de destino espera en la bandeja 99UXA00L22036",
       notes: null,
       changes: [],
+      detailHref: null,
     },
     {
       id: "e2",
@@ -58,6 +60,7 @@ const activity: ActivityPage = {
       summary: "retiró el cable",
       notes: null,
       changes: [],
+      detailHref: null,
     },
   ],
   total: 120,
