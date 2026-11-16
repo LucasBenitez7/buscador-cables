@@ -84,6 +84,13 @@ export const wiringEditSchema = z.object({
   version: z.number().int().positive(),
   /** Save even if two wires of one end share a terminal (the user confirmed the warning). */
   confirmDuplicates: z.boolean().default(false),
+  /** Why, in a few words ("el regletero está renumerado en campo"). Optional. */
+  notes: z
+    .string()
+    .trim()
+    .max(500, "Máximo 500 caracteres")
+    .nullish()
+    .transform((value) => value || null),
   wires: z
     .array(
       z.object({

@@ -6,6 +6,7 @@ import {
   CABLE_ACTION_LABELS,
   CABLE_LEVEL_LABELS,
   cableActionAvailability,
+  cableSheetKey,
   canRunCableAction,
   formatDecimal,
   hasPermission,
@@ -15,6 +16,9 @@ import { INLINE_LINK, levelCablesHref, locationHref } from "@/lib/links";
 import { DataList, Item, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
+import { CableWiring } from "@/features/cables/components/cable-wiring";
+import { DrawingViewer } from "@/features/drawings/components/drawing-viewer";
+import { hasDrawingImage } from "@/server/drawings/store";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
 import { RouteDrawings } from "@/features/drawings/components/route-drawings";
 import { getRouteSheets } from "@/server/drawings/route-sheets";
@@ -26,6 +30,14 @@ import { requireUser, whenSignedIn } from "@/server/session";
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/** The two ways to look at a cable: who lays it (route) and who connects it (wiring). */
+const VIEWS = [
+  { id: "recorrido", label: "Recorrido" },
+  { id: "conexionado", label: "Conexionado" },
+] as const;
+type View = (typeof VIEWS)[number]["id"];
 
 const dateFormat = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "medium",
@@ -46,19 +58,28 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 const withUnit = (value: number | null, unit: string) =>
   value === null ? null : `${formatDecimal(value)} ${unit}`;
 
-export default async function CablePage({ params }: { params: Params }) {
+export default async function CablePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const user = await requireUser();
   const { id } = await params;
+  const view: View = (await searchParams).vista === "conexionado" ? "conexionado" : "recorrido";
   const cable = await loadCable(id);
   if (!cable) {
     notFound();
   }
+  const sheetKey = cableSheetKey(cable.code);
   const canEdit = !cable.deleted && hasPermission(user.role, "cable:update");
   // Dados de baja: sin acciones. El resto ve solo lo que su rol permite.
   const availability = cable.deleted ? [] : cableActionAvailability(user.role, cable.state);
-  const [locations, routeSheets] = await Promise.all([
+  const [locations, routeSheets, hasSheet] = await Promise.all([
     availability.length > 0 ? listLocationOptions() : Promise.resolve([]),
-    getRouteSheets(cable.route, cable.state),
+    view === "recorrido" ? getRouteSheets(cable.route, cable.state) : Promise.resolve([]),
+    view === "conexionado" ? hasDrawingImage(sheetKey) : Promise.resolve(false),
   ]);
   const correctableEvents = canRunCableAction(user.role, "CORRECTION")
     ? cable.history.map((entry) => ({
@@ -128,6 +149,32 @@ export default async function CablePage({ params }: { params: Params }) {
         ]}
       />
 
+      <nav aria-label="Vista del cable" className="flex gap-1 border-b">
+        {VIEWS.map((item) => (
+          <Link
+            key={item.id}
+            href={
+              item.id === "recorrido"
+                ? `/cables/${cable.id}`
+                : `/cables/${cable.id}?vista=${item.id}`
+            }
+            aria-current={view === item.id ? "page" : undefined}
+            className={
+              view === item.id
+                ? "border-primary text-foreground -mb-px border-b-2 px-4 py-2 text-sm font-semibold"
+                : "text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mb-px rounded-t-md border-b-2 border-transparent px-4 py-2 text-sm font-medium outline-none focus-visible:ring-3"
+            }
+          >
+            {item.label}
+            {item.id === "conexionado" && cable.wiring.wires.length > 0 ? (
+              <span className="text-muted-foreground ml-1.5 text-xs">
+                {cable.wiring.wires.length}
+              </span>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
+
       <Section title="Extremos">
         <CableEnds ends={cable.ends} state={cable.state} />
         {cable.currentLocation ? (
@@ -144,99 +191,141 @@ export default async function CablePage({ params }: { params: Params }) {
         ) : null}
       </Section>
 
-      <Section
-        title={`Recorrido por bandejas${cable.route.length > 0 ? ` (${cable.route.length} tramos)` : ""}`}
-      >
-        {routeSheets.length > 0 ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-            <CableRoute route={cable.route} state={cable.state} />
-            <RouteDrawings sheets={routeSheets} />
-          </div>
-        ) : (
-          <CableRoute route={cable.route} state={cable.state} />
-        )}
-      </Section>
-
-      <Section title="Datos">
-        <DataList>
-          <Item label="Tipo">
-            {cable.type && cable.typeId ? (
-              <Link
-                href={`/cables?type=${encodeURIComponent(cable.typeId)}`}
-                className={INLINE_LINK}
-              >
-                {cable.type}
-              </Link>
+      {view === "recorrido" ? (
+        <>
+          <Section
+            title={`Recorrido por bandejas${cable.route.length > 0 ? ` (${cable.route.length} tramos)` : ""}`}
+          >
+            {routeSheets.length > 0 ? (
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+                <CableRoute route={cable.route} state={cable.state} />
+                <RouteDrawings sheets={routeSheets} />
+              </div>
             ) : (
-              cable.type
+              <CableRoute route={cable.route} state={cable.state} />
             )}
-          </Item>
-          <Item label="Color">
-            {cable.color ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span
-                  aria-hidden
-                  className="border-foreground/40 size-3 rounded-full border"
-                  style={{ backgroundColor: cable.color.hex ?? "transparent" }}
-                />
-                {cable.colorId ? (
+          </Section>
+
+          <Section title="Datos">
+            <DataList>
+              <Item label="Tipo">
+                {cable.type && cable.typeId ? (
                   <Link
-                    href={`/cables?color=${encodeURIComponent(cable.colorId)}`}
+                    href={`/cables?type=${encodeURIComponent(cable.typeId)}`}
                     className={INLINE_LINK}
                   >
-                    {cable.color.name}
+                    {cable.type}
                   </Link>
                 ) : (
-                  cable.color.name
+                  cable.type
                 )}
-              </span>
+              </Item>
+              <Item label="Color">
+                {cable.color ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="border-foreground/40 size-3 rounded-full border"
+                      style={{ backgroundColor: cable.color.hex ?? "transparent" }}
+                    />
+                    {cable.colorId ? (
+                      <Link
+                        href={`/cables?color=${encodeURIComponent(cable.colorId)}`}
+                        className={INLINE_LINK}
+                      >
+                        {cable.color.name}
+                      </Link>
+                    ) : (
+                      cable.color.name
+                    )}
+                  </span>
+                ) : null}
+              </Item>
+              <Item label="Fabricante">
+                {cable.manufacturer && cable.manufacturerId ? (
+                  <Link
+                    href={`/cables?manufacturer=${encodeURIComponent(cable.manufacturerId)}`}
+                    className={INLINE_LINK}
+                  >
+                    {cable.manufacturer}
+                  </Link>
+                ) : (
+                  cable.manufacturer
+                )}
+              </Item>
+              <Item label="Nº de conductores">{cable.conductors}</Item>
+              <Item label="Sección">{withUnit(cable.crossSectionMm2, "mm²")}</Item>
+              <Item label="Diámetro exterior">{withUnit(cable.outerDiameterMm, "mm")}</Item>
+              <Item label="Longitud">
+                {cable.lengthM === null && !cable.lengthPending
+                  ? null
+                  : `${withUnit(cable.lengthM, "m") ?? "Sin longitud"}${cable.lengthPending ? " (pendiente)" : ""}`}
+              </Item>
+              <Item label="Tensión nominal">{cable.voltageRating}</Item>
+              <Item label="Composición">{cable.composition}</Item>
+              <Item label="Circuito">
+                {cable.circuit
+                  ? `${cable.circuit}${cable.cablesPerCircuit ? ` · ${cable.cablesPerCircuit} cables por circuito` : ""}`
+                  : null}
+              </Item>
+              <Item label="Esquema">{cable.diagram}</Item>
+              <Item label="Revisión">{cable.revision}</Item>
+              <Item label="Listado de origen">
+                {cable.source
+                  ? [cable.source.document, cable.source.page ? `pág. ${cable.source.page}` : null]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : null}
+              </Item>
+              <Item label="Alta">{dateFormat.format(cable.createdAt)}</Item>
+            </DataList>
+            {cable.notes ? (
+              <div className="space-y-1 text-sm">
+                <h3 className="text-muted-foreground">Notas</h3>
+                <p className="whitespace-pre-line">{cable.notes}</p>
+              </div>
             ) : null}
-          </Item>
-          <Item label="Fabricante">
-            {cable.manufacturer && cable.manufacturerId ? (
-              <Link
-                href={`/cables?manufacturer=${encodeURIComponent(cable.manufacturerId)}`}
-                className={INLINE_LINK}
-              >
-                {cable.manufacturer}
-              </Link>
+          </Section>
+        </>
+      ) : (
+        <>
+          <Section
+            title={`Conexionado${cable.wiring.revision ? ` (revisión ${cable.wiring.revision})` : ""}`}
+          >
+            <CableWiring
+              cableId={cable.id}
+              version={cable.version}
+              wires={cable.wiring.wires}
+              jumpers={cable.wiring.jumpers}
+              canEdit={!cable.deleted && hasPermission(user.role, "cable:wiring")}
+            />
+          </Section>
+
+          <Section title="Hoja original del listado">
+            {hasSheet ? (
+              <div className="space-y-2">
+                <p className="text-muted-foreground text-sm">
+                  {cable.source?.document ?? "Listado"}
+                  {cable.source?.page ? `, pág. ${cable.source.page}` : ""}
+                  {cable.revision ? ` · revisión ${cable.revision}` : ""}. En caso de duda, manda la
+                  hoja original.
+                </p>
+                <DrawingViewer
+                  imageKey={sheetKey}
+                  width={1000}
+                  height={1414}
+                  marks={[]}
+                  label={`Hoja original del cable ${cable.code}`}
+                />
+              </div>
             ) : (
-              cable.manufacturer
+              <p className="text-muted-foreground text-sm">
+                La hoja original de este cable todavía no está disponible.
+              </p>
             )}
-          </Item>
-          <Item label="Nº de conductores">{cable.conductors}</Item>
-          <Item label="Sección">{withUnit(cable.crossSectionMm2, "mm²")}</Item>
-          <Item label="Diámetro exterior">{withUnit(cable.outerDiameterMm, "mm")}</Item>
-          <Item label="Longitud">
-            {cable.lengthM === null && !cable.lengthPending
-              ? null
-              : `${withUnit(cable.lengthM, "m") ?? "Sin longitud"}${cable.lengthPending ? " (pendiente)" : ""}`}
-          </Item>
-          <Item label="Tensión nominal">{cable.voltageRating}</Item>
-          <Item label="Composición">{cable.composition}</Item>
-          <Item label="Circuito">
-            {cable.circuit
-              ? `${cable.circuit}${cable.cablesPerCircuit ? ` · ${cable.cablesPerCircuit} cables por circuito` : ""}`
-              : null}
-          </Item>
-          <Item label="Esquema">{cable.diagram}</Item>
-          <Item label="Revisión">{cable.revision}</Item>
-          <Item label="Listado de origen">
-            {cable.source
-              ? [cable.source.document, cable.source.page ? `pág. ${cable.source.page}` : null]
-                  .filter(Boolean)
-                  .join(" · ")
-              : null}
-          </Item>
-          <Item label="Alta">{dateFormat.format(cable.createdAt)}</Item>
-        </DataList>
-        {cable.notes ? (
-          <div className="space-y-1 text-sm">
-            <h3 className="text-muted-foreground">Notas</h3>
-            <p className="whitespace-pre-line">{cable.notes}</p>
-          </div>
-        ) : null}
-      </Section>
+          </Section>
+        </>
+      )}
 
       <Section title="Último movimiento">
         {cable.lastAction ? (
@@ -281,6 +370,11 @@ export default async function CablePage({ params }: { params: Params }) {
                 </p>
                 {entry.notes ? <p className="italic">“{entry.notes}”</p> : null}
                 <ChangeList changes={entry.changes} />
+                {entry.detailHref ? (
+                  <Link href={entry.detailHref} className={INLINE_LINK}>
+                    Ver qué cambió
+                  </Link>
+                ) : null}
               </li>
             ))}
           </ol>

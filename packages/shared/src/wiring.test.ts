@@ -48,6 +48,7 @@ describe("wiringEditSchema", () => {
       cableId: "c1",
       version: 3,
       confirmDuplicates: false,
+      notes: null,
       wires: [
         {
           position: 1,

@@ -20,6 +20,7 @@ import {
   type TestStatus,
   type InstallationStatus,
   type RouteSection,
+  type WireRow,
 } from "@cables/shared";
 import { listLocationOptions } from "@/server/cables/service";
 
@@ -43,6 +44,24 @@ export type CableHistoryEntry = {
   changes: ReadableChange[];
   /** For corrections: the event they correct ("Tendido · 11/11/26 10:42"). */
   corrects: string | null;
+  /** Events too long for one line (terminals corrected): the page with every change. */
+  detailHref: string | null;
+};
+
+export type CableJumperDetail = {
+  position: number;
+  code: string;
+  fromBlock: string | null;
+  fromPoint: string | null;
+  toBlock: string | null;
+  toPoint: string | null;
+};
+
+/** The wiring table (fase 11): wires with field and list values, and jumpers. */
+export type CableWiring = {
+  revision: string | null;
+  wires: WireRow[];
+  jumpers: CableJumperDetail[];
 };
 
 export type CableEndDetail = {
@@ -82,6 +101,7 @@ export type CableDetail = {
   lengthPending: boolean;
   /** Where the data comes from in the project lists, to check it on paper. */
   source: { document: string | null; page: number | null } | null;
+  wiring: CableWiring;
   /** Both ends as the lists give them, plus the location in the tree. */
   ends: { origin: CableEndDetail; destination: CableEndDetail };
   description: string | null;
@@ -203,22 +223,31 @@ function valueHref(field: string, value: unknown, lookups: Lookups): string | un
   }
 }
 
+/** Cells of a terminal correction ("wire.3.originPoint"): shown on the event's own page. */
+const isWiringCell = (field: string) => field.startsWith("wire.");
+
 export function readableChanges(changes: unknown, lookups: Lookups): ReadableChange[] {
-  return orderedChanges(changes).map(([field, change]) => {
-    const fromHref = valueHref(field, change?.from, lookups);
-    const toHref = valueHref(field, change?.to, lookups);
-    return {
-      field:
-        CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
-        PROJECT_FIELD_LABELS[field] ??
-        field,
-      from: readableValue(field, change?.from, lookups),
-      to: readableValue(field, change?.to, lookups),
-      ...(fromHref ? { fromHref } : {}),
-      ...(toHref ? { toHref } : {}),
-    };
-  });
+  return orderedChanges(changes)
+    .filter(([field]) => !isWiringCell(field))
+    .map(([field, change]) => {
+      const fromHref = valueHref(field, change?.from, lookups);
+      const toHref = valueHref(field, change?.to, lookups);
+      return {
+        field:
+          CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
+          PROJECT_FIELD_LABELS[field] ??
+          field,
+        from: readableValue(field, change?.from, lookups),
+        to: readableValue(field, change?.to, lookups),
+        ...(fromHref ? { fromHref } : {}),
+        ...(toHref ? { toHref } : {}),
+      };
+    });
 }
+
+/** The page with every change of an event, for the ones summed up in one line. */
+export const eventDetailHref = (event: { id: string; action: CableAction }) =>
+  event.action === "WIRING_EDITED" ? `/activity/${event.id}` : null;
 
 const toNumber = (value: { toNumber(): number } | null) => value?.toNumber() ?? null;
 
@@ -245,6 +274,8 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
           tray: { select: { code: true } },
         },
       },
+      wires: { orderBy: { position: "asc" }, omit: { id: true, cableId: true } },
+      jumpers: { orderBy: { position: "asc" }, omit: { id: true, cableId: true } },
       events: {
         orderBy: { createdAt: "desc" },
         take: HISTORY_LIMIT,
@@ -299,6 +330,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       cable.sourceDocument || cable.sourcePage
         ? { document: cable.sourceDocument, page: cable.sourcePage }
         : null,
+    wiring: { revision: cable.wiringRevision, wires: cable.wires, jumpers: cable.jumpers },
     ends: {
       origin: {
         equipment: cable.originEquipment,
@@ -375,6 +407,7 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       corrects: event.correctsEvent
         ? `${CABLE_ACTION_LABELS[event.correctsEvent.action]} · ${dateFormat.format(event.correctsEvent.createdAt)}`
         : null,
+      detailHref: eventDetailHref(event),
     })),
   };
 }

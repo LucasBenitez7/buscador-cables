@@ -21,6 +21,7 @@ export const PERMISSIONS = [
   "cable:disconnect",
   "cable:move",
   "cable:test",
+  "cable:wiring",
   "cable:retire",
   "cable:correct",
   "activity:view",
@@ -59,6 +60,7 @@ export const ROLE_DESCRIPTIONS: Record<Role, { summary: string; can: readonly st
     can: [
       "Tender (también a medias, indicando dónde está), enrollar y mover cables.",
       "Conectar, desconectar y timbrar.",
+      "Corregir las bornas de un cable cuando en campo no coinciden con el listado.",
       "Dar de alta y editar cables.",
     ],
   },
@@ -93,6 +95,8 @@ const TECHNICIAN_PERMISSIONS: readonly Permission[] = [
   "cable:move",
   // Timbrar: lo hace quien está en campo con el cable.
   "cable:test",
+  // Corregir bornas (fase 11): el conexionista deja la tabla como está en campo.
+  "cable:wiring",
 ];
 
 const SUPERVISOR_PERMISSIONS: readonly Permission[] = [
