@@ -19,6 +19,7 @@ import {
   type ConnectionStatus,
   type TestStatus,
   type InstallationStatus,
+  type CableHistorySearch,
   type RouteSection,
   type WireRow,
 } from "@cables/shared";
@@ -129,9 +130,15 @@ export type CableDetail = {
   createdAt: Date;
   updatedAt: Date;
   deleted: { at: Date; user: string; reason: string | null } | null;
-  /** The latest events, newest first; `historyTotal` says how many there are in all. */
+  /**
+   * The events that match the history filters (newest first unless asked otherwise), up to
+   * `HISTORY_LIMIT`; `historyTotal` says how many match and `historyAll` how many there are.
+   */
   history: CableHistoryEntry[];
   historyTotal: number;
+  historyAll: number;
+  /** People who appear in the history, for its "Quién" filter. */
+  historyPeople: { id: string; label: string }[];
 };
 
 export const HISTORY_LIMIT = 100;
@@ -255,7 +262,15 @@ const toNumber = (value: { toNumber(): number } | null) => value?.toNumber() ?? 
  * Everything about a cable, including retired (soft-deleted) ones so their
  * record and history stay reachable from old links.
  */
-export async function getCableDetail(id: string): Promise<CableDetail | null> {
+export async function getCableDetail(
+  id: string,
+  historySearch: CableHistorySearch = {},
+): Promise<CableDetail | null> {
+  const historyWhere = {
+    ...(historySearch.action ? { action: historySearch.action } : {}),
+    ...(historySearch.person ? { userId: historySearch.person } : {}),
+  };
+  const historyOrder = historySearch.sort === "oldest" ? "asc" : "desc";
   const cable = await prisma.cable.findUnique({
     where: { id },
     include: {
@@ -277,7 +292,8 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
       wires: { orderBy: { position: "asc" }, omit: { id: true, cableId: true } },
       jumpers: { orderBy: { position: "asc" }, omit: { id: true, cableId: true } },
       events: {
-        orderBy: { createdAt: "desc" },
+        where: historyWhere,
+        orderBy: [{ createdAt: historyOrder }, { id: historyOrder }],
         take: HISTORY_LIMIT,
         include: {
           user: { select: { name: true, role: true } },
@@ -290,11 +306,24 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
     return null;
   }
 
-  const lookups = await loadLookups();
+  const [lookups, historyTotal, people] = await Promise.all([
+    loadLookups(),
+    prisma.cableEvent.count({ where: { cableId: cable.id, ...historyWhere } }),
+    prisma.user.findMany({
+      where: { cableEvents: { some: { cableId: cable.id } } },
+      select: { id: true, name: true, role: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
   const location = (locationId: string | null) => locationName(lookups, locationId);
+  // The deletion reason is read even when the history filters leave it out.
   const deletion = cable.deletedAt
-    ? cable.events.find((event) => event.action === "DELETED")
-    : undefined;
+    ? await prisma.cableEvent.findFirst({
+        where: { cableId: cable.id, action: "DELETED" },
+        orderBy: { createdAt: "desc" },
+        include: { user: { select: { name: true, role: true } } },
+      })
+    : null;
 
   return {
     id: cable.id,
@@ -390,7 +419,9 @@ export async function getCableDetail(id: string): Promise<CableDetail | null> {
           reason: deletion?.notes ?? null,
         }
       : null,
-    historyTotal: cable._count.events,
+    historyTotal,
+    historyAll: cable._count.events,
+    historyPeople: people.map((person) => ({ id: person.id, label: userName(person) })),
     history: cable.events.map((event) => ({
       id: event.id,
       action: event.action,

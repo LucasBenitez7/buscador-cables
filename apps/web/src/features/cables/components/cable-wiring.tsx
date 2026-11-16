@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { editWiringAction } from "@/features/cables/wiring-actions";
 import type { CableJumperDetail } from "@/server/cables/detail";
@@ -43,6 +44,9 @@ const draftOf = (wires: readonly WireRow[]): Draft =>
     ]),
   ) as Draft;
 
+/** "X51 2" < "X51 10" < "X52 1": strips and terminals in numeric order. */
+const naturalOrder = new Intl.Collator("es", { numeric: true, sensitivity: "base" }).compare;
+
 const COLUMN_HEAD = "text-muted-foreground px-3 py-2 text-left text-xs font-medium";
 
 /**
@@ -59,6 +63,10 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
   const [serverDuplicates, setServerDuplicates] = useState<string[]>([]);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  // Filters and order of the table: only what is shown, never what is saved.
+  const [query, setQuery] = useState("");
+  const [onlyEdited, setOnlyEdited] = useState(false);
+  const [order, setOrder] = useState<"list" | "origin" | "destination">("list");
   const switchId = useId();
   const showColour = wires.some((wire) => wire.colour);
 
@@ -156,6 +164,24 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
     );
   }
 
+  const needle = query.trim().toUpperCase();
+  const terminalKey = (row: (typeof rows)[number], end: "origin" | "destination") =>
+    `${row[`${end}Block`] ?? "￿"} ${row[`${end}Point`] ?? "￿"}`;
+  const visible = rows
+    .filter(
+      (row) =>
+        (!needle ||
+          [row.wire, row.colour, ...WIRING_FIELDS.map((field) => row[field])].some((value) =>
+            value?.toUpperCase().includes(needle),
+          )) &&
+        (!onlyEdited || WIRING_FIELDS.some((field) => row[field] !== pdfValue(row, field))),
+    )
+    .sort((a, b) =>
+      order === "list"
+        ? a.position - b.position
+        : naturalOrder(terminalKey(a, order), terminalKey(b, order)) || a.position - b.position,
+    );
+
   const editedInField = wires.filter((wire) =>
     WIRING_FIELDS.some((field) => isFieldEdited(wire, field)),
   ).length;
@@ -211,6 +237,51 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
         </p>
       ) : null}
 
+      <div
+        role="group"
+        aria-label="Filtrar y ordenar los hilos"
+        className="bg-card grid gap-3 rounded-lg border p-3 sm:grid-cols-3"
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor={`${switchId}-query`}>Buscar hilo o borna</Label>
+          <Input
+            id={`${switchId}-query`}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="BN, X51, 12…"
+            autoComplete="off"
+            maxLength={60}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${switchId}-order`}>Orden</Label>
+          <NativeSelect
+            id={`${switchId}-order`}
+            value={order}
+            onChange={(event) => setOrder(event.target.value as typeof order)}
+          >
+            <option value="list">Como en el listado</option>
+            <option value="origin">Por borna de origen</option>
+            <option value="destination">Por borna de destino</option>
+          </NativeSelect>
+        </div>
+        <label className="flex items-center gap-2 self-end pb-2 text-sm">
+          <input
+            type="checkbox"
+            checked={onlyEdited}
+            onChange={(event) => setOnlyEdited(event.target.checked)}
+            className="accent-primary size-4"
+          />
+          Solo corregidos en campo
+        </label>
+      </div>
+      {visible.length < rows.length ? (
+        <p role="status" className="text-muted-foreground text-sm">
+          Se ven {visible.length} de {rows.length} hilos.
+        </p>
+      ) : null}
+
       <div className="bg-card overflow-x-auto rounded-lg border">
         <table className="w-full min-w-[36rem] text-sm">
           <caption className="sr-only">Hilos del cable y sus bornas en origen y destino</caption>
@@ -249,7 +320,7 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
             </tr>
           </thead>
           <tbody className="divide-y">
-            {rows.map((row) => {
+            {visible.map((row) => {
               const wire = wires.find((item) => item.position === row.position)!;
               return (
                 <tr key={row.position} className={cn(touched.has(row.position) && "bg-primary/5")}>

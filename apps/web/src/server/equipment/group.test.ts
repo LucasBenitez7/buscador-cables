@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { groupEquipmentEnds, isEndConnected, type EquipmentCableInput } from "./group";
+import {
+  filterEquipmentGroups,
+  groupEquipmentEnds,
+  isEndConnected,
+  type EquipmentCableInput,
+} from "./group";
 
 const wire = (
   position: number,
@@ -94,5 +99,42 @@ describe("groupEquipmentEnds", () => {
       ["origin", false, false],
       ["destination", true, true],
     ]);
+  });
+});
+
+describe("filterEquipmentGroups", () => {
+  const groups = groupEquipmentEnds("99BMA10", [
+    cable({ id: "a", code: "99A", connectionStatus: "ORIGIN_ONLY", wires: [wire(1, "X51", "1")] }),
+    cable({ id: "b", code: "99B", testStatus: "TESTED_OK", wires: [wire(1, "X51", "2")] }),
+    cable({ id: "c", code: "99C", testStatus: "TESTED_FAILED", wires: [wire(1, "X52", "1")] }),
+  ]);
+  const codes = (search: Parameters<typeof filterEquipmentGroups>[1]) =>
+    filterEquipmentGroups(groups, search).map((group) => [
+      group.block,
+      group.ends.map((end) => end.code),
+    ]);
+
+  it("keeps everything without filters", () => {
+    expect(codes({})).toEqual([
+      ["X51", ["99A", "99B"]],
+      ["X52", ["99C"]],
+    ]);
+  });
+
+  it("filters by code, state of this end, test and strip, and drops empty strips", () => {
+    expect(codes({ q: "9b" })).toEqual([["X51", ["99B"]]]);
+    expect(codes({ state: "connected" })).toEqual([["X51", ["99A"]]]);
+    expect(codes({ state: "pending" })).toEqual([
+      ["X51", ["99B"]],
+      ["X52", ["99C"]],
+    ]);
+    expect(codes({ test: "failed" })).toEqual([["X52", ["99C"]]]);
+    expect(codes({ test: "untested" })).toEqual([["X51", ["99A"]]]);
+    expect(codes({ block: "X52" })).toEqual([["X52", ["99C"]]]);
+  });
+
+  it("orders inside each strip: by code or with the ends to connect first", () => {
+    expect(codes({ sort: "pending" })[0]).toEqual(["X51", ["99B", "99A"]]);
+    expect(codes({ sort: "code" })[0]).toEqual(["X51", ["99A", "99B"]]);
   });
 });

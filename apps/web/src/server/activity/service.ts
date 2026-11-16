@@ -105,7 +105,7 @@ export type ActivityPage = {
 };
 
 /** First instant of a day in Madrid, as a UTC Date (handles summer time). */
-function madridDayStart(day: string): Date {
+export function madridDayStart(day: string): Date {
   const utcMidnight = new Date(`${day}T00:00:00Z`);
   const madridHour = Number(
     new Intl.DateTimeFormat("en-GB", {
@@ -118,7 +118,7 @@ function madridDayStart(day: string): Date {
   return new Date(utcMidnight.getTime() - madridHour * 60 * 60 * 1000);
 }
 
-function nextDay(day: string): string {
+export function nextDay(day: string): string {
   const date = new Date(`${day}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + 1);
   return date.toISOString().slice(0, 10);
@@ -156,7 +156,10 @@ export async function listActivity(
   const [events, lookups] = await Promise.all([
     prisma.cableEvent.findMany({
       where,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      orderBy:
+        search.sort === "oldest"
+          ? [{ createdAt: "asc" }, { id: "asc" }]
+          : [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: EVENT_INCLUDE,

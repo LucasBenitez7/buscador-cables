@@ -140,8 +140,8 @@ export function ActivityList({
         page={activity.page}
         pageCount={activity.pageCount}
         href={(page) => `${basePath}${activityQuery(search, { page })}`}
-        previousLabel="← Más recientes"
-        nextLabel="Más antiguos →"
+        previousLabel={search.sort === "oldest" ? "← Más antiguos" : "← Más recientes"}
+        nextLabel={search.sort === "oldest" ? "Más recientes →" : "Más antiguos →"}
       />
     </div>
   );

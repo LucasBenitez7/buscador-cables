@@ -10,6 +10,8 @@ import {
   createUser,
   listUserEvents,
   listUsers,
+  searchUserEvents,
+  searchUsers,
   setUserActive,
 } from "./service";
 
@@ -372,5 +374,150 @@ describe("account audit", () => {
     await expect(setUserActive(admin, { userId: admin.id, active: false })).rejects.toThrow();
 
     expect(await listUserEvents()).toEqual([]);
+  });
+});
+
+describe("searchUsers", () => {
+  async function seed() {
+    const approvedAt = new Date();
+    const at = (day: number) => new Date(`2026-11-${String(day).padStart(2, "0")}T10:00:00Z`);
+    await prisma.user.createMany({
+      data: [
+        {
+          id: "u-zoe",
+          name: "Zoe",
+          email: "zoe@obra.test",
+          role: "VIEWER",
+          approvedAt,
+          createdAt: at(1),
+        },
+        {
+          id: "u-ana",
+          name: "Ana",
+          email: "ana@cables.test",
+          role: "VIEWER",
+          active: false,
+          approvedAt,
+          createdAt: at(2),
+        },
+        {
+          id: "u-bea",
+          name: "Bea",
+          email: "bea@cables.test",
+          role: "TECHNICIAN",
+          approvedAt,
+          createdAt: at(3),
+        },
+        {
+          id: "u-nico",
+          name: "Nico",
+          email: "nico@obra.test",
+          role: "VIEWER",
+          active: false,
+          createdAt: at(4),
+        },
+      ],
+    });
+  }
+  const names = async (search: Parameters<typeof searchUsers>[0]) =>
+    (await searchUsers(search)).rows.map((user) => user.name);
+
+  it("keeps the pending accounts first by default, like the old list", async () => {
+    await seed();
+    expect(await names({})).toEqual(["Nico", "Bea", "Zoe", "Ana"]);
+  });
+
+  it("filters by name or email, role and state", async () => {
+    await seed();
+    expect(await names({ q: "OBRA" })).toEqual(["Nico", "Zoe"]);
+    expect(await names({ role: "TECHNICIAN" })).toEqual(["Bea"]);
+    expect(await names({ status: "pending" })).toEqual(["Nico"]);
+    expect(await names({ status: "active" })).toEqual(["Bea", "Zoe"]);
+    expect(await names({ status: "inactive" })).toEqual(["Ana"]);
+  });
+
+  it("orders by name, sign-up date or role", async () => {
+    await seed();
+    expect(await names({ sort: "name" })).toEqual(["Ana", "Bea", "Nico", "Zoe"]);
+    expect(await names({ sort: "newest" })).toEqual(["Nico", "Bea", "Ana", "Zoe"]);
+    expect(await names({ sort: "oldest" })).toEqual(["Zoe", "Ana", "Bea", "Nico"]);
+    expect((await names({ sort: "role" }))[0]).toBe("Bea");
+  });
+
+  it("cuts pages across the pending accounts and the rest", async () => {
+    const approvedAt = new Date();
+    await prisma.user.createMany({
+      data: Array.from({ length: 30 }, (_, i) => ({
+        id: `p-${String(i).padStart(2, "0")}`,
+        name: `Persona ${String(i).padStart(2, "0")}`,
+        email: `p${i}@cables.test`,
+        role: "VIEWER" as const,
+        active: i >= 3,
+        approvedAt: i < 3 ? null : approvedAt,
+        createdAt: new Date(Date.UTC(2026, 10, 1, 0, i)),
+      })),
+    });
+
+    const first = await searchUsers({});
+    const second = await searchUsers({ page: 2 });
+    expect(first).toMatchObject({ total: 30, page: 1, pageCount: 2 });
+    expect(first.rows).toHaveLength(25);
+    expect(first.rows.slice(0, 3).every((user) => user.pending)).toBe(true);
+    expect(second.rows).toHaveLength(5);
+    const all = [...first.rows, ...second.rows].map((user) => user.id);
+    expect(new Set(all).size).toBe(30);
+  });
+});
+
+describe("searchUserEvents", () => {
+  it("filters the account changes by change, person and dates, in either order", async () => {
+    const admin = await insertUser("ADMIN");
+    const ana = await insertUser("VIEWER");
+    const bea = await insertUser("VIEWER");
+    await prisma.userEvent.createMany({
+      data: [
+        {
+          actorId: admin.id,
+          targetId: ana.id,
+          action: "ROLE_CHANGED",
+          fromRole: "VIEWER",
+          toRole: "TECHNICIAN",
+          createdAt: new Date("2026-11-10T10:00:00Z"),
+        },
+        {
+          actorId: admin.id,
+          targetId: bea.id,
+          action: "DEACTIVATED",
+          createdAt: new Date("2026-11-12T10:00:00Z"),
+        },
+        {
+          actorId: admin.id,
+          targetId: ana.id,
+          action: "DEACTIVATED",
+          createdAt: new Date("2026-11-14T10:00:00Z"),
+        },
+      ],
+    });
+    const actions = async (search: Parameters<typeof searchUserEvents>[0]) =>
+      (await searchUserEvents(search)).rows.map((event) => `${event.action}:${event.target}`);
+
+    expect(await actions({})).toEqual([
+      `DEACTIVATED:${ana.name}`,
+      `DEACTIVATED:${bea.name}`,
+      `ROLE_CHANGED:${ana.name}`,
+    ]);
+    expect(await actions({ sort: "oldest" })).toEqual([
+      `ROLE_CHANGED:${ana.name}`,
+      `DEACTIVATED:${bea.name}`,
+      `DEACTIVATED:${ana.name}`,
+    ]);
+    expect(await actions({ action: "DEACTIVATED", person: ana.id })).toEqual([
+      `DEACTIVATED:${ana.name}`,
+    ]);
+    expect(await actions({ from: "2026-11-11", to: "2026-11-13" })).toEqual([
+      `DEACTIVATED:${bea.name}`,
+    ]);
+    // The person filter also finds who made the change.
+    expect((await searchUserEvents({ person: admin.id })).total).toBe(3);
   });
 });

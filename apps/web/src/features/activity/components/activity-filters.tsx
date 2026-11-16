@@ -5,6 +5,8 @@ import type { ComponentProps, FormEvent, ReactNode } from "react";
 import {
   CABLE_ACTIONS,
   CABLE_ACTION_LABELS,
+  DATE_SORTS,
+  DATE_SORT_LABELS,
   activityQuery,
   parseActivitySearch,
   type ActivitySearch,
@@ -43,7 +45,7 @@ export function ActivityFilters({ basePath, search, users }: Props) {
       aria-label="Filtrar movimientos"
       className="space-y-4 rounded-lg border p-4"
     >
-      <div className={`grid gap-3 sm:grid-cols-2 ${users ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+      <div className={`grid gap-3 sm:grid-cols-2 ${users ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
         {users ? (
           <Field label="Quién" htmlFor="actor">
             <SearchableSelect
@@ -69,6 +71,15 @@ export function ActivityFilters({ basePath, search, users }: Props) {
         </Field>
         <Field label="Hasta" htmlFor="to">
           <Input id="to" name="to" type="date" defaultValue={search.to ?? ""} />
+        </Field>
+        <Field label="Orden" htmlFor="sort">
+          <NativeSelect id="sort" name="sort" defaultValue={search.sort ?? "newest"}>
+            {DATE_SORTS.map((sort) => (
+              <option key={sort} value={sort}>
+                {DATE_SORT_LABELS[sort]}
+              </option>
+            ))}
+          </NativeSelect>
         </Field>
       </div>
       <div className="flex flex-wrap gap-2">

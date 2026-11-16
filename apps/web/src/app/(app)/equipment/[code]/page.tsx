@@ -2,12 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { TEST_STATUS_LABELS, WIRING_END_LABELS } from "@cables/shared";
+import {
+  EQUIPMENT_SORT_LABELS,
+  EQUIPMENT_STATE_LABELS,
+  EQUIPMENT_TEST_LABELS,
+  TEST_STATUS_LABELS,
+  WIRING_END_LABELS,
+  optionsOf,
+  parseEquipmentSearch,
+} from "@cables/shared";
 import { Section } from "@/components/detail";
+import { FilterForm } from "@/components/filter-form";
 import { Badge } from "@/components/ui/badge";
 import { TEST_VARIANT } from "@/features/cables/components/cable-status-badges";
 import { EquipmentLink } from "@/features/cables/components/equipment-link";
 import { INLINE_LINK, equipmentCablesHref } from "@/lib/links";
+import { filterEquipmentGroups } from "@/server/equipment/group";
 import { getEquipment } from "@/server/equipment/service";
 import { requireUser, whenSignedIn } from "@/server/session";
 
@@ -44,8 +54,8 @@ function pointsText(points: readonly string[]): string {
 
 /**
  * One equipment (cabinet, junction box, panel) as the connection crew sees it: the cables that
- * land in it, by terminal strip, each with the state of its end here. "Solo pendientes" hides
- * the ends already connected.
+ * land in it, by terminal strip, each with the state of its end here, with filters (cable,
+ * state of this end, test, strip) and order.
  */
 export default async function EquipmentPage({
   params,
@@ -56,18 +66,15 @@ export default async function EquipmentPage({
 }) {
   await requireUser();
   const tag = tagOf((await params).code);
-  const pendingOnly = (await searchParams).pendientes === "1";
+  const search = parseEquipmentSearch(await searchParams);
   const equipment = await loadEquipment(tag);
   if (!equipment) notFound();
 
   const { totals } = equipment;
   const base = `/equipment/${encodeURIComponent(equipment.equipment)}`;
-  const groups = equipment.groups
-    .map((group) => ({
-      ...group,
-      ends: pendingOnly ? group.ends.filter((end) => !end.connected) : group.ends,
-    }))
-    .filter((group) => group.ends.length > 0);
+  const groups = filterEquipmentGroups(equipment.groups, search);
+  const shown = groups.reduce((sum, group) => sum + group.ends.length, 0);
+  const filtered = Boolean(search.q || search.state || search.test || search.block || search.sort);
 
   return (
     <article className="space-y-6">
@@ -98,36 +105,63 @@ export default async function EquipmentPage({
         </p>
       </header>
 
-      <nav aria-label="Filtro" className="flex flex-wrap gap-1.5">
-        {[
-          { label: "Todos", href: base, active: !pendingOnly },
+      <FilterForm
+        action={base}
+        label="Filtrar los cables del equipo"
+        active={filtered}
+        fields={[
           {
-            label: "Solo pendientes de conectar",
-            href: `${base}?pendientes=1`,
-            active: pendingOnly,
+            kind: "text",
+            name: "q",
+            label: "Cable",
+            value: search.q,
+            placeholder: "Parte del código",
           },
-        ].map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            aria-current={item.active ? "true" : undefined}
-            className={
-              item.active
-                ? "bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs font-medium"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 rounded-full border px-3 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3"
-            }
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+          {
+            kind: "select",
+            name: "state",
+            label: "Punta aquí",
+            value: search.state,
+            options: optionsOf(EQUIPMENT_STATE_LABELS),
+          },
+          {
+            kind: "select",
+            name: "test",
+            label: "Timbrado",
+            value: search.test,
+            options: optionsOf(EQUIPMENT_TEST_LABELS),
+          },
+          {
+            kind: "select",
+            name: "block",
+            label: "Regletero",
+            value: search.block,
+            options: equipment.groups.flatMap((group) =>
+              group.block ? [{ value: group.block, label: group.block }] : [],
+            ),
+          },
+          {
+            kind: "select",
+            name: "sort",
+            label: "Orden",
+            value: search.sort,
+            options: optionsOf(EQUIPMENT_SORT_LABELS),
+            emptyLabel: null,
+          },
+        ]}
+      />
+      {filtered ? (
+        <p role="status" className="text-muted-foreground text-sm">
+          {shown} de {totals.ends} cumplen los filtros.
+        </p>
+      ) : null}
 
       {groups.length === 0 ? (
         <p
           role="status"
           className="text-muted-foreground rounded-lg border p-6 text-center text-sm"
         >
-          Todas las puntas de este equipo están conectadas.
+          Ningún cable de este equipo cumple los filtros.
         </p>
       ) : (
         groups.map((group) => (

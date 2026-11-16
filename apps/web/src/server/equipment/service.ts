@@ -13,7 +13,10 @@ export type EquipmentMatch = { equipment: string; cables: number };
  * Equipment tags that contain `query` (origin or destination of a cable), with how many cables
  * end in each, most cables first. Without a query, the equipment with the most cables.
  */
-export async function searchEquipment(query: string): Promise<EquipmentMatch[]> {
+export async function searchEquipment(
+  query: string,
+  sort: "cables" | "name" = "cables",
+): Promise<EquipmentMatch[]> {
   const text = query.trim().slice(0, EQUIPMENT_MAX);
   const pattern = `%${escapeLike(text)}%`;
   const filter = (column: Prisma.Sql) =>
@@ -27,7 +30,7 @@ export async function searchEquipment(query: string): Promise<EquipmentMatch[]> 
         WHERE "deletedAt" IS NULL AND "destinationEquipment" IS NOT NULL ${filter(Prisma.sql`"destinationEquipment"`)}
     ) ends
     GROUP BY equipment
-    ORDER BY cables DESC, equipment
+    ORDER BY ${sort === "name" ? Prisma.sql`equipment` : Prisma.sql`cables DESC, equipment`}
     LIMIT ${SEARCH_LIMIT}`;
 }
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { equipmentHref } from "@/lib/links";
 import { EQUIPMENT_MAX, searchEquipment } from "@/server/equipment/service";
 import { requireUser } from "@/server/session";
@@ -19,9 +20,11 @@ export default async function EquipmentSearchPage({
   searchParams: SearchParams;
 }) {
   await requireUser();
-  const raw = (await searchParams).q;
+  const params = await searchParams;
+  const raw = params.q;
   const query = (typeof raw === "string" ? raw : "").trim().slice(0, EQUIPMENT_MAX);
-  const matches = await searchEquipment(query);
+  const sort = params.sort === "name" ? "name" : "cables";
+  const matches = await searchEquipment(query, sort);
 
   return (
     <div className="space-y-6">
@@ -52,6 +55,13 @@ export default async function EquipmentSearchPage({
             spellCheck={false}
             className="font-mono uppercase"
           />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="equipment-sort">Orden</Label>
+          <NativeSelect id="equipment-sort" name="sort" defaultValue={sort}>
+            <option value="cables">Más cables primero</option>
+            <option value="name">Código (A-Z)</option>
+          </NativeSelect>
         </div>
         <Button type="submit">Buscar</Button>
       </form>

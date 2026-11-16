@@ -3,7 +3,7 @@
  * end in it, grouped by the terminal strip they land on, with the state of that end. Pure
  * functions, so they can be tested without a database.
  */
-import type { ConnectionStatus, TestStatus, WiringEnd } from "@cables/shared";
+import type { ConnectionStatus, EquipmentSearch, TestStatus, WiringEnd } from "@cables/shared";
 
 export type EquipmentCableInput = {
   id: string;
@@ -124,4 +124,33 @@ export function groupEquipmentEnds(
           naturalOrder(a.points[0] ?? "", b.points[0] ?? "") || naturalOrder(a.code, b.code),
       ),
     }));
+}
+
+/**
+ * The groups after the filters of the equipment page: a cable code that contains `q`, the
+ * state of the end here, the result of the test and one terminal strip. The order works inside
+ * each strip: terminal (default), cable code, or the ends still to connect first.
+ */
+export function filterEquipmentGroups(
+  groups: readonly EquipmentGroup[],
+  search: EquipmentSearch,
+): EquipmentGroup[] {
+  const q = search.q?.toUpperCase();
+  const keep = (end: EquipmentEnd) =>
+    (!q || end.code.toUpperCase().includes(q)) &&
+    (!search.state || (search.state === "connected") === end.connected) &&
+    (!search.test ||
+      (search.test === "untested" && end.testStatus === "NOT_TESTED") ||
+      (search.test === "ok" && end.testStatus === "TESTED_OK") ||
+      (search.test === "failed" && end.testStatus === "TESTED_FAILED"));
+  const order = (ends: EquipmentEnd[]) =>
+    search.sort === "code"
+      ? [...ends].sort((a, b) => naturalOrder(a.code, b.code))
+      : search.sort === "pending"
+        ? [...ends].sort((a, b) => Number(a.connected) - Number(b.connected))
+        : ends;
+  return groups
+    .filter((group) => !search.block || (group.block ?? "") === search.block)
+    .map((group) => ({ ...group, ends: order(group.ends.filter(keep)) }))
+    .filter((group) => group.ends.length > 0);
 }
