@@ -180,6 +180,20 @@ describe("markFrame", () => {
     expect(frame.y + frame.height / 2).toBeCloseTo(0.25);
   });
 
+  // Fase 10: en los códigos escritos en vertical el margen salía del alto (el largo del
+  // código) y el recuadro se comía las columnas de al lado.
+  it("frames a vertical code tightly, without the neighbouring columns", () => {
+    // Hoja apaisada (alto = 0,7 del ancho); el código mide 0,006 de ancho y 0,05 de alto.
+    const frame = markFrame({ x: 0.5, y: 0.5, w: 0.006, h: 0.05, kind: "label" }, 0.7);
+
+    expect(frame.width).toBeLessThan(0.006 * 2);
+    expect(frame.width).toBeGreaterThan(0.006);
+    expect(frame.height).toBeGreaterThan(0.05 * 0.7);
+    expect(frame.height).toBeLessThan(0.05 * 0.7 + 0.006 * 2);
+    expect(frame.x + frame.width / 2).toBeCloseTo(0.5);
+    expect(frame.y + frame.height / 2).toBeCloseTo(0.35);
+  });
+
   it("only points the arrow at what is being looked for", async () => {
     render(
       <DrawingViewer

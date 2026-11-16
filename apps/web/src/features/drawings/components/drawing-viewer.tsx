@@ -51,17 +51,19 @@ const DEFAULT_SIZE = { w: 0.012, h: 0.008 };
  * and grows and shrinks with the drawing.
  */
 export function markFrame(mark: ViewerMark, aspect: number) {
-  const w = mark.w ?? DEFAULT_SIZE.w;
-  const h = mark.h ?? DEFAULT_SIZE.h;
-  // Margin of half a line of text around it; the flags' boxes are a bit larger than their number.
-  const pad = h * (mark.kind === "flag" ? 0.7 : 0.35);
-  const width = w + pad * 2;
-  const height = h + pad * 2;
+  // Todo en las unidades del visor: el ancho de la hoja es 1 y el alto, `aspect`.
+  const width = mark.w ?? DEFAULT_SIZE.w;
+  const height = (mark.h ?? DEFAULT_SIZE.h) * aspect;
+  // El margen sale del grosor de la línea de texto, sea horizontal o vertical. Con el alto
+  // (que en un código vertical es su largo) el recuadro se comía las columnas de al lado.
+  const line = Math.min(width, height);
+  // Margin of a third of a line around it; the flags' boxes are a bit larger than their number.
+  const pad = line * (mark.kind === "flag" ? 0.7 : 0.35);
   return {
-    x: mark.x - width / 2,
-    y: (mark.y - height / 2) * aspect,
-    width,
-    height: height * aspect,
+    x: mark.x - width / 2 - pad,
+    y: mark.y * aspect - height / 2 - pad,
+    width: width + pad * 2,
+    height: height + pad * 2,
   };
 }
 
@@ -97,7 +99,7 @@ function arrowElement(): HTMLElement {
 function labelElement(label: string, keep: boolean): HTMLElement {
   const element = document.createElement("span");
   element.className = cn(
-    "pointer-events-none ml-1 rounded-full bg-background px-1.5 text-xs font-bold text-foreground shadow",
+    "pointer-events-none mt-1 rounded-full bg-background px-1.5 text-xs font-bold text-foreground shadow",
     !keep && "group-data-[far=true]/viewer:invisible",
   );
   element.textContent = label;
@@ -156,8 +158,10 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
       if (mark.label) {
         instance.addOverlay({
           element: labelElement(mark.label, isHighlighted(mark)),
-          location: new OSD.Point(frame.x + frame.width, frame.y + frame.height / 2),
-          placement: OSD.Placement.LEFT,
+          // Debajo del recuadro, fuera de él: a un lado taparía el código vecino (en los planos
+          // con códigos verticales pegados, la columna de al lado).
+          location: new OSD.Point(frame.x + frame.width / 2, frame.y + frame.height),
+          placement: OSD.Placement.TOP,
           checkResize: false,
         });
       }
