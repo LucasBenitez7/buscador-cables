@@ -6,13 +6,13 @@ const mocks = vi.hoisted(() => ({
   createUser: vi.fn(),
   changeUserRole: vi.fn(),
   setUserActive: vi.fn(),
-  notifyAccountApproved: vi.fn(),
+  notifyAccountChange: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/server/session", () => ({ authorize: mocks.authorize }));
-vi.mock("@/server/account-approval", () => ({
-  notifyAccountApproved: mocks.notifyAccountApproved,
+vi.mock("@/server/account-notifications", () => ({
+  notifyAccountChange: mocks.notifyAccountChange,
 }));
 vi.mock("@/server/users/service", () => ({
   UserServiceError: class UserServiceError extends Error {},
@@ -40,7 +40,16 @@ describe("user actions", () => {
       mock.mockReset();
     }
     mocks.authorize.mockResolvedValue({ ok: true, user: admin });
-    mocks.setUserActive.mockResolvedValue({ approved: null });
+    mocks.setUserActive.mockImplementation(async (_actor, input: { active: boolean }) => ({
+      action: input.active ? "REACTIVATED" : "DEACTIVATED",
+      user: { id: "u2", name: "Ana", email: "ana@planta.example" },
+    }));
+    mocks.createUser.mockImplementation(
+      async (_actor, input: { name: string; email: string; role: string }) => ({
+        id: "u9",
+        ...input,
+      }),
+    );
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -77,7 +86,14 @@ describe("user actions", () => {
       role: "TECHNICIAN",
       password: "clave-temporal-1",
     });
-    expect(result).toEqual({ ok: true, message: "Usuario ana@planta.example creado." });
+    expect(result).toEqual({
+      ok: true,
+      message: "Usuario ana@planta.example creado. Se le ha enviado un correo de bienvenida.",
+    });
+    expect(mocks.notifyAccountChange).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "CREATED", toRole: "TECHNICIAN" }),
+      admin,
+    );
   });
 
   it("rejects invalid input before reaching the service", async () => {
@@ -108,27 +124,64 @@ describe("user actions", () => {
     });
   });
 
-  it("deactivates and reactivates without sending any email", async () => {
+  // Fase 10: la persona sabe por correo todo lo que pasa con su cuenta.
+  it("tells the person when the account is deactivated or reactivated", async () => {
     const off = await setUserActiveAction(form({ userId: "u2", active: "false" }));
     const on = await setUserActiveAction(form({ userId: "u2", active: "true" }));
 
     expect(mocks.setUserActive).toHaveBeenNthCalledWith(1, admin, { userId: "u2", active: false });
-    expect(off).toEqual({ ok: true, message: "Usuario desactivado." });
-    expect(on).toEqual({ ok: true, message: "Usuario reactivado." });
-    expect(mocks.notifyAccountApproved).not.toHaveBeenCalled();
+    expect(off).toEqual({ ok: true, message: "Usuario desactivado. Se le ha avisado por correo." });
+    expect(on).toEqual({ ok: true, message: "Usuario reactivado. Se le ha avisado por correo." });
+    expect(mocks.notifyAccountChange.mock.calls.map(([change]) => change.action)).toEqual([
+      "DEACTIVATED",
+      "REACTIVATED",
+    ]);
   });
 
   // Revisión F0-F7 (A2): al aprobar una cuenta registrada se avisa a su dueño.
-  it("tells the user when their account is approved", async () => {
-    const applicant = { name: "Nico Nuevo", email: "nico@planta.example" };
-    mocks.setUserActive.mockResolvedValue({ approved: applicant });
+  it("tells the user when their account is approved, with its role", async () => {
+    const change = {
+      action: "APPROVED",
+      user: { id: "u3", name: "Nico Nuevo", email: "nico@planta.example" },
+      toRole: "TECHNICIAN",
+    };
+    mocks.setUserActive.mockResolvedValue(change);
 
-    const result = await setUserActiveAction(form({ userId: "u3", active: "true" }));
+    const result = await setUserActiveAction(
+      form({ userId: "u3", active: "true", role: "TECHNICIAN" }),
+    );
 
-    expect(mocks.notifyAccountApproved).toHaveBeenCalledWith(applicant);
+    expect(mocks.setUserActive).toHaveBeenCalledWith(admin, {
+      userId: "u3",
+      active: true,
+      role: "TECHNICIAN",
+    });
+    expect(mocks.notifyAccountChange).toHaveBeenCalledWith(change, admin);
     expect(result).toEqual({
       ok: true,
       message: "Cuenta aprobada. Se ha avisado al usuario por correo.",
     });
+  });
+
+  it("only emails a role change that changed something", async () => {
+    mocks.changeUserRole.mockResolvedValueOnce(null);
+    expect(await changeRoleAction(form({ userId: "u2", role: "VIEWER" }))).toEqual({
+      ok: true,
+      message: "Ya tenía ese rol.",
+    });
+    expect(mocks.notifyAccountChange).not.toHaveBeenCalled();
+
+    const change = {
+      action: "ROLE_CHANGED",
+      user: { id: "u2" },
+      fromRole: "VIEWER",
+      toRole: "ADMIN",
+    };
+    mocks.changeUserRole.mockResolvedValueOnce(change);
+    expect(await changeRoleAction(form({ userId: "u2", role: "ADMIN" }))).toEqual({
+      ok: true,
+      message: "Rol actualizado. Se le ha avisado por correo.",
+    });
+    expect(mocks.notifyAccountChange).toHaveBeenCalledWith(change, admin);
   });
 });

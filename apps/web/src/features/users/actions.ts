@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { changeRoleSchema, createUserSchema, setUserActiveSchema } from "@cables/shared";
 import { firstIssue, formValue, type ActionResult } from "@/lib/action-result";
-import { notifyAccountApproved } from "@/server/account-approval";
+import { notifyAccountChange } from "@/server/account-notifications";
 import { authorize } from "@/server/session";
 import {
   UserServiceError,
@@ -45,9 +45,16 @@ export async function createUserAction(
   }
 
   try {
-    await createUser(auth.user, parsed.data);
+    const created = await createUser(auth.user, parsed.data);
     revalidatePath(USERS_PATH);
-    return { ok: true, message: `Usuario ${parsed.data.email} creado.` };
+    await notifyAccountChange(
+      { action: "CREATED", user: created, toRole: created.role },
+      auth.user,
+    );
+    return {
+      ok: true,
+      message: `Usuario ${parsed.data.email} creado. Se le ha enviado un correo de bienvenida.`,
+    };
   } catch (error) {
     return fail(error);
   }
@@ -68,9 +75,13 @@ export async function changeRoleAction(formData: FormData): Promise<ActionResult
   }
 
   try {
-    await changeUserRole(auth.user, parsed.data);
+    const change = await changeUserRole(auth.user, parsed.data);
     revalidatePath(USERS_PATH);
-    return { ok: true, message: "Rol actualizado." };
+    if (!change) {
+      return { ok: true, message: "Ya tenía ese rol." };
+    }
+    await notifyAccountChange(change, auth.user);
+    return { ok: true, message: "Rol actualizado. Se le ha avisado por correo." };
   } catch (error) {
     return fail(error);
   }
@@ -92,16 +103,18 @@ export async function setUserActiveAction(formData: FormData): Promise<ActionRes
   }
 
   try {
-    const { approved } = await setUserActive(auth.user, parsed.data);
+    const change = await setUserActive(auth.user, parsed.data);
     revalidatePath(USERS_PATH);
-    if (approved) {
-      // El correo no bloquea la aprobación: `sendEmail` registra el fallo y no lo propaga.
-      await notifyAccountApproved(approved);
-      return { ok: true, message: "Cuenta aprobada. Se ha avisado al usuario por correo." };
-    }
+    // El correo no bloquea el cambio: `sendEmail` registra el fallo y no lo propaga.
+    await notifyAccountChange(change, auth.user);
+    const messages = {
+      APPROVED: "Cuenta aprobada. Se ha avisado al usuario por correo.",
+      REACTIVATED: "Usuario reactivado. Se le ha avisado por correo.",
+      DEACTIVATED: "Usuario desactivado. Se le ha avisado por correo.",
+    } as const;
     return {
       ok: true,
-      message: parsed.data.active ? "Usuario reactivado." : "Usuario desactivado.",
+      message: messages[change.action as keyof typeof messages] ?? "Hecho.",
     };
   } catch (error) {
     return fail(error);

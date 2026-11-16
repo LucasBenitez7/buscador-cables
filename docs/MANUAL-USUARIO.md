@@ -34,6 +34,19 @@ Cada rol puede hacer también todo lo de los anteriores.
 
 La misma tabla está siempre a la vista en la página **Usuarios** del administrador.
 
+## Correos que te llegan
+
+Todos salen de la aplicación con su logo, y nunca hace falta responderlos:
+
+- al pedir la cuenta, para confirmar tu correo;
+- cuando la aprueban o te dan de alta: bienvenida con tu rol y lo que puedes hacer;
+- si te cambian el rol, o desactivan o reactivan tu cuenta;
+- al pedir una contraseña nueva, y un aviso cuando la contraseña cambia (si no fuiste tú,
+  pide otra enseguida y avisa a un administrador).
+
+Los administradores reciben además las cuentas pendientes de aprobar y cada administrador
+nuevo.
+
 ## Inicio
 
 Lo primero que ves: buscador rápido de cable y bandeja, y el avance de la obra (cables
@@ -96,7 +109,9 @@ tiene su página con lo que contiene, sus cables y sus bandejas.
 
 ## Administración
 
-**Usuarios** (administrador):
+**Usuarios** (administrador). Si hay cuentas esperando, el menú lo dice: un número junto a
+«Usuarios» (y un punto en el botón del menú en el móvil). También llega un correo a cada
+administrador con los datos de la persona.
 
 - **Cuentas pendientes** arriba. Elige su rol en el selector (debajo se resume qué podrá
   hacer) y pulsa «Aprobar como…». Aprueba solo a personas que conozcas.

@@ -707,6 +707,19 @@ despliega, paso a paso: `docs/DESPLIEGUE.md`.
 - No se hace el `Dockerfile` de servidor propio: el despliegue es en Vercel. Se puede añadir si
   algún día hace falta una intranet.
 
+### Marca, cargas y avisos (2026-11-16)
+
+Rama `feat/brand-notifications`.
+
+- [x] Logo propio (lupa con cable y conector), favicon, icono de iPhone y manifiesto.
+- [x] Vista previa al compartir el enlace (WhatsApp, X…): título, descripción e imagen.
+- [x] Cargas con el logo y cajas translúcidas con la forma de cada página.
+- [x] Ojo para ver la contraseña en todos los campos de contraseña.
+- [x] Correos con el logo y un aspecto común; bienvenida con el rol, cambio de rol,
+      desactivación, reactivación, contraseña cambiada y administrador nuevo. Quién recibe
+      qué: `docs/ARQUITECTURA.md`, «Correos y avisos».
+- [x] Número de cuentas pendientes junto a «Usuarios» en el menú, y un punto en el móvil.
+
 ### Lo que hace el responsable (cuentas y claves)
 
 - [ ] Llevar `dev` a `main` por PR (producción sale de `main`).

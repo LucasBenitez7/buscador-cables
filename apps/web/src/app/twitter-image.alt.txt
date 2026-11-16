@@ -1,0 +1,1 @@
+Buscador de Cables: localiza cada cable de la planta, su recorrido y su estado

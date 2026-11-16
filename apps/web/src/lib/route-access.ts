@@ -13,6 +13,14 @@ export const PUBLIC_PATHS = [
   // Las tareas periódicas comprueban su propio secreto (`CRON_SECRET`).
   "/api/cron",
   "/robots.txt",
+  // Logo, iconos e imagen para compartir: los piden el navegador antes de entrar, los
+  // clientes de correo y las vistas previas de WhatsApp o X, siempre sin sesión.
+  "/brand",
+  "/icon.svg",
+  "/apple-icon.png",
+  "/opengraph-image.png",
+  "/twitter-image.png",
+  "/manifest.webmanifest",
 ] as const;
 
 export function isPublicPath(pathname: string): boolean {

@@ -4,6 +4,7 @@ import { startTransition, useActionState, useState, type FormEvent } from "react
 import { ROLES, ROLE_LABELS, canManageActor, type Role } from "@cables/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { createUserAction, type ActionResult } from "@/features/users/actions";
@@ -65,13 +66,7 @@ export function CreateUserForm({ currentRole }: { currentRole: Role }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Contraseña temporal</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          {...field("password")}
-          required
-        />
+        <PasswordInput id="password" autoComplete="new-password" {...field("password")} required />
       </div>
 
       <div className="flex items-center justify-between gap-4 sm:col-span-2">

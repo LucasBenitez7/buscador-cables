@@ -54,4 +54,19 @@ describe("proxy", () => {
     expect(proxy(request("/api/cron/cleanup")).headers.get("location")).toBeNull();
     expect(proxy(request("/robots.txt")).headers.get("location")).toBeNull();
   });
+
+  // Los iconos, el logo de los correos y la vista previa al compartir se piden sin sesión.
+  it("serves the brand assets without a session", () => {
+    for (const path of [
+      "/brand/logo-email.png",
+      "/icon.svg",
+      "/apple-icon.png",
+      "/opengraph-image.png",
+      "/twitter-image.png",
+      "/manifest.webmanifest",
+    ]) {
+      expect(proxy(request(path)).headers.get("location"), path).toBeNull();
+    }
+    expect(proxy(request("/brandx")).headers.get("location")).not.toBeNull();
+  });
 });

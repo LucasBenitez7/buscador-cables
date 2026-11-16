@@ -16,13 +16,29 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const DESCRIPTION =
+  "Cada cable de la planta: dónde está, por dónde va y en qué estado. Acceso para personal autorizado.";
+
 export const metadata: Metadata = {
   title: {
     default: "Buscador de Cables",
     template: "%s | Buscador de Cables",
   },
-  description: "Localización, estado y trazabilidad del cableado de planta.",
+  description: DESCRIPTION,
+  applicationName: "Buscador de Cables",
   metadataBase: new URL(env.APP_URL),
+  // La imagen al compartir el enlace (WhatsApp, X, Teams…) son `opengraph-image.png` y
+  // `twitter-image.png`, junto a este fichero; el icono, `icon.svg`, `favicon.ico` y
+  // `apple-icon.png`. Todos salen de `public/brand/logo.svg`.
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    siteName: "Buscador de Cables",
+    title: "Buscador de Cables",
+    description: DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image", title: "Buscador de Cables", description: DESCRIPTION },
+  appleWebApp: { title: "Cables", statusBarStyle: "black-translucent" },
 };
 
 // Barra del navegador en móvil con el mismo fondo que la app (--background).
