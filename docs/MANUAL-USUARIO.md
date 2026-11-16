@@ -25,12 +25,12 @@ poner otra (caduca en una hora). Tras 10 contraseñas incorrectas seguidas, la c
 
 Cada rol puede hacer también todo lo de los anteriores.
 
-| Rol               | Para quién                   | Qué puede hacer                                                                                           |
-| ----------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Consulta**      | Quien solo necesita mirar    | Buscar cables y ver su ficha, recorrido e historial; ver bandejas, ubicaciones y planos.                  |
-| **Técnico**       | Quien trabaja en campo       | Tender (también a medias), enrollar, mover, conectar, desconectar y timbrar; dar de alta y editar cables. |
-| **Supervisor**    | Quien coordina la obra       | Ver la actividad de todo el equipo; retirar cables y corregir su estado; ubicaciones y catálogos.         |
-| **Administrador** | Quien gestiona la aplicación | Aprobar cuentas, cambiar roles, desactivar cuentas, dar de alta usuarios y eliminar cables.               |
+| Rol               | Para quién                   | Qué puede hacer                                                                                                            |
+| ----------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Consulta**      | Quien solo necesita mirar    | Buscar cables y ver su ficha, recorrido e historial; ver bandejas, ubicaciones y planos.                                   |
+| **Técnico**       | Quien trabaja en campo       | Tender (también a medias), enrollar, mover, conectar, desconectar y timbrar; corregir bornas; dar de alta y editar cables. |
+| **Supervisor**    | Quien coordina la obra       | Ver la actividad de todo el equipo; retirar cables y corregir su estado; ubicaciones y catálogos.                          |
+| **Administrador** | Quien gestiona la aplicación | Aprobar cuentas, cambiar roles, desactivar cuentas, dar de alta usuarios y eliminar cables.                                |
 
 La misma tabla está siempre a la vista en la página **Usuarios** del administrador.
 
@@ -61,8 +61,40 @@ fabricante, sección, longitud, estado de instalación, conexión y timbrado, ni
 (exacto, en origen o destino) y bandeja. Los filtros quedan en la dirección de la página: se
 puede guardar o compartir una búsqueda copiando el enlace.
 
-Pulsa un código para abrir su **ficha**: datos, origen y destino, recorrido por bandejas, el
-plano con el recorrido marcado y el historial completo.
+Pulsa un código para abrir su **ficha**. Tiene dos pestañas, con las mismas acciones y el
+mismo historial arriba y abajo:
+
+- **Recorrido** (quien tiende): datos, origen y destino, recorrido por bandejas y el plano con
+  el recorrido marcado.
+- **Conexionado** (quien conecta): la tabla de hilos con el regletero y la borna de cada uno
+  en origen y en destino, los puentes y la **hoja original del listado**, con zoom. En caso de
+  duda, manda la hoja original.
+
+El cable es el mismo en las dos: si alguien lo timbró, se ve timbrado también en Conexionado.
+Conectar no exige haber timbrado antes, ni al revés.
+
+## Conexionado: corregir bornas
+
+Si en campo un hilo está en otro regletero o en otra borna que la del listado (técnico,
+supervisor y administrador):
+
+1. En la pestaña **Conexionado**, activa **Modo editar**.
+2. Cambia solo las celdas que no coinciden. Lo cambiado se marca; si dos hilos de la misma
+   punta quedan en la misma borna, la tabla lo marca en rojo y lo explica.
+3. Escribe, si quieres, una nota (por qué cambia) y pulsa **Guardar**. Si hay bornas
+   repetidas, la app pide confirmarlo con **Guardar igualmente**.
+
+El listado no se pierde: debajo de cada celda corregida se ve «Listado: …», y el botón ↺ de la
+fila la devuelve a lo que dice el listado. Se marca **por punta**, como siempre (Conectar
+origen / destino), no hilo a hilo. Una revisión nueva del listado no pisa lo corregido en
+campo.
+
+## Equipos
+
+**Equipos** busca un cuadro, caja o armario y abre su página: los cables que llegan a él,
+agrupados por regletero, con sus bornas, el equipo del otro lado y si **esa punta** está
+conectada. «Solo pendientes de conectar» deja los que faltan. Es la forma de trabajar armario
+a armario. El código de un equipo, en cualquier ficha, lleva a su página.
 
 ## Registrar trabajo en un cable
 
@@ -104,6 +136,8 @@ tiene su página con lo que contiene, sus cables y sus bandejas.
 ## Actividad
 
 - **Mi actividad**: todo lo que has registrado, por días.
+- Una corrección de bornas ocupa **una línea** («corrigió las bornas de 3 hilos en origen»).
+  «Ver qué cambió» abre su página con cada hilo, antes y después.
 - **Actividad** (supervisor y administrador): lo de todo el equipo, con filtros por persona,
   acción y periodo.
 

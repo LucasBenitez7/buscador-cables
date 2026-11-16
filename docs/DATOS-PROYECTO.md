@@ -234,12 +234,39 @@ interpreta después): solo se vuelven a dibujar las que cambian (una
 revisión nueva añade una fila al cajetín) y se borran las que ya no están. `--force` las
 dibuja todas.
 
+### Hojas de cable (fase 11)
+
+`pnpm data:render` también dibuja la página de cada cable de `cables.json` como **una sola
+imagen** WebP (`cable_<código>.webp`, lado mayor 2600 px), en la misma carpeta y el mismo
+manifiesto que los planos. Una hoja de cable es pequeña: una imagen de unos cientos de KB se
+abre al momento y se lee con zoom, sin las miles de teselas de un plano. En el código, "." y
+"/" pasan a "_p" y "_s" (los códigos no llevan "_"), así que dos cables nunca comparten
+imagen. Como los planos, solo se redibujan las páginas cuyo texto cambia (`sourceFingerprint`)
+y se borran las de cables que ya no están. `--only drawings|cables` dibuja solo una parte.
+`pnpm data:upload` las sube con las teselas.
+
 ### Si cambian los planos
 
 1. Sustituye el PDF en `private-data/source/`.
 2. `pnpm data:extract` → `pnpm data:render` → `pnpm data:load`.
 
 Las marcas se recalculan del texto del PDF: no hay que colocar nada a mano.
+
+## Conexionado (fase 11)
+
+La tabla `INTERCONNECTION` de cada ficha da, por hilo, el regletero o bloque y la borna o
+punto en origen y en destino; los eléctricos traen además los puentes (`JUMPERS`) y la revisión
+de la tabla («R.» junto a INTERCONNECTION). Las dos tablas tienen la misma maquetación en todas
+las fichas: se leen por columnas (cada texto va a la cabecera más cercana). Una celda con solo
+"-" o "." queda vacía; "-Direct" o "Note 1" se guardan tal cual.
+
+Resultado con los listados reales (2026-11-16): 4.458 cables con tabla, 34.027 hilos, 105
+puentes y 0 errores.
+
+En la base, cada hilo (`CableWire`) guarda el valor de campo y el del listado (`pdf…`). Una
+recarga actualiza siempre el del listado y solo cambia el de campo si nadie lo corrigió; si el
+listado cambia una borna corregida en campo, se queda la de campo y el informe lo dice. Si un
+hilo cambia de nombre o desaparece, sus correcciones se pierden, también con aviso.
 
 ## Dónde se ve en la app
 

@@ -788,17 +788,27 @@ web para conectar cada cable, con la hoja original del listado siempre a la vist
       reales: 4.458 cables con tabla, 34.027 hilos, 105 puentes y 0 errores.
 - [x] Modelo: hilos del cable (`CableWire`, con valor de campo y valor del listado) y
       puentes (`CableJumper`); migración; carga idempotente que respeta lo corregido.
-- [ ] Hojas originales: `data:render` y `data:upload` de la página de cada cable; visor en la
+- [x] Hojas originales: `data:render` y `data:upload` de la página de cada cable; visor en la
       ficha con revisión y fecha.
-- [ ] Ficha del cable: pestañas Recorrido y Conexionado; tabla por punta con puentes y los
+- [x] Ficha del cable: pestañas Recorrido y Conexionado; tabla por punta con puentes y los
       botones de siempre (conectar origen/destino, timbrar).
-- [ ] Modo editar bornas: validación con Zod en el servidor, aviso de bornas repetidas,
+- [x] Modo editar bornas: validación con Zod en el servidor, aviso de bornas repetidas,
       permisos (técnico, supervisor, administrador) y evento en el historial.
-- [ ] Actividad: resumen de una línea y página de detalle de cada evento.
-- [ ] Equipos: página por equipo agrupada por regletero, enlazada desde la ficha y el
+- [x] Actividad: resumen de una línea y página de detalle de cada evento.
+- [x] Equipos: página por equipo agrupada por regletero, enlazada desde la ficha y el
       buscador.
 - [ ] Tests (extracción, carga, edición, permisos) y E2E; manual de usuario y
       `docs/DATOS-PROYECTO.md`.
+
+Hecho también: permiso nuevo `cable:wiring` («corregir bornas», técnico y superiores; en la
+fase 12 se podrá dar o quitar desde la web) y hojas de cable como **una imagen** por cable en
+vez de teselas (≈4.460 ficheros en lugar de más de 150.000).
+
+### Lo que hace el responsable al desplegar la fase 11
+
+- [ ] Las migraciones se aplican solas en el despliegue (`vercel.json`).
+- [ ] `pnpm data:extract` → `pnpm data:render` (dibuja también las hojas de cable) →
+      `pnpm data:upload` → `pnpm data:load --as <correo>` contra producción.
 
 ---
 

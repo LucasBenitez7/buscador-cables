@@ -118,6 +118,7 @@ async function prepare() {
   const now = new Date();
   for (const cable of Object.values(CABLES)) {
     const route: readonly string[] = "route" in cable ? cable.route : [];
+    const wires: readonly (readonly (string | null)[])[] = "wires" in cable ? cable.wires : [];
     const loose =
       "looseTray" in cable
         ? { looseEnd: cable.looseEnd, looseEndTrayId: trayIds.get(cable.looseTray)! }
@@ -149,6 +150,20 @@ async function prepare() {
             position: index + 1,
             label: code,
             trayId: trayIds.get(code)!,
+          })),
+        },
+        wires: {
+          create: wires.map(([wire, fromBlock, fromPoint, toBlock, toPoint], index) => ({
+            position: index + 1,
+            wire: wire!,
+            originBlock: fromBlock ?? null,
+            originPoint: fromPoint ?? null,
+            destinationBlock: toBlock ?? null,
+            destinationPoint: toPoint ?? null,
+            pdfOriginBlock: fromBlock ?? null,
+            pdfOriginPoint: fromPoint ?? null,
+            pdfDestinationBlock: toBlock ?? null,
+            pdfDestinationPoint: toPoint ?? null,
           })),
         },
         events: {
