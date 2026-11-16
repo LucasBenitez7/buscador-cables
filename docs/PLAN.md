@@ -804,6 +804,18 @@ Hecho también: permiso nuevo `cable:wiring` («corregir bornas», técnico y su
 fase 12 se podrá dar o quitar desde la web) y hojas de cable como **una imagen** por cable en
 vez de teselas (≈4.460 ficheros en lugar de más de 150.000).
 
+### Repaso antes del merge (2026-11-16)
+
+- [x] Menú del escritorio: ya no cabía con «Equipos». Fila principal, menú **Gestión**
+      (Catálogos, Usuarios y, en la fase 12, Roles) y menú con el nombre (Mi actividad, Cerrar
+      sesión).
+- [x] Filtros y orden en las URL (Zod, `packages/shared/src/list-filters.ts`) y un único
+      componente `FilterForm`: cuentas (25 por página), cambios en las cuentas (página propia
+      `/admin/users/events`), historial de la ficha del cable, equipos y actividad; filtros
+      del conexionado en la propia tabla (hilo o borna, solo corregidos, orden por borna).
+- [x] Pantalla completa del navegador en todos los visores (planos y hoja original), con la
+      de la ventana donde no la hay (iPhone), botón «Salir» visible y la página quieta detrás.
+
 ### Lo que hace el responsable al desplegar la fase 11
 
 - [ ] Las migraciones se aplican solas en el despliegue (`vercel.json`).

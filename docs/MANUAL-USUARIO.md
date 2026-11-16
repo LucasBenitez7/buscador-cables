@@ -17,6 +17,15 @@ Funciona en el ordenador y en el móvil o la tableta, desde el navegador.
 3. **Esperar la aprobación:** un administrador revisa la cuenta y le da un rol. Cuando la
    aprueba, llega otro correo y ya puedes entrar.
 
+En el ordenador, el menú de arriba tiene las secciones principales; **Gestión** agrupa
+Catálogos y Usuarios (con el número de cuentas pendientes), y el botón con **tu nombre** abre
+«Mi actividad» y «Cerrar sesión». En el móvil está todo en el botón ☰.
+
+**Filtros y orden.** Las listas largas (cuentas, cambios en las cuentas, historial de un cable,
+equipos, actividad, conexionado) tienen arriba sus filtros y un «Orden». Los filtros quedan en
+la dirección de la página: se puede guardar o compartir el enlace. «Quitar filtros» vuelve a
+verlo todo.
+
 ¿Olvidaste la contraseña? «He olvidado mi contraseña» en la entrada: llega un enlace para
 poner otra (caduca en una hora). Tras 10 contraseñas incorrectas seguidas, la cuenta se bloquea
 15 minutos.
@@ -120,7 +129,9 @@ bandeja marcada, qué cables pasan por ella y cuáles esperan con una punta suel
 En el plano:
 
 - Arrastra para moverte; rueda o dos dedos para acercar y alejar.
-- Botones de la derecha: acercar, alejar, ver la hoja entera y pantalla completa.
+- Botones de la derecha: acercar, alejar, ver la hoja entera y **pantalla completa** (igual en
+  los planos y en la hoja original de un cable). Se sale con «Salir de pantalla completa» o con
+  Esc.
 - «Ir a la marca» y «Siguiente» saltan entre las marcas.
 - Con el plano seleccionado, también con el teclado: flechas para moverlo, «+» y «−» para
   acercar o alejar y 0 para verlo entero.
@@ -152,8 +163,11 @@ administrador con los datos de la persona.
 - Cambiar el rol de una cuenta activa, desactivarla (cierra sus sesiones) o reactivarla.
 - **Dar de alta un usuario** directamente, con una contraseña temporal que le comunicas; puede
   cambiarla con «He olvidado mi contraseña».
-- **Cambios en las cuentas**: quién aprobó, cambió de rol o desactivó a quién y cuándo. No se
-  puede editar ni borrar.
+- **Cuentas**: se filtran por nombre o correo, rol y estado (pendientes, activas,
+  desactivadas) y se ordenan (pendientes primero, nombre, alta o rol), 25 por página.
+- **Cambios en las cuentas**: los últimos aparecen aquí; «Ver todos y filtrarlos» abre su
+  página, con filtros por tipo de cambio, persona (quien lo hizo o quien lo recibió) y fechas.
+  No se pueden editar ni borrar.
 
 Nadie puede gestionar a alguien de su mismo rol o superior (salvo los administradores entre
 sí), ni cambiarse el rol, ni desactivarse. Siempre queda al menos un administrador activo.
