@@ -4,8 +4,9 @@ name: Scorecard
 # fijadas, permisos, revisión de código…). Resultados en Security → Code scanning y en la
 # insignia del README.
 on:
+  # Scorecard solo analiza la rama por defecto del repositorio, que es `main` (producción).
   push:
-    branches: [dev]
+    branches: [main]
   schedule:
     - cron: "41 5 * * 1"
   workflow_dispatch:
