@@ -291,3 +291,18 @@ describe("SearchResults", () => {
     expect(screen.getByText(/Ningún código contiene «shh50»/)).toBeInTheDocument();
   });
 });
+
+// Fase 11: quien conecta va directo a la pestaña Conexionado desde el buscador.
+describe("SearchResults: wiring link", () => {
+  it("links each cable straight to its wiring tab, in the table and in the cards", () => {
+    render(
+      <SearchResults search={{}} result={{ items: [item], total: 1, page: 1, pageCount: 1 }} />,
+    );
+
+    const links = screen.getAllByRole("link", { name: "Conexionado del cable SH-50" });
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", `/cables/${item.id}?vista=conexionado`);
+    }
+  });
+});

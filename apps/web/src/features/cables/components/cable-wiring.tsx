@@ -22,6 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { SHOW_MORE_INITIAL, SHOW_MORE_LIMIT } from "@/components/show-more";
+import { EquipmentLink } from "@/features/cables/components/equipment-link";
 import { editWiringAction } from "@/features/cables/wiring-actions";
 import type { CableJumperDetail } from "@/server/cables/detail";
 
@@ -30,6 +32,8 @@ type Props = {
   version: number;
   wires: WireRow[];
   jumpers: CableJumperDetail[];
+  /** Equipment at each end, shown over its columns: where each end has to be connected. */
+  equipment?: { origin: string | null; destination: string | null };
   /** The user may correct terminals (permission `cable:wiring`, cable not deleted). */
   canEdit: boolean;
 };
@@ -55,7 +59,7 @@ const COLUMN_HEAD = "text-muted-foreground px-3 py-2 text-left text-xs font-medi
  * the user corrects cells and saves them all at once; two wires in one terminal are pointed
  * out as they are typed and need a confirmation to be saved.
  */
-export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props) {
+export function CableWiring({ cableId, version, wires, jumpers, equipment, canEdit }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => draftOf(wires));
@@ -67,6 +71,7 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
   const [query, setQuery] = useState("");
   const [onlyEdited, setOnlyEdited] = useState(false);
   const [order, setOrder] = useState<"list" | "origin" | "destination">("list");
+  const [showAll, setShowAll] = useState(false);
   const switchId = useId();
   const showColour = wires.some((wire) => wire.colour);
 
@@ -181,6 +186,10 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
         ? a.position - b.position
         : naturalOrder(terminalKey(a, order), terminalKey(b, order)) || a.position - b.position,
     );
+
+  // Una tabla larga enseña las primeras filas; editando se ven todas (se puede tocar cualquiera).
+  const cut = !editing && !showAll && visible.length > SHOW_MORE_LIMIT;
+  const shown = cut ? visible.slice(0, SHOW_MORE_INITIAL) : visible;
 
   const editedInField = wires.filter((wire) =>
     WIRING_FIELDS.some((field) => isFieldEdited(wire, field)),
@@ -297,9 +306,21 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
               ) : null}
               <th scope="colgroup" colSpan={2} className={cn(COLUMN_HEAD, "border-l pb-0")}>
                 Origen
+                {equipment?.origin ? (
+                  <>
+                    {" · "}
+                    <EquipmentLink equipment={equipment.origin} className="text-foreground" />
+                  </>
+                ) : null}
               </th>
               <th scope="colgroup" colSpan={2} className={cn(COLUMN_HEAD, "border-l pb-0")}>
                 Destino
+                {equipment?.destination ? (
+                  <>
+                    {" · "}
+                    <EquipmentLink equipment={equipment.destination} className="text-foreground" />
+                  </>
+                ) : null}
               </th>
               {editing ? (
                 <th scope="col" rowSpan={2} className="sr-only">
@@ -320,7 +341,7 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
             </tr>
           </thead>
           <tbody className="divide-y">
-            {visible.map((row) => {
+            {shown.map((row) => {
               const wire = wires.find((item) => item.position === row.position)!;
               return (
                 <tr key={row.position} className={cn(touched.has(row.position) && "bg-primary/5")}>
@@ -391,6 +412,18 @@ export function CableWiring({ cableId, version, wires, jumpers, canEdit }: Props
           </tbody>
         </table>
       </div>
+      {!editing && visible.length > SHOW_MORE_LIMIT ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAll((value) => !value)}
+        >
+          {showAll
+            ? "Ver menos hilos"
+            : `Ver los ${visible.length} hilos (faltan ${visible.length - SHOW_MORE_INITIAL})`}
+        </Button>
+      ) : null}
 
       {editing ? (
         <div className="space-y-3">
