@@ -783,9 +783,10 @@ web para conectar cada cable, con la hoja original del listado siempre a la vist
 
 ### Tareas
 
-- [ ] Extracción: tabla de hilos (y puentes) de las fichas de instrumentación y eléctricas,
-      revisión del conexionado, con tests sobre PDFs inventados e informe.
-- [ ] Modelo: hilos del cable (`CableConductor`, con valor actual y valor del listado) y
+- [x] Extracción: tabla de hilos (y puentes) de las fichas de instrumentación y eléctricas,
+      revisión del conexionado, con tests sobre PDFs inventados e informe. Con los listados
+      reales: 4.458 cables con tabla, 34.027 hilos, 105 puentes y 0 errores.
+- [x] Modelo: hilos del cable (`CableWire`, con valor de campo y valor del listado) y
       puentes (`CableJumper`); migración; carga idempotente que respeta lo corregido.
 - [ ] Hojas originales: `data:render` y `data:upload` de la página de cada cable; visor en la
       ficha con revisión y fecha.
