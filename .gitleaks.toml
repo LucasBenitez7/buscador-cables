@@ -1,0 +1,13 @@
+# Búsqueda de secretos (gitleaks) en todo el historial: workflow "Seguridad".
+# Las reglas por defecto, salvo en los tests y los E2E, que usan contraseñas inventadas a
+# propósito (cuentas de la base de pruebas, nunca de producción).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Contraseñas inventadas de los tests y los E2E"
+paths = [
+  '''(^|/)[^/]+\.test\.tsx?$''',
+  '''(^|/)[^/]+\.int\.test\.ts$''',
+  '''^apps/web/e2e/''',
+]
