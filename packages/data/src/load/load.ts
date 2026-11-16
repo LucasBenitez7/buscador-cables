@@ -8,7 +8,8 @@
  * notes, history — is never overwritten, and neither is a value somebody corrected by hand
  * in the edit form (a measured length, the room of an end): the load keeps it and says so.
  * Every new cable gets its CREATED event and every change an UPDATED event, signed by the
- * user who runs the load and marked as written by the load.
+ * user who runs the load and marked as written by the load. The wiring (wires and jumpers)
+ * follows the lists too, except the terminals corrected in the field (see `./wiring.ts`).
  */
 import type { Prisma, PrismaClient } from "@cables/db";
 import {
@@ -31,6 +32,7 @@ import {
   type ProjectTray,
 } from "../extract/schema";
 import { sheetKey } from "../render/render-sheets";
+import { mergeWires, sameRows, wireFromList, wiringChange, type StoredJumper } from "./wiring";
 
 export type LoadOptions = {
   /** Who signs the events of the load. */
@@ -75,6 +77,7 @@ const ENGINEERING_FIELDS = [
   "cablesPerCircuit",
   "composition",
   "diagram",
+  "wiringRevision",
   "originId",
   "originEquipment",
   "originCubicle",
@@ -564,6 +567,7 @@ function engineeringValues(cable: ProjectCable, context: CableContext): Engineer
     cablesPerCircuit: cable.cablesPerCircuit,
     composition: cable.composition,
     diagram: cable.diagram,
+    wiringRevision: cable.wiringRevision,
     originId: endLocationId(cable.origin.room, context.locations),
     originEquipment: cable.origin.equipment,
     originCubicle: cable.origin.cubicle,
@@ -680,7 +684,11 @@ async function loadCables(
     where: {
       OR: [{ code: { in: cables.map((cable) => cable.code) } }, { sourceDocument: { not: null } }],
     },
-    include: { routeSteps: { orderBy: { position: "asc" } } },
+    include: {
+      routeSteps: { orderBy: { position: "asc" } },
+      wires: { orderBy: { position: "asc" }, omit: { id: true, cableId: true } },
+      jumpers: { orderBy: { position: "asc" }, omit: { id: true, cableId: true } },
+    },
   });
   const byCode = new Map(existing.map((cable) => [cable.code, cable]));
   const listed = new Set(cables.map((cable) => cable.code));
@@ -742,6 +750,16 @@ async function loadCables(
           })),
         ),
       });
+      await tx.cableWire.createMany({
+        data: batch.flatMap((cable) =>
+          cable.wires.map((wire) => ({ ...wireFromList(wire), cableId: idOf.get(cable.code)! })),
+        ),
+      });
+      await tx.cableJumper.createMany({
+        data: batch.flatMap((cable) =>
+          cable.jumpers.map((jumper) => ({ ...jumper, cableId: idOf.get(cable.code)! })),
+        ),
+      });
       return rows.length;
     });
     summary.cables.created += created;
@@ -757,6 +775,8 @@ async function loadCables(
     route: StoredStep[];
     currentRoute: StoredStep[];
     routeChanged: boolean;
+    wiring: ReturnType<typeof mergeWires>;
+    jumpersChanged: boolean;
   };
   const pending: Pending[] = [];
   for (const cable of cables) {
@@ -793,11 +813,24 @@ async function loadCables(
       section,
     }));
     const routeChanged = JSON.stringify(route) !== JSON.stringify(currentRoute);
-    if (Object.keys(changes).length === 0 && !routeChanged) {
+    const wiring = mergeWires(cable.code, current.wires, cable.wires);
+    summary.issues.push(...wiring.issues);
+    const jumpersChanged = !sameRows<StoredJumper>(cable.jumpers, current.jumpers);
+    if (Object.keys(changes).length === 0 && !routeChanged && !wiring.changed && !jumpersChanged) {
       summary.cables.unchanged += 1;
       continue;
     }
-    pending.push({ cable, current, after, changes, route, currentRoute, routeChanged });
+    pending.push({
+      cable,
+      current,
+      after,
+      changes,
+      route,
+      currentRoute,
+      routeChanged,
+      wiring,
+      jumpersChanged,
+    });
   }
 
   // Values a person corrected in the app win over the lists: keep them and say so.
@@ -809,7 +842,17 @@ async function loadCables(
   );
   const trayCodes = new Map([...context.trayIds].map(([code, id]) => [id, code]));
 
-  for (const { cable, current, after, changes, route, currentRoute, routeChanged } of pending) {
+  for (const {
+    cable,
+    current,
+    after,
+    changes,
+    route,
+    currentRoute,
+    routeChanged,
+    wiring,
+    jumpersChanged,
+  } of pending) {
     const kept = edited.get(current.id);
     for (const field of Object.keys(changes)) {
       if (kept?.has(field) && isHandEditable(field)) {
@@ -828,14 +871,24 @@ async function loadCables(
         );
       }
     }
-    if (Object.keys(changes).length === 0) {
+    // Only the list values changed under field corrections: nothing to show, but store them.
+    if (wiring.changed && wiring.listCellsChanged > 0) {
+      changes.wiring = wiringChange(current.wires.length, wiring);
+    }
+    if (jumpersChanged) {
+      changes.jumpers = {
+        from: `${current.jumpers.length} puentes`,
+        to: `${cable.jumpers.length} puentes`,
+      };
+    }
+    if (Object.keys(changes).length === 0 && !wiring.changed) {
       summary.cables.unchanged += 1;
       continue;
     }
 
     const changedValues = Object.fromEntries(
       Object.keys(changes)
-        .filter((field) => field !== "route")
+        .filter((field) => field !== "route" && field !== "wiring" && field !== "jumpers")
         .map((field) => [field, after[field as EngineeringField]]),
     ) as Partial<EngineeringValues>;
     await within(async (tx) => {
@@ -844,6 +897,18 @@ async function loadCables(
         where: { id: current.id },
         data: { ...toColumns(changedValues), version: { increment: 1 } },
       });
+      if (wiring.changed) {
+        await tx.cableWire.deleteMany({ where: { cableId: current.id } });
+        await tx.cableWire.createMany({
+          data: wiring.wires.map((wire) => ({ ...wire, cableId: current.id })),
+        });
+      }
+      if (jumpersChanged) {
+        await tx.cableJumper.deleteMany({ where: { cableId: current.id } });
+        await tx.cableJumper.createMany({
+          data: cable.jumpers.map((jumper) => ({ ...jumper, cableId: current.id })),
+        });
+      }
       if (routeChanged) {
         await tx.cableRouteStep.deleteMany({ where: { cableId: current.id } });
         await tx.cableRouteStep.createMany({

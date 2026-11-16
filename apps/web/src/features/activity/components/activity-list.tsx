@@ -44,6 +44,7 @@ export function actionVariant(entry: Pick<ActivityEntry, "action" | "changes">):
     CORRECTION: "warning",
     TESTED: "success",
     DELETED: "destructive",
+    WIRING_EDITED: "warning",
   };
   if (entry.action === "TESTED" && entry.changes.some((change) => /fallo/.test(change.to))) {
     return "destructive";
