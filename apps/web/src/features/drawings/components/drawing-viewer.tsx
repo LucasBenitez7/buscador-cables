@@ -5,7 +5,7 @@ import { Maximize2Icon, Minimize2Icon, MinusIcon, PlusIcon, ScanIcon } from "luc
 import { useEffect, useId, useRef, useState } from "react";
 import type OpenSeadragon from "openseadragon";
 import type { Viewer } from "openseadragon";
-import type { DrawingMark } from "@cables/shared";
+import { isCableSheetKey, type DrawingMark } from "@cables/shared";
 import { BrandLoader } from "@/components/loading";
 import { Button } from "@/components/ui/button";
 
@@ -114,8 +114,9 @@ const KEY_ZOOM = 1.25;
 const FAR_WIDTH = 2200;
 
 /**
- * A sheet of the drawings with pan and zoom (also with two fingers), opened centred on the
- * first mark. The tiles come from `/api/drawings`, which only answers signed-in users.
+ * A sheet of the drawings, or the original page of a cable, with pan and zoom (also with two
+ * fingers), opened centred on the first mark. The images come from `/api/drawings`, which only
+ * answers signed-in users.
  */
 export function DrawingViewer({ imageKey, width, height, marks, label }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -188,7 +189,10 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
       library.current = OSD;
       instance = OSD({
         element: container.current,
-        tileSources: `/api/drawings/${imageKey}.dzi`,
+        // The page of a cable is one image; a drawing sheet, Deep Zoom tiles.
+        tileSources: isCableSheetKey(imageKey)
+          ? { type: "image", url: `/api/drawings/${imageKey}.webp` }
+          : `/api/drawings/${imageKey}.dzi`,
         showNavigationControl: false,
         gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true },
         gestureSettingsTouch: { pinchRotate: false },

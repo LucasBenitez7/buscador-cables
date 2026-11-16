@@ -47,3 +47,17 @@ export function bucketObjectUrl(bucket: DrawingsBucket, key: string): string {
   const path = key.split("/").map(encodeURIComponent).join("/");
   return `${bucket.endpoint}/${encodeURIComponent(bucket.bucket)}/${path}`;
 }
+
+/**
+ * The original page of a cable in its list (fase 11), drawn as one image `<key>.webp` next to
+ * the drawing tiles and listed in the same manifest. "." and "/" of the code become "_p" and
+ * "_s": codes have no "_", so two cables never share an image.
+ */
+export const CABLE_SHEET_PREFIX = "cable_";
+
+export function cableSheetKey(code: string): string {
+  return `${CABLE_SHEET_PREFIX}${code.replaceAll(".", "_p").replaceAll("/", "_s")}`;
+}
+
+/** Whether a manifest key is a cable page (one image) and not a drawing sheet (tiles). */
+export const isCableSheetKey = (key: string) => key.startsWith(CABLE_SHEET_PREFIX);
