@@ -69,4 +69,47 @@ describe("AppHeader", () => {
     fireEvent.click(within(menu).getByRole("link", { name: "Cables" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  // Fase 10: lo pendiente de aprobar, siempre a la vista, también con el menú cerrado.
+  it("shows how many accounts wait for approval on Usuarios and a dot on the closed menu", () => {
+    render(
+      <AppHeader
+        items={[
+          ...items,
+          {
+            href: "/admin/users",
+            label: "Usuarios",
+            match: "prefix",
+            badge: { count: 2, label: "cuentas pendientes de aprobar" },
+          },
+        ]}
+        user={{ name: "Ada", role: "Administrador" }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Usuarios, 2 cuentas pendientes de aprobar" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir menú (2 pendientes)" })).toBeInTheDocument();
+  });
+
+  it("shows no count when nothing waits", () => {
+    render(
+      <AppHeader
+        items={[
+          ...items,
+          {
+            href: "/admin/users",
+            label: "Usuarios",
+            match: "prefix",
+            badge: { count: 0, label: "x" },
+          },
+        ]}
+        user={{ name: "Ada", role: "Administrador" }}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Usuarios" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir menú" })).toBeInTheDocument();
+  });
 });

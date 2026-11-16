@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { PASSWORD_MIN_LENGTH } from "@cables/shared";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
@@ -70,12 +70,12 @@ export function ResetPasswordForm({
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-2">
         <Label htmlFor="password">Nueva contraseña</Label>
-        <Input id="password" name="password" type="password" autoComplete="new-password" required />
+        <PasswordInput id="password" name="password" autoComplete="new-password" required />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="confirm">Repite la contraseña</Label>
-        <Input id="confirm" name="confirm" type="password" autoComplete="new-password" required />
+        <PasswordInput id="confirm" name="confirm" autoComplete="new-password" required />
       </div>
 
       {error ? (

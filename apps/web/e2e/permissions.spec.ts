@@ -69,7 +69,8 @@ test.describe("administrador", () => {
       "Mi actividad",
       "Actividad",
       "Catálogos",
-      "Usuarios",
+      // Con cuentas pendientes de aprobar, el enlace lleva su número.
+      /^Usuarios\d*$/,
     ]);
     await expect(nav(page).getByRole("link", { name: "Cables" })).toHaveAttribute(
       "aria-current",

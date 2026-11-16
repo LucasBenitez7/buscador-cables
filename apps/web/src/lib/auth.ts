@@ -9,7 +9,10 @@ import { ROLES } from "@cables/shared";
 import { env } from "@/lib/env";
 import { authRateLimit } from "@/lib/auth-rate-limit";
 import { accountExistsEmail, passwordResetEmail, verificationEmail } from "@/lib/email-templates";
-import { notifyAdminsOfPendingAccount } from "@/server/account-approval";
+import {
+  notifyAdminsOfPendingAccount,
+  notifyPasswordChanged,
+} from "@/server/account-notifications";
 import {
   assertAccountActive,
   assertNoProfileSelfEdit,
@@ -46,6 +49,10 @@ export const auth = betterAuth({
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: 60 * 60,
     revokeSessionsOnPasswordReset: true,
+    // Aviso al dueño: si no fue él, lo sabe enseguida.
+    onPasswordReset: async ({ user }) => {
+      await notifyPasswordChanged(user);
+    },
     // Cualquiera puede pedir una cuenta con su correo y contraseña, pero no entra hasta
     // confirmar el correo y hasta que un administrador la apruebe (la app guarda los datos
     // reales del cliente). Empieza como VIEWER (solo lectura).

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { signInErrorMessage } from "@/lib/auth-errors";
@@ -55,13 +56,7 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
 
       <div className="space-y-2">
         <Label htmlFor="password">Contraseña</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-        />
+        <PasswordInput id="password" name="password" autoComplete="current-password" required />
       </div>
 
       {error ? (

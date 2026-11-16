@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type OpenSeadragon from "openseadragon";
 import type { Viewer } from "openseadragon";
 import type { DrawingMark } from "@cables/shared";
+import { BrandLoader } from "@/components/loading";
 import { Button } from "@/components/ui/button";
 
 /** A point to highlight on the sheet. `emphasis` ones get the arrow and the zoom. */
@@ -277,9 +278,7 @@ export function DrawingViewer({ imageKey, width, height, marks, label }: Props) 
         entero.
       </p>
       {status === "loading" ? (
-        <p className="text-muted-foreground absolute inset-0 flex items-center justify-center text-sm">
-          Cargando el plano…
-        </p>
+        <BrandLoader label="Cargando el plano…" className="absolute inset-0 justify-center" />
       ) : null}
       {status === "error" ? (
         <p
