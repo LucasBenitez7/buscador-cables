@@ -1,7 +1,7 @@
 import { prisma } from "@cables/db";
 import { parseCableSearch } from "@cables/shared";
-import { beforeEach, describe, expect, it } from "vitest";
-import { searchCables } from "./search";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getSearchOptions, searchCables } from "./search";
 
 const ids = {
   plant: "plant",
@@ -305,5 +305,86 @@ describe("searchCables: who / what / when", () => {
 
     const result = await codes({ sort: "activity" });
     expect(result[0]).toBe("SH-5");
+  });
+});
+
+// Lo anterior al corte (la carga inicial de datos) no cuenta como actividad ni se muestra.
+describe("searchCables: history start", () => {
+  let saved: string | undefined;
+
+  beforeEach(async () => {
+    saved = process.env.HISTORY_START;
+    process.env.HISTORY_START = "2026-11-16T23:00:00Z"; // 17/11/2026 00:00 Madrid
+    await prisma.user.create({
+      data: { id: "juan", name: "Juan", email: "juan@cables.test", role: "TECHNICIAN" },
+    });
+    const cable = (code: string) =>
+      prisma.cable.findUniqueOrThrow({ where: { code }, select: { id: true } });
+    const sh50 = await cable("SH-50");
+    const pw50 = await cable("PW-50");
+    const sh5 = await cable("SH-5");
+    await prisma.cableEvent.createMany({
+      data: [
+        // Antes del corte: no cuenta.
+        {
+          cableId: sh50.id,
+          userId: "juan",
+          action: "CONNECTED",
+          changes: {},
+          createdAt: new Date("2026-11-12T10:00:00Z"),
+        },
+        // Después del corte: sí cuenta.
+        {
+          cableId: pw50.id,
+          userId: "juan",
+          action: "CONNECTED",
+          changes: {},
+          createdAt: new Date("2026-11-17T10:00:00Z"),
+        },
+      ],
+    });
+    await prisma.cable.update({
+      where: { id: sh5.id },
+      data: {
+        lastAction: "LAID",
+        lastActionById: "juan",
+        lastActionAt: new Date("2026-11-12T08:00:00Z"),
+      },
+    });
+    await prisma.cable.update({
+      where: { id: pw50.id },
+      data: {
+        lastAction: "CONNECTED",
+        lastActionById: "juan",
+        lastActionAt: new Date("2026-11-17T10:00:00Z"),
+      },
+    });
+  });
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env.HISTORY_START;
+    else process.env.HISTORY_START = saved;
+  });
+
+  it("only matches the activity filters with events from the history start on", async () => {
+    expect(await codes({ action: "CONNECTED" })).toEqual(["PW-50"]);
+    expect(await codes({ actor: "juan", from: "2026-11-10" })).toEqual(["PW-50"]);
+    expect(await codes({ from: "2026-11-10", to: "2026-11-12" })).toEqual([]);
+  });
+
+  it("hides the last action from before the history start, and sorts those last", async () => {
+    const result = await search({ q: "SH-5" });
+    const sh5 = result.items.find((item) => item.code === "SH-5");
+
+    expect(sh5).toMatchObject({ lastAction: null, lastActionAt: null, lastActionBy: null });
+    expect((await codes({ sort: "activity" }))[0]).toBe("PW-50");
+    expect((await search({ q: "PW-50" })).items[0]).toMatchObject({
+      lastAction: "CONNECTED",
+      lastActionBy: "Juan",
+    });
+  });
+
+  it("offers only the people with an event from the history start on", async () => {
+    expect((await getSearchOptions()).users).toEqual([{ id: "juan", label: "Juan" }]);
   });
 });

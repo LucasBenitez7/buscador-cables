@@ -1,7 +1,7 @@
 import { permissionsOfRole } from "@cables/shared";
 import { prisma } from "@cables/db";
 import { parseActivitySearch } from "@cables/shared";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getSearchOptions } from "@/server/cables/search";
 import { getActivityEvent, listActivity, listActivityUsers } from "./service";
 
@@ -221,5 +221,47 @@ describe("listActivity: origin", () => {
     expect(await ids({ origin: "loads" })).toEqual(["eload00000000001"]);
     expect(await ids({ origin: "all" })).toContain("eload00000000001");
     expect(await ids({ origin: "all" })).toContain("e1");
+  });
+});
+
+// Lo anterior al corte (la carga inicial de datos) se guarda pero no se muestra en ningún sitio.
+describe("history start", () => {
+  let saved: string | undefined;
+
+  beforeEach(async () => {
+    saved = process.env.HISTORY_START;
+    process.env.HISTORY_START = "2026-11-16T23:00:00Z"; // 17/11/2026 00:00 Madrid
+    // Ana solo tiene eventos antes del corte; Juan tiene uno después.
+    await prisma.cableEvent.create({
+      data: {
+        id: "eafter0000000001",
+        cableId: "c1",
+        userId: "juan",
+        action: "UPDATED",
+        changes: { notes: { from: null, to: "después del corte" } },
+        createdAt: new Date("2026-11-17T09:00:00Z"),
+      },
+    });
+  });
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env.HISTORY_START;
+    else process.env.HISTORY_START = saved;
+  });
+
+  it("lists only the events from the history start on", async () => {
+    expect(await ids({})).toEqual(["eafter0000000001"]);
+    expect(await ids({ from: "2026-11-10", to: "2026-11-11" })).toEqual([]);
+    expect(await ids({ from: "2026-11-10" })).toEqual(["eafter0000000001"]);
+    expect(await ids({ actor: "ana" })).toEqual([]);
+  });
+
+  it("offers only the people with an event from the history start on", async () => {
+    expect(await listActivityUsers()).toEqual([{ id: "juan", label: "Juan Pérez" }]);
+  });
+
+  it("does not open an event from before the history start", async () => {
+    expect(await getActivityEvent("e1", VIEWER)).toBeNull();
+    expect(await getActivityEvent("eafter0000000001", VIEWER)).not.toBeNull();
   });
 });
