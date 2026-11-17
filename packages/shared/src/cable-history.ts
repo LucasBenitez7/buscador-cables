@@ -10,6 +10,9 @@ import {
 } from "./cables";
 import { describeWiringEdit } from "./wiring";
 
+/** Lo anterior es la carga inicial de datos: se guarda, pero no se muestra. */
+export const HISTORY_START = new Date("2026-11-16T23:00:00Z"); // 17/11/2026 00:00 Madrid
+
 /** Order in which an event's changes are shown (Postgres `jsonb` does not keep key order). */
 export const CHANGE_FIELD_ORDER = [
   ...CABLE_EDITABLE_FIELDS,

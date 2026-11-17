@@ -19,6 +19,7 @@ import {
   type LocationOption,
   type Option,
 } from "@/server/cables/service";
+import { historyStart, visibleLastAction } from "@/server/activity/history-start";
 import { escapeLike } from "@/server/like";
 import { findSubtreeIds } from "@/server/locations/service";
 
@@ -177,7 +178,11 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
   if (hasActivityFilters(search)) {
     // Todas las condiciones sobre el mismo evento: "cables que conectó Juan esta semana".
     // Los días se cuentan en hora de Madrid, como los ve la gente en planta.
-    const event: Prisma.Sql[] = [Prisma.sql`e."cableId" = c."id"`];
+    // Lo anterior al corte (la carga inicial) no cuenta como actividad.
+    const event: Prisma.Sql[] = [
+      Prisma.sql`e."cableId" = c."id"`,
+      Prisma.sql`e."createdAt" >= ${historyStart()}`,
+    ];
     if (search.actor) event.push(Prisma.sql`e."userId" = ${search.actor}`);
     if (search.action) event.push(Prisma.sql`e."action" = ${search.action}::"CableAction"`);
     const localDay = Prisma.sql`(e."createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Madrid')::date`;
@@ -196,6 +201,8 @@ function orderBy(search: CableSearch): Prisma.Sql {
   // `dir` solo puede ser "asc" o "desc" (lo valida el esquema), nunca texto del usuario.
   const direction = Prisma.raw(dir === "desc" ? "DESC" : "ASC");
   const natural = naturalCodeOrder(Prisma.raw("ASC"));
+  // Misma regla que la columna «Última acción»: una anterior al corte cuenta como vacía.
+  const shownLastAt = Prisma.sql`CASE WHEN c."lastActionAt" >= ${historyStart()} THEN c."lastActionAt" END`;
 
   switch (sort) {
     case "relevance": {
@@ -205,7 +212,7 @@ function orderBy(search: CableSearch): Prisma.Sql {
     case "updated":
       return Prisma.sql`c."updatedAt" ${direction}, ${natural}`;
     case "activity":
-      return Prisma.sql`c."lastActionAt" ${direction} NULLS LAST, ${natural}`;
+      return Prisma.sql`${shownLastAt} ${direction} NULLS LAST, ${natural}`;
     case "length":
       return Prisma.sql`c."lengthM" ${direction} NULLS LAST, ${natural}`;
     case "section":
@@ -303,6 +310,7 @@ export async function searchCables(
     if (!cable) {
       return [];
     }
+    const showLastAction = visibleLastAction(cable.lastActionAt, true) === true;
     return [
       {
         id: cable.id,
@@ -337,9 +345,10 @@ export async function searchCables(
         destination: locationLabel(cable.destination),
         originLocationId: cable.originId,
         destinationLocationId: cable.destinationId,
-        lastAction: cable.lastAction,
-        lastActionAt: cable.lastActionAt,
-        lastActionBy: cable.lastActionBy?.name ?? null,
+        // Una última acción anterior al corte no se muestra (ni acción, ni autor, ni fecha).
+        lastAction: showLastAction ? cable.lastAction : null,
+        lastActionAt: showLastAction ? cable.lastActionAt : null,
+        lastActionBy: showLastAction ? (cable.lastActionBy?.name ?? null) : null,
       },
     ];
   });
@@ -363,7 +372,7 @@ export async function getSearchOptions(): Promise<SearchOptions> {
     listLocationOptions({ includePlants: true }),
     // Only who appears in the history: the filter is not a list of every account.
     prisma.user.findMany({
-      where: { cableEvents: { some: {} } },
+      where: { cableEvents: { some: { createdAt: { gte: historyStart() } } } },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

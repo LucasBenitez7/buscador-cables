@@ -25,6 +25,7 @@ import {
   type WireRow,
 } from "@cables/shared";
 import { listLocationOptions } from "@/server/cables/service";
+import { historyStart, visibleLastAction } from "@/server/activity/history-start";
 
 /** A change as text, with a link for each value that has a page (a tray, a location). */
 export type ReadableChange = {
@@ -133,7 +134,8 @@ export type CableDetail = {
   deleted: { at: Date; user: string; reason: string | null } | null;
   /**
    * The events that match the history filters (newest first unless asked otherwise), up to
-   * `HISTORY_LIMIT`; `historyTotal` says how many match and `historyAll` how many there are.
+   * `HISTORY_LIMIT`; `historyTotal` says how many match and `historyAll` how many there are
+   * from the history start on (`historyStart()`).
    */
   history: CableHistoryEntry[];
   historyTotal: number;
@@ -268,7 +270,10 @@ export async function getCableDetail(
   historySearch: CableHistorySearch = {},
 ): Promise<CableDetail | null> {
   const sources = originSources(historySearch.origin);
+  // Lo anterior al corte (la carga inicial) no aparece en ningún sitio de la ficha.
+  const cutoff = historyStart();
   const historyWhere = {
+    createdAt: { gte: cutoff },
     ...(sources ? { source: { in: sources } } : {}),
     ...(historySearch.action ? { action: historySearch.action } : {}),
     ...(historySearch.person ? { userId: historySearch.person } : {}),
@@ -282,7 +287,6 @@ export async function getCableDetail(
       manufacturer: { select: { name: true } },
       lastActionBy: { select: { name: true } },
       looseEndTray: { select: { code: true } },
-      _count: { select: { events: true } },
       routeSteps: {
         orderBy: { position: "asc" },
         select: {
@@ -309,11 +313,12 @@ export async function getCableDetail(
     return null;
   }
 
-  const [lookups, historyTotal, people] = await Promise.all([
+  const [lookups, historyTotal, historyAll, people] = await Promise.all([
     loadLookups(),
     prisma.cableEvent.count({ where: { cableId: cable.id, ...historyWhere } }),
+    prisma.cableEvent.count({ where: { cableId: cable.id, createdAt: { gte: cutoff } } }),
     prisma.user.findMany({
-      where: { cableEvents: { some: { cableId: cable.id } } },
+      where: { cableEvents: { some: { cableId: cable.id, createdAt: { gte: cutoff } } } },
       select: { id: true, name: true, role: true },
       orderBy: { name: "asc" },
     }),
@@ -405,7 +410,8 @@ export async function getCableDetail(
     installationStatus: cable.installationStatus,
     connectionStatus: cable.connectionStatus,
     testStatus: cable.testStatus,
-    lastAction:
+    lastAction: visibleLastAction(
+      cable.lastActionAt,
       cable.lastAction && cable.lastActionAt
         ? {
             action: cable.lastAction,
@@ -413,6 +419,7 @@ export async function getCableDetail(
             at: cable.lastActionAt,
           }
         : null,
+    ),
     createdAt: cable.createdAt,
     updatedAt: cable.updatedAt,
     deleted: cable.deletedAt
@@ -423,7 +430,7 @@ export async function getCableDetail(
         }
       : null,
     historyTotal,
-    historyAll: cable._count.events,
+    historyAll,
     historyPeople: people.map((person) => ({ id: person.id, label: userName(person) })),
     history: cable.events.map((event) => ({
       id: event.id,
