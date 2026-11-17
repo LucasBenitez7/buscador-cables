@@ -59,6 +59,32 @@ describe("ListToolbar", () => {
     expect(push).toHaveBeenCalledWith("/trays?q=99uxa&sort=code-desc&kind=LADDER&waiting=1");
   });
 
+  it("resets the fields when the URL values change («Limpiar», back button)", () => {
+    const { rerender } = renderToolbar({
+      sort: { ...sort, value: "code-desc" },
+      filters: [
+        filters[0]!,
+        { kind: "checkbox", name: "waiting", label: "Solo con cables esperando", checked: true },
+      ],
+    });
+    expect(screen.getByLabelText("Orden")).toHaveValue("code-desc");
+    expect(screen.getByLabelText("Solo con cables esperando")).toBeChecked();
+
+    rerender(
+      <ListToolbar
+        action="/trays"
+        label="Buscar bandejas"
+        search={{ name: "q", label: "Código de bandeja" }}
+        sort={sort}
+        filters={filters}
+        count={<span>12 bandejas</span>}
+      />,
+    );
+
+    expect(screen.getByLabelText("Orden")).toHaveValue("code");
+    expect(screen.getByLabelText("Solo con cables esperando")).not.toBeChecked();
+  });
+
   it("leaves out empty values and the default order", () => {
     renderToolbar();
 

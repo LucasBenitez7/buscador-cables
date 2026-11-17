@@ -85,9 +85,20 @@ export function ListToolbar({
     navigate(`${action}${query ? `?${query}` : ""}`);
   }
 
+  // Los campos no están controlados: la clave los reinicia cuando cambian los valores de la URL
+  // («Limpiar», el botón atrás). Sin ella, el orden y las casillas se quedaban como estaban.
+  const formKey = JSON.stringify([
+    search.value ?? "",
+    sort?.value ?? "",
+    filters.map((filter) => (filter.kind === "checkbox" ? Boolean(filter.checked) : filter.value)),
+  ]);
+
   return (
     <div className="space-y-3">
       <form
+        key={formKey}
+        method="get"
+        action={action}
         role="search"
         aria-label={label}
         onSubmit={submit}
@@ -97,7 +108,8 @@ export function ListToolbar({
           <input key={name} type="hidden" name={name} value={value} />
         ))}
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1 space-y-1.5 sm:min-w-56">
+          {/* En el móvil la búsqueda ocupa su fila; el orden y los botones van debajo. */}
+          <div className="w-full min-w-0 space-y-1.5 sm:w-auto sm:min-w-56 sm:flex-1">
             <Label htmlFor={idOf(search.name)}>{search.label}</Label>
             <Input
               id={idOf(search.name)}
@@ -112,7 +124,7 @@ export function ListToolbar({
             />
           </div>
           {sort ? (
-            <div className="space-y-1.5">
+            <div className="min-w-0 flex-1 space-y-1.5 sm:flex-none">
               <Label htmlFor={idOf(sort.name)}>Orden</Label>
               <NativeSelect id={idOf(sort.name)} name={sort.name} defaultValue={sort.value}>
                 {sort.options.map((option) => (
@@ -150,7 +162,7 @@ export function ListToolbar({
                   {filter.label}
                 </label>
               ) : (
-                <div key={filter.name} className="min-w-40 space-y-1.5">
+                <div key={filter.name} className="min-w-36 flex-1 space-y-1.5 sm:flex-none">
                   <Label htmlFor={idOf(filter.name)}>{filter.label}</Label>
                   <NativeSelect
                     id={idOf(filter.name)}

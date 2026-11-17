@@ -56,8 +56,13 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
     navigate(`${action}${query ? `?${query}` : ""}${hash}`, { scroll: !anchor });
   }
 
+  // Los campos no están controlados: la clave los reinicia cuando cambian los valores de la URL
+  // («Quitar filtros», el botón atrás). Sin ella, los selects se quedaban como estaban.
+  const formKey = JSON.stringify(fields.map((field) => field.value ?? ""));
+
   return (
     <form
+      key={formKey}
       method="get"
       action={`${action}${hash}`}
       onSubmit={submit}
