@@ -185,6 +185,7 @@ Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
   cable a mano…). Las **cargas de listados** (una revisión nueva de un listado) escriben una
   entrada por cable y no se ven por defecto: se eligen con «Cargas de listados» o «Todo», en
   Actividad y en el historial de cada cable.
+- Al pulsar cualquier enlace, una **barra azul** arriba indica que la página está en camino.
 - Al cambiar un filtro, el orden o la página, la lista muestra **«Cargando…»** hasta que llega
   el resultado: no hace falta pulsar otra vez.
 - Una corrección de bornas ocupa **una línea** («corrigió las bornas de 3 hilos en origen»).
