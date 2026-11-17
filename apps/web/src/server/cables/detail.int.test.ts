@@ -347,3 +347,27 @@ describe("getCableDetail: history filters", () => {
     expect(byAna?.history.map((entry) => entry.action)).toEqual(["TESTED"]);
   });
 });
+
+describe("getCableDetail: loads of the lists in the history", () => {
+  it("hides the entries written by a load unless asked for, and still counts them", async () => {
+    const { id } = await newCable();
+    await prisma.cableEvent.create({
+      data: {
+        cableId: id,
+        userId: actor.id,
+        action: "UPDATED",
+        source: "PROJECT_LOAD",
+        changes: { revision: { from: "2", to: "3" } },
+        createdAt: new Date("2026-11-20T10:00:00Z"),
+      },
+    });
+
+    const people = await getCableDetail(id);
+    expect(people).toMatchObject({ historyTotal: 1, historyAll: 2 });
+    expect(people?.history.map((entry) => entry.action)).toEqual(["CREATED"]);
+
+    const everything = await getCableDetail(id, { origin: "all" });
+    expect(everything?.history.map((entry) => entry.action)).toEqual(["UPDATED", "CREATED"]);
+    expect((await getCableDetail(id, { origin: "loads" }))?.historyTotal).toBe(1);
+  });
+});

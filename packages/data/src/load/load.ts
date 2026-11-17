@@ -833,6 +833,10 @@ async function loadCables(
     });
   }
 
+  if (pending.length > 0) {
+    onProgress(`Cables que cambian: ${pending.length} (${summary.cables.unchanged} sin cambios)`);
+  }
+
   // Values a person corrected in the app win over the lists: keep them and say so.
   const edited = await handEditedFields(
     db,
@@ -932,5 +936,10 @@ async function loadCables(
       });
     });
     summary.cables.updated += 1;
+    // Contra una base remota cada cable son varias idas y vueltas: sin esto, la carga pasaba
+    // veinte minutos sin decir nada.
+    if (summary.cables.updated % 250 === 0) {
+      onProgress(`Cables actualizados: ${summary.cables.updated} de ${pending.length}`);
+    }
   }
 }

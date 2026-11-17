@@ -156,6 +156,10 @@ tiene su página con lo que contiene, sus cables y sus bandejas.
 ## Actividad
 
 - **Mi actividad**: todo lo que has registrado, por días.
+- **Origen**: por defecto se ve lo que hacen las **personas** (tender, conectar, dar de alta un
+  cable a mano…). Las **cargas de listados** escriben una entrada por cable y quedan ocultas;
+  se ven eligiendo «Cargas de listados» o «Todo». En la ficha de cada cable, el historial
+  dice cuántas hay ocultas y enlaza a «Ver todo».
 - Una corrección de bornas ocupa **una línea** («corrigió las bornas de 3 hilos en origen»).
   «Ver qué cambió» abre su página con cada hilo, antes y después.
 - **Actividad** (supervisor y administrador): lo de todo el equipo, con filtros por persona,
