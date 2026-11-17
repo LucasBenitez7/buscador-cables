@@ -25,6 +25,7 @@ import { DataList, Item, JumpLinks, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableWiring } from "@/features/cables/components/cable-wiring";
+import { HistoryFilterNote } from "@/features/cables/components/history-filter-note";
 import { DrawingViewer } from "@/features/drawings/components/drawing-viewer";
 import { hasDrawingImage } from "@/server/drawings/store";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
@@ -431,27 +432,11 @@ export default async function CablePage({
             },
           ]}
         />
-        {cable.historyTotal !== cable.historyAll ? (
-          <p role="status" className="text-muted-foreground text-sm">
-            {historySearch.origin || historySearch.action || historySearch.person ? (
-              `${cable.historyTotal} de ${cable.historyAll} movimientos cumplen los filtros.`
-            ) : (
-              // Solo se ocultan las cargas de los listados (el filtro por defecto).
-              <>
-                {cable.historyAll - cable.historyTotal === 1
-                  ? "1 entrada de cargas de listados oculta"
-                  : `${cable.historyAll - cable.historyTotal} entradas de cargas de listados ocultas`}{" "}
-                ·{" "}
-                <Link
-                  href={`/cables/${cable.id}?vista=${view}&origin=all#historial`}
-                  className={INLINE_LINK}
-                >
-                  Ver todo
-                </Link>
-              </>
-            )}
-          </p>
-        ) : null}
+        <HistoryFilterNote
+          search={historySearch}
+          total={cable.historyTotal}
+          all={cable.historyAll}
+        />
         {cable.historyTotal > cable.history.length ? (
           <p role="note" className="text-muted-foreground text-sm">
             Se muestran {cable.history.length} de {cable.historyTotal}. Los demás siguen guardados:

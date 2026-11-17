@@ -135,7 +135,7 @@ export const parseUserEventSearch = (params: RawSearchParams): UserEventSearch =
 export const ACTIVITY_ORIGINS = ["people", "loads", "all"] as const;
 export type ActivityOrigin = (typeof ACTIVITY_ORIGINS)[number];
 export const ACTIVITY_ORIGIN_LABELS: Record<ActivityOrigin, string> = {
-  people: "Personas",
+  people: "En campo",
   loads: "Cargas de listados",
   all: "Todo",
 };
