@@ -11,6 +11,14 @@ Cómo poner en producción el Buscador de Cables y mantenerlo. Decidido en la fa
 | Correo           | **Resend** (SMTP)      | Correos de confirmación, aprobación y contraseña.                   |
 | Errores          | Logs de Vercel         | JSON por línea; Sentry, más adelante si hace falta.                 |
 
+**La web y la base, en la misma zona.** Cada página hace varias consultas a la base: si la web
+se ejecuta lejos de ella, cada una cruza esa distancia. `apps/web/vercel.json` fija las
+funciones en Frankfurt (`"regions": ["fra1"]`), junto a la base de Railway en Amsterdam (EU
+West). Sin esa línea, Vercel las pone en Washington (`iad1`) y la ficha de un cable tardaba
+varios segundos. Si la base cambia de región, cambia esta también. La región en la que se ha
+ejecutado una respuesta se ve en la cabecera `x-vercel-id` (`cdg1::fra1::…`: entrada por
+París, función en Frankfurt).
+
 Las cuentas en estos servicios las crea el responsable del proyecto. Ninguna clave va en el
 repositorio: todas van en las variables de entorno de cada servicio o en el `.env` local, que
 git ignora.
