@@ -43,7 +43,6 @@ describe("LocationTree", () => {
     render(<LocationTree tree={tree} canManage={false} />);
 
     expect(screen.getByText("Planta Norte")).toBeInTheDocument();
-    expect(screen.getByText("Reactor X")).toBeInTheDocument();
     // El recuento abre el buscador filtrado por esa ubicación (y lo que contiene).
     expect(screen.getByRole("link", { name: "3 cables →" })).toHaveAttribute(
       "href",
@@ -65,10 +64,66 @@ describe("LocationTree", () => {
 
   it("collapses and expands a branch", () => {
     render(<LocationTree tree={tree} canManage={false} />);
+    expect(screen.queryByText("Reactor X")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expandir Área de calderas" }));
+    expect(screen.getByText("Reactor X")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Contraer Área de calderas" }));
-
     expect(screen.queryByText("Reactor X")).toBeNull();
+  });
+
+  it("opens the plants and keeps the areas folded at first", () => {
+    render(<LocationTree tree={tree} canManage={false} />);
+
+    expect(screen.getByRole("button", { name: "Contraer Planta Norte" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Expandir Área de calderas" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("says how many areas, units or sites a folded location holds", () => {
+    render(<LocationTree tree={tree} canManage={false} />);
+
+    expect(screen.getByText("1 unidad")).toBeInTheDocument();
+  });
+
+  it("expands and folds everything", () => {
+    render(<LocationTree tree={tree} canManage={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Expandir todo" }));
+    expect(screen.getByText("Reactor X")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Contraer todo" }));
+    expect(screen.queryByText("Área de calderas")).toBeNull();
+    expect(screen.getByText("Planta Norte")).toBeInTheDocument();
+  });
+
+  it("opens the path to the matches and highlights them while searching", () => {
+    render(<LocationTree tree={tree} canManage={false} matches={["u"]} searching />);
+
+    const link = screen.getByRole("link", { name: "Reactor X" });
+    expect(link).toHaveClass("text-primary");
+    expect(link.closest("div")).toHaveClass("bg-primary/10");
+    expect(screen.getByRole("link", { name: "Área de calderas" })).toHaveClass("font-medium");
+    expect(screen.getByRole("link", { name: "Planta Norte" })).not.toHaveClass("text-primary");
+  });
+
+  it("highlights nothing without a search", () => {
+    render(<LocationTree tree={tree} canManage={false} matches={["u"]} />);
+
+    expect(screen.getByRole("link", { name: "Planta Norte" })).not.toHaveClass("text-primary");
+    expect(screen.queryByText("Reactor X")).toBeNull();
+  });
+
+  it("says when the search finds nothing", () => {
+    render(<LocationTree tree={[]} canManage={false} matches={[]} searching />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Ninguna ubicación cumple la búsqueda.");
   });
 
   it("shows an empty state", () => {
@@ -115,6 +170,8 @@ describe("moving a location", () => {
     ];
     render(<LocationTree tree={withSecondArea} canManage />);
 
+    // Calderas (abierta a mano) y Turbinas: las dos áreas, y Reactor X dentro de Calderas.
+    fireEvent.click(screen.getByRole("button", { name: "Expandir Área de calderas" }));
     expect(screen.getAllByRole("button", { name: /^Mover .+/ })).toHaveLength(3);
     fireEvent.click(screen.getByRole("button", { name: "Mover Reactor X" }));
     const select = screen.getByLabelText('Mover "Reactor X" a otra área');
@@ -130,6 +187,36 @@ describe("moving a location", () => {
     await waitFor(() => expect(moveLocationAction).toHaveBeenCalled());
     const formData = vi.mocked(moveLocationAction).mock.calls[0]?.[0] as FormData;
     expect(Object.fromEntries(formData)).toEqual({ id: "u", parentId: "a2" });
+  });
+
+  it("offers the destinations of the whole tree, even when a search hides them", () => {
+    const withSecondArea = [
+      {
+        ...tree[0]!,
+        children: [
+          ...tree[0]!.children,
+          node({ id: "a2", name: "Turbinas", code: "A-TUR", type: "AREA", parentId: "p" }),
+        ],
+      },
+    ];
+    // La búsqueda solo deja la rama de Reactor X; Turbinas no aparece en la lista.
+    const filtered = [
+      {
+        ...tree[0]!,
+        children: [{ ...tree[0]!.children[0]!, children: tree[0]!.children[0]!.children }],
+      },
+    ];
+    render(
+      <LocationTree tree={filtered} allTree={withSecondArea} canManage matches={["u"]} searching />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Mover Reactor X" }));
+    const select = screen.getByLabelText('Mover "Reactor X" a otra área');
+    expect(
+      Array.from((select as HTMLSelectElement).options)
+        .filter((option) => !option.disabled)
+        .map((option) => option.textContent),
+    ).toEqual(["Planta Norte › Turbinas"]);
   });
 
   it("does not offer to move plants", () => {

@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
-import { hasPermission } from "@cables/shared";
+import {
+  LOCATION_SORT_LABELS,
+  LOCATION_TYPE_LABELS,
+  filterLocationTree,
+  hasPermission,
+  optionsOf,
+  parseLocationSearch,
+  sortLocationTree,
+} from "@cables/shared";
+import { ListToolbar } from "@/components/list-toolbar";
+import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { LocationTree } from "@/features/locations/components/location-tree";
 import { listLocationTree } from "@/server/locations/service";
 import { requireUser } from "@/server/session";
@@ -7,24 +17,83 @@ import { requireUser } from "@/server/session";
 export const metadata: Metadata = { title: "Ubicaciones" };
 export const dynamic = "force-dynamic";
 
-export default async function LocationsPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function LocationsPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
+  const search = parseLocationSearch(await searchParams);
   const tree = await listLocationTree();
+  const filtered = filterLocationTree(tree, search);
+  const shown = sortLocationTree(filtered.tree, search.sort ?? "name");
   const canManage = hasPermission(user, "location:manage");
+  const searching = Boolean(search.q || search.type || search.cables);
+  const active = searching || (search.sort !== undefined && search.sort !== "name");
+  const count = filtered.matches.length;
+  // Cambiar un criterio reabre el árbol con lo que cumple (y sus antepasados): se reinicia.
+  const treeKey = `${search.q ?? ""}|${search.type ?? ""}|${search.cables ? 1 : 0}`;
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Ubicaciones</h1>
         <p className="text-muted-foreground text-sm">
-          Planta → Área → Unidad → Sitio, con su código KKS: <code className="font-mono">99</code>{" "}
-          planta, <code className="font-mono">99UX</code> área,{" "}
-          <code className="font-mono">99UXA</code> edificio y{" "}
-          <code className="font-mono">99UXA16RA001</code> la sala donde empieza o termina un cable.
-          Pulsa «N cables» para verlos en el buscador (incluye todo lo que contiene).
+          Planta → Área → Unidad → Sitio, con su código KKS. Por ejemplo,{" "}
+          <code className="font-mono">99UXA16RA001</code> es una sala.
         </p>
       </div>
-      <LocationTree tree={tree} canManage={canManage} />
+
+      <PendingListProvider>
+        <ListToolbar
+          action="/locations"
+          label="Buscar ubicaciones"
+          search={{
+            name: "q",
+            label: "Nombre o código",
+            value: search.q ?? "",
+            placeholder: "99UXA, Sala de control…",
+            maxLength: 80,
+          }}
+          sort={{
+            name: "sort",
+            value: search.sort ?? "name",
+            defaultValue: "name",
+            options: optionsOf(LOCATION_SORT_LABELS),
+          }}
+          filters={[
+            {
+              kind: "select",
+              name: "type",
+              label: "Tipo",
+              value: search.type,
+              options: optionsOf(LOCATION_TYPE_LABELS),
+            },
+            {
+              kind: "checkbox",
+              name: "cables",
+              label: "Solo con cables",
+              checked: search.cables,
+            },
+          ]}
+          active={active}
+          count={
+            <>
+              <span className="text-foreground font-medium">{count.toLocaleString("es-ES")}</span>{" "}
+              {count === 1 ? "ubicación" : "ubicaciones"}
+            </>
+          }
+        />
+
+        <PendingResults>
+          <LocationTree
+            key={treeKey}
+            tree={shown}
+            allTree={tree}
+            canManage={canManage}
+            matches={filtered.matches}
+            searching={searching}
+          />
+        </PendingResults>
+      </PendingListProvider>
     </div>
   );
 }
