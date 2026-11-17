@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { parseActivitySearch } from "@cables/shared";
 import { ActivityFilters } from "@/features/activity/components/activity-filters";
+import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { ActivityList } from "@/features/activity/components/activity-list";
 import { listActivity } from "@/server/activity/service";
 import { requireUser } from "@/server/session";
@@ -22,8 +23,17 @@ export default async function MyActivityPage({ searchParams }: { searchParams: S
         <h1 className="text-2xl font-semibold tracking-tight">Mi actividad</h1>
         <p className="text-muted-foreground text-sm">Lo que has registrado tú en los cables.</p>
       </div>
-      <ActivityFilters basePath="/activity/me" search={search} />
-      <ActivityList basePath="/activity/me" search={search} activity={activity} showUser={false} />
+      <PendingListProvider>
+        <ActivityFilters basePath="/activity/me" search={search} />
+        <PendingResults>
+          <ActivityList
+            basePath="/activity/me"
+            search={search}
+            activity={activity}
+            showUser={false}
+          />
+        </PendingResults>
+      </PendingListProvider>
     </div>
   );
 }

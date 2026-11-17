@@ -2,7 +2,6 @@
 
 import { cn } from "cn";
 import { SlidersHorizontalIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import {
   CABLE_ACTIONS,
@@ -20,6 +19,7 @@ import {
   parseCableSearch,
   type CableSearch,
 } from "@cables/shared";
+import { SubmitLabel, usePendingNavigation } from "@/components/pending-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +41,7 @@ const RANGES = [
  * actual se conserva; la página vuelve a la 1.
  */
 export function SearchFilters({ search, options }: Props) {
-  const router = useRouter();
+  const { navigate, pending } = usePendingNavigation();
   const [expanded, setExpanded] = useState(false);
   const advancedActive = Boolean(
     search.manufacturer ||
@@ -64,7 +64,7 @@ export function SearchFilters({ search, options }: Props) {
       dir: search.dir,
       size: search.size === undefined ? undefined : String(search.size),
     });
-    router.push(`/cables${cableSearchQuery(next)}`);
+    navigate(`/cables${cableSearchQuery(next)}`);
   }
 
   const text = (value: number | string | undefined) =>
@@ -281,8 +281,10 @@ export function SearchFilters({ search, options }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit">Buscar</Button>
-        <Button type="button" variant="ghost" onClick={() => router.push("/cables")}>
+        <Button type="submit" disabled={pending}>
+          <SubmitLabel pending={pending} idle="Buscar" />
+        </Button>
+        <Button type="button" variant="ghost" onClick={() => navigate("/cables")}>
           Limpiar filtros
         </Button>
       </div>

@@ -10,6 +10,7 @@ import {
 import { ChangeList } from "@/components/change-list";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
+import { PendingLink } from "@/components/pending-list";
 import { Badge } from "@/components/ui/badge";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { INLINE_LINK } from "@/lib/links";
@@ -275,7 +276,7 @@ function QuickRanges({
       {ranges.map((range) => {
         const active = search.from === range.from && search.to === range.to;
         return (
-          <Link
+          <PendingLink
             key={range.label}
             href={`${basePath}${activityQuery(search, { from: range.from, to: range.to, page: undefined })}`}
             aria-current={active ? "true" : undefined}
@@ -286,7 +287,7 @@ function QuickRanges({
             }
           >
             {range.label}
-          </Link>
+          </PendingLink>
         );
       })}
     </nav>

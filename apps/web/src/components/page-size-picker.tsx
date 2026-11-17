@@ -1,6 +1,6 @@
 import { repage } from "@cables/shared";
 import { cn } from "cn";
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-list";
 
 type Props = {
   /** Sizes on offer; the first one is the default. */
@@ -26,7 +26,7 @@ export function PageSizePicker({ sizes, size, page, href }: Props) {
           const active = option === current;
           return (
             <li key={option}>
-              <Link
+              <PendingLink
                 href={href(option, repage(page, current, option))}
                 aria-current={active ? "true" : undefined}
                 className={cn(
@@ -37,7 +37,7 @@ export function PageSizePicker({ sizes, size, page, href }: Props) {
                 )}
               >
                 {option}
-              </Link>
+              </PendingLink>
             </li>
           );
         })}

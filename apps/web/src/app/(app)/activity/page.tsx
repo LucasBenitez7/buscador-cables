@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { parseActivitySearch } from "@cables/shared";
 import { ActivityFilters } from "@/features/activity/components/activity-filters";
+import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { ActivityList } from "@/features/activity/components/activity-list";
 import { listActivity, listActivityUsers } from "@/server/activity/service";
 import { requirePermission } from "@/server/session";
@@ -24,8 +25,12 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
           Todo lo que se ha hecho con los cables, de lo más reciente a lo más antiguo.
         </p>
       </div>
-      <ActivityFilters basePath="/activity" search={search} users={users} />
-      <ActivityList basePath="/activity" search={search} activity={activity} />
+      <PendingListProvider>
+        <ActivityFilters basePath="/activity" search={search} users={users} />
+        <PendingResults>
+          <ActivityList basePath="/activity" search={search} activity={activity} />
+        </PendingResults>
+      </PendingListProvider>
     </div>
   );
 }

@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
+import { PendingLink, SubmitLabel, usePendingNavigation } from "@/components/pending-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +43,7 @@ type Props = {
  */
 export function FilterForm({ action, label, fields, keep = {}, active = false, anchor }: Props) {
   const hash = anchor ? `#${anchor}` : "";
-  const router = useRouter();
+  const { navigate, pending } = usePendingNavigation();
   const clear = `${action}${new URLSearchParams(keep).size > 0 ? `?${new URLSearchParams(keep)}` : ""}${hash}`;
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -54,7 +53,7 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
       if (typeof value === "string" && value.trim() !== "") params.set(key, value.trim());
     }
     const query = params.toString();
-    router.push(`${action}${query ? `?${query}` : ""}${hash}`, { scroll: !anchor });
+    navigate(`${action}${query ? `?${query}` : ""}${hash}`, { scroll: !anchor });
   }
 
   return (
@@ -107,12 +106,12 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
         })}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="sm">
-          Aplicar
+        <Button type="submit" size="sm" disabled={pending}>
+          <SubmitLabel pending={pending} idle="Aplicar" />
         </Button>
         {active ? (
           <Button asChild type="button" variant="ghost" size="sm">
-            <Link href={clear}>Quitar filtros</Link>
+            <PendingLink href={clear}>Quitar filtros</PendingLink>
           </Button>
         ) : null}
       </div>

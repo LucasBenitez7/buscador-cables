@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import type { ComponentProps, FormEvent, ReactNode } from "react";
 import {
   CABLE_ACTIONS,
@@ -18,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { SearchableSelect, toOptions } from "@/components/searchable-select";
+import { SubmitLabel, usePendingNavigation } from "@/components/pending-list";
 
 type Props = {
   basePath: string;
@@ -28,7 +28,7 @@ type Props = {
 
 /** Filters of the activity pages. They navigate to a clean, shareable URL. */
 export function ActivityFilters({ basePath, search, users }: Props) {
-  const router = useRouter();
+  const { navigate, pending } = usePendingNavigation();
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,7 +37,7 @@ export function ActivityFilters({ basePath, search, users }: Props) {
     );
     // El tamaño de página no es un filtro: se conserva al filtrar.
     const size = search.size === undefined ? {} : { size: String(search.size) };
-    router.push(`${basePath}${activityQuery(parseActivitySearch({ ...values, ...size }))}`);
+    navigate(`${basePath}${activityQuery(parseActivitySearch({ ...values, ...size }))}`);
   }
 
   return (
@@ -94,8 +94,10 @@ export function ActivityFilters({ basePath, search, users }: Props) {
         </Field>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit">Filtrar</Button>
-        <Button type="button" variant="ghost" onClick={() => router.push(basePath)}>
+        <Button type="submit" disabled={pending}>
+          <SubmitLabel pending={pending} idle="Filtrar" />
+        </Button>
+        <Button type="button" variant="ghost" onClick={() => navigate(basePath)}>
           Limpiar filtros
         </Button>
       </div>

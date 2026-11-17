@@ -11,6 +11,7 @@ import {
 } from "@cables/shared";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
+import { PendingLink } from "@/components/pending-list";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
 import { trayHref } from "@/features/cables/components/cable-route";
@@ -53,7 +54,7 @@ export function SearchResults({ search, result, actions }: Props) {
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
         className={`px-3 py-2 font-medium ${className}`}
       >
-        <Link
+        <PendingLink
           href={`/cables${cableSearchQuery(search, { sort: key, dir: nextDir, page: undefined })}`}
           className="hover:text-foreground focus-visible:ring-ring/50 inline-flex items-center gap-1 rounded-sm outline-none focus-visible:ring-3"
         >
@@ -61,7 +62,7 @@ export function SearchResults({ search, result, actions }: Props) {
           <span aria-hidden className="text-xs">
             {active ? (dir === "asc" ? "▲" : "▼") : ""}
           </span>
-        </Link>
+        </PendingLink>
       </th>
     );
   };

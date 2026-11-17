@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableWiring } from "@/features/cables/components/cable-wiring";
 import { HistoryFilterNote } from "@/features/cables/components/history-filter-note";
+import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { DrawingViewer } from "@/features/drawings/components/drawing-viewer";
 import { hasDrawingImage } from "@/server/drawings/store";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
@@ -382,106 +383,112 @@ export default async function CablePage({
             </span>
           </h2>
         </div>
-        <FilterForm
-          action={`/cables/${cable.id}`}
-          label="Filtrar el historial"
-          anchor="historial"
-          keep={{ vista: view }}
-          active={Boolean(
-            historySearch.origin ||
-            historySearch.action ||
-            historySearch.person ||
-            historySearch.sort,
-          )}
-          fields={[
-            {
-              kind: "select",
-              name: "origin",
-              label: "Origen",
-              value: historySearch.origin,
-              options: optionsOf(ACTIVITY_ORIGIN_LABELS),
-              emptyLabel: null,
-            },
-            {
-              kind: "select",
-              name: "action",
-              label: "Qué se hizo",
-              value: historySearch.action,
-              options: CABLE_ACTIONS.map((action) => ({
-                value: action,
-                label: CABLE_ACTION_LABELS[action],
-              })),
-            },
-            {
-              kind: "select",
-              name: "person",
-              label: "Quién",
-              value: historySearch.person,
-              options: cable.historyPeople.map((person) => ({
-                value: person.id,
-                label: person.label,
-              })),
-            },
-            {
-              kind: "select",
-              name: "sort",
-              label: "Orden",
-              value: historySearch.sort,
-              options: optionsOf(DATE_SORT_LABELS),
-              emptyLabel: null,
-            },
-          ]}
-        />
-        <HistoryFilterNote
-          search={historySearch}
-          total={cable.historyTotal}
-          all={cable.historyAll}
-        />
-        {cable.historyTotal > cable.history.length ? (
-          <p role="note" className="text-muted-foreground text-sm">
-            Se muestran {cable.history.length} de {cable.historyTotal}. Los demás siguen guardados:
-            usa los filtros o el orden para verlos.
-          </p>
-        ) : null}
-        {cable.history.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            {cable.historyAll === 0 ? "Sin historial." : "Ningún movimiento cumple los filtros."}
-          </p>
-        ) : (
-          <ShowMore
-            as="ol"
-            className="space-y-5 border-l pl-4"
-            noun="movimientos"
-            items={cable.history.map((entry, index) => (
-              <li key={entry.id} className="relative space-y-1 text-sm">
-                <span
-                  aria-hidden
-                  className={`absolute top-1.5 -left-[1.3125rem] size-2 rounded-full ${index === 0 && historySearch.sort !== "oldest" ? "bg-primary" : "bg-border"}`}
-                />
-                <p className="text-muted-foreground text-xs">
-                  <time dateTime={entry.at.toISOString()}>{dateFormat.format(entry.at)}</time> ·{" "}
-                  <span className="text-foreground font-medium">
-                    {CABLE_ACTION_LABELS[entry.action]}
-                  </span>
-                </p>
-                <p>
-                  <span className="font-medium">{entry.user}</span> {entry.summary}
-                  {entry.corrects ? (
-                    <span className="text-muted-foreground"> ({entry.corrects})</span>
-                  ) : null}
-                  .
-                </p>
-                {entry.notes ? <p className="italic">“{entry.notes}”</p> : null}
-                <ChangeList changes={entry.changes} />
-                {entry.detailHref ? (
-                  <Link href={entry.detailHref} className={INLINE_LINK}>
-                    Ver qué cambió
-                  </Link>
-                ) : null}
-              </li>
-            ))}
+        <PendingListProvider>
+          <FilterForm
+            action={`/cables/${cable.id}`}
+            label="Filtrar el historial"
+            anchor="historial"
+            keep={{ vista: view }}
+            active={Boolean(
+              historySearch.origin ||
+              historySearch.action ||
+              historySearch.person ||
+              historySearch.sort,
+            )}
+            fields={[
+              {
+                kind: "select",
+                name: "origin",
+                label: "Origen",
+                value: historySearch.origin,
+                options: optionsOf(ACTIVITY_ORIGIN_LABELS),
+                emptyLabel: null,
+              },
+              {
+                kind: "select",
+                name: "action",
+                label: "Qué se hizo",
+                value: historySearch.action,
+                options: CABLE_ACTIONS.map((action) => ({
+                  value: action,
+                  label: CABLE_ACTION_LABELS[action],
+                })),
+              },
+              {
+                kind: "select",
+                name: "person",
+                label: "Quién",
+                value: historySearch.person,
+                options: cable.historyPeople.map((person) => ({
+                  value: person.id,
+                  label: person.label,
+                })),
+              },
+              {
+                kind: "select",
+                name: "sort",
+                label: "Orden",
+                value: historySearch.sort,
+                options: optionsOf(DATE_SORT_LABELS),
+                emptyLabel: null,
+              },
+            ]}
           />
-        )}
+          <PendingResults>
+            <HistoryFilterNote
+              search={historySearch}
+              total={cable.historyTotal}
+              all={cable.historyAll}
+            />
+            {cable.historyTotal > cable.history.length ? (
+              <p role="note" className="text-muted-foreground text-sm">
+                Se muestran {cable.history.length} de {cable.historyTotal}. Los demás siguen
+                guardados: usa los filtros o el orden para verlos.
+              </p>
+            ) : null}
+            {cable.history.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                {cable.historyAll === 0
+                  ? "Sin historial."
+                  : "Ningún movimiento cumple los filtros."}
+              </p>
+            ) : (
+              <ShowMore
+                as="ol"
+                className="space-y-5 border-l pl-4"
+                noun="movimientos"
+                items={cable.history.map((entry, index) => (
+                  <li key={entry.id} className="relative space-y-1 text-sm">
+                    <span
+                      aria-hidden
+                      className={`absolute top-1.5 -left-[1.3125rem] size-2 rounded-full ${index === 0 && historySearch.sort !== "oldest" ? "bg-primary" : "bg-border"}`}
+                    />
+                    <p className="text-muted-foreground text-xs">
+                      <time dateTime={entry.at.toISOString()}>{dateFormat.format(entry.at)}</time> ·{" "}
+                      <span className="text-foreground font-medium">
+                        {CABLE_ACTION_LABELS[entry.action]}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="font-medium">{entry.user}</span> {entry.summary}
+                      {entry.corrects ? (
+                        <span className="text-muted-foreground"> ({entry.corrects})</span>
+                      ) : null}
+                      .
+                    </p>
+                    {entry.notes ? <p className="italic">“{entry.notes}”</p> : null}
+                    <ChangeList changes={entry.changes} />
+                    {entry.detailHref ? (
+                      <Link href={entry.detailHref} className={INLINE_LINK}>
+                        Ver qué cambió
+                      </Link>
+                    ) : null}
+                  </li>
+                ))}
+              />
+            )}
+          </PendingResults>
+        </PendingListProvider>
       </section>
     </article>
   );

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-list";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -30,9 +30,9 @@ export function Pagination({
       <div>
         {page > 1 ? (
           <Button asChild variant="outline">
-            <Link href={href(page - 1)} rel="prev">
+            <PendingLink href={href(page - 1)} rel="prev">
               {previousLabel}
-            </Link>
+            </PendingLink>
           </Button>
         ) : null}
       </div>
@@ -43,9 +43,9 @@ export function Pagination({
       <div className="flex justify-end">
         {page < pageCount ? (
           <Button asChild variant="outline">
-            <Link href={href(page + 1)} rel="next">
+            <PendingLink href={href(page + 1)} rel="next">
               {nextLabel}
-            </Link>
+            </PendingLink>
           </Button>
         ) : null}
       </div>
