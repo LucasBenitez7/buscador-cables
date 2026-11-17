@@ -3,14 +3,19 @@ import { prisma, type Prisma } from "@cables/db";
 import {
   ACTIVITY_PAGE_SIZE,
   describeCableEvent,
+  hasPermission,
+  wiringChanges,
   type ActivitySearch,
   type CableAction,
+  type WiringChangeEntry,
 } from "@cables/shared";
 import {
+  eventDetailHref,
   loadLookups,
   locationName,
   readableChanges,
   userName,
+  type Lookups,
   type ReadableChange,
 } from "@/server/cables/detail";
 
@@ -31,7 +36,84 @@ export type ActivityEntry = {
   summary: string;
   notes: string | null;
   changes: ReadableChange[];
+  /** Events summed up in one line (terminals corrected): the page with every change. */
+  detailHref: string | null;
 };
+
+/** One event with everything it changed, for its own page. */
+export type ActivityEventDetail = ActivityEntry & {
+  /** Terminals corrected, cell by cell, in table order. */
+  wiring: WiringChangeEntry[];
+};
+
+const EVENT_INCLUDE = {
+  user: { select: { name: true, role: true } },
+  cable: { select: { id: true, code: true, deletedAt: true } },
+} as const;
+
+type StoredEvent = Prisma.CableEventGetPayload<{ include: typeof EVENT_INCLUDE }>;
+
+function toEntry(event: StoredEvent, lookups: Lookups): ActivityEntry {
+  const place = (id: string | null) => {
+    const name = id ? lookups.locations.get(id) : undefined;
+    return id && name ? { id, name } : null;
+  };
+  return {
+    id: event.id,
+    at: event.createdAt,
+    action: event.action,
+    user: userName(event.user),
+    userId: event.userId,
+    tray: changedTray(event.changes),
+    from: place(event.fromLocationId),
+    to: place(event.toLocationId),
+    cable: {
+      id: event.cable.id,
+      code: event.cable.code,
+      deleted: event.cable.deletedAt !== null,
+    },
+    summary: describeCableEvent({
+      action: event.action,
+      changes: event.changes,
+      fromLocation: locationName(lookups, event.fromLocationId),
+      toLocation: locationName(lookups, event.toLocationId),
+    }),
+    notes: event.notes,
+    changes: readableChanges(event.changes, lookups),
+    detailHref: eventDetailHref(event),
+  };
+}
+
+/** A movement of a cable: its author, the team's activity, or the cable's own history. */
+export function canSeeCableEvent(
+  viewer: { id: string; permissions: readonly string[] },
+  authorId: string,
+): boolean {
+  return (
+    viewer.id === authorId ||
+    hasPermission(viewer, "activity:view") ||
+    hasPermission(viewer, "cable:read")
+  );
+}
+
+/**
+ * One event and all it changed. Like the history of a cable, any signed-in user may read it;
+ * an id that does not exist gives null.
+ */
+export async function getActivityEvent(
+  id: string,
+  viewer: { id: string; permissions: readonly string[] },
+): Promise<ActivityEventDetail | null> {
+  if (!/^[a-z0-9]{10,40}$/.test(id)) return null;
+  const [event, lookups] = await Promise.all([
+    prisma.cableEvent.findUnique({ where: { id }, include: EVENT_INCLUDE }),
+    loadLookups(),
+  ]);
+  // Quién ve un movimiento (fase 12): quien lo hizo, quien ve la actividad del equipo y quien
+  // ve los cables (es una entrada del historial de su ficha). Lo que no puede ver no existe.
+  if (!event || !canSeeCableEvent(viewer, event.userId)) return null;
+  return { ...toEntry(event, lookups), wiring: wiringChanges(event.changes) };
+}
 
 export type ActivityPage = {
   entries: ActivityEntry[];
@@ -41,7 +123,7 @@ export type ActivityPage = {
 };
 
 /** First instant of a day in Madrid, as a UTC Date (handles summer time). */
-function madridDayStart(day: string): Date {
+export function madridDayStart(day: string): Date {
   const utcMidnight = new Date(`${day}T00:00:00Z`);
   const madridHour = Number(
     new Intl.DateTimeFormat("en-GB", {
@@ -54,7 +136,7 @@ function madridDayStart(day: string): Date {
   return new Date(utcMidnight.getTime() - madridHour * 60 * 60 * 1000);
 }
 
-function nextDay(day: string): string {
+export function nextDay(day: string): string {
   const date = new Date(`${day}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + 1);
   return date.toISOString().slice(0, 10);
@@ -92,46 +174,19 @@ export async function listActivity(
   const [events, lookups] = await Promise.all([
     prisma.cableEvent.findMany({
       where,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      orderBy:
+        search.sort === "oldest"
+          ? [{ createdAt: "asc" }, { id: "asc" }]
+          : [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: {
-        user: { select: { name: true, role: true } },
-        cable: { select: { id: true, code: true, deletedAt: true } },
-      },
+      include: EVENT_INCLUDE,
     }),
     loadLookups(),
   ]);
 
-  const place = (id: string | null) => {
-    const name = id ? lookups.locations.get(id) : undefined;
-    return id && name ? { id, name } : null;
-  };
-
   return {
-    entries: events.map((event) => ({
-      id: event.id,
-      at: event.createdAt,
-      action: event.action,
-      user: userName(event.user),
-      userId: event.userId,
-      tray: changedTray(event.changes),
-      from: place(event.fromLocationId),
-      to: place(event.toLocationId),
-      cable: {
-        id: event.cable.id,
-        code: event.cable.code,
-        deleted: event.cable.deletedAt !== null,
-      },
-      summary: describeCableEvent({
-        action: event.action,
-        changes: event.changes,
-        fromLocation: locationName(lookups, event.fromLocationId),
-        toLocation: locationName(lookups, event.toLocationId),
-      }),
-      notes: event.notes,
-      changes: readableChanges(event.changes, lookups),
-    })),
+    entries: events.map((event) => toEntry(event, lookups)),
     total,
     page,
     pageCount,

@@ -1,4 +1,5 @@
 import { prisma } from "@cables/db";
+import { permissionsOfRole } from "@cables/shared";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -121,7 +122,7 @@ describe("getCableProgress", () => {
 
 describe("getDashboard", () => {
   it("shows a viewer only the progress of the works", async () => {
-    const dashboard = await getDashboard({ id: "view", role: "VIEWER" });
+    const dashboard = await getDashboard({ id: "view", ...permissionsOfRole("VIEWER") });
 
     expect(dashboard.progress.total).toBe(4);
     expect(dashboard.myActivity).toBeNull();
@@ -130,7 +131,7 @@ describe("getDashboard", () => {
   });
 
   it("adds a technician's own latest actions, and nobody else's", async () => {
-    const dashboard = await getDashboard({ id: "tec", role: "TECHNICIAN" });
+    const dashboard = await getDashboard({ id: "tec", ...permissionsOfRole("TECHNICIAN") });
 
     expect(dashboard.myActivity?.map((entry) => entry.id)).toEqual(["e1"]);
     expect(dashboard.team).toBeNull();
@@ -138,7 +139,7 @@ describe("getDashboard", () => {
   });
 
   it("adds the team summary for a supervisor, without the accounts", async () => {
-    const dashboard = await getDashboard({ id: "sup", role: "SUPERVISOR" });
+    const dashboard = await getDashboard({ id: "sup", ...permissionsOfRole("SUPERVISOR") });
 
     expect(dashboard.team?.trays).toBe(2);
     expect(dashboard.team?.recentActivity).toHaveLength(2);
@@ -146,11 +147,17 @@ describe("getDashboard", () => {
   });
 
   it("adds accounts and system state for an administrator", async () => {
-    const dashboard = await getDashboard({ id: "admin", role: "ADMIN" });
+    const dashboard = await getDashboard({ id: "admin", ...permissionsOfRole("ADMIN") });
 
     expect(dashboard.admin).toEqual({
       pendingAccounts: 1,
       activeUsers: { ADMIN: 1, SUPERVISOR: 1, TECHNICIAN: 1, VIEWER: 1 },
+      roleNames: {
+        ADMIN: "Administrador",
+        SUPERVISOR: "Supervisor",
+        TECHNICIAN: "Técnico",
+        VIEWER: "Consulta",
+      },
       database: "ok",
       drawings: { sheets: 2, drawn: 1 },
     });

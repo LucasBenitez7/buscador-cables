@@ -124,7 +124,9 @@ test("cerrar sesión vuelve al login y protege las páginas", async ({ page }) =
   // Sesión propia: cerrar la guardada en `auth.setup.ts` rompería los demás tests.
   await signIn(page, USERS.technician.email);
 
-  await page.getByRole("button", { name: "Cerrar sesión" }).click();
+  // En el escritorio, "Cerrar sesión" está en el menú con el nombre de la persona.
+  await page.getByRole("button", { name: `Menú de ${USERS.technician.name}` }).click();
+  await page.getByRole("menuitem", { name: "Cerrar sesión" }).click();
 
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/cables");

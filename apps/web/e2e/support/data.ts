@@ -98,6 +98,19 @@ export const CABLES = {
     looseEnd: "DESTINATION",
     looseTray: "99UXB00L22001",
   },
+  // Fase 11: tabla de conexionado (hilo, regletero y borna en origen y en destino).
+  wiring: {
+    code: "99XAD10W2001",
+    level: "L2",
+    status: "LAID",
+    connection: "DISCONNECTED",
+    ends: ["99BMC", "99XAD10AP001"],
+    wires: [
+      ["BN", "X51", "11", "-", "U1"],
+      ["BU", "X51", "12", "-", "V1"],
+      ["SH", null, "PE", null, "PE"],
+    ],
+  },
 } as const;
 
 /** Lo que escribiría alguien en planta para encontrar `search` y `searchSibling`: sin guion y en minúsculas. */

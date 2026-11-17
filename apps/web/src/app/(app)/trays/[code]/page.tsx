@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -9,7 +10,7 @@ import {
   formatTraySize,
   normalizeTrayCode,
 } from "@cables/shared";
-import { DataList, Item, Section } from "@/components/detail";
+import { DataList, Item, JumpLinks, Section } from "@/components/detail";
 import { Button } from "@/components/ui/button";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
@@ -66,8 +67,19 @@ export default async function TrayPage({ params }: { params: Params }) {
         </p>
       </header>
 
+      <JumpLinks
+        links={[
+          { id: "planos", label: "Plano" },
+          { id: "esperando", label: "Esperando aquí" },
+          { id: "pasan", label: "Pasan por aquí" },
+          { id: "datos", label: "Datos" },
+        ]}
+      />
+
       <Section
         title={`Plano${tray.drawings.length > 1 ? `s (${tray.drawings.length} hojas)` : ""}`}
+        collapsible
+        id="planos"
       >
         {tray.drawings.length === 0 ? (
           <p className="text-muted-foreground text-sm">No aparece en los planos cargados.</p>
@@ -76,7 +88,7 @@ export default async function TrayPage({ params }: { params: Params }) {
         )}
       </Section>
 
-      <Section title="Datos">
+      <Section title="Datos" collapsible id="datos">
         <DataList>
           <Item label="Tamaño">{size}</Item>
           <Item label="Edificio">
@@ -93,7 +105,11 @@ export default async function TrayPage({ params }: { params: Params }) {
         {tray.notes ? <p className="text-sm whitespace-pre-line">{tray.notes}</p> : null}
       </Section>
 
-      <Section title={`Cables esperando aquí (${tray.waitingCables.length})`}>
+      <Section
+        title={`Cables esperando aquí (${tray.waitingCables.length})`}
+        collapsible
+        id="esperando"
+      >
         {tray.waitingCables.length === 0 ? (
           <p className="text-muted-foreground text-sm">Ningún cable tiene aquí la punta suelta.</p>
         ) : (
@@ -103,6 +119,8 @@ export default async function TrayPage({ params }: { params: Params }) {
 
       <Section
         title={`Cables que pasan por aquí (${tray.routeCables.length})`}
+        collapsible
+        id="pasan"
         action={
           tray.routeCables.length > 0 ? (
             <Button asChild variant="outline" size="sm">
@@ -125,8 +143,11 @@ export default async function TrayPage({ params }: { params: Params }) {
 
 function CableList({ cables }: { cables: TrayCable[] }) {
   return (
-    <ul className="bg-card divide-y rounded-lg border">
-      {cables.map((cable) => (
+    <ShowMore
+      as="ul"
+      className="bg-card divide-y rounded-lg border"
+      noun="cables"
+      items={cables.map((cable) => (
         <li
           key={cable.id}
           className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
@@ -166,6 +187,6 @@ function CableList({ cables }: { cables: TrayCable[] }) {
           />
         </li>
       ))}
-    </ul>
+    />
   );
 }

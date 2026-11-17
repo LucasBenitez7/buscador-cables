@@ -1,4 +1,3 @@
-import { ROLE_LABELS } from "@cables/shared";
 import { Dashboard } from "@/features/dashboard/components/dashboard";
 import { getDashboard } from "@/server/dashboard/service";
 import { requireUser } from "@/server/session";
@@ -17,8 +16,8 @@ export default async function HomePage() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Inicio</h1>
         <p className="text-muted-foreground text-sm">
-          Hola, <span className="text-foreground font-medium">{user.name}</span> ·{" "}
-          {ROLE_LABELS[user.role]}
+          Hola, <span className="text-foreground font-medium">{user.name}</span> · {user.roleName}
+          {user.extraCount > 0 ? ` (+${user.extraCount} permisos extra)` : ""}
         </p>
       </div>
       <Dashboard data={dashboard} />

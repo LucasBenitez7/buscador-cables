@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { MenuIcon } from "lucide-react";
+import { ChevronDownIcon, MenuIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -12,8 +12,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { BrandLogo } from "@/components/brand-logo";
-import { SignOutButton } from "@/features/auth/components/sign-out-button";
+import { SignOutButton, useSignOut } from "@/features/auth/components/sign-out-button";
 import { isActive, type NavItem } from "./nav-items";
 
 type Props = {
@@ -22,14 +30,19 @@ type Props = {
 };
 
 /**
- * App header. From 1280 px the links sit in a row; below that (phones and tablets, where the
- * app is used most) a menu button opens a side panel. The current section is highlighted in
- * both: light text on a soft background, the rest muted until hovered.
+ * App header. From 1280 px the main sections sit in a row, administration goes in a "Gestión"
+ * menu and the person's own things in the menu with their name, so the row always fits (it
+ * did not with every section in it). Below that (phones and tablets, where the app is used
+ * most) a menu button opens a side panel with everything. The current section is highlighted:
+ * light text on a soft background, the rest muted until hovered.
  */
 export function AppHeader({ items, user }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const waiting = items.reduce((sum, item) => sum + (item.badge?.count ?? 0), 0);
+  const main = items.filter((item) => (item.place ?? "main") === "main");
+  const manage = items.filter((item) => item.place === "manage");
+  const own = items.filter((item) => item.place === "user");
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
@@ -43,15 +56,15 @@ export function AppHeader({ items, user }: Props) {
             Buscador de Cables
           </Link>
           <nav aria-label="Principal" className="hidden items-center gap-1 xl:flex">
-            {items.map((item) => (
+            {main.map((item) => (
               <NavLink key={item.href} item={item} active={isActive(item, pathname)} />
             ))}
+            {manage.length > 0 ? <ManageMenu items={manage} pathname={pathname} /> : null}
           </nav>
         </div>
 
-        <div className="hidden items-center gap-4 xl:flex">
-          <UserBadge user={user} />
-          <SignOutButton />
+        <div className="hidden xl:block">
+          <UserMenu user={user} items={own} pathname={pathname} />
         </div>
 
         <Sheet open={open} onOpenChange={setOpen}>
@@ -139,6 +152,102 @@ function NavLink({
         </span>
       ) : null}
     </Link>
+  );
+}
+
+const MENU_TRIGGER =
+  "focus-visible:ring-ring/50 data-[state=open]:bg-accent inline-flex items-center gap-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3";
+
+/** "Gestión": the administration sections, with the sum of what waits in them. */
+function ManageMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
+  const active = items.some((item) => isActive(item, pathname));
+  const waiting = items.reduce((sum, item) => sum + (item.badge?.count ?? 0), 0);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={waiting > 0 ? `Gestión, ${waiting} pendientes` : undefined}
+        className={cn(
+          MENU_TRIGGER,
+          "px-3 py-1.5",
+          active
+            ? "bg-accent text-foreground"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent/60",
+        )}
+      >
+        Gestión
+        {waiting > 0 ? <Count value={waiting} /> : null}
+        <ChevronDownIcon aria-hidden className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {items.map((item) => (
+          <DropdownMenuItem key={item.href} asChild data-current={isActive(item, pathname)}>
+            <Link
+              href={item.href}
+              aria-current={isActive(item, pathname) ? "page" : undefined}
+              aria-label={
+                item.badge && item.badge.count > 0
+                  ? `${item.label}, ${item.badge.count} ${item.badge.label}`
+                  : undefined
+              }
+            >
+              {item.label}
+              {item.badge && item.badge.count > 0 ? <Count value={item.badge.count} /> : null}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** The person's name and role; opens their own things and "Cerrar sesión". */
+function UserMenu({
+  user,
+  items,
+  pathname,
+}: {
+  user: { name: string; role: string };
+  items: NavItem[];
+  pathname: string;
+}) {
+  const { signOut, pending } = useSignOut();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={`Menú de ${user.name}`}
+        className={cn(MENU_TRIGGER, "hover:bg-accent/60 px-2 py-1 text-left")}
+      >
+        <UserBadge user={user} />
+        <ChevronDownIcon aria-hidden className="text-muted-foreground size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuLabel>
+          <UserBadge user={user} />
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {items.map((item) => (
+          <DropdownMenuItem key={item.href} asChild data-current={isActive(item, pathname)}>
+            <Link href={item.href} aria-current={isActive(item, pathname) ? "page" : undefined}>
+              {item.label}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuItem disabled={pending} onSelect={() => void signOut()}>
+          {pending ? "Saliendo…" : "Cerrar sesión"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function Count({ value }: { value: number }) {
+  return (
+    <span
+      aria-hidden
+      className="bg-warning text-primary-foreground min-w-5 rounded-full px-1.5 text-center text-xs leading-5 font-bold tabular-nums"
+    >
+      {value}
+    </span>
   );
 }
 

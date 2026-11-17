@@ -20,6 +20,7 @@ beforeAll(async () => {
   await writeFile(path.join(dir, "EJ-ELE-DRW-0024_02.dzi"), "<Image/>");
   await mkdir(path.join(dir, "EJ-ELE-DRW-0024_02_files", "12"), { recursive: true });
   await writeFile(path.join(dir, "EJ-ELE-DRW-0024_02_files", "12", "3_4.webp"), "tile");
+  await writeFile(path.join(dir, "cable_99XAT10W2005.webp"), "hoja");
   // Fuera de las teselas: nunca se sirve.
   await writeFile(path.join(dir, "manifest.json"), "{}");
 });
@@ -35,6 +36,12 @@ describe("drawingFilePath", () => {
     expect(drawingFilePath(["EJ-ELE-DRW-0024_02_files", "12", "3_4.webp"])).toBe(
       "EJ-ELE-DRW-0024_02_files/12/3_4.webp",
     );
+  });
+
+  it("accepts the single image of a cable page, and no other single image", () => {
+    expect(drawingFilePath(["cable_99XAT10W2005.webp"])).toBe("cable_99XAT10W2005.webp");
+    expect(drawingFilePath(["EJ-ELE-DRW-0024_02.webp"])).toBeNull();
+    expect(drawingFilePath(["cable_../x.webp"])).toBeNull();
   });
 
   it("refuses anything that could leave the tiles folder", () => {
@@ -74,6 +81,8 @@ describe("readDrawingFile", () => {
     await expect(hasDrawingImage("EJ-ELE-DRW-0024_02")).resolves.toBe(true);
     await expect(hasDrawingImage("EJ-ELE-DRW-0024_03")).resolves.toBe(false);
     await expect(hasDrawingImage("../x")).resolves.toBe(false);
+    await expect(hasDrawingImage("cable_99XAT10W2005")).resolves.toBe(true);
+    await expect(hasDrawingImage("cable_99XAT10W2006")).resolves.toBe(false);
   });
 });
 
@@ -122,6 +131,20 @@ describe("GET /api/drawings", () => {
     expect(tile.status).toBe(200);
     expect(currentUser).not.toHaveBeenCalled();
     expect(tile.headers.get("Set-Cookie")).toBeNull();
+  });
+
+  it("serves the image of a cable page only with a session, never with the pass alone", async () => {
+    const pass = createDrawingAccess();
+    currentUser.mockResolvedValue(null);
+    expect(
+      (await get(["cable_99XAT10W2005.webp"], { Cookie: `drawing_access=${pass}` })).status,
+    ).toBe(401);
+
+    currentUser.mockResolvedValue({ id: "u1", role: "VIEWER" });
+    const response = await get(["cable_99XAT10W2005.webp"]);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/webp");
+    expect(response.headers.get("Cache-Control")).toBe("private, no-cache");
   });
 
   it("never opens a sheet with the pass alone, nor tiles with a forged or expired one", async () => {

@@ -13,6 +13,9 @@ export const locationCablesHref = (id: string) => `/cables?location=${encodeURIC
 export const equipmentCablesHref = (equipment: string) =>
   `/cables?equipment=${encodeURIComponent(equipment)}`;
 
+/** The page of an equipment: its cables by terminal strip, for the connection crews. */
+export const equipmentHref = (equipment: string) => `/equipment/${encodeURIComponent(equipment)}`;
+
 export const levelCablesHref = (level: CableLevel) => `/cables?level=${level}`;
 
 export const trayHref = (code: string) => `/trays/${encodeURIComponent(code)}`;

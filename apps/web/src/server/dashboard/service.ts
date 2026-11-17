@@ -10,7 +10,6 @@ import {
   hasPermission,
   type ConnectionStatus,
   type InstallationStatus,
-  type Role,
   type TestStatus,
 } from "@cables/shared";
 import { listActivity, type ActivityEntry } from "@/server/activity/service";
@@ -46,7 +45,9 @@ export type Dashboard = {
   } | null;
   admin: {
     pendingAccounts: number;
-    activeUsers: Record<Role, number>;
+    /** Active people per role id, and the name of each role (fase 12: roles can be made). */
+    activeUsers: Record<string, number>;
+    roleNames: Record<string, string>;
     database: HealthStatus;
     /**
      * Sheets of the drawings loaded and how many have their tiles. Without tiles the tray
@@ -100,9 +101,12 @@ async function getAdminSummary(): Promise<NonNullable<Dashboard["admin"]>> {
     getHealth(),
     getDrawingImages(),
   ]);
-  const activeUsers = zeroes(ROLES);
+  // Por rol: los de siempre (aunque no tengan a nadie) y los creados en la web.
+  const roles = await prisma.role.findMany({ select: { id: true, name: true } });
+  const activeUsers: Record<string, number> = zeroes(ROLES);
   for (const row of byRole) activeUsers[row.role] = row._count._all;
-  return { pendingAccounts, activeUsers, database: health.database, drawings };
+  const roleNames = Object.fromEntries(roles.map((role) => [role.id, role.name]));
+  return { pendingAccounts, activeUsers, roleNames, database: health.database, drawings };
 }
 
 async function getDrawingImages(): Promise<{ sheets: number; drawn: number }> {
@@ -111,13 +115,16 @@ async function getDrawingImages(): Promise<{ sheets: number; drawn: number }> {
   return { sheets: sheets.length, drawn: drawn.filter(Boolean).length };
 }
 
-export async function getDashboard(user: { id: string; role: Role }): Promise<Dashboard> {
-  const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user.role, action));
+export async function getDashboard(user: {
+  id: string;
+  permissions: readonly string[];
+}): Promise<Dashboard> {
+  const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user, action));
   const [progress, mine, team, admin] = await Promise.all([
     getCableProgress(),
     canAct ? listActivity({ actor: user.id }, RECENT) : null,
-    hasPermission(user.role, "activity:view") ? getTeamSummary() : null,
-    hasPermission(user.role, "user:manage") ? getAdminSummary() : null,
+    hasPermission(user, "activity:view") ? getTeamSummary() : null,
+    hasPermission(user, "user:manage") ? getAdminSummary() : null,
   ]);
   return { progress, myActivity: mine?.entries ?? null, team, admin };
 }

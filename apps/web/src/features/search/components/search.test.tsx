@@ -1,3 +1,4 @@
+import { permissionsOfRole } from "@cables/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CableSearchResult, SearchOptions } from "@/server/cables/search";
@@ -161,7 +162,7 @@ describe("SearchResults", () => {
     expect(table.getByText("Destino")).toBeInTheDocument();
     expect(table.getByRole("link", { name: "+99BMA01" })).toHaveAttribute(
       "href",
-      "/cables?equipment=%2B99BMA01",
+      "/equipment/%2B99BMA01",
     );
     expect(table.getByRole("link", { name: "Caldera 1 › Bandeja norte" })).toHaveAttribute(
       "href",
@@ -267,7 +268,11 @@ describe("SearchResults", () => {
     expect(screen.queryByRole("button", { name: "Acción" })).toBeNull();
 
     rerender(
-      <SearchResults search={{}} result={result} actions={{ role: "TECHNICIAN", locations: [] }} />,
+      <SearchResults
+        search={{}}
+        result={result}
+        actions={{ ...permissionsOfRole("TECHNICIAN"), locations: [] }}
+      />,
     );
     fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Acción" }));
 
@@ -289,5 +294,20 @@ describe("SearchResults", () => {
     );
 
     expect(screen.getByText(/Ningún código contiene «shh50»/)).toBeInTheDocument();
+  });
+});
+
+// Fase 11: quien conecta va directo a la pestaña Conexionado desde el buscador.
+describe("SearchResults: wiring link", () => {
+  it("links each cable straight to its wiring tab, in the table and in the cards", () => {
+    render(
+      <SearchResults search={{}} result={{ items: [item], total: 1, page: 1, pageCount: 1 }} />,
+    );
+
+    const links = screen.getAllByRole("link", { name: "Conexionado del cable SH-50" });
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", `/cables/${item.id}?vista=conexionado`);
+    }
   });
 });

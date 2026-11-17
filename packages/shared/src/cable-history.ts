@@ -8,6 +8,7 @@ import {
   type ConnectionStatus,
   type FieldChange,
 } from "./cables";
+import { describeWiringEdit } from "./wiring";
 
 /** Order in which an event's changes are shown (Postgres `jsonb` does not keep key order). */
 export const CHANGE_FIELD_ORDER = [
@@ -133,5 +134,7 @@ export function describeCableEvent(event: CableEventForSentence): string {
         : "timbró el cable: correcto";
     case "DELETED":
       return "dio de baja el cable";
+    case "WIRING_EDITED":
+      return describeWiringEdit(event.changes);
   }
 }

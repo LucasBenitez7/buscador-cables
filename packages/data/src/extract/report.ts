@@ -36,6 +36,7 @@ export function formatReport(result: ExtractionResult, generatedAt = new Date())
     `- Bandejas localizadas en el plano: ${stats.trayMarks.label} por su código dibujado, ${stats.trayMarks.flag} por la bandera de su sección; ${stats.trayMarks.tableOnly} solo en una tabla.`,
     `- Hojas de plano: ${result.sheets.length}.`,
     `- Tramos de recorrido: ${result.cables.reduce((sum, cable) => sum + cable.route.length, 0)}.`,
+    `- Conexionado: ${stats.wiring.cables} cables con tabla de hilos, ${stats.wiring.wires} hilos y ${stats.wiring.jumpers} puentes.`,
     `- Errores (fichas descartadas): ${errors.length}. Avisos: ${warnings.length}.`,
     "",
   ];

@@ -102,7 +102,7 @@ describe("user actions", () => {
       form({
         name: "Ana",
         email: "ana@planta.example",
-        role: "ROOT",
+        role: "../ROOT",
         password: "clave-temporal-1",
       }),
     );

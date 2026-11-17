@@ -18,6 +18,21 @@ export type RawCableEnd = {
   extra: string | null;
 };
 
+/** A terminal of the wiring table: terminal strip or block, and terminal or point. */
+export type RawTerminal = { block: string | null; point: string | null };
+
+/** A row of the INTERCONNECTION table: one wire (or shield) of the cable. */
+export type RawWire = {
+  wire: string | null;
+  /** Instrumentation only ("1.Blue"); the power lists name the wire by its colour code. */
+  colour: string | null;
+  from: RawTerminal;
+  to: RawTerminal;
+};
+
+/** A row of the JUMPERS table of the power lists: a bridge between two terminals. */
+export type RawJumper = { code: string | null; from: RawTerminal; to: RawTerminal };
+
 export type RawCableSheet = {
   layout: "instrument" | "power";
   page: number;
@@ -42,6 +57,11 @@ export type RawCableSheet = {
   /** Route column top to bottom, as printed (trays, markers, notes). */
   route: string[];
   observations: string | null;
+  /** Null when the page has no INTERCONNECTION table that can be read. */
+  wires: RawWire[] | null;
+  jumpers: RawJumper[];
+  /** Revision of the wiring table ("R. 5" next to INTERCONNECTION), power lists only. */
+  wiringRevision: string | null;
 };
 
 const TYPE_CODE = /^[A-Z]{1,2}\d{3,5}[A-Z]?$/;
@@ -154,6 +174,137 @@ function readRoute(runs: readonly TextRun[], top: number, bottom: number, right:
   return runsIn(runs, { top, bottom, right }).map((run) => run.text);
 }
 
+/**
+ * The header line of a table: the line that holds `first`, below `top`, with exactly the
+ * `expected` labels left to right. Null if the page does not have it (another layout).
+ */
+function tableHeader(
+  runs: readonly TextRun[],
+  first: string,
+  expected: readonly string[],
+  top: number,
+  bottom: number,
+): TextRun[] | null {
+  const label = findLabel(runs, first, (box) => box.top > top && box.top < bottom);
+  if (!label) return null;
+  const line = lines(runs.filter((run) => Math.abs(run.top - label.top) < 2.5))[0] ?? [];
+  const header = line.filter((run) => run.x0 >= label.x0 - 1);
+  const names = header.map((run) => compact(run.text));
+  return names.length === expected.length &&
+    names.every((name, i) => name === compact(expected[i]!))
+    ? header
+    : null;
+}
+
+/**
+ * The rows of a table under its header, between `top` and `bottom`: each text goes to the
+ * column whose header centre is nearest. A line without text in the first column is not a row
+ * (stray marks such as an empty revision box).
+ */
+function tableRows(
+  runs: readonly TextRun[],
+  header: readonly TextRun[],
+  top: number,
+  bottom: number,
+): (string | null)[][] {
+  const centres = header.map((run) => (run.x0 + run.x1) / 2);
+  const left = header[0]!.x0 - 15;
+  const rows: (string | null)[][] = [];
+  for (const line of lines(runsIn(runs, { top, bottom, left }))) {
+    const cells: string[][] = header.map(() => []);
+    for (const run of line) {
+      const middle = (run.x0 + run.x1) / 2;
+      const column = centres.reduce(
+        (best, centre, index) =>
+          Math.abs(centre - middle) < Math.abs(centres[best]! - middle) ? index : best,
+        0,
+      );
+      cells[column]!.push(run.text);
+    }
+    const row = cells.map((texts) => texts.join(" ").trim() || null);
+    if (row[0]) rows.push(row);
+  }
+  return rows;
+}
+
+const terminal = (block: string | null | undefined, point: string | null | undefined) => ({
+  block: block ?? null,
+  point: point ?? null,
+});
+
+const INSTRUMENT_WIRING = [
+  "Wire No.",
+  "Colour",
+  "Terminal Strip (End 1)",
+  "T.B. (End 1)",
+  "Terminal Strip (End 2)",
+  "T.B. (End 2)",
+] as const;
+const POWER_WIRING = ["WIRE", "BLOCK", "POINT", "BLOCK", "POINT"] as const;
+const POWER_JUMPERS = ["JUMPER", "BLOCK", "POINT", "BLOCK", "POINT"] as const;
+
+function readInstrumentWiring(page: PdfPage, interconnection: Box | null, bottom: number) {
+  if (!interconnection) return null;
+  const { runs } = page;
+  const header = tableHeader(
+    runs,
+    "Wire No.",
+    INSTRUMENT_WIRING,
+    interconnection.top,
+    interconnection.top + 40,
+  );
+  if (!header) return null;
+  return tableRows(runs, header, header[0]!.top + 4, bottom).map(
+    ([wire, colour, fromBlock, fromPoint, toBlock, toPoint]): RawWire => ({
+      wire: wire ?? null,
+      colour: colour ?? null,
+      from: terminal(fromBlock, fromPoint),
+      to: terminal(toBlock, toPoint),
+    }),
+  );
+}
+
+function readPowerWiring(page: PdfPage, interconnection: Box | null, bottom: number) {
+  const { runs } = page;
+  if (!interconnection) return { wires: null, jumpers: [], wiringRevision: null };
+  const jumpersLabel = findLabel(runs, "JUMPERS", (box) => box.top > interconnection.top);
+  const tableBottom = (jumpersLabel?.top ?? bottom) - 2;
+
+  const header = tableHeader(
+    runs,
+    "WIRE",
+    POWER_WIRING,
+    interconnection.top,
+    interconnection.top + 60,
+  );
+  const wires = header
+    ? tableRows(runs, header, header[0]!.top + 4, tableBottom).map(
+        ([wire, fromBlock, fromPoint, toBlock, toPoint]): RawWire => ({
+          wire: wire ?? null,
+          colour: null,
+          from: terminal(fromBlock, fromPoint),
+          to: terminal(toBlock, toPoint),
+        }),
+      )
+    : null;
+
+  const jumperHeader = jumpersLabel
+    ? tableHeader(runs, "JUMPER", POWER_JUMPERS, jumpersLabel.top, jumpersLabel.top + 60)
+    : null;
+  const jumpers = jumperHeader
+    ? tableRows(runs, jumperHeader, jumperHeader[0]!.top + 4, bottom - 2).map(
+        ([code, fromBlock, fromPoint, toBlock, toPoint]): RawJumper => ({
+          code: code ?? null,
+          from: terminal(fromBlock, fromPoint),
+          to: terminal(toBlock, toPoint),
+        }),
+      )
+    : [];
+
+  const revision = rightOf(runs, interconnection, page.width)?.replace(/^R\.?\s*/i, "") || null;
+  return { wires, jumpers, wiringRevision: revision };
+}
+
 function parsePowerSheet(page: PdfPage): RawCableSheet {
   const { runs, width, height } = page;
   const idLabel = findLabel(runs, "CABLE ID")!;
@@ -242,6 +393,11 @@ function parsePowerSheet(page: PdfPage): RawCableSheet {
       ? readRoute(runs, route.top + 4, (observations?.top ?? height) - 2, width * 0.3)
       : [],
     observations: observations ? rightOf(runs, observations, width) : null,
+    ...readPowerWiring(
+      page,
+      findLabel(runs, "INTERCONNECTION", (box) => box.x0 > width * 0.3),
+      observations?.top ?? height,
+    ),
   };
 }
 
@@ -302,5 +458,12 @@ function parseInstrumentSheet(page: PdfPage): RawCableSheet {
       ? readRoute(runs, route.top + 4, (observations?.top ?? height) - 2, width * 0.17)
       : [],
     observations: observations ? rightOf(runs, observations, width * 0.6) : null,
+    wires: readInstrumentWiring(
+      page,
+      findLabel(runs, "INTERCONNECTION", (box) => box.x0 > width * 0.3),
+      (observations?.top ?? height) - 2,
+    ),
+    jumpers: [],
+    wiringRevision: null,
   };
 }

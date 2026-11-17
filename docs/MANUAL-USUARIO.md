@@ -17,6 +17,20 @@ Funciona en el ordenador y en el móvil o la tableta, desde el navegador.
 3. **Esperar la aprobación:** un administrador revisa la cuenta y le da un rol. Cuando la
    aprueba, llega otro correo y ya puedes entrar.
 
+En el ordenador, el menú de arriba tiene las secciones principales; **Gestión** agrupa
+Catálogos y Usuarios (con el número de cuentas pendientes), y el botón con **tu nombre** abre
+«Mi actividad» y «Cerrar sesión». En el móvil está todo en el botón ☰.
+
+**Fichas largas.** Arriba de cada ficha (cable, bandeja, equipo) hay una barra **«Ir a»**
+que se queda fija al bajar: un toque y vas a la tabla, al plano, a la hoja original o al
+historial. Cada bloque se pliega pulsando su título (siempre empieza abierto), y las listas
+largas enseñan las 10 primeras filas con un botón «Ver los N».
+
+**Filtros y orden.** Las listas largas (cuentas, cambios en las cuentas, historial de un cable,
+equipos, actividad, conexionado) tienen arriba sus filtros y un «Orden». Los filtros quedan en
+la dirección de la página: se puede guardar o compartir el enlace. «Quitar filtros» vuelve a
+verlo todo.
+
 ¿Olvidaste la contraseña? «He olvidado mi contraseña» en la entrada: llega un enlace para
 poner otra (caduca en una hora). Tras 10 contraseñas incorrectas seguidas, la cuenta se bloquea
 15 minutos.
@@ -25,12 +39,12 @@ poner otra (caduca en una hora). Tras 10 contraseñas incorrectas seguidas, la c
 
 Cada rol puede hacer también todo lo de los anteriores.
 
-| Rol               | Para quién                   | Qué puede hacer                                                                                           |
-| ----------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Consulta**      | Quien solo necesita mirar    | Buscar cables y ver su ficha, recorrido e historial; ver bandejas, ubicaciones y planos.                  |
-| **Técnico**       | Quien trabaja en campo       | Tender (también a medias), enrollar, mover, conectar, desconectar y timbrar; dar de alta y editar cables. |
-| **Supervisor**    | Quien coordina la obra       | Ver la actividad de todo el equipo; retirar cables y corregir su estado; ubicaciones y catálogos.         |
-| **Administrador** | Quien gestiona la aplicación | Aprobar cuentas, cambiar roles, desactivar cuentas, dar de alta usuarios y eliminar cables.               |
+| Rol               | Para quién                   | Qué puede hacer                                                                                                            |
+| ----------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Consulta**      | Quien solo necesita mirar    | Buscar cables y ver su ficha, recorrido e historial; ver bandejas, ubicaciones y planos.                                   |
+| **Técnico**       | Quien trabaja en campo       | Tender (también a medias), enrollar, mover, conectar, desconectar y timbrar; corregir bornas; dar de alta y editar cables. |
+| **Supervisor**    | Quien coordina la obra       | Ver la actividad de todo el equipo; retirar cables y corregir su estado; ubicaciones y catálogos.                          |
+| **Administrador** | Quien gestiona la aplicación | Aprobar cuentas, cambiar roles, desactivar cuentas, dar de alta usuarios y eliminar cables.                                |
 
 La misma tabla está siempre a la vista en la página **Usuarios** del administrador.
 
@@ -61,8 +75,44 @@ fabricante, sección, longitud, estado de instalación, conexión y timbrado, ni
 (exacto, en origen o destino) y bandeja. Los filtros quedan en la dirección de la página: se
 puede guardar o compartir una búsqueda copiando el enlace.
 
-Pulsa un código para abrir su **ficha**: datos, origen y destino, recorrido por bandejas, el
-plano con el recorrido marcado y el historial completo.
+Pulsa un código para abrir su **ficha**. Tiene dos pestañas, con las mismas acciones y el
+mismo historial arriba y abajo:
+
+- **Recorrido** (quien tiende): datos, origen y destino, recorrido por bandejas y el plano con
+  el recorrido marcado.
+- **Conexionado** (quien conecta): la tabla de hilos con el regletero y la borna de cada uno
+  en origen y en destino, los puentes y la **hoja original del listado**, con zoom. En caso de
+  duda, manda la hoja original.
+
+En el buscador, cada cable tiene debajo de su código el enlace **Conexionado**, que abre la
+ficha directamente en esa pestaña. En la tabla de hilos, encima de «Origen» y «Destino» está
+el equipo de cada punta (enlaza a su página).
+
+El cable es el mismo en las dos: si alguien lo timbró, se ve timbrado también en Conexionado.
+Conectar no exige haber timbrado antes, ni al revés.
+
+## Conexionado: corregir bornas
+
+Si en campo un hilo está en otro regletero o en otra borna que la del listado (técnico,
+supervisor y administrador):
+
+1. En la pestaña **Conexionado**, activa **Modo editar**.
+2. Cambia solo las celdas que no coinciden. Lo cambiado se marca; si dos hilos de la misma
+   punta quedan en la misma borna, la tabla lo marca en rojo y lo explica.
+3. Escribe, si quieres, una nota (por qué cambia) y pulsa **Guardar**. Si hay bornas
+   repetidas, la app pide confirmarlo con **Guardar igualmente**.
+
+El listado no se pierde: debajo de cada celda corregida se ve «Listado: …», y el botón ↺ de la
+fila la devuelve a lo que dice el listado. Se marca **por punta**, como siempre (Conectar
+origen / destino), no hilo a hilo. Una revisión nueva del listado no pisa lo corregido en
+campo.
+
+## Equipos
+
+**Equipos** busca un cuadro, caja o armario y abre su página: los cables que llegan a él,
+agrupados por regletero, con sus bornas, el equipo del otro lado y si **esa punta** está
+conectada. «Solo pendientes de conectar» deja los que faltan. Es la forma de trabajar armario
+a armario. El código de un equipo, en cualquier ficha, lleva a su página.
 
 ## Registrar trabajo en un cable
 
@@ -88,7 +138,9 @@ bandeja marcada, qué cables pasan por ella y cuáles esperan con una punta suel
 En el plano:
 
 - Arrastra para moverte; rueda o dos dedos para acercar y alejar.
-- Botones de la derecha: acercar, alejar, ver la hoja entera y pantalla completa.
+- Botones de la derecha: acercar, alejar, ver la hoja entera y **pantalla completa** (igual en
+  los planos y en la hoja original de un cable). Se sale con «Salir de pantalla completa» o con
+  Esc.
 - «Ir a la marca» y «Siguiente» saltan entre las marcas.
 - Con el plano seleccionado, también con el teclado: flechas para moverlo, «+» y «−» para
   acercar o alejar y 0 para verlo entero.
@@ -104,6 +156,8 @@ tiene su página con lo que contiene, sus cables y sus bandejas.
 ## Actividad
 
 - **Mi actividad**: todo lo que has registrado, por días.
+- Una corrección de bornas ocupa **una línea** («corrigió las bornas de 3 hilos en origen»).
+  «Ver qué cambió» abre su página con cada hilo, antes y después.
 - **Actividad** (supervisor y administrador): lo de todo el equipo, con filtros por persona,
   acción y periodo.
 
@@ -118,11 +172,47 @@ administrador con los datos de la persona.
 - Cambiar el rol de una cuenta activa, desactivarla (cierra sus sesiones) o reactivarla.
 - **Dar de alta un usuario** directamente, con una contraseña temporal que le comunicas; puede
   cambiarla con «He olvidado mi contraseña».
-- **Cambios en las cuentas**: quién aprobó, cambió de rol o desactivó a quién y cuándo. No se
-  puede editar ni borrar.
+- **Cuentas**: se filtran por nombre o correo, rol y estado (pendientes, activas,
+  desactivadas) y se ordenan (pendientes primero, nombre, alta o rol), 25 por página.
+- **Cambios en las cuentas**: los últimos aparecen aquí; «Ver todos y filtrarlos» abre su
+  página, con filtros por tipo de cambio, persona (quien lo hizo o quien lo recibió) y fechas.
+  No se pueden editar ni borrar.
 
-Nadie puede gestionar a alguien de su mismo rol o superior (salvo los administradores entre
-sí), ni cambiarse el rol, ni desactivarse. Siempre queda al menos un administrador activo.
+Solo el rol Administrador gestiona cuentas. Nadie puede cambiarse el rol ni desactivarse, y
+siempre queda al menos un administrador activo.
+
+### Roles y permisos (administrador)
+
+En **Gestión → Roles y permisos**:
+
+- La lista de roles, con cuántas personas tiene cada uno. Los cuatro de siempre
+  (Administrador, Supervisor, Técnico, Consulta) no se borran; **Administrador** tampoco se
+  edita.
+- **Crear rol**: elige un rol del que copiar, ponle nombre y marca o desmarca lo que puede
+  hacer. Cada permiso está explicado. Un rol nuevo aparece al momento en Usuarios.
+- En la ficha de un rol se cambian sus permisos: **afecta al momento** a todas las personas que
+  lo tienen. Un rol solo se borra si nadie lo tiene.
+
+**Permisos extra de una persona**: en Usuarios, pulsa su nombre. Su ficha dice lo que puede
+hacer y si le viene de su rol o es un extra. Marca lo que necesite además de su rol y guarda.
+En la lista de cuentas se ve como «Técnico **+2**».
+
+«Gestionar cuentas» y «Gestionar roles» son solo del rol Administrador: no se pueden dar a
+otro rol ni como extra.
+
+### Quién ve qué
+
+| Qué                                   | Quién lo ve                                                           |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| Cables, bandejas, equipos e historial | Todo el mundo (ver cables va en todos los roles)                      |
+| Mi actividad                          | Cada persona, la suya                                                 |
+| Actividad del equipo                  | Quien tenga «Ver la actividad del equipo» (Supervisor, Administrador) |
+| Detalle de un movimiento              | Quien lo hizo, quien ve la actividad del equipo o quien ve el cable   |
+| Usuarios y cambios en las cuentas     | Solo el Administrador                                                 |
+| Roles, permisos y sus cambios         | Solo el Administrador                                                 |
+
+Todos los cambios de cuentas, roles y permisos extra quedan en **Cambios en las cuentas**, con
+quién, qué y cuándo, y no se pueden editar ni borrar.
 
 **Catálogos** (supervisor y administrador): tipos de cable, colores y fabricantes.
 

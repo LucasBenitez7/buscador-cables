@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -72,7 +73,7 @@ export default async function LocationPage({ params }: { params: Params }) {
         </p>
       </header>
 
-      <Section title="Datos">
+      <Section title="Datos" collapsible>
         <DataList>
           <Item label="Tipo">{typeLabel}</Item>
           <Item label="Código">
@@ -111,6 +112,7 @@ export default async function LocationPage({ params }: { params: Params }) {
       {location.someCables.length > 0 ? (
         <Section
           title={`Cables (${location.cables})`}
+          collapsible
           action={
             <Button asChild variant="outline" size="sm">
               <Link href={locationCablesHref(location.id)}>
@@ -121,8 +123,11 @@ export default async function LocationPage({ params }: { params: Params }) {
             </Button>
           }
         >
-          <ul className="bg-card divide-y rounded-lg border">
-            {location.someCables.map((cable) => (
+          <ShowMore
+            as="ul"
+            className="bg-card divide-y rounded-lg border"
+            noun="cables"
+            items={location.someCables.map((cable) => (
               <li
                 key={cable.id}
                 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 text-sm"
@@ -142,13 +147,14 @@ export default async function LocationPage({ params }: { params: Params }) {
                 </span>
               </li>
             ))}
-          </ul>
+          />
         </Section>
       ) : null}
 
       {location.children.length > 0 ? (
         <Section
           title={`Contiene (${location.children.length})`}
+          collapsible
           action={
             location.cables > 0 ? (
               <Button asChild variant="outline" size="sm">

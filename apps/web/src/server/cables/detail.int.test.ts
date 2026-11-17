@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { permissionsOfRole } from "@cables/shared";
 import { prisma } from "@cables/db";
 import { cableActionSchema, createCableSchema, updateCableSchema } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -138,7 +139,7 @@ describe("getCableDetail", () => {
 
   it("tells each field action as a sentence with its changes in a stable order", async () => {
     const { id } = await newCable();
-    const supervisor = { id: actor.id, role: "ADMIN" as const };
+    const supervisor = { id: actor.id, ...permissionsOfRole("ADMIN") };
     const run = async (fields: Record<string, string>) => {
       const { version } = await prisma.cable.findUniqueOrThrow({ where: { id } });
       await runCableAction(
@@ -213,7 +214,7 @@ describe("getCableDetail: route and loose end", () => {
       ],
     });
     await runCableAction(
-      { id: actor.id, role: "ADMIN" },
+      { id: actor.id, ...permissionsOfRole("ADMIN") },
       cableActionSchema.parse({
         cableId: created.id,
         version: "1",
@@ -303,5 +304,46 @@ describe("getCableDetail: data from the project lists", () => {
       state: { originId: "99XAB10CT001", destinationId: "c2" },
       route: [],
     });
+  });
+});
+
+describe("getCableDetail: history filters", () => {
+  it("filters the history by action and person, orders it, and still counts it all", async () => {
+    const { id } = await newCable();
+    const other = await prisma.user.create({
+      data: { id: randomUUID(), name: "Ana Ruiz", email: "ana@cables.test", role: "TECHNICIAN" },
+    });
+    await prisma.cableEvent.createMany({
+      data: [
+        {
+          cableId: id,
+          userId: other.id,
+          action: "TESTED",
+          changes: { testStatus: { from: "NOT_TESTED", to: "TESTED_OK" } },
+          createdAt: new Date("2026-11-20T10:00:00Z"),
+        },
+        {
+          cableId: id,
+          userId: actor.id,
+          action: "TESTED",
+          changes: { testStatus: { from: "TESTED_OK", to: "TESTED_FAILED" } },
+          createdAt: new Date("2026-11-21T10:00:00Z"),
+        },
+      ],
+    });
+
+    const all = await getCableDetail(id);
+    expect(all).toMatchObject({ historyTotal: 3, historyAll: 3 });
+    expect(all?.historyPeople.map((person) => person.label)).toEqual(["Ana Ruiz", "Tomás Gil"]);
+
+    const tested = await getCableDetail(id, { action: "TESTED" });
+    expect(tested).toMatchObject({ historyTotal: 2, historyAll: 3 });
+    expect(tested?.history.map((entry) => entry.user)).toEqual(["Tomás Gil", "Ana Ruiz"]);
+
+    const oldest = await getCableDetail(id, { action: "TESTED", sort: "oldest" });
+    expect(oldest?.history.map((entry) => entry.user)).toEqual(["Ana Ruiz", "Tomás Gil"]);
+
+    const byAna = await getCableDetail(id, { person: other.id });
+    expect(byAna?.history.map((entry) => entry.action)).toEqual(["TESTED"]);
   });
 });

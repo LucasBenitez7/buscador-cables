@@ -16,35 +16,68 @@ datasource db {
 // Autenticación (Better Auth)
 // ---------------------------------------------------------------------------
 
-enum Role {
-  ADMIN
-  SUPERVISOR
-  TECHNICIAN
-  VIEWER
+/// Un rol: qué puede hacer quien lo tiene (fase 12). Los cuatro de siempre tienen como id su
+/// clave (`ADMIN`, `SUPERVISOR`, `TECHNICIAN`, `VIEWER`) y no se borran; el administrador crea
+/// otros desde la web. `permissions` solo admite los permisos del código (`PERMISSIONS`).
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions String[]
+  /// El rol Administrador: no se edita ni se borra, y es el único con la gestión de cuentas y
+  /// de roles.
+  locked      Boolean  @default(false)
+  /// Uno de los cuatro de siempre: no se borra (sí se editan sus permisos, salvo Administrador).
+  system      Boolean  @default(false)
+  /// Control de concurrencia: dos administradores editando a la vez no se pisan.
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+
+  @@map("role")
+}
+
+/// Permiso extra de una persona, además de los de su rol (fase 12).
+model UserPermissionGrant {
+  userId      String
+  user        User     @relation("UserGrants", fields: [userId], references: [id], onDelete: Cascade)
+  permission  String
+  grantedById String
+  grantedBy   User     @relation("UserGrantsGiven", fields: [grantedById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+
+  @@id([userId, permission])
+  @@map("user_permission_grant")
 }
 
 model User {
-  id               String       @id @default(cuid())
+  id               String                @id @default(cuid())
   name             String
-  email            String       @unique
-  emailVerified    Boolean      @default(false)
+  email            String                @unique
+  emailVerified    Boolean               @default(false)
   image            String?
-  role             Role         @default(VIEWER)
-  active           Boolean      @default(true)
+  /// Id del rol (`Role.id`). Los de siempre: "ADMIN", "SUPERVISOR", "TECHNICIAN", "VIEWER".
+  role             String                @default("VIEWER")
+  roleInfo         Role                  @relation(fields: [role], references: [id], onDelete: Restrict)
+  /// Permisos además de los de su rol.
+  permissionGrants UserPermissionGrant[] @relation("UserGrants")
+  grantsGiven      UserPermissionGrant[] @relation("UserGrantsGiven")
+  active           Boolean               @default(true)
   /// Cuándo aprobó un administrador la cuenta. Null: registrada y pendiente de aprobación.
   approvedAt       DateTime?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
   sessions         Session[]
   accounts         Account[]
   // Trazabilidad (fase 5): qué hizo cada usuario sobre los cables.
   cableEvents      CableEvent[]
-  lastActionCables Cable[]      @relation("CableLastActionBy")
-  installedCables  Cable[]      @relation("CableInstalledBy")
-  connectedCables  Cable[]      @relation("CableConnectedBy")
+  lastActionCables Cable[]               @relation("CableLastActionBy")
+  installedCables  Cable[]               @relation("CableInstalledBy")
+  connectedCables  Cable[]               @relation("CableConnectedBy")
   // Auditoría de cuentas (fase 10): lo que hizo cada administrador y a quién.
-  userEventsDone   UserEvent[]  @relation("UserEventActor")
-  userEvents       UserEvent[]  @relation("UserEventTarget")
+  userEventsDone   UserEvent[]           @relation("UserEventActor")
+  userEvents       UserEvent[]           @relation("UserEventTarget")
 
   @@map("user")
 }
@@ -55,6 +88,10 @@ enum UserEventAction {
   ROLE_CHANGED
   DEACTIVATED
   REACTIVATED
+  PERMISSIONS_CHANGED // permisos extra de una persona
+  ROLE_CREATED
+  ROLE_UPDATED
+  ROLE_DELETED
 }
 
 /// Auditoría de las cuentas: quién creó, aprobó, cambió de rol o desactivó a quién. Nunca se
@@ -64,15 +101,21 @@ model UserEvent {
   action    UserEventAction
   actorId   String
   actor     User            @relation("UserEventActor", fields: [actorId], references: [id], onDelete: Restrict)
-  targetId  String
-  target    User            @relation("UserEventTarget", fields: [targetId], references: [id], onDelete: Restrict)
-  /// Rol antes y después (`ROLE_CHANGED`) o con el que entra (`CREATED`, `APPROVED`).
-  fromRole  Role?
-  toRole    Role?
+  /// La persona afectada; vacío en los cambios de un rol (`ROLE_*`).
+  targetId  String?
+  target    User?           @relation("UserEventTarget", fields: [targetId], references: [id], onDelete: Restrict)
+  /// Rol antes y después (`ROLE_CHANGED`) o con el que entra (`CREATED`, `APPROVED`): ids.
+  fromRole  String?
+  toRole    String?
+  /// El rol de un cambio `ROLE_*` (su id; puede estar ya borrado: el nombre va en `details`).
+  roleId    String?
+  /// Lo que cambió, legible: nombre del rol, permisos añadidos y quitados.
+  details   Json?
   createdAt DateTime        @default(now())
 
   @@index([createdAt])
   @@index([targetId, createdAt])
+  @@index([action, createdAt])
   @@map("user_event")
 }
 
@@ -244,6 +287,7 @@ enum CableAction {
   CORRECTION
   TESTED // timbrado
   DELETED // baja lógica (deletedAt)
+  WIRING_EDITED // bornas corregidas en campo (modo editar del conexionado)
 }
 
 /// Nivel del cable en los listados del proyecto (ver docs/DATOS-PROYECTO.md).
@@ -319,6 +363,11 @@ model Cable {
 
   /// Recorrido previsto, en orden.
   routeSteps     CableRouteStep[]
+  /// Conexionado: hilos con su regletero y borna en cada punta, y puentes (listados eléctricos).
+  wires          CableWire[]
+  jumpers        CableJumper[]
+  /// Revisión de la tabla de conexionado ("R." junto a INTERCONNECTION, listado eléctrico).
+  wiringRevision String?
   /// Cable tendido a medias: qué punta quedó suelta y en qué bandeja espera.
   looseEnd       CableEndSide?
   looseEndTrayId String?
@@ -494,6 +543,50 @@ model CableRouteStep {
 
 /// De dónde sale un evento del historial. La carga de los listados lo usa para no pisar lo
 /// que una persona corrigió a mano en la app.
+/// Un hilo del cable (tabla INTERCONNECTION del listado) y dónde va en cada punta.
+/// Los campos `pdf*` guardan lo que dice el listado; los otros, lo que hay en campo. Son iguales
+/// hasta que alguien corrige una borna con el modo editar; una recarga de los listados
+/// actualiza los `pdf*` y solo cambia los de campo que nadie ha corregido.
+model CableWire {
+  id                  String  @id @default(cuid())
+  cableId             String
+  cable               Cable   @relation(fields: [cableId], references: [id], onDelete: Restrict)
+  /// 1, 2, 3... en el orden del listado.
+  position            Int
+  /// Número o código del hilo tal y como viene: "1+", "BN", "BK-3", "SH".
+  wire                String
+  /// Color del hilo (listado de instrumentación): "1.Blue".
+  colour              String?
+  /// Regletero o bloque, y borna o punto, en origen y en destino ("X51" · "11").
+  originBlock         String?
+  originPoint         String?
+  destinationBlock    String?
+  destinationPoint    String?
+  pdfOriginBlock      String?
+  pdfOriginPoint      String?
+  pdfDestinationBlock String?
+  pdfDestinationPoint String?
+
+  @@unique([cableId, position])
+  @@map("cable_wire")
+}
+
+/// Puente entre dos bornas (tabla JUMPERS del listado eléctrico). Solo lectura.
+model CableJumper {
+  id        String  @id @default(cuid())
+  cableId   String
+  cable     Cable   @relation(fields: [cableId], references: [id], onDelete: Restrict)
+  position  Int
+  code      String
+  fromBlock String?
+  fromPoint String?
+  toBlock   String?
+  toPoint   String?
+
+  @@unique([cableId, position])
+  @@map("cable_jumper")
+}
+
 enum CableEventSource {
   APP // una persona, desde la aplicación
   PROJECT_LOAD // la carga de los listados del proyecto (`pnpm data:load`)

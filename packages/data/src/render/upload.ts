@@ -11,6 +11,7 @@ import { AwsClient } from "aws4fetch";
 import {
   DRAWINGS_MANIFEST,
   bucketObjectUrl,
+  isCableSheetKey,
   type DrawingsBucket,
   type DrawingsManifest,
 } from "@cables/shared";
@@ -35,8 +36,12 @@ async function inPool<T>(items: readonly T[], task: (item: T) => Promise<void>) 
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, worker));
 }
 
-/** Every file of a sheet: its descriptor and its tiles, relative to the folder, with "/". */
+/**
+ * Every file of a sheet: its descriptor and its tiles, relative to the folder, with "/". The
+ * page of a cable is a single image.
+ */
 async function sheetFiles(dir: string, key: string): Promise<string[]> {
+  if (isCableSheetKey(key)) return [`${key}.webp`];
   const tiles = await readdir(path.join(dir, `${key}_files`), {
     recursive: true,
     withFileTypes: true,
@@ -107,7 +112,9 @@ export async function uploadDrawings(options: {
   await call("PUT", DRAWINGS_MANIFEST, manifest, "application/json");
 
   for (const key of Object.keys(remote).filter((key) => !(key in local))) {
-    const files = [`${key}.dzi`, ...(await listKeys(bucket, client, `${key}_files/`))];
+    const files = isCableSheetKey(key)
+      ? [`${key}.webp`]
+      : [`${key}.dzi`, ...(await listKeys(bucket, client, `${key}_files/`))];
     await inPool(files, async (file) => {
       await call("DELETE", file);
     });

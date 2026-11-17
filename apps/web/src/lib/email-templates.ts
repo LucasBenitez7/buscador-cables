@@ -1,4 +1,7 @@
-import { ROLE_DESCRIPTIONS, ROLE_LABELS, type Role } from "@cables/shared";
+import { PERMISSION_LABELS, isPermission } from "@cables/shared";
+
+/** A role as the emails show it (fase 12: roles live in the database). */
+export type RoleSummary = { name: string; description: string | null; permissions: string[] };
 import type { OutgoingEmail } from "@/server/email";
 
 /**
@@ -142,7 +145,11 @@ function email(to: string, subject: string, content: EmailContent): OutgoingEmai
   };
 }
 
-const roleList = (role: Role, title: string) => ({ title, items: ROLE_DESCRIPTIONS[role].can });
+/** What the role lets the person do, in words. */
+const roleList = (role: RoleSummary) => ({
+  title: role.description ?? `Con el rol ${role.name} puedes:`,
+  items: role.permissions.filter(isPermission).map((permission) => PERMISSION_LABELS[permission]),
+});
 
 // ---------------------------------------------------------------------------------------------
 // To the person: their own account
@@ -222,20 +229,20 @@ export function accountExistsEmail(input: {
 export function welcomeEmail(input: {
   to: string;
   name: string;
-  role: Role;
+  role: RoleSummary;
   loginUrl: string;
 }): OutgoingEmail {
   return email(input.to, "tu cuenta está aprobada", {
-    preheader: `Ya puedes entrar con el rol ${ROLE_LABELS[input.role]}.`,
+    preheader: `Ya puedes entrar con el rol ${input.role.name}.`,
     title: `Bienvenido/a, ${input.name}`,
     paragraphs: [
       "Un administrador ha aprobado tu cuenta. Ya puedes entrar con tu correo y tu contraseña.",
     ],
     details: [
-      ["Tu rol", ROLE_LABELS[input.role]],
+      ["Tu rol", input.role.name],
       ["Correo", input.to],
     ],
-    list: roleList(input.role, ROLE_DESCRIPTIONS[input.role].summary),
+    list: roleList(input.role),
     action: { label: "Entrar", url: input.loginUrl },
   });
 }
@@ -244,23 +251,23 @@ export function welcomeEmail(input: {
 export function accountCreatedEmail(input: {
   to: string;
   name: string;
-  role: Role;
+  role: RoleSummary;
   createdBy: string;
   loginUrl: string;
   forgotPasswordUrl: string;
 }): OutgoingEmail {
   return email(input.to, "te han dado de alta", {
-    preheader: `${input.createdBy} te ha dado de alta con el rol ${ROLE_LABELS[input.role]}.`,
+    preheader: `${input.createdBy} te ha dado de alta con el rol ${input.role.name}.`,
     title: `Bienvenido/a, ${input.name}`,
     paragraphs: [
       `${input.createdBy} te ha dado de alta en ${APP_NAME}. Te dará una contraseña temporal para el primer acceso.`,
       "Te recomendamos cambiarla en cuanto entres: en la pantalla de entrada, «He olvidado mi contraseña» te envía un enlace para poner una tuya.",
     ],
     details: [
-      ["Tu rol", ROLE_LABELS[input.role]],
+      ["Tu rol", input.role.name],
       ["Correo", input.to],
     ],
-    list: roleList(input.role, ROLE_DESCRIPTIONS[input.role].summary),
+    list: roleList(input.role),
     action: { label: "Entrar", url: input.loginUrl },
     note: `Para poner tu propia contraseña: ${input.forgotPasswordUrl}`,
   });
@@ -269,22 +276,22 @@ export function accountCreatedEmail(input: {
 export function roleChangedEmail(input: {
   to: string;
   name: string;
-  fromRole: Role;
-  toRole: Role;
+  fromRole: RoleSummary;
+  toRole: RoleSummary;
   changedBy: string;
   loginUrl: string;
 }): OutgoingEmail {
-  return email(input.to, `ahora eres ${ROLE_LABELS[input.toRole]}`, {
-    preheader: `Tu rol ha cambiado a ${ROLE_LABELS[input.toRole]}.`,
+  return email(input.to, `ahora eres ${input.toRole.name}`, {
+    preheader: `Tu rol ha cambiado a ${input.toRole.name}.`,
     title: "Tu rol ha cambiado",
     paragraphs: [
       `Hola, ${input.name}. ${input.changedBy} ha cambiado tu rol. El cambio ya está activo: la próxima página que abras lo tendrá en cuenta.`,
     ],
     details: [
-      ["Antes", ROLE_LABELS[input.fromRole]],
-      ["Ahora", ROLE_LABELS[input.toRole]],
+      ["Antes", input.fromRole.name],
+      ["Ahora", input.toRole.name],
     ],
-    list: roleList(input.toRole, ROLE_DESCRIPTIONS[input.toRole].summary),
+    list: roleList(input.toRole),
     action: { label: "Abrir la aplicación", url: input.loginUrl },
   });
 }

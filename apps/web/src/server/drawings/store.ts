@@ -9,6 +9,7 @@ import {
   bucketObjectUrl,
   drawingsBucket,
   environmentSchema,
+  isCableSheetKey,
   type DrawingsBucket,
   type DrawingsManifest,
 } from "@cables/shared";
@@ -105,19 +106,30 @@ export type DrawingFile = {
   etag: string;
 };
 
-/** The descriptor of a sheet (`<key>.dzi`), the first thing the viewer asks for. */
+/**
+ * The descriptor of a sheet (`<key>.dzi`), the first thing the viewer asks for, or the single
+ * image of a cable page (`<key>.webp`): both always check the session.
+ */
 export const isDrawingDescriptor = (segments: readonly string[]): boolean => segments.length === 1;
 
 /**
  * The relative path of a tile or descriptor from the URL segments, or null for anything else.
- * Only two shapes are accepted, so a URL can never reach a file outside the tiles. Always with
- * "/": it is also the key of the object in the bucket.
+ * Only three shapes are accepted, so a URL can never reach a file outside the drawings: a
+ * descriptor, a tile, or the image of a cable page (fase 11). Always with "/": it is also the
+ * key of the object in the bucket.
  */
 export function drawingFilePath(segments: readonly string[]): string | null {
   if (segments.length === 1) {
     const [file] = segments;
-    const key = file!.endsWith(".dzi") ? file!.slice(0, -4) : null;
-    return key && KEY.test(key) ? `${key}.dzi` : null;
+    if (file!.endsWith(".dzi")) {
+      const key = file!.slice(0, -4);
+      return KEY.test(key) ? `${key}.dzi` : null;
+    }
+    if (file!.endsWith(".webp")) {
+      const key = file!.slice(0, -5);
+      return KEY.test(key) && isCableSheetKey(key) ? `${key}.webp` : null;
+    }
+    return null;
   }
   if (segments.length === 3) {
     const [folder, level, tile] = segments;
@@ -165,7 +177,8 @@ export async function hasDrawingImage(key: string): Promise<boolean> {
     }
   }
   try {
-    return (await stat(path.join(drawingsDir(), `${key}.dzi`))).isFile();
+    const file = isCableSheetKey(key) ? `${key}.webp` : `${key}.dzi`;
+    return (await stat(path.join(drawingsDir(), file))).isFile();
   } catch {
     return false;
   }

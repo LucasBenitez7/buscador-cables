@@ -50,6 +50,7 @@ function instrumentCable(overrides: Partial<ProjectCable> = {}): ProjectCable {
     sourceDocument: "EJ-ICO-LST-0100",
     sourceFile: "instrumentacion.pdf",
     sourcePage: 8,
+    sourceFingerprint: "0123456789abcdef",
     origin: end({ equipment: "99XAB10CT001", gland: "M-20ARM", room: "99UYC14RA001" }),
     destination: end({ equipment: "99CXJ11", gland: "M-20", room: "99UXB23RA052" }),
     route: [
@@ -57,6 +58,9 @@ function instrumentCable(overrides: Partial<ProjectCable> = {}): ProjectCable {
       { label: "(NOTE 1)", trayCode: null, section: "FIELD" },
       { label: "99UXB01L10030", trayCode: "99UXB01L10030", section: "ROOM" },
     ],
+    wiringRevision: null,
+    wires: [],
+    jumpers: [],
     ...overrides,
   };
 }
@@ -687,5 +691,82 @@ describe("loadProjectData: warnings and dry run", () => {
       ["CREATED", "PROJECT_LOAD"],
       ["UPDATED", "PROJECT_LOAD"],
     ]);
+  });
+});
+
+describe("loadProjectData: wiring", () => {
+  const wire = (position: number, label: string, originPoint: string) => ({
+    position,
+    wire: label,
+    colour: null,
+    originBlock: "X51",
+    originPoint,
+    destinationBlock: "-",
+    destinationPoint: "+",
+  });
+  const jumper = {
+    position: 1,
+    code: "99XAT10-J01",
+    fromBlock: "XT03",
+    fromPoint: "13",
+    toBlock: "XT03",
+    toPoint: "21",
+  };
+
+  it("stores the wires as the list prints them, and the jumpers", async () => {
+    await load([
+      powerCable({ wires: [wire(1, "BN", "11"), wire(2, "BU", "12")], jumpers: [jumper] }),
+    ]);
+
+    const cable = await db.cable.findUniqueOrThrow({
+      where: { code: "99XAT10W2005" },
+      include: { wires: { orderBy: { position: "asc" } }, jumpers: true },
+    });
+    expect(cable.wires.map((row) => [row.wire, row.originPoint, row.pdfOriginPoint])).toEqual([
+      ["BN", "11", "11"],
+      ["BU", "12", "12"],
+    ]);
+    expect(cable.jumpers).toMatchObject([jumper]);
+  });
+
+  it("keeps a terminal corrected in the field when a new revision changes the list", async () => {
+    await load([powerCable({ wires: [wire(1, "BN", "11"), wire(2, "BU", "12")] })]);
+    const { id } = await db.cable.findUniqueOrThrow({ where: { code: "99XAT10W2005" } });
+    await db.cableWire.update({
+      where: { cableId_position: { cableId: id, position: 1 } },
+      data: { originPoint: "14" },
+    });
+
+    const summary = await load([
+      powerCable({ revision: "3", wires: [wire(1, "BN", "15"), wire(2, "BU", "16")] }),
+    ]);
+
+    const wires = await db.cableWire.findMany({
+      where: { cableId: id },
+      orderBy: { position: "asc" },
+    });
+    expect(wires.map((row) => [row.originPoint, row.pdfOriginPoint])).toEqual([
+      ["14", "15"],
+      ["16", "16"],
+    ]);
+    expect(summary.issues).toContain(
+      "99XAT10W2005: hilo BN, borna de origen corregido en campo (14); el listado nuevo dice 15. No se cambia.",
+    );
+    const event = await db.cableEvent.findFirstOrThrow({
+      where: { cableId: id, source: "PROJECT_LOAD", action: "UPDATED" },
+    });
+    expect(event.changes).toEqual({
+      revision: { from: "2", to: "3" },
+      wiring: { from: "2 hilos", to: "2 hilos, 2 celdas cambiadas en el listado" },
+    });
+  });
+
+  it("changes nothing when the wiring and the jumpers did not change", async () => {
+    const cable = powerCable({ wires: [wire(1, "BN", "11")], jumpers: [jumper] });
+    await load([cable]);
+
+    const summary = await load([cable]);
+
+    expect(summary.cables).toMatchObject({ updated: 0, unchanged: 1 });
   });
 });

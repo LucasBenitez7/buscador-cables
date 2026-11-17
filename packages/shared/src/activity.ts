@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CABLE_ACTIONS } from "./cables";
+import { DATE_SORTS } from "./list-filters";
 import {
   daySchema,
   firstParams,
@@ -29,6 +30,7 @@ export const activitySearchSchema = z.object({
   action: z.enum(CABLE_ACTIONS).optional().catch(undefined),
   from: daySchema,
   to: daySchema,
+  sort: z.enum(DATE_SORTS).optional().catch(undefined),
   page: pageSchema,
   size: pageSizeSchema(ACTIVITY_PAGE_SIZES),
 });
@@ -51,6 +53,7 @@ export function activityQuery(
     if (
       value === undefined ||
       (key === "page" && value === 1) ||
+      (key === "sort" && value === "newest") ||
       (key === "size" && value === ACTIVITY_PAGE_SIZE)
     ) {
       continue;

@@ -36,7 +36,8 @@ test("ordenar por código en un sentido y en el otro", async ({ page }) => {
   await page.goto(`/cables?q=${SEARCH_QUERY}&sort=code&dir=asc`);
   const table = page.getByRole("table");
   const codeHeader = table.getByRole("columnheader", { name: "Código" });
-  const codes = table.locator("tbody tr td:first-child a");
+  // El código del cable; debajo va el enlace "Conexionado", que no cuenta para el orden.
+  const codes = table.locator('tbody tr td:first-child a:not([href*="vista="])');
 
   await expect(codeHeader).toHaveAttribute("aria-sort", "ascending");
   await expect(codes).toHaveText([CABLES.search.code, CABLES.searchSibling.code]);

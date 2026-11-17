@@ -10,18 +10,28 @@ const { changeRoleAction, setUserActiveAction } = vi.hoisted(() => ({
 
 vi.mock("@/features/users/actions", () => ({ changeRoleAction, setUserActiveAction }));
 
+const roles = [
+  { id: "ADMIN", name: "Administrador", description: null },
+  { id: "SUPERVISOR", name: "Supervisor", description: null },
+  { id: "TECHNICIAN", name: "Técnico", description: "Trabajo en campo." },
+  { id: "VIEWER", name: "Consulta", description: null },
+  { id: "r-conex", name: "Conexionista", description: "Conectan y timbran." },
+];
+
 const technician: UserRow = {
   id: "u2",
   name: "Ana Pérez",
   email: "ana@planta.example",
   role: "TECHNICIAN",
+  roleName: "Técnico",
+  extras: [],
   active: true,
   pending: false,
   createdAt: new Date("2026-11-01T00:00:00Z"),
 };
 
 function renderTable() {
-  render(<UsersTable users={[technician]} currentUserId="u1" currentRole="ADMIN" />);
+  render(<UsersTable users={[technician]} currentUserId="u1" roles={roles} />);
   return screen.getByLabelText<HTMLSelectElement>("Rol de Ana Pérez");
 }
 
@@ -62,7 +72,7 @@ describe("UsersTable", () => {
       <UsersTable
         users={[{ ...technician, role: "VIEWER", active: false, pending: true }]}
         currentUserId="u1"
-        currentRole="ADMIN"
+        roles={roles}
       />,
     );
 
@@ -81,7 +91,7 @@ describe("UsersTable", () => {
       <UsersTable
         users={[{ ...technician, role: "VIEWER", active: false, pending: true }]}
         currentUserId="u1"
-        currentRole="ADMIN"
+        roles={roles}
       />,
     );
 
@@ -99,11 +109,7 @@ describe("UsersTable", () => {
 
   it("offers to reactivate an account that was deactivated", () => {
     render(
-      <UsersTable
-        users={[{ ...technician, active: false }]}
-        currentUserId="u1"
-        currentRole="ADMIN"
-      />,
+      <UsersTable users={[{ ...technician, active: false }]} currentUserId="u1" roles={roles} />,
     );
 
     expect(screen.getByText("Desactivado")).toBeInTheDocument();
@@ -111,9 +117,7 @@ describe("UsersTable", () => {
   });
 
   it("does not offer actions on your own account", () => {
-    render(
-      <UsersTable users={[{ ...technician, id: "u1" }]} currentUserId="u1" currentRole="ADMIN" />,
-    );
+    render(<UsersTable users={[{ ...technician, id: "u1" }]} currentUserId="u1" roles={roles} />);
 
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Desactivar" })).toBeNull();

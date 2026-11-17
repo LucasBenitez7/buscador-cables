@@ -13,7 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { createPrismaClient } from "@cables/db";
-import { hasPermission, isRole } from "@cables/shared";
+import { hasPermission, effectivePermissions } from "@cables/shared";
 import { loadProjectData } from "../load/load";
 import { describeTarget, signerProblem } from "../load/target";
 
@@ -48,13 +48,30 @@ async function main() {
   try {
     const user = await db.user.findUnique({
       where: { email },
-      select: { id: true, name: true, role: true, active: true },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        active: true,
+        roleInfo: { select: { permissions: true } },
+        permissionGrants: { select: { permission: true } },
+      },
     });
     const problem = signerProblem(
       email,
       user && {
         active: user.active,
-        canImport: isRole(user.role) && hasPermission(user.role, "import:run"),
+        // Su rol y sus extras, como en la app (fase 12).
+        canImport: hasPermission(
+          {
+            permissions: effectivePermissions({
+              roleId: user.role,
+              rolePermissions: user.roleInfo.permissions,
+              grants: user.permissionGrants.map((grant) => grant.permission),
+            }),
+          },
+          "import:run",
+        ),
       },
     );
     if (!user || problem) throw new Error(problem ?? "Usuario no válido.");

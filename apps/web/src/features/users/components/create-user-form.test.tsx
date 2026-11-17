@@ -18,10 +18,18 @@ function fillAndSubmit() {
   fireEvent.click(screen.getByRole("button", { name: "Crear usuario" }));
 }
 
+const roles = [
+  { id: "ADMIN", name: "Administrador", description: null },
+  { id: "SUPERVISOR", name: "Supervisor", description: null },
+  { id: "TECHNICIAN", name: "Técnico", description: "Trabajo en campo." },
+  { id: "VIEWER", name: "Consulta", description: null },
+  { id: "r-conex", name: "Conexionista", description: "Conectan y timbran." },
+];
+
 describe("CreateUserForm", () => {
   beforeEach(() => {
     createUserAction.mockReset();
-    render(<CreateUserForm currentRole="ADMIN" />);
+    render(<CreateUserForm roles={roles} />);
   });
 
   // Regresión: React 19 vaciaba el formulario también cuando el servidor rechazaba el alta.

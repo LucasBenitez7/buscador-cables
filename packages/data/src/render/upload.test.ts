@@ -98,6 +98,26 @@ describe("uploadDrawings", () => {
     expect(again).toMatchObject({ uploaded: 0, unchanged: 2, removed: 0 });
   });
 
+  it("uploads the page of a cable as one image and removes it when it is gone", async () => {
+    const { objects } = fakeBucket();
+    const manifest: Record<string, unknown> = {};
+    await drawSheet("EJ-ELE-DRW-0024_02", "a", manifest);
+    await writeFile(path.join(dir, "cable_99XAT10W2005.webp"), "hoja");
+    manifest.cable_99XAT10W2005 = { fingerprint: "h", width: 10, height: 14 };
+    await writeFile(path.join(dir, "manifest.json"), JSON.stringify(manifest));
+
+    const summary = await uploadDrawings({ dir, bucket });
+
+    expect(summary).toEqual({ uploaded: 2, unchanged: 0, removed: 0, files: 3 });
+    expect(objects.get("cable_99XAT10W2005.webp")).toEqual({ body: "hoja", type: "image/webp" });
+
+    delete manifest.cable_99XAT10W2005;
+    await writeFile(path.join(dir, "manifest.json"), JSON.stringify(manifest));
+    expect(await uploadDrawings({ dir, bucket })).toMatchObject({ removed: 1 });
+    expect(objects.has("cable_99XAT10W2005.webp")).toBe(false);
+    expect(objects.has("EJ-ELE-DRW-0024_02.dzi")).toBe(true);
+  });
+
   it("asks to render first when there is nothing drawn", async () => {
     fakeBucket();
 

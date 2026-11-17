@@ -30,9 +30,9 @@ test("de la ficha a la bandeja, y de la bandeja al buscador", async ({ page }) =
     .getByRole("link", { name: looseTray })
     .click();
   await expect(page.getByRole("heading", { level: 1, name: looseTray })).toBeVisible();
-  const waiting = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Cables esperando aquí (1)" }) });
+  // Bloque plegable con su ancla para «Ir a».
+  const waiting = page.locator("#esperando");
+  await expect(waiting.getByRole("heading", { name: "Cables esperando aquí (1)" })).toBeVisible();
   await expect(waiting.getByRole("link", { name: code })).toBeVisible();
   await expect(waiting.getByText("Punta de destino suelta aquí")).toBeVisible();
 

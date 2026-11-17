@@ -8,7 +8,6 @@ import {
   SEARCH_PAGE_SIZES,
   type CableSearch,
   type CableSort,
-  type Role,
 } from "@cables/shared";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
@@ -29,8 +28,8 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
 type Props = {
   search: CableSearch;
   result: CableSearchResult;
-  /** When set, each row gets an "Acción" button for what this role can do. */
-  actions?: { role: Role; locations: ActionOption[] };
+  /** When set, each row gets an "Acción" button for what this person can do. */
+  actions?: { permissions: readonly string[]; locations: ActionOption[] };
 };
 
 /** Tabla de resultados. Ordenación y paginación son enlaces: todo vive en la URL. */
@@ -111,6 +110,7 @@ export function SearchResults({ search, result, actions }: Props) {
             </div>
             <Ends cable={cable} />
             <LooseEnd cable={cable} />
+            <WiringLink cableId={cable.id} code={cable.code} />
             <p className="text-muted-foreground inline-flex items-center gap-1.5">
               {cable.color ? (
                 <span
@@ -148,7 +148,7 @@ export function SearchResults({ search, result, actions }: Props) {
                   code={cable.code}
                   version={cable.version}
                   state={cable.state}
-                  availability={cableActionAvailability(actions.role, cable.state)}
+                  availability={cableActionAvailability(actions, cable.state)}
                   locations={actions.locations}
                 />
               ) : null}
@@ -188,6 +188,7 @@ export function SearchResults({ search, result, actions }: Props) {
                   <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
                     {cable.code}
                   </Link>
+                  <WiringLink cableId={cable.id} code={cable.code} />
                 </td>
                 <td className="hidden px-3 py-2 md:table-cell">
                   <span className="inline-flex items-center gap-1.5">
@@ -242,7 +243,7 @@ export function SearchResults({ search, result, actions }: Props) {
                       code={cable.code}
                       version={cable.version}
                       state={cable.state}
-                      availability={cableActionAvailability(actions.role, cable.state)}
+                      availability={cableActionAvailability(actions, cable.state)}
                       locations={actions.locations}
                     />
                   </td>
@@ -310,5 +311,21 @@ function LooseEnd({ cable }: { cable: CableSearchItem }) {
         {looseEndTray}
       </Link>
     </p>
+  );
+}
+
+/**
+ * Straight to the wiring tab of the cable (wires, terminals and the original sheet): who
+ * connects does not have to open the record and change tab.
+ */
+function WiringLink({ cableId, code }: { cableId: string; code: string }) {
+  return (
+    <Link
+      href={`/cables/${cableId}?vista=conexionado`}
+      aria-label={`Conexionado del cable ${code}`}
+      className="text-muted-foreground hover:text-primary focus-visible:ring-ring/50 block w-fit rounded-sm font-sans text-xs font-normal underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+    >
+      Conexionado
+    </Link>
   );
 }

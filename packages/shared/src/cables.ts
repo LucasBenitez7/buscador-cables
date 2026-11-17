@@ -31,6 +31,7 @@ export const CABLE_ACTIONS = [
   "CORRECTION",
   "TESTED",
   "DELETED",
+  "WIRING_EDITED",
 ] as const;
 
 /** Who wrote a history event. The Prisma enum `CableEventSource` must list the same members. */
@@ -77,6 +78,7 @@ export const CABLE_ACTION_LABELS: Record<CableAction, string> = {
   CORRECTION: "Corrección",
   TESTED: "Timbrado",
   DELETED: "Baja",
+  WIRING_EDITED: "Bornas corregidas",
 };
 
 /** Fields a technician edits in the cable form (statuses change through actions). */
@@ -156,6 +158,9 @@ export const PROJECT_FIELD_LABELS: Record<string, string> = {
   sourceDocument: "Documento",
   sourcePage: "Página",
   route: "Recorrido",
+  wiringRevision: "Revisión del conexionado",
+  wiring: "Conexionado",
+  jumpers: "Puentes",
 };
 
 // ---------------------------------------------------------------------------

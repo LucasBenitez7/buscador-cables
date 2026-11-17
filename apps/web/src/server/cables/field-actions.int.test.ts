@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { permissionsOfRole } from "@cables/shared";
 import { prisma } from "@cables/db";
 import { cableActionSchema, createCableSchema, type Role } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { runCableAction } from "./field-actions";
 import { CableServiceError, createCable } from "./service";
 
-type Actor = { id: string; role: Role };
+type Actor = { id: string; role: Role; permissions: readonly string[] };
 
 let technician: Actor;
 let supervisor: Actor;
@@ -30,8 +31,8 @@ beforeEach(async () => {
       }),
     ),
   );
-  technician = { id: tech!.id, role: "TECHNICIAN" };
-  supervisor = { id: sup!.id, role: "SUPERVISOR" };
+  technician = { id: tech!.id, role: "TECHNICIAN", ...permissionsOfRole("TECHNICIAN") };
+  supervisor = { id: sup!.id, role: "SUPERVISOR", ...permissionsOfRole("SUPERVISOR") };
 
   const plant = await prisma.location.create({
     data: { name: "Norte", code: "N", type: "PLANT", path: "/N" },

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { ROLES, canManageActor, type Role } from "./permissions";
+import { ADMIN_ROLE, hasPermission, type PermissionHolder } from "./permissions";
+import { roleIdSchema } from "./roles";
 
 export const PASSWORD_MIN_LENGTH = 10;
 export const PASSWORD_MAX_LENGTH = 128;
@@ -27,7 +28,7 @@ const passwordField = z
 export const createUserSchema = z.object({
   name: nameField,
   email: emailField,
-  role: z.enum(ROLES, { error: "Rol no válido" }),
+  role: roleIdSchema,
   password: passwordField,
 });
 
@@ -50,14 +51,14 @@ export const signUpSchema = signUpProfileSchema
 
 export const changeRoleSchema = z.object({
   userId: z.string().min(1),
-  role: z.enum(ROLES, { error: "Rol no válido" }),
+  role: roleIdSchema,
 });
 
 export const setUserActiveSchema = z.object({
   userId: z.string().min(1),
   active: z.boolean(),
   /** Al aprobar una cuenta nueva: el rol con el que entra (si no, el que tiene). */
-  role: z.enum(ROLES, { error: "Rol no válido" }).optional(),
+  role: roleIdSchema.optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
@@ -65,38 +66,43 @@ export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ChangeRoleInput = z.infer<typeof changeRoleSchema>;
 export type SetUserActiveInput = z.infer<typeof setUserActiveSchema>;
 
+/** Who acts on the accounts: their id and permissions. */
 export type ActorContext = {
   actorId: string;
-  actorRole: Role;
+  actor: PermissionHolder;
 };
 
+/**
+ * Only who can manage accounts touches them. That permission is only in the administrator
+ * role (it cannot be given to another role nor as an extra), so there is no ladder of roles
+ * to climb: administrators manage everybody, the rest nobody.
+ */
+const NOT_ALLOWED = "No tienes permiso para gestionar cuentas.";
+
 /** Returns an error message in Spanish, or null when the operation is allowed. */
-export function validateCreateUser(actor: ActorContext, newRole: Role): string | null {
-  if (!canManageActor(actor.actorRole, newRole)) {
-    return "No puedes crear usuarios con un rol superior al tuyo.";
-  }
-  return null;
+export function validateCreateUser(actor: ActorContext): string | null {
+  return hasPermission(actor.actor, "user:manage") ? null : NOT_ALLOWED;
 }
 
 export type RoleChange = ActorContext & {
   targetId: string;
-  targetRole: Role;
-  newRole: Role;
+  /** Role ids, before and after. */
+  targetRole: string;
+  newRole: string;
   /** Active administrators other than the target. */
   otherActiveAdmins: number;
 };
 
 export function validateRoleChange(change: RoleChange): string | null {
+  if (!hasPermission(change.actor, "user:manage")) return NOT_ALLOWED;
   if (change.actorId === change.targetId) {
     return "No puedes cambiar tu propio rol.";
   }
-  if (!canManageActor(change.actorRole, change.targetRole)) {
-    return "No tienes permiso para gestionar a este usuario.";
-  }
-  if (!canManageActor(change.actorRole, change.newRole)) {
-    return "No puedes asignar un rol superior al tuyo.";
-  }
-  if (change.targetRole === "ADMIN" && change.newRole !== "ADMIN" && change.otherActiveAdmins < 1) {
+  if (
+    change.targetRole === ADMIN_ROLE &&
+    change.newRole !== ADMIN_ROLE &&
+    change.otherActiveAdmins < 1
+  ) {
     return "Debe quedar al menos un administrador activo.";
   }
   return null;
@@ -104,19 +110,17 @@ export function validateRoleChange(change: RoleChange): string | null {
 
 export type ActiveChange = ActorContext & {
   targetId: string;
-  targetRole: Role;
+  targetRole: string;
   active: boolean;
   otherActiveAdmins: number;
 };
 
 export function validateActiveChange(change: ActiveChange): string | null {
+  if (!hasPermission(change.actor, "user:manage")) return NOT_ALLOWED;
   if (change.actorId === change.targetId && !change.active) {
     return "No puedes desactivar tu propia cuenta.";
   }
-  if (!canManageActor(change.actorRole, change.targetRole)) {
-    return "No tienes permiso para gestionar a este usuario.";
-  }
-  if (!change.active && change.targetRole === "ADMIN" && change.otherActiveAdmins < 1) {
+  if (!change.active && change.targetRole === ADMIN_ROLE && change.otherActiveAdmins < 1) {
     return "Debe quedar al menos un administrador activo.";
   }
   return null;
