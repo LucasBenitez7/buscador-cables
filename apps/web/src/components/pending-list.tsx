@@ -105,7 +105,8 @@ export function PendingLink({
         // Ctrl/cmd/shift, clic central o `target`: el navegador se encarga, como siempre.
         if (!context || event.defaultPrevented || isModifiedClick(event, props.target)) return;
         event.preventDefault();
-        context.navigate(href);
+        // Mismo `scroll` que pediría el Link (p. ej. `scroll={false}` en una sección).
+        context.navigate(href, { scroll: props.scroll !== false });
       }}
     />
   );

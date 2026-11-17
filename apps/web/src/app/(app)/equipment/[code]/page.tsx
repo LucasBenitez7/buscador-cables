@@ -157,7 +157,7 @@ export default async function EquipmentPage({
             },
           ]}
         />
-        <PendingResults>
+        <PendingResults className="space-y-6">
           {filtered ? (
             <p role="status" className="text-muted-foreground text-sm">
               {shown} de {totals.ends} cumplen los filtros.

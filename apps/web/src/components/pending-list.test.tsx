@@ -116,6 +116,20 @@ describe("PendingLink", () => {
     expect(push).toHaveBeenCalledWith("/cables?page=2", { scroll: true });
   });
 
+  it("keeps the link's scroll={false}", () => {
+    render(
+      <PendingListProvider>
+        <PendingLink href="/cables/1?page=2#historial" scroll={false}>
+          Siguiente
+        </PendingLink>
+      </PendingListProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("link", { name: "Siguiente" }));
+
+    expect(push).toHaveBeenCalledWith("/cables/1?page=2#historial", { scroll: false });
+  });
+
   it("leaves ctrl/cmd, shift and middle clicks to the browser", () => {
     render(
       <PendingListProvider>

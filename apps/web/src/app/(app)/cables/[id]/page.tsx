@@ -434,7 +434,7 @@ export default async function CablePage({
               },
             ]}
           />
-          <PendingResults>
+          <PendingResults className="space-y-3">
             <HistoryFilterNote
               search={historySearch}
               total={cable.historyTotal}
