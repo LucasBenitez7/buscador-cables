@@ -1,8 +1,8 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { PendingLink, SubmitLabel, usePendingNavigation } from "@/components/pending-list";
-import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/form-actions";
+import { usePendingNavigation } from "@/components/pending-list";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -30,7 +30,7 @@ type Props = {
   fields: readonly FilterField[];
   /** Values that are not filters but must survive them (`vista=conexionado`). */
   keep?: Record<string, string>;
-  /** Some filter is on: shows "Quitar filtros". */
+  /** Some filter is on: «Limpiar» works (otherwise it is greyed out). */
   active?: boolean;
   /** Id of the section to come back to after filtering (`historial`). */
   anchor?: string;
@@ -57,7 +57,7 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
   }
 
   // Los campos no están controlados: la clave los reinicia cuando cambian los valores de la URL
-  // («Quitar filtros», el botón atrás). Sin ella, los selects se quedaban como estaban.
+  // («Limpiar», el botón atrás). Sin ella, los selects se quedaban como estaban.
   const formKey = JSON.stringify(fields.map((field) => field.value ?? ""));
 
   return (
@@ -67,7 +67,7 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
       action={`${action}${hash}`}
       onSubmit={submit}
       aria-label={label}
-      className="bg-card space-y-3 rounded-lg border p-3"
+      className="bg-card space-y-4 rounded-lg border p-4"
     >
       {Object.entries(keep).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
@@ -110,16 +110,13 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="sm" disabled={pending}>
-          <SubmitLabel pending={pending} idle="Aplicar" />
-        </Button>
-        {active ? (
-          <Button asChild type="button" variant="ghost" size="sm">
-            <PendingLink href={clear}>Quitar filtros</PendingLink>
-          </Button>
-        ) : null}
-      </div>
+      <FormActions
+        // «Buscar» si hay un cuadro de texto; si solo hay filtros, «Aplicar».
+        submitLabel={fields.some((field) => field.kind === "text") ? "Buscar" : "Aplicar"}
+        pending={pending}
+        clearHref={clear}
+        active={active}
+      />
     </form>
   );
 }

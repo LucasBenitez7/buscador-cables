@@ -106,9 +106,13 @@ describe("SearchFilters", () => {
   it("clears every filter", () => {
     render(<SearchFilters search={{ q: "SH" }} options={options} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+    expect(screen.getByRole("link", { name: "Limpiar" })).toHaveAttribute("href", "/cables");
+  });
 
-    expect(push).toHaveBeenCalledWith("/cables");
+  it("greys out «Limpiar» with nothing searched or filtered", () => {
+    render(<SearchFilters search={{ sort: "code", page: 2 }} options={options} />);
+
+    expect(screen.getByRole("button", { name: "Limpiar" })).toBeDisabled();
   });
 });
 

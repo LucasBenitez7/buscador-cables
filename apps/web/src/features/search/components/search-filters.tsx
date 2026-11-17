@@ -19,7 +19,8 @@ import {
   parseCableSearch,
   type CableSearch,
 } from "@cables/shared";
-import { SubmitLabel, usePendingNavigation } from "@/components/pending-list";
+import { FormActions } from "@/components/form-actions";
+import { usePendingNavigation } from "@/components/pending-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,7 +82,7 @@ export function SearchFilters({ search, options }: Props) {
       onSubmit={submit}
       role="search"
       aria-label="Buscar cables"
-      className="space-y-4 rounded-lg border p-4"
+      className="bg-card space-y-4 rounded-lg border p-4"
     >
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1 space-y-1.5 sm:min-w-56">
@@ -293,14 +294,12 @@ export function SearchFilters({ search, options }: Props) {
         </details>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={pending}>
-          <SubmitLabel pending={pending} idle="Buscar" />
-        </Button>
-        <Button type="button" variant="ghost" onClick={() => navigate("/cables")}>
-          Limpiar filtros
-        </Button>
-      </div>
+      <FormActions
+        submitLabel="Buscar"
+        pending={pending}
+        clearHref="/cables"
+        active={Boolean(search.q) || activeCount > 0}
+      />
     </form>
   );
 }

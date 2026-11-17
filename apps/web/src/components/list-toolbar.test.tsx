@@ -102,9 +102,10 @@ describe("ListToolbar", () => {
     expect(push).toHaveBeenCalledWith("/trays?size=120&q=UX");
   });
 
-  it("offers «Limpiar» only when a filter is on, and keeps the kept values", () => {
+  it("greys out «Limpiar» until a filter is on, and keeps the kept values", () => {
     const { rerender } = renderToolbar({ keep: { size: "120" } });
     expect(screen.queryByRole("link", { name: "Limpiar" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Limpiar" })).toBeDisabled();
 
     rerender(
       <ListToolbar

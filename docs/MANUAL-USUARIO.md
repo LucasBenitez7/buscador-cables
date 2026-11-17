@@ -28,8 +28,9 @@ largas enseñan las 10 primeras filas con un botón «Ver los N».
 
 **Filtros y orden.** Las listas largas (cuentas, cambios en las cuentas, historial de un cable,
 equipos, actividad, conexionado) tienen arriba sus filtros y un «Orden». Los filtros quedan en
-la dirección de la página: se puede guardar o compartir el enlace. «Quitar filtros» vuelve a
-verlo todo.
+la dirección de la página: se puede guardar o compartir el enlace. Todos los formularios acaban
+igual: «Buscar» (o «Aplicar», si solo hay filtros) y, a su lado, «Limpiar», que vuelve a verlo
+todo. «Limpiar» está apagado mientras no hay nada buscado ni filtrado.
 
 ¿Olvidaste la contraseña? «He olvidado mi contraseña» en la entrada: llega un enlace para
 poner otra (caduca en una hora). Tras 10 contraseñas incorrectas seguidas, la cuenta se bloquea

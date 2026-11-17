@@ -1,8 +1,8 @@
 "use client";
 
 import type { FormEvent, ReactNode } from "react";
-import { PendingLink, SubmitLabel, usePendingNavigation } from "@/components/pending-list";
-import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/form-actions";
+import { usePendingNavigation } from "@/components/pending-list";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -174,17 +174,8 @@ export function ListToolbar({
           </div>
         ) : null}
 
-        {/* 3. Al final, como en cualquier formulario: «Buscar» aplica todo lo de arriba. */}
-        <div className="flex items-center justify-end gap-2 border-t pt-3">
-          {active ? (
-            <Button asChild type="button" variant="ghost">
-              <PendingLink href={clear}>Limpiar</PendingLink>
-            </Button>
-          ) : null}
-          <Button type="submit" disabled={pending}>
-            <SubmitLabel pending={pending} idle="Buscar" />
-          </Button>
-        </div>
+        {/* 3. Al final, a la izquierda, como en el buscador de cables. */}
+        <FormActions submitLabel="Buscar" pending={pending} clearHref={clear} active={active} />
       </form>
       <p role="status" className="text-muted-foreground text-sm">
         {count}

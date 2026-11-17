@@ -16,7 +16,7 @@ const field = (value?: string): FilterField => ({
 });
 
 describe("FilterForm", () => {
-  it("resets the fields when the URL values change («Quitar filtros», back button)", () => {
+  it("resets the fields when the URL values change («Limpiar», back button)", () => {
     const { rerender } = render(
       <FilterForm action="/cables/1" label="Filtrar el historial" fields={[field("all")]} active />,
     );
