@@ -341,6 +341,13 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - **Cargas:** cada sección tiene su `loading.tsx` con el logo y un anillo que gira
   (`BrandLoader`, sin girar si se prefiere menos movimiento) y cajas translúcidas con la
   forma de la página (`Skeleton`, en `components/loading.tsx`).
+- **Barra de carga global:** `NavigationProgress` (en el layout de la app) pinta una barra fina
+  arriba en cuanto se pulsa un enlace interno o un formulario navega
+  (`startNavigationProgress()`), y la quita cuando cambia la URL. Solo se ve si la espera pasa
+  de 120 ms, para no parpadear. Así ninguna página parece congelada con una red lenta.
+- **Pestañas de la ficha del cable** (`CableViewTabs`): Recorrido y Conexionado son la misma
+  página con otro `?vista=`; la pestaña pulsada se marca al momento y el contenido muestra
+  «Cargando…» (`PendingListProvider`).
 - **Cargas dentro de una página:** `loading.tsx` no sale cuando solo cambian los parámetros de
   la URL (filtrar, ordenar, paginar). Para eso, `components/pending-list.tsx`:
   `PendingListProvider` envuelve el formulario y su lista; los formularios navegan con

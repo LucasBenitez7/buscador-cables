@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { BrandLoader } from "@/components/loading";
+import { startNavigationProgress } from "@/components/navigation-progress";
 import { cn } from "cn";
 
 type NavigateOptions = { scroll?: boolean };
@@ -30,10 +31,12 @@ export const PendingListContext = createContext<PendingState | null>(null);
 export function PendingListProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const navigate = (href: string, options?: NavigateOptions) =>
+  const navigate = (href: string, options?: NavigateOptions) => {
+    startNavigationProgress();
     startTransition(() => {
       router.push(href, { scroll: options?.scroll ?? true });
     });
+  };
   return (
     <PendingListContext.Provider value={{ navigate, pending }}>
       {children}
@@ -52,6 +55,7 @@ export function usePendingNavigation(): PendingState {
   if (context) return context;
   return {
     navigate: (href, options) => {
+      startNavigationProgress();
       if (options) router.push(href, { scroll: options.scroll ?? true });
       else router.push(href);
     },
