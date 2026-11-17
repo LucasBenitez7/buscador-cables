@@ -16,13 +16,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BrandLogo } from "@/components/brand-logo";
 import { SignOutButton, useSignOut } from "@/features/auth/components/sign-out-button";
 import { isActive, type NavItem } from "./nav-items";
+import { useHoverMenu } from "./use-hover-menu";
 
 type Props = {
   items: NavItem[];
@@ -162,9 +161,11 @@ const MENU_TRIGGER =
 function ManageMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
   const active = items.some((item) => isActive(item, pathname));
   const waiting = items.reduce((sum, item) => sum + (item.badge?.count ?? 0), 0);
+  const hover = useHoverMenu();
   return (
-    <DropdownMenu>
+    <DropdownMenu {...hover.root}>
       <DropdownMenuTrigger
+        {...hover.trigger}
         aria-label={waiting > 0 ? `Gestión, ${waiting} pendientes` : undefined}
         className={cn(
           MENU_TRIGGER,
@@ -178,7 +179,7 @@ function ManageMenu({ items, pathname }: { items: NavItem[]; pathname: string })
         {waiting > 0 ? <Count value={waiting} /> : null}
         <ChevronDownIcon aria-hidden className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
+      <DropdownMenuContent align="start" {...hover.content}>
         {items.map((item) => (
           <DropdownMenuItem key={item.href} asChild data-current={isActive(item, pathname)}>
             <Link
@@ -211,20 +212,19 @@ function UserMenu({
   pathname: string;
 }) {
   const { signOut, pending } = useSignOut();
+  const hover = useHoverMenu();
   return (
-    <DropdownMenu>
+    <DropdownMenu {...hover.root}>
       <DropdownMenuTrigger
+        {...hover.trigger}
         aria-label={`Menú de ${user.name}`}
         className={cn(MENU_TRIGGER, "hover:bg-accent/60 px-2 py-1 text-left")}
       >
         <UserBadge user={user} />
         <ChevronDownIcon aria-hidden className="text-muted-foreground size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuLabel>
-          <UserBadge user={user} />
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      {/* El nombre y el rol ya están en el botón: el menú no los repite. */}
+      <DropdownMenuContent {...hover.content}>
         {items.map((item) => (
           <DropdownMenuItem key={item.href} asChild data-current={isActive(item, pathname)}>
             <Link href={item.href} aria-current={isActive(item, pathname) ? "page" : undefined}>
@@ -232,7 +232,11 @@ function UserMenu({
             </Link>
           </DropdownMenuItem>
         ))}
-        <DropdownMenuItem disabled={pending} onSelect={() => void signOut()}>
+        <DropdownMenuItem
+          disabled={pending}
+          onSelect={() => void signOut()}
+          className="text-destructive focus:bg-destructive/15 focus:text-destructive"
+        >
           {pending ? "Saliendo…" : "Cerrar sesión"}
         </DropdownMenuItem>
       </DropdownMenuContent>

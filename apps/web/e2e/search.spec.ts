@@ -50,7 +50,7 @@ test("ordenar por código en un sentido y en el otro", async ({ page }) => {
 test("limpiar quita todos los filtros", async ({ page }) => {
   await page.goto(`/cables?q=${SEARCH_QUERY}&installation=LAID`);
 
-  await page.getByRole("button", { name: "Limpiar filtros" }).click();
+  await page.getByRole("link", { name: "Limpiar", exact: true }).click();
 
   await expect(page).toHaveURL(/\/cables$/);
   await expect(page.getByLabel("Código, equipo o descripción")).toHaveValue("");

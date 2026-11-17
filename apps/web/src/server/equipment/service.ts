@@ -15,7 +15,7 @@ export type EquipmentMatch = { equipment: string; cables: number };
  */
 export async function searchEquipment(
   query: string,
-  sort: "cables" | "name" = "cables",
+  sort: "cables" | "name" | "name-desc" = "cables",
 ): Promise<EquipmentMatch[]> {
   const text = query.trim().slice(0, EQUIPMENT_MAX);
   const pattern = `%${escapeLike(text)}%`;
@@ -30,7 +30,13 @@ export async function searchEquipment(
         WHERE "deletedAt" IS NULL AND "destinationEquipment" IS NOT NULL ${filter(Prisma.sql`"destinationEquipment"`)}
     ) ends
     GROUP BY equipment
-    ORDER BY ${sort === "name" ? Prisma.sql`equipment` : Prisma.sql`cables DESC, equipment`}
+    ORDER BY ${
+      sort === "name"
+        ? Prisma.sql`equipment`
+        : sort === "name-desc"
+          ? Prisma.sql`equipment DESC`
+          : Prisma.sql`cables DESC, equipment`
+    }
     LIMIT ${SEARCH_LIMIT}`;
 }
 

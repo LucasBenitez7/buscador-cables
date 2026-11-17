@@ -131,6 +131,20 @@ describe("parseTraySearch", () => {
     expect(parseTraySearch({ size: "100000" })).toEqual({});
     expect(parseTraySearch({ size: "7" })).toEqual({});
   });
+
+  it("reads the type, the level, the waiting cables and the order", () => {
+    expect(parseTraySearch({ kind: "CONDUIT", level: "2", waiting: "1", sort: "waiting" })).toEqual(
+      { kind: "CONDUIT", level: 2, waiting: true, sort: "waiting" },
+    );
+  });
+
+  it("ignores an unknown type, level, order or waiting value", () => {
+    expect(parseTraySearch({ kind: "CABLE", level: "5", waiting: "yes", sort: "random" })).toEqual(
+      {},
+    );
+    expect(parseTraySearch({ level: "1.5" })).toEqual({});
+    expect(parseTraySearch({ level: "0" })).toEqual({});
+  });
 });
 
 describe("trayQuery", () => {
@@ -138,5 +152,26 @@ describe("trayQuery", () => {
     expect(trayQuery({})).toBe("");
     expect(trayQuery({ q: "99UXA", page: 1, size: 60 })).toBe("?q=99UXA");
     expect(trayQuery({ q: "99UXA", size: 120 }, { page: 3 })).toBe("?q=99UXA&page=3&size=120");
+  });
+
+  it("writes the filters and the order, but not the default order", () => {
+    expect(trayQuery({ kind: "LADDER", level: 3, waiting: true, sort: "waiting" })).toBe(
+      "?kind=LADDER&level=3&waiting=1&sort=waiting",
+    );
+    expect(trayQuery({ sort: "code" })).toBe("");
+    expect(trayQuery({ waiting: false, sort: "code-desc" })).toBe("?sort=code-desc");
+  });
+
+  it("reads back what it writes", () => {
+    const search = {
+      q: "99UXA",
+      kind: "GRID" as const,
+      level: 4,
+      waiting: true,
+      sort: "code-desc" as const,
+      page: 2,
+    };
+    const query = trayQuery(search);
+    expect(parseTraySearch(Object.fromEntries(new URLSearchParams(query)))).toEqual(search);
   });
 });

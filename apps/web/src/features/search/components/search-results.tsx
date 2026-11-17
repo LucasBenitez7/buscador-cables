@@ -9,8 +9,10 @@ import {
   type CableSearch,
   type CableSort,
 } from "@cables/shared";
+import { ListSummary } from "@/components/list-summary";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
+import { PendingLink } from "@/components/pending-list";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
 import { trayHref } from "@/features/cables/components/cable-route";
@@ -53,7 +55,7 @@ export function SearchResults({ search, result, actions }: Props) {
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}
         className={`px-3 py-2 font-medium ${className}`}
       >
-        <Link
+        <PendingLink
           href={`/cables${cableSearchQuery(search, { sort: key, dir: nextDir, page: undefined })}`}
           className="hover:text-foreground focus-visible:ring-ring/50 inline-flex items-center gap-1 rounded-sm outline-none focus-visible:ring-3"
         >
@@ -61,7 +63,7 @@ export function SearchResults({ search, result, actions }: Props) {
           <span aria-hidden className="text-xs">
             {active ? (dir === "asc" ? "▲" : "▼") : ""}
           </span>
-        </Link>
+        </PendingLink>
       </th>
     );
   };
@@ -73,23 +75,22 @@ export function SearchResults({ search, result, actions }: Props) {
           Ningún código contiene «{search.q}». Se muestran los códigos más parecidos.
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p role="status" className="text-muted-foreground text-sm">
-          <span className="text-foreground font-medium">
-            {result.total.toLocaleString("es-ES")}
-          </span>{" "}
-          {result.total === 1 ? "cable" : "cables"}
-          {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
-        </p>
-        {result.total > SEARCH_PAGE_SIZES[0] ? (
-          <PageSizePicker
-            sizes={SEARCH_PAGE_SIZES}
-            size={search.size}
-            page={result.page}
-            href={(size, page) => `/cables${cableSearchQuery(search, { size, page })}`}
-          />
-        ) : null}
-      </div>
+      <ListSummary
+        aside={
+          result.total > SEARCH_PAGE_SIZES[0] ? (
+            <PageSizePicker
+              sizes={SEARCH_PAGE_SIZES}
+              size={search.size}
+              page={result.page}
+              href={(size, page) => `/cables${cableSearchQuery(search, { size, page })}`}
+            />
+          ) : null
+        }
+      >
+        <span className="text-foreground font-medium">{result.total.toLocaleString("es-ES")}</span>{" "}
+        {result.total === 1 ? "cable" : "cables"}
+        {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
+      </ListSummary>
 
       {/* Móvil: tarjetas, más fáciles de leer y de pulsar que una tabla estrecha. */}
       <ul className="space-y-3 md:hidden">

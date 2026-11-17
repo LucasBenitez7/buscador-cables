@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import type { ComponentProps, FormEvent, ReactNode } from "react";
 import {
   CABLE_ACTIONS,
@@ -13,11 +12,12 @@ import {
   parseActivitySearch,
   type ActivitySearch,
 } from "@cables/shared";
-import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/form-actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { SearchableSelect, toOptions } from "@/components/searchable-select";
+import { usePendingNavigation } from "@/components/pending-list";
 
 type Props = {
   basePath: string;
@@ -28,7 +28,7 @@ type Props = {
 
 /** Filters of the activity pages. They navigate to a clean, shareable URL. */
 export function ActivityFilters({ basePath, search, users }: Props) {
-  const router = useRouter();
+  const { navigate, pending } = usePendingNavigation();
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,7 +37,7 @@ export function ActivityFilters({ basePath, search, users }: Props) {
     );
     // El tamaño de página no es un filtro: se conserva al filtrar.
     const size = search.size === undefined ? {} : { size: String(search.size) };
-    router.push(`${basePath}${activityQuery(parseActivitySearch({ ...values, ...size }))}`);
+    navigate(`${basePath}${activityQuery(parseActivitySearch({ ...values, ...size }))}`);
   }
 
   return (
@@ -45,7 +45,7 @@ export function ActivityFilters({ basePath, search, users }: Props) {
       key={activityQuery(search)}
       onSubmit={submit}
       aria-label="Filtrar movimientos"
-      className="space-y-4 rounded-lg border p-4"
+      className="bg-card space-y-4 rounded-lg border p-4"
     >
       <div className={`grid gap-3 sm:grid-cols-2 ${users ? "lg:grid-cols-6" : "lg:grid-cols-5"}`}>
         {users ? (
@@ -93,12 +93,13 @@ export function ActivityFilters({ basePath, search, users }: Props) {
           </NativeSelect>
         </Field>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit">Filtrar</Button>
-        <Button type="button" variant="ghost" onClick={() => router.push(basePath)}>
-          Limpiar filtros
-        </Button>
-      </div>
+      <FormActions
+        submitLabel="Aplicar"
+        pending={pending}
+        clearHref={basePath}
+        // Sin página ni tamaño (no son filtros): solo cuenta lo que la persona ha elegido.
+        active={activityQuery({ ...search, page: undefined, size: undefined }) !== ""}
+      />
     </form>
   );
 }

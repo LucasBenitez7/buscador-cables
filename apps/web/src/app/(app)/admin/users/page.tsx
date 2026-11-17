@@ -10,6 +10,7 @@ import {
 } from "@cables/shared";
 import { FilterForm } from "@/components/filter-form";
 import { Pagination } from "@/components/pagination";
+import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { CreateUserForm } from "@/features/users/components/create-user-form";
 import { RoleGuide } from "@/features/users/components/role-guide";
 import { UserEvents } from "@/features/users/components/user-events";
@@ -59,66 +60,70 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-8">
-          <section className="space-y-3">
-            <h2 className="text-base font-medium">
-              Cuentas ({users.total.toLocaleString("es-ES")})
-              {users.pageCount > 1 ? (
-                <span className="text-muted-foreground text-sm font-normal">
-                  {" "}
-                  · página {users.page} de {users.pageCount}
-                </span>
-              ) : null}
-            </h2>
-            <FilterForm
-              action="/admin/users"
-              label="Filtrar cuentas"
-              active={filtered}
-              fields={[
-                {
-                  kind: "text",
-                  name: "q",
-                  label: "Nombre o correo",
-                  value: search.q,
-                  placeholder: "Ana, @empresa…",
-                },
-                {
-                  kind: "select",
-                  name: "role",
-                  label: "Rol",
-                  value: search.role,
-                  options: roles.map((role) => ({ value: role.id, label: role.name })),
-                },
-                {
-                  kind: "select",
-                  name: "status",
-                  label: "Estado",
-                  value: search.status,
-                  options: optionsOf(USER_STATUS_LABELS),
-                  emptyLabel: "Todas",
-                },
-                {
-                  kind: "select",
-                  name: "sort",
-                  label: "Orden",
-                  value: search.sort,
-                  options: optionsOf(USER_SORT_LABELS),
-                  emptyLabel: null,
-                },
-              ]}
-            />
-            {users.rows.length === 0 ? (
-              <p role="status" className="text-muted-foreground rounded-lg border p-4 text-sm">
-                Ninguna cuenta cumple estos filtros.
-              </p>
-            ) : (
-              <UsersTable users={users.rows} currentUserId={current.id} roles={roles} />
-            )}
-            <Pagination
-              page={users.page}
-              pageCount={users.pageCount}
-              href={(page) => pageHref(search, page)}
-            />
-          </section>
+          <PendingListProvider>
+            <section className="space-y-3">
+              <h2 className="text-base font-medium">
+                Cuentas ({users.total.toLocaleString("es-ES")})
+                {users.pageCount > 1 ? (
+                  <span className="text-muted-foreground text-sm font-normal">
+                    {" "}
+                    · página {users.page} de {users.pageCount}
+                  </span>
+                ) : null}
+              </h2>
+              <FilterForm
+                action="/admin/users"
+                label="Filtrar cuentas"
+                active={filtered}
+                fields={[
+                  {
+                    kind: "text",
+                    name: "q",
+                    label: "Nombre o correo",
+                    value: search.q,
+                    placeholder: "Ana, @empresa…",
+                  },
+                  {
+                    kind: "select",
+                    name: "role",
+                    label: "Rol",
+                    value: search.role,
+                    options: roles.map((role) => ({ value: role.id, label: role.name })),
+                  },
+                  {
+                    kind: "select",
+                    name: "status",
+                    label: "Estado",
+                    value: search.status,
+                    options: optionsOf(USER_STATUS_LABELS),
+                    emptyLabel: "Todas",
+                  },
+                  {
+                    kind: "select",
+                    name: "sort",
+                    label: "Orden",
+                    value: search.sort,
+                    options: optionsOf(USER_SORT_LABELS),
+                    emptyLabel: null,
+                  },
+                ]}
+              />
+              <PendingResults className="space-y-3">
+                {users.rows.length === 0 ? (
+                  <p role="status" className="text-muted-foreground rounded-lg border p-4 text-sm">
+                    Ninguna cuenta cumple estos filtros.
+                  </p>
+                ) : (
+                  <UsersTable users={users.rows} currentUserId={current.id} roles={roles} />
+                )}
+                <Pagination
+                  page={users.page}
+                  pageCount={users.pageCount}
+                  href={(page) => pageHref(search, page)}
+                />
+              </PendingResults>
+            </section>
+          </PendingListProvider>
 
           <section className="space-y-3">
             <h2 className="text-base font-medium">Dar de alta un usuario</h2>

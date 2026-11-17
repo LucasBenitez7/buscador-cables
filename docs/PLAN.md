@@ -876,6 +876,20 @@ administrador; la actividad del equipo, de quien tenga ese permiso; el detalle d
 movimiento, de su autor o de quien ve el cable) y triggers en la base que impiden dar la
 gestión de cuentas o de roles fuera del rol Administrador.
 
+Repaso de listas e historial (2026-11-17, sin cambios en la base ni en los datos):
+
+- [x] El historial empieza el 17/11/2026 (`HISTORY_START`): la carga inicial no se muestra en
+      ningún sitio, sin borrarla.
+- [x] Filtro «Origen»: «En campo» en vez de «Personas»; fuera el aviso «N entradas ocultas».
+- [x] «Cargando…» en el lugar de la lista al filtrar, ordenar o paginar (`PendingListProvider`).
+- [x] Barra común (`ListToolbar`) en Ubicaciones, Bandejas y Equipos; «Limpiar» y «Quitar
+      filtros» reinician de verdad los campos.
+- [x] Bandejas: filtros por tipo, nivel y cables esperando, y orden. Equipos: orden Z-A.
+- [x] Ubicaciones: búsqueda, filtros y orden; árbol plegado por defecto, con guías, tipo como
+      etiqueta, «Expandir / Contraer todo» y menú de acciones en pantallas táctiles.
+- [x] Flecha en «Filtros» y «Más filtros» del buscador de cables; sin badges «Fijo» / «De
+      siempre» en la lista de roles.
+
 ---
 
 ## Entornos

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppHeader } from "./app-header";
 import { isActive, type NavItem } from "./nav-items";
@@ -152,6 +152,34 @@ describe("AppHeader: menus on a computer", () => {
     ).toHaveAttribute("aria-current", "page");
   });
 
+  it("opens the menus when the mouse rests on them, and closes them when it leaves", () => {
+    vi.useFakeTimers();
+    try {
+      render(<AppHeader items={manageItems} user={{ name: "Ada", role: "Administrador" }} />);
+      const row = screen.getAllByRole("navigation", { name: "Principal" })[0]!;
+      const manage = within(row).getByRole("button", { name: "Gestión, 3 pendientes" });
+
+      fireEvent.pointerEnter(manage, { pointerType: "mouse" });
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+
+      // Un clic con el menú ya abierto por el hover no lo cierra.
+      fireEvent.pointerDown(manage, { pointerType: "mouse", button: 0 });
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+
+      fireEvent.pointerLeave(manage, { pointerType: "mouse" });
+      act(() => vi.advanceTimersByTime(200));
+      expect(screen.queryByRole("menu")).toBeNull();
+
+      // Un dedo no lo abre al pasar: en una pantalla táctil se toca.
+      fireEvent.pointerEnter(screen.getByRole("button", { name: "Menú de Ada" }), {
+        pointerType: "touch",
+      });
+      expect(screen.queryByRole("menu")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("opens the person's menu with their activity and sign out", () => {
     render(<AppHeader items={manageItems} user={{ name: "Ada", role: "Administrador" }} />);
 
@@ -161,6 +189,12 @@ describe("AppHeader: menus on a computer", () => {
       "href",
       "/activity/me",
     );
-    expect(within(menu).getByRole("menuitem", { name: "Cerrar sesión" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Cerrar sesión" })).toHaveClass(
+      "text-destructive",
+    );
+    // El nombre y el rol ya están en el botón: el menú no los repite.
+    expect(within(menu).queryByText("Ada")).toBeNull();
+    expect(within(menu).queryByText("Administrador")).toBeNull();
+    expect(within(menu).getAllByRole("menuitem")).toHaveLength(2);
   });
 });

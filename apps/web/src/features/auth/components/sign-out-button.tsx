@@ -23,7 +23,14 @@ export function useSignOut() {
 export function SignOutButton() {
   const { signOut, pending } = useSignOut();
   return (
-    <Button variant="outline" size="sm" onClick={signOut} disabled={pending}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={signOut}
+      disabled={pending}
+      // Rojo, como «Cerrar sesión» en el menú de la cuenta del ordenador.
+      className="text-destructive hover:bg-destructive/15 hover:text-destructive"
+    >
       {pending ? "Saliendo…" : "Cerrar sesión"}
     </Button>
   );

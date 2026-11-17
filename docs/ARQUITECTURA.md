@@ -237,6 +237,15 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   catálogos son únicos sin distinguir mayúsculas (índice único sobre `lower(name)`).
 - `CableEvent.source` (`APP` / `PROJECT_LOAD`): quién escribió el evento, una persona en la
   app o la carga de los listados. La carga lo usa para no pisar lo que alguien corrigió a mano.
+  En la interfaz, el filtro «Origen» los llama «En campo» (`people`) y «Cargas de listados»
+  (`loads`).
+- **Inicio del historial** (`HISTORY_START` en `packages/shared`, 17/11/2026 00:00 Madrid):
+  lo anterior es la carga inicial (el alta de todos los cables) y se guarda pero no se
+  muestra. `historyStart()` y `visibleLastAction()` (`server/activity/history-start.ts`) lo
+  aplican en Actividad y el panel, el detalle de un movimiento (404), el historial, el filtro
+  «Quién» y la «Última acción» de la ficha, y los filtros, la columna y el orden de actividad
+  del buscador. No toca «Cambios en las cuentas» ni la búsqueda del motivo de borrado. La
+  variable de entorno `HISTORY_START` lo cambia (los tests de integración la ponen en 1970).
 - Los límites de longitud de los textos de un cable (`CABLE_TEXT_LIMITS` en `packages/shared`)
   son los mismos en el formulario y en la carga.
 
@@ -332,6 +341,20 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - **Cargas:** cada sección tiene su `loading.tsx` con el logo y un anillo que gira
   (`BrandLoader`, sin girar si se prefiere menos movimiento) y cajas translúcidas con la
   forma de la página (`Skeleton`, en `components/loading.tsx`).
+- **Cargas dentro de una página:** `loading.tsx` no sale cuando solo cambian los parámetros de
+  la URL (filtrar, ordenar, paginar). Para eso, `components/pending-list.tsx`:
+  `PendingListProvider` envuelve el formulario y su lista; los formularios navegan con
+  `usePendingNavigation()` (un `router.push` dentro de `startTransition`), la paginación, el
+  tamaño de página y las cabeceras de orden con `PendingLink`, y `PendingResults` pone
+  «Cargando…» en el lugar de la lista mientras llega la página nueva. Si `PendingResults`
+  envuelve varios elementos, lleva el `space-y-*` que tenía el contenedor.
+- **Barras de las listas:** `ListToolbar` (`components/list-toolbar.tsx`) es la barra común de
+  Ubicaciones, Bandejas y Equipos: búsqueda, orden, filtros (select o casilla), «Buscar»,
+  «Limpiar» y recuento. `FilterForm` sigue para los filtros en rejilla (historial, usuarios,
+  ficha de un equipo). Las dos son GET que funcionan sin JavaScript, con campos no
+  controlados: una `key` con los valores de la URL los reinicia al «Limpiar» o al volver
+  atrás. El filtrado de Ubicaciones es una función pura (`filterLocationTree`,
+  `sortLocationTree` en `@cables/shared`) sobre el árbol que ya se carga entero.
 - **Contraseñas:** todos los campos usan `PasswordInput`, con un ojo para ver lo escrito.
 - **Lo pendiente, a la vista:** quien gestiona usuarios ve en el menú, junto a «Usuarios»,
   cuántas cuentas esperan aprobación, y un punto en el botón del menú del móvil. Además, el

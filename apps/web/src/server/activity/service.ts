@@ -19,6 +19,7 @@ import {
   type Lookups,
   type ReadableChange,
 } from "@/server/cables/detail";
+import { historyStart } from "@/server/activity/history-start";
 
 export type ActivityEntry = {
   id: string;
@@ -110,9 +111,11 @@ export async function getActivityEvent(
     prisma.cableEvent.findUnique({ where: { id }, include: EVENT_INCLUDE }),
     loadLookups(),
   ]);
+  // Lo anterior al corte (la carga inicial) no se muestra: como si no existiera.
+  if (!event || event.createdAt.getTime() < historyStart().getTime()) return null;
   // Quién ve un movimiento (fase 12): quien lo hizo, quien ve la actividad del equipo y quien
   // ve los cables (es una entrada del historial de su ficha). Lo que no puede ver no existe.
-  if (!event || !canSeeCableEvent(viewer, event.userId)) return null;
+  if (!canSeeCableEvent(viewer, event.userId)) return null;
   return { ...toEntry(event, lookups), wiring: wiringChanges(event.changes) };
 }
 
@@ -153,18 +156,17 @@ export async function listActivity(
   pageSize = search.size ?? ACTIVITY_PAGE_SIZE,
 ): Promise<ActivityPage> {
   const sources = originSources(search.origin);
+  // Nunca antes del corte; si el filtro «Desde» es posterior, manda el filtro.
+  const cutoff = historyStart();
+  const from = search.from ? madridDayStart(search.from) : null;
   const where: Prisma.CableEventWhereInput = {
     ...(sources ? { source: { in: sources } } : {}),
     ...(search.actor ? { userId: search.actor } : {}),
     ...(search.action ? { action: search.action } : {}),
-    ...(search.from || search.to
-      ? {
-          createdAt: {
-            ...(search.from ? { gte: madridDayStart(search.from) } : {}),
-            ...(search.to ? { lt: madridDayStart(nextDay(search.to)) } : {}),
-          },
-        }
-      : {}),
+    createdAt: {
+      gte: from && from.getTime() > cutoff.getTime() ? from : cutoff,
+      ...(search.to ? { lt: madridDayStart(nextDay(search.to)) } : {}),
+    },
   };
 
   const total = await prisma.cableEvent.count({ where });
@@ -200,7 +202,7 @@ export async function listActivity(
 export async function listActivityUsers(): Promise<{ id: string; label: string }[]> {
   // Only who has registered something: the filter is not a list of every account.
   const users = await prisma.user.findMany({
-    where: { cableEvents: { some: {} } },
+    where: { cableEvents: { some: { createdAt: { gte: historyStart() } } } },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
