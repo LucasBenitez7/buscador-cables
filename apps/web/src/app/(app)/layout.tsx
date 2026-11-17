@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { hasPermission } from "@cables/shared";
+import { NavigationProgress } from "@/components/navigation-progress";
 import { AppHeader } from "@/features/navigation/app-header";
 import type { NavItem } from "@/features/navigation/nav-items";
 import { requireUser } from "@/server/session";
@@ -59,6 +60,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh">
+      {/* Lee la URL (useSearchParams): fuera del primer render del servidor. */}
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       <AppHeader
         items={items}
         user={{
