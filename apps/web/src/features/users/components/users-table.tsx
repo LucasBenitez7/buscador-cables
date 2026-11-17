@@ -114,36 +114,44 @@ function UserRowView({
         {user.email}
       </td>
       <td data-label="Rol" className={CELL}>
-        {manageable ? (
-          <NativeSelect
-            aria-label={`Rol de ${user.name}`}
-            value={role}
-            disabled={pending}
-            onChange={(event) => changeRole(event.currentTarget.value)}
-            className="w-auto"
-          >
-            {roles.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </NativeSelect>
-        ) : (
-          user.roleName
-        )}
-        {user.extras.length > 0 ? (
-          <Link
-            href={`/admin/users/${user.id}`}
-            title={`Permisos extra: ${user.extras.length}`}
-            className="bg-primary/15 text-primary ml-2 rounded-full px-2 py-0.5 text-xs font-semibold"
-          >
-            +{user.extras.length}
-            <span className="sr-only"> permisos extra</span>
-          </Link>
-        ) : null}
-        {approving && chosen?.description ? (
-          <p className="text-muted-foreground mt-1 max-w-56 text-xs">{chosen.description}</p>
-        ) : null}
+        {/* Un solo bloque: en el móvil la celda reparte sus hijos a lo ancho y el selector
+            quedaba suelto en medio, con el «+N» al otro lado. */}
+        <span className="flex flex-col items-end gap-1 md:items-start">
+          <span className="inline-flex items-center gap-2">
+            {manageable ? (
+              <NativeSelect
+                aria-label={`Rol de ${user.name}`}
+                value={role}
+                disabled={pending}
+                onChange={(event) => changeRole(event.currentTarget.value)}
+                className="w-auto"
+              >
+                {roles.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            ) : (
+              user.roleName
+            )}
+            {user.extras.length > 0 ? (
+              <Link
+                href={`/admin/users/${user.id}`}
+                title={`Permisos extra: ${user.extras.length}`}
+                className="bg-primary/15 text-primary rounded-full px-2 py-0.5 text-xs font-semibold"
+              >
+                +{user.extras.length}
+                <span className="sr-only"> permisos extra</span>
+              </Link>
+            ) : null}
+          </span>
+          {approving && chosen?.description ? (
+            <span className="text-muted-foreground max-w-56 text-right text-xs md:text-left">
+              {chosen.description}
+            </span>
+          ) : null}
+        </span>
       </td>
       <td data-label="Estado" className={CELL}>
         <span
