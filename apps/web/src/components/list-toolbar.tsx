@@ -2,6 +2,7 @@
 
 import type { FormEvent, ReactNode } from "react";
 import { FormActions } from "@/components/form-actions";
+import { ListSummary } from "@/components/list-summary";
 import { usePendingNavigation } from "@/components/pending-list";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +50,8 @@ type Props = {
   active?: boolean;
   /** Recuento de la lista, debajo de la barra (role="status"). */
   count: ReactNode;
+  /** Junto al recuento: el selector «Por página», si la lista lo tiene. */
+  countAside?: ReactNode;
 };
 
 /**
@@ -65,6 +68,7 @@ export function ListToolbar({
   keep = {},
   active = false,
   count,
+  countAside,
 }: Props) {
   const { navigate, pending } = usePendingNavigation();
   const keepQuery = new URLSearchParams(keep).toString();
@@ -177,9 +181,7 @@ export function ListToolbar({
         {/* 3. Al final, a la izquierda, como en el buscador de cables. */}
         <FormActions submitLabel="Buscar" pending={pending} clearHref={clear} active={active} />
       </form>
-      <p role="status" className="text-muted-foreground text-sm">
-        {count}
-      </p>
+      <ListSummary aside={countAside}>{count}</ListSummary>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   type CableAction,
 } from "@cables/shared";
 import { ChangeList } from "@/components/change-list";
+import { ListSummary } from "@/components/list-summary";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
 import { PendingLink } from "@/components/pending-list";
@@ -102,23 +103,24 @@ export function ActivityList({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p role="status" className="text-muted-foreground text-sm">
-          <span className="text-foreground font-medium">
-            {activity.total.toLocaleString("es-ES")}
-          </span>{" "}
-          {activity.total === 1 ? "movimiento" : "movimientos"}
-          {activity.pageCount > 1 ? ` · página ${activity.page} de ${activity.pageCount}` : ""}
-        </p>
-        {activity.total > ACTIVITY_PAGE_SIZES[0] ? (
-          <PageSizePicker
-            sizes={ACTIVITY_PAGE_SIZES}
-            size={search.size}
-            page={activity.page}
-            href={(size, page) => `${basePath}${activityQuery(search, { size, page })}`}
-          />
-        ) : null}
-      </div>
+      <ListSummary
+        aside={
+          activity.total > ACTIVITY_PAGE_SIZES[0] ? (
+            <PageSizePicker
+              sizes={ACTIVITY_PAGE_SIZES}
+              size={search.size}
+              page={activity.page}
+              href={(size, page) => `${basePath}${activityQuery(search, { size, page })}`}
+            />
+          ) : null
+        }
+      >
+        <span className="text-foreground font-medium">
+          {activity.total.toLocaleString("es-ES")}
+        </span>{" "}
+        {activity.total === 1 ? "movimiento" : "movimientos"}
+        {activity.pageCount > 1 ? ` · página ${activity.page} de ${activity.pageCount}` : ""}
+      </ListSummary>
       {ranges}
 
       {days.map((day) => (

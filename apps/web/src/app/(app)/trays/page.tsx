@@ -88,6 +88,16 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
           // El tamaño de página se conserva al buscar.
           keep={search.size ? { size: String(search.size) } : {}}
           active={active}
+          countAside={
+            result.total > TRAY_PAGE_SIZES[0] ? (
+              <PageSizePicker
+                sizes={TRAY_PAGE_SIZES}
+                size={search.size}
+                page={result.page}
+                href={(size, page) => `/trays${trayQuery(search, { size, page })}`}
+              />
+            ) : null
+          }
           count={
             <>
               <span className="text-foreground font-medium">
@@ -100,17 +110,6 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
         />
 
         <PendingResults className="space-y-6">
-          {result.total > TRAY_PAGE_SIZES[0] ? (
-            <div className="flex justify-end">
-              <PageSizePicker
-                sizes={TRAY_PAGE_SIZES}
-                size={search.size}
-                page={result.page}
-                href={(size, page) => `/trays${trayQuery(search, { size, page })}`}
-              />
-            </div>
-          ) : null}
-
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {result.items.map((tray) => {
               const size = formatTraySize(tray.size);
