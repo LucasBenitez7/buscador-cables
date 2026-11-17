@@ -125,10 +125,35 @@ export const parseUserEventSearch = (params: RawSearchParams): UserEventSearch =
   userEventSearchSchema.parse(firstParams(params));
 
 // ---------------------------------------------------------------------------
+// Who wrote a movement: people in the app or the load of the project lists
+// ---------------------------------------------------------------------------
+
+/**
+ * The load of the lists writes one event per cable (4.459 at once): by default the activity
+ * and the history show what people do, and the loads only when asked for.
+ */
+export const ACTIVITY_ORIGINS = ["people", "loads", "all"] as const;
+export type ActivityOrigin = (typeof ACTIVITY_ORIGINS)[number];
+export const ACTIVITY_ORIGIN_LABELS: Record<ActivityOrigin, string> = {
+  people: "Personas",
+  loads: "Cargas de listados",
+  all: "Todo",
+};
+
+/** The event sources (`CableEvent.source`) an origin shows; null for all of them. */
+export function originSources(
+  origin: ActivityOrigin | undefined,
+): ("APP" | "PROJECT_LOAD")[] | null {
+  if (origin === "all") return null;
+  return origin === "loads" ? ["PROJECT_LOAD"] : ["APP"];
+}
+
+// ---------------------------------------------------------------------------
 // History of a cable
 // ---------------------------------------------------------------------------
 
 export const cableHistorySearchSchema = z.object({
+  origin: oneOf(ACTIVITY_ORIGINS),
   action: oneOf(CABLE_ACTIONS),
   person: text,
   sort: oneOf(DATE_SORTS),

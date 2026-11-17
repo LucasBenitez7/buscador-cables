@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CABLE_ACTIONS } from "./cables";
-import { DATE_SORTS } from "./list-filters";
+import { ACTIVITY_ORIGINS, DATE_SORTS } from "./list-filters";
 import {
   daySchema,
   firstParams,
@@ -26,6 +26,8 @@ const optionalText = z
   .catch(undefined);
 
 export const activitySearchSchema = z.object({
+  /** People (default), loads of the lists or everything. */
+  origin: z.enum(ACTIVITY_ORIGINS).optional().catch(undefined),
   actor: optionalText,
   action: z.enum(CABLE_ACTIONS).optional().catch(undefined),
   from: daySchema,
@@ -54,6 +56,7 @@ export function activityQuery(
       value === undefined ||
       (key === "page" && value === 1) ||
       (key === "sort" && value === "newest") ||
+      (key === "origin" && value === "people") ||
       (key === "size" && value === ACTIVITY_PAGE_SIZE)
     ) {
       continue;

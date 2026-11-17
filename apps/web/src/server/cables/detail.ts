@@ -19,6 +19,7 @@ import {
   type ConnectionStatus,
   type TestStatus,
   type InstallationStatus,
+  originSources,
   type CableHistorySearch,
   type RouteSection,
   type WireRow,
@@ -266,7 +267,9 @@ export async function getCableDetail(
   id: string,
   historySearch: CableHistorySearch = {},
 ): Promise<CableDetail | null> {
+  const sources = originSources(historySearch.origin);
   const historyWhere = {
+    ...(sources ? { source: { in: sources } } : {}),
     ...(historySearch.action ? { action: historySearch.action } : {}),
     ...(historySearch.person ? { userId: historySearch.person } : {}),
   };

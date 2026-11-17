@@ -4,6 +4,7 @@ import {
   ACTIVITY_PAGE_SIZE,
   describeCableEvent,
   hasPermission,
+  originSources,
   wiringChanges,
   type ActivitySearch,
   type CableAction,
@@ -151,7 +152,9 @@ export async function listActivity(
   search: ActivitySearch,
   pageSize = search.size ?? ACTIVITY_PAGE_SIZE,
 ): Promise<ActivityPage> {
+  const sources = originSources(search.origin);
   const where: Prisma.CableEventWhereInput = {
+    ...(sources ? { source: { in: sources } } : {}),
     ...(search.actor ? { userId: search.actor } : {}),
     ...(search.action ? { action: search.action } : {}),
     ...(search.from || search.to

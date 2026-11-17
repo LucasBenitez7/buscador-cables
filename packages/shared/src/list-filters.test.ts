@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   listQuery,
+  originSources,
   optionsOf,
   parseCableHistorySearch,
   parseEquipmentSearch,
@@ -68,5 +69,16 @@ describe("list filters", () => {
       { value: "a", label: "Uno" },
       { value: "b", label: "Dos" },
     ]);
+  });
+});
+
+describe("originSources", () => {
+  it("shows what people do by default, the loads or everything on request", () => {
+    expect(originSources(undefined)).toEqual(["APP"]);
+    expect(originSources("people")).toEqual(["APP"]);
+    expect(originSources("loads")).toEqual(["PROJECT_LOAD"]);
+    expect(originSources("all")).toBeNull();
+    expect(parseCableHistorySearch({ origin: "loads" }).origin).toBe("loads");
+    expect(parseCableHistorySearch({ origin: "robots" }).origin).toBeUndefined();
   });
 });
