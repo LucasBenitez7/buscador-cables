@@ -102,55 +102,47 @@ export function ListToolbar({
         role="search"
         aria-label={label}
         onSubmit={submit}
-        className="bg-card space-y-3 rounded-lg border p-4"
+        className="bg-card space-y-4 rounded-lg border p-4"
       >
         {Object.entries(keep).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
-        <div className="flex flex-wrap items-end gap-3">
-          {/* En el móvil la búsqueda ocupa su fila; el orden y los botones van debajo. */}
-          <div className="w-full min-w-0 space-y-1.5 sm:w-auto sm:min-w-56 sm:flex-1">
-            <Label htmlFor={idOf(search.name)}>{search.label}</Label>
-            <Input
-              id={idOf(search.name)}
-              name={search.name}
-              type="search"
-              defaultValue={search.value ?? ""}
-              placeholder={search.placeholder}
-              maxLength={search.maxLength}
-              autoComplete="off"
-              spellCheck={false}
-              className={search.mono ? "font-mono uppercase" : undefined}
-            />
-          </div>
-          {sort ? (
-            <div className="min-w-0 flex-1 space-y-1.5 sm:flex-none">
-              <Label htmlFor={idOf(sort.name)}>Orden</Label>
-              <NativeSelect id={idOf(sort.name)} name={sort.name} defaultValue={sort.value}>
-                {sort.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-          ) : null}
-          <Button type="submit" disabled={pending}>
-            <SubmitLabel pending={pending} idle="Buscar" />
-          </Button>
-          {active ? (
-            <Button asChild type="button" variant="ghost">
-              <PendingLink href={clear}>Limpiar</PendingLink>
-            </Button>
-          ) : null}
+        {/* 1. Qué buscar, a lo ancho. */}
+        <div className="min-w-0 space-y-1.5">
+          <Label htmlFor={idOf(search.name)}>{search.label}</Label>
+          <Input
+            id={idOf(search.name)}
+            name={search.name}
+            type="search"
+            defaultValue={search.value ?? ""}
+            placeholder={search.placeholder}
+            maxLength={search.maxLength}
+            autoComplete="off"
+            spellCheck={false}
+            className={search.mono ? "font-mono uppercase" : undefined}
+          />
         </div>
-        {filters.length > 0 ? (
-          <div className="flex flex-wrap items-end gap-3">
+
+        {/* 2. Cómo: el orden y los filtros, en una fila (dos columnas en el móvil). */}
+        {sort || filters.length > 0 ? (
+          <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap">
+            {sort ? (
+              <div className="min-w-0 space-y-1.5 sm:w-52">
+                <Label htmlFor={idOf(sort.name)}>Orden</Label>
+                <NativeSelect id={idOf(sort.name)} name={sort.name} defaultValue={sort.value}>
+                  {sort.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+            ) : null}
             {filters.map((filter) =>
               filter.kind === "checkbox" ? (
                 <label
                   key={filter.name}
-                  className="flex min-h-10 cursor-pointer items-center gap-2 text-sm"
+                  className="col-span-2 flex min-h-10 cursor-pointer items-center gap-2 text-sm sm:col-span-1"
                 >
                   <input
                     type="checkbox"
@@ -162,7 +154,7 @@ export function ListToolbar({
                   {filter.label}
                 </label>
               ) : (
-                <div key={filter.name} className="min-w-36 flex-1 space-y-1.5 sm:flex-none">
+                <div key={filter.name} className="min-w-0 space-y-1.5 sm:w-44">
                   <Label htmlFor={idOf(filter.name)}>{filter.label}</Label>
                   <NativeSelect
                     id={idOf(filter.name)}
@@ -181,6 +173,18 @@ export function ListToolbar({
             )}
           </div>
         ) : null}
+
+        {/* 3. Al final, como en cualquier formulario: «Buscar» aplica todo lo de arriba. */}
+        <div className="flex items-center justify-end gap-2 border-t pt-3">
+          {active ? (
+            <Button asChild type="button" variant="ghost">
+              <PendingLink href={clear}>Limpiar</PendingLink>
+            </Button>
+          ) : null}
+          <Button type="submit" disabled={pending}>
+            <SubmitLabel pending={pending} idle="Buscar" />
+          </Button>
+        </div>
       </form>
       <p role="status" className="text-muted-foreground text-sm">
         {count}
