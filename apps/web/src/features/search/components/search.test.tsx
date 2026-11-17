@@ -22,6 +22,30 @@ const options: SearchOptions = {
 describe("SearchFilters", () => {
   beforeEach(() => push.mockReset());
 
+  // Las flechas giran cuando el panel se abre: el botón de móvil (aria-expanded) y el desplegable.
+  it("turns the arrow of the Filtros button with the panel", () => {
+    render(<SearchFilters search={{}} options={options} />);
+    const button = screen.getByRole("button", { name: /^Filtros/ });
+    // El icono de filtros va primero; la flecha, al final.
+    const arrow = () =>
+      button.querySelectorAll("svg").item(button.querySelectorAll("svg").length - 1);
+
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(arrow()).not.toHaveClass("rotate-180");
+
+    fireEvent.click(button);
+
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(arrow()).toHaveClass("rotate-180");
+  });
+
+  it("gives the «Más filtros» summary an arrow that turns when the block opens", () => {
+    render(<SearchFilters search={{}} options={options} />);
+    const summary = screen.getByText("Más filtros").closest("summary");
+
+    expect(summary?.querySelector("svg")).toHaveClass("group-open:rotate-180");
+  });
+
   it("navigates to a clean, shareable URL keeping the current order", () => {
     render(<SearchFilters search={{ sort: "length", dir: "desc", page: 4 }} options={options} />);
 

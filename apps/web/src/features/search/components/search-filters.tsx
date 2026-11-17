@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { SlidersHorizontalIcon } from "lucide-react";
+import { ChevronDownIcon, SlidersHorizontalIcon } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import {
   CABLE_ACTIONS,
@@ -106,6 +106,14 @@ export function SearchFilters({ search, options }: Props) {
         >
           <SlidersHorizontalIcon />
           Filtros{activeCount > 0 ? ` (${activeCount})` : ""}
+          {/* Gira al abrir el panel: se ve que el botón despliega algo. */}
+          <ChevronDownIcon
+            aria-hidden
+            className={cn(
+              "transition-transform motion-safe:duration-200",
+              expanded && "rotate-180",
+            )}
+          />
         </Button>
       </div>
 
@@ -189,8 +197,13 @@ export function SearchFilters({ search, options }: Props) {
         </div>
 
         <details open={advancedActive} className="group">
-          <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-sm text-sm transition-colors outline-none select-none focus-visible:ring-3">
+          <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-sm transition-colors outline-none select-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
             Más filtros
+            {/* Gira al abrir: en escritorio también se ve que el bloque se despliega. */}
+            <ChevronDownIcon
+              aria-hidden
+              className="size-4 transition-transform group-open:rotate-180 motion-safe:duration-200"
+            />
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Filter label="Equipo (exacto, en origen o destino)" htmlFor="equipment">
