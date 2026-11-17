@@ -298,22 +298,25 @@ export async function getCableDetail(
       },
       wires: { orderBy: { position: "asc" }, omit: { id: true, cableId: true } },
       jumpers: { orderBy: { position: "asc" }, omit: { id: true, cableId: true } },
-      events: {
-        where: historyWhere,
-        orderBy: [{ createdAt: historyOrder }, { id: historyOrder }],
-        take: HISTORY_LIMIT,
-        include: {
-          user: { select: { name: true, role: true } },
-          correctsEvent: { select: { action: true, createdAt: true } },
-        },
-      },
     },
   });
   if (!cable) {
     return null;
   }
 
-  const [lookups, historyTotal, historyAll, people] = await Promise.all([
+  // El historial va en su propia consulta y no anidado en la del cable: anidado (con su orden y
+  // su límite) Prisma lo resolvía en una transacción con varias consultas a la vez sobre la
+  // misma conexión, y `pg` avisa de que eso dejará de funcionar (pg@9).
+  const [events, lookups, historyTotal, historyAll, people] = await Promise.all([
+    prisma.cableEvent.findMany({
+      where: { cableId: cable.id, ...historyWhere },
+      orderBy: [{ createdAt: historyOrder }, { id: historyOrder }],
+      take: HISTORY_LIMIT,
+      include: {
+        user: { select: { name: true, role: true } },
+        correctsEvent: { select: { action: true, createdAt: true } },
+      },
+    }),
     loadLookups(),
     prisma.cableEvent.count({ where: { cableId: cable.id, ...historyWhere } }),
     prisma.cableEvent.count({ where: { cableId: cable.id, createdAt: { gte: cutoff } } }),
@@ -432,7 +435,7 @@ export async function getCableDetail(
     historyTotal,
     historyAll,
     historyPeople: people.map((person) => ({ id: person.id, label: userName(person) })),
-    history: cable.events.map((event) => ({
+    history: events.map((event) => ({
       id: event.id,
       action: event.action,
       user: userName(event.user),
