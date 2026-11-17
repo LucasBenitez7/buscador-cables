@@ -14,7 +14,8 @@ export function HistoryFilterNote({
   all: number;
 }) {
   const filtered = (search.origin && search.origin !== "people") || search.action || search.person;
-  if (!filtered) return null;
+  // Sin ningún movimiento ya se lee «Sin historial.»: el recuento no añade nada.
+  if (!filtered || all === 0) return null;
   return (
     <p role="status" className="text-muted-foreground text-sm">
       {`${total} de ${all} movimientos cumplen los filtros.`}

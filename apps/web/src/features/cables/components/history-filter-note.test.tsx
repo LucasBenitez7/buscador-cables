@@ -21,6 +21,14 @@ describe("HistoryFilterNote", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("says nothing when the cable has no history at all", () => {
+    const { container } = render(
+      <HistoryFilterNote search={{ origin: "all" }} total={0} all={0} />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("counts the matches once a filter is set", () => {
     const { rerender } = render(<HistoryFilterNote search={{ origin: "all" }} total={9} all={9} />);
     expect(screen.getByRole("status")).toHaveTextContent("9 de 9 movimientos cumplen los filtros.");
