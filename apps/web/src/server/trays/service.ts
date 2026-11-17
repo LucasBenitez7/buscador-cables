@@ -90,23 +90,68 @@ const sizeOf = (tray: TraySize): TraySize => ({
   diameterMm: tray.diameterMm,
 });
 
+/** Levels (1-4) that some tray has, for the "Nivel" filter. */
+export async function trayLevels(): Promise<number[]> {
+  const rows = await prisma.tray.findMany({
+    where: { voltageLevel: { not: null } },
+    distinct: ["voltageLevel"],
+    orderBy: { voltageLevel: "asc" },
+    select: { voltageLevel: true },
+  });
+  return rows.flatMap((row) => (row.voltageLevel === null ? [] : [row.voltageLevel]));
+}
+
+/** The trays that match the filters (not the order or the page). */
+function trayWhere(search: TraySearch): Prisma.TrayWhereInput {
+  return {
+    // Prisma does not escape LIKE wildcards in `contains`, and "_" is part of tray codes.
+    ...(search.q ? { code: { contains: escapeLike(search.q), mode: "insensitive" as const } } : {}),
+    ...(search.kind ? { kind: search.kind } : {}),
+    ...(search.level ? { voltageLevel: search.level } : {}),
+    // Solo cuentan los cables activos: un cable dado de baja no espera en ninguna bandeja.
+    ...(search.waiting ? { looseEndCables: { some: ACTIVE } } : {}),
+  };
+}
+
+/**
+ * Every tray that matches, most waiting cables first and then by code. Prisma cannot count only
+ * the active cables in an `orderBy`, and there are a few hundred trays: they are ranked here.
+ */
+async function trayIdsByWaiting(where: Prisma.TrayWhereInput): Promise<string[]> {
+  const [trays, waiting] = await Promise.all([
+    prisma.tray.findMany({ where, select: { id: true, code: true } }),
+    prisma.cable.groupBy({
+      by: ["looseEndTrayId"],
+      where: { ...ACTIVE, looseEndTrayId: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
+  const counts = new Map(waiting.map((row) => [row.looseEndTrayId, row._count._all]));
+  return trays
+    .sort(
+      (a, b) =>
+        (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0) ||
+        a.code.localeCompare(b.code, "es", { numeric: true }),
+    )
+    .map((tray) => tray.id);
+}
+
 /** Trays by code (substring), with how many cables go through and wait in each one. */
 export async function searchTrays(
   search: TraySearch,
   pageSize = search.size ?? TRAY_PAGE_SIZE,
 ): Promise<{ items: TrayListItem[]; total: number; page: number; pageCount: number }> {
-  // Prisma does not escape LIKE wildcards in `contains`, and "_" is part of tray codes.
-  const where = search.q
-    ? { code: { contains: escapeLike(search.q), mode: "insensitive" as const } }
-    : {};
+  const where = trayWhere(search);
   const total = await prisma.tray.count({ where });
   const pageCount = Math.ceil(total / pageSize);
   const page = Math.min(search.page ?? 1, Math.max(pageCount, 1));
+  const start = (page - 1) * pageSize;
+  const ranked = search.sort === "waiting" ? await trayIdsByWaiting(where) : null;
+  const pageIds = ranked?.slice(start, start + pageSize);
   const trays = await prisma.tray.findMany({
-    where,
-    orderBy: { code: "asc" },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
+    where: pageIds ? { id: { in: pageIds } } : where,
+    orderBy: { code: search.sort === "code-desc" ? "desc" : "asc" },
+    ...(pageIds ? {} : { skip: start, take: pageSize }),
     include: {
       location: {
         select: { id: true, code: true, name: true, parent: { select: { name: true } } },
@@ -114,6 +159,8 @@ export async function searchTrays(
       _count: { select: { looseEndCables: { where: ACTIVE } } },
     },
   });
+  // `findMany` no devuelve en el orden de `id in`: se pone en el del ranking.
+  if (pageIds) trays.sort((a, b) => pageIds.indexOf(a.id) - pageIds.indexOf(b.id));
   // A route may name the same tray twice: count cables, not route steps, like the record.
   const counts =
     trays.length === 0

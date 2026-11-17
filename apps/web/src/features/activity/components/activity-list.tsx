@@ -8,8 +8,10 @@ import {
   type CableAction,
 } from "@cables/shared";
 import { ChangeList } from "@/components/change-list";
+import { ListSummary } from "@/components/list-summary";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
+import { PendingLink } from "@/components/pending-list";
 import { Badge } from "@/components/ui/badge";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { INLINE_LINK } from "@/lib/links";
@@ -101,23 +103,24 @@ export function ActivityList({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p role="status" className="text-muted-foreground text-sm">
-          <span className="text-foreground font-medium">
-            {activity.total.toLocaleString("es-ES")}
-          </span>{" "}
-          {activity.total === 1 ? "movimiento" : "movimientos"}
-          {activity.pageCount > 1 ? ` · página ${activity.page} de ${activity.pageCount}` : ""}
-        </p>
-        {activity.total > ACTIVITY_PAGE_SIZES[0] ? (
-          <PageSizePicker
-            sizes={ACTIVITY_PAGE_SIZES}
-            size={search.size}
-            page={activity.page}
-            href={(size, page) => `${basePath}${activityQuery(search, { size, page })}`}
-          />
-        ) : null}
-      </div>
+      <ListSummary
+        aside={
+          activity.total > ACTIVITY_PAGE_SIZES[0] ? (
+            <PageSizePicker
+              sizes={ACTIVITY_PAGE_SIZES}
+              size={search.size}
+              page={activity.page}
+              href={(size, page) => `${basePath}${activityQuery(search, { size, page })}`}
+            />
+          ) : null
+        }
+      >
+        <span className="text-foreground font-medium">
+          {activity.total.toLocaleString("es-ES")}
+        </span>{" "}
+        {activity.total === 1 ? "movimiento" : "movimientos"}
+        {activity.pageCount > 1 ? ` · página ${activity.page} de ${activity.pageCount}` : ""}
+      </ListSummary>
       {ranges}
 
       {days.map((day) => (
@@ -275,7 +278,7 @@ function QuickRanges({
       {ranges.map((range) => {
         const active = search.from === range.from && search.to === range.to;
         return (
-          <Link
+          <PendingLink
             key={range.label}
             href={`${basePath}${activityQuery(search, { from: range.from, to: range.to, page: undefined })}`}
             aria-current={active ? "true" : undefined}
@@ -286,7 +289,7 @@ function QuickRanges({
             }
           >
             {range.label}
-          </Link>
+          </PendingLink>
         );
       })}
     </nav>

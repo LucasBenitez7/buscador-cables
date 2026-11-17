@@ -28,8 +28,9 @@ largas enseñan las 10 primeras filas con un botón «Ver los N».
 
 **Filtros y orden.** Las listas largas (cuentas, cambios en las cuentas, historial de un cable,
 equipos, actividad, conexionado) tienen arriba sus filtros y un «Orden». Los filtros quedan en
-la dirección de la página: se puede guardar o compartir el enlace. «Quitar filtros» vuelve a
-verlo todo.
+la dirección de la página: se puede guardar o compartir el enlace. Todos los formularios acaban
+igual: «Buscar» (o «Aplicar», si solo hay filtros) y, a su lado, «Limpiar», que vuelve a verlo
+todo. «Limpiar» está apagado mientras no hay nada buscado ni filtrado.
 
 ¿Olvidaste la contraseña? «He olvidado mi contraseña» en la entrada: llega un enlace para
 poner otra (caduca en una hora). Tras 10 contraseñas incorrectas seguidas, la cuenta se bloquea
@@ -73,7 +74,9 @@ estado, la actividad del equipo o las cuentas pendientes de aprobar.
 mayúsculas) y afina con los filtros: ubicación (incluye todo lo que contiene), tipo, color,
 fabricante, sección, longitud, estado de instalación, conexión y timbrado, nivel, equipo
 (exacto, en origen o destino) y bandeja. Los filtros quedan en la dirección de la página: se
-puede guardar o compartir una búsqueda copiando el enlace.
+puede guardar o compartir una búsqueda copiando el enlace. En el móvil, el botón **Filtros ⌄**
+despliega todos los filtros; «Más filtros ⌄» abre los menos usados. La flecha gira cuando
+están abiertos.
 
 Pulsa un código para abrir su **ficha**. Tiene dos pestañas, con las mismas acciones y el
 mismo historial arriba y abajo:
@@ -109,7 +112,8 @@ campo.
 
 ## Equipos
 
-**Equipos** busca un cuadro, caja o armario y abre su página: los cables que llegan a él,
+**Equipos** busca un cuadro, caja o armario (ordenados por más cables o por código, A-Z o
+Z-A) y abre su página: los cables que llegan a él,
 agrupados por regletero, con sus bornas, el equipo del otro lado y si **esa punta** está
 conectada. «Solo pendientes de conectar» deja los que faltan. Es la forma de trabajar armario
 a armario. El código de un equipo, en cualquier ficha, lleva a su página.
@@ -132,7 +136,9 @@ cambio: recarga la página y repite la acción.
 
 ## Bandejas y planos
 
-**Bandejas** lista las bandejas con sus cables. La ficha de una bandeja enseña el plano con la
+**Bandejas** lista las bandejas con sus cables. Se buscan por código y se filtran por tipo,
+por nivel (L1-L4) o «Solo con cables esperando»; se ordenan por código (A-Z o Z-A) o con las
+que más cables esperan primero. La ficha de una bandeja enseña el plano con la
 bandeja marcada, qué cables pasan por ella y cuáles esperan con una punta suelta.
 
 En el plano:
@@ -150,16 +156,37 @@ fiable), la bandera de su sección o solo la fila de la tabla de su sección.
 
 ## Ubicaciones
 
-**Ubicaciones** muestra el árbol de la planta (planta → área → unidad → sala). Cada ubicación
-tiene su página con lo que contiene, sus cables y sus bandejas.
+**Ubicaciones** muestra el árbol de la planta (planta → área → unidad → sitio). Al entrar se
+ven las plantas con sus áreas; cada fila dice su tipo, su código y, plegada, cuánto contiene.
+La flecha abre o cierra una rama; «Expandir todo» y «Contraer todo», el árbol entero.
+
+- **Buscar**: nombre o código (no importan acentos ni mayúsculas). El árbol se abre solo
+  hasta cada ubicación que coincide y la resalta.
+- **Filtrar** por tipo (planta, área, unidad, sitio) o «Solo con cables».
+- **Ordenar** por nombre, código o «Más cables primero».
+- «N cables →» abre el buscador con los cables de esa ubicación y de todo lo que contiene.
+
+Quien gestiona ubicaciones añade, edita, mueve o elimina desde la fila: con ratón, los
+botones aparecen al pasar por encima; en el móvil o una tablet, en el menú «⋯».
+
+Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
+
+**Ubicaciones, Bandejas y Equipos** tienen la misma barra: búsqueda, orden, filtros
+(cuando los hay), «Buscar» y «Limpiar» para volver a empezar.
 
 ## Actividad
 
 - **Mi actividad**: todo lo que has registrado, por días.
-- **Origen**: por defecto se ve lo que hacen las **personas** (tender, conectar, dar de alta un
-  cable a mano…). Las **cargas de listados** escriben una entrada por cable y quedan ocultas;
-  se ven eligiendo «Cargas de listados» o «Todo». En la ficha de cada cable, el historial
-  dice cuántas hay ocultas y enlaza a «Ver todo».
+- **El historial empieza el 17/11/2026.** Lo anterior (el alta de todos los cables al cargar
+  los listados para poner en marcha la app) sigue guardado, pero no se muestra en ningún
+  sitio: ni en Actividad, ni en el historial o el «Último movimiento» de un cable, ni en los
+  filtros de actividad del buscador.
+- **Origen**: por defecto se ve lo que se hace **en campo** (tender, conectar, dar de alta un
+  cable a mano…). Las **cargas de listados** (una revisión nueva de un listado) escriben una
+  entrada por cable y no se ven por defecto: se eligen con «Cargas de listados» o «Todo», en
+  Actividad y en el historial de cada cable.
+- Al cambiar un filtro, el orden o la página, la lista muestra **«Cargando…»** hasta que llega
+  el resultado: no hace falta pulsar otra vez.
 - Una corrección de bornas ocupa **una línea** («corrigió las bornas de 3 hilos en origen»).
   «Ver qué cambió» abre su página con cada hilo, antes y después.
 - **Actividad** (supervisor y administrador): lo de todo el equipo, con filtros por persona,

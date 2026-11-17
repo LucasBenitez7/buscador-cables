@@ -54,6 +54,17 @@ describe("searchEquipment", () => {
   it("takes '%' and '_' literally", async () => {
     expect(await searchEquipment("%_")).toEqual([{ equipment: "99B%_X", cables: 1 }]);
   });
+
+  it("sorts by code A-Z or Z-A on request", async () => {
+    // El orden exacto de "%" y "_" depende de la collation de la base: se miran los otros dos.
+    const codes = async (sort: "name" | "name-desc") =>
+      (await searchEquipment("", sort))
+        .map((match) => match.equipment)
+        .filter((equipment) => equipment !== "99B%_X");
+
+    expect(await codes("name")).toEqual(["99BMA10", "99CXJ11"]);
+    expect(await codes("name-desc")).toEqual(["99CXJ11", "99BMA10"]);
+  });
 });
 
 describe("getEquipment", () => {

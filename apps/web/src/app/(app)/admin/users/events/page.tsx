@@ -10,6 +10,7 @@ import {
 } from "@cables/shared";
 import { FilterForm } from "@/components/filter-form";
 import { Pagination } from "@/components/pagination";
+import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { UserEventList } from "@/features/users/components/user-events";
 import { INLINE_LINK } from "@/lib/links";
 import { requirePermission } from "@/server/session";
@@ -48,50 +49,56 @@ export default async function UserEventsPage({ searchParams }: { searchParams: S
         </p>
       </div>
 
-      <FilterForm
-        action="/admin/users/events"
-        label="Filtrar cambios"
-        active={filtered}
-        fields={[
-          {
-            kind: "select",
-            name: "action",
-            label: "Qué cambió",
-            value: search.action,
-            options: optionsOf(USER_EVENT_ACTION_LABELS),
-          },
-          {
-            kind: "select",
-            name: "person",
-            label: "Persona (lo hizo o lo recibió)",
-            value: search.person,
-            options: people.map((person) => ({ value: person.id, label: person.label })),
-            emptyLabel: "Todas",
-          },
-          { kind: "date", name: "from", label: "Desde", value: search.from },
-          { kind: "date", name: "to", label: "Hasta", value: search.to },
-          {
-            kind: "select",
-            name: "sort",
-            label: "Orden",
-            value: search.sort,
-            options: optionsOf(DATE_SORT_LABELS),
-            emptyLabel: null,
-          },
-        ]}
-      />
+      <PendingListProvider>
+        <FilterForm
+          action="/admin/users/events"
+          label="Filtrar cambios"
+          active={filtered}
+          fields={[
+            {
+              kind: "select",
+              name: "action",
+              label: "Qué cambió",
+              value: search.action,
+              options: optionsOf(USER_EVENT_ACTION_LABELS),
+            },
+            {
+              kind: "select",
+              name: "person",
+              label: "Persona (lo hizo o lo recibió)",
+              value: search.person,
+              options: people.map((person) => ({ value: person.id, label: person.label })),
+              emptyLabel: "Todas",
+            },
+            { kind: "date", name: "from", label: "Desde", value: search.from },
+            { kind: "date", name: "to", label: "Hasta", value: search.to },
+            {
+              kind: "select",
+              name: "sort",
+              label: "Orden",
+              value: search.sort,
+              options: optionsOf(DATE_SORT_LABELS),
+              emptyLabel: null,
+            },
+          ]}
+        />
 
-      <p role="status" className="text-muted-foreground text-sm">
-        <span className="text-foreground font-medium">{events.total.toLocaleString("es-ES")}</span>{" "}
-        {events.total === 1 ? "cambio" : "cambios"}
-        {events.pageCount > 1 ? ` · página ${events.page} de ${events.pageCount}` : ""}
-      </p>
-      <UserEventList events={events.rows} />
-      <Pagination
-        page={events.page}
-        pageCount={events.pageCount}
-        href={(page) => pageHref(search, page)}
-      />
+        <PendingResults className="space-y-6">
+          <p role="status" className="text-muted-foreground text-sm">
+            <span className="text-foreground font-medium">
+              {events.total.toLocaleString("es-ES")}
+            </span>{" "}
+            {events.total === 1 ? "cambio" : "cambios"}
+            {events.pageCount > 1 ? ` · página ${events.page} de ${events.pageCount}` : ""}
+          </p>
+          <UserEventList events={events.rows} />
+          <Pagination
+            page={events.page}
+            pageCount={events.pageCount}
+            href={(page) => pageHref(search, page)}
+          />
+        </PendingResults>
+      </PendingListProvider>
     </div>
   );
 }

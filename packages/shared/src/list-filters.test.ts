@@ -4,6 +4,7 @@ import {
   originSources,
   optionsOf,
   parseCableHistorySearch,
+  parseEquipmentListSearch,
   parseEquipmentSearch,
   parseUserEventSearch,
   parseUserListSearch,
@@ -69,6 +70,22 @@ describe("list filters", () => {
       { value: "a", label: "Uno" },
       { value: "b", label: "Dos" },
     ]);
+  });
+});
+
+describe("equipment list search", () => {
+  it("reads the code and the order, and ignores an unknown order", () => {
+    expect(parseEquipmentListSearch({ q: " 99bma ", sort: "name-desc" })).toEqual({
+      q: "99bma",
+      sort: "name-desc",
+    });
+    expect(parseEquipmentListSearch({ sort: "name" })).toEqual({ sort: "name" });
+    expect(parseEquipmentListSearch({ sort: "robots" })).toEqual({});
+  });
+
+  it("caps the code like the equipment page does", () => {
+    expect(parseEquipmentListSearch({ q: "x".repeat(121) })).toEqual({});
+    expect(parseEquipmentListSearch({ q: "x".repeat(120) }).q).toHaveLength(120);
   });
 });
 

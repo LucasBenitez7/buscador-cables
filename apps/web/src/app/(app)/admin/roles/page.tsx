@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listRoles } from "@/server/roles/service";
 import { requirePermission } from "@/server/session";
@@ -41,8 +40,6 @@ export default async function RolesPage() {
               >
                 {role.name}
               </Link>
-              {role.locked ? <Badge variant="outline">Fijo</Badge> : null}
-              {role.system && !role.locked ? <Badge variant="outline">De siempre</Badge> : null}
             </div>
             {role.description ? <p className="text-muted-foreground">{role.description}</p> : null}
             <p>

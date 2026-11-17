@@ -1,8 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { SlidersHorizontalIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { ChevronDownIcon, SlidersHorizontalIcon } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import {
   CABLE_ACTIONS,
@@ -20,6 +19,8 @@ import {
   parseCableSearch,
   type CableSearch,
 } from "@cables/shared";
+import { FormActions } from "@/components/form-actions";
+import { usePendingNavigation } from "@/components/pending-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,7 @@ const RANGES = [
  * actual se conserva; la página vuelve a la 1.
  */
 export function SearchFilters({ search, options }: Props) {
-  const router = useRouter();
+  const { navigate, pending } = usePendingNavigation();
   const [expanded, setExpanded] = useState(false);
   const advancedActive = Boolean(
     search.manufacturer ||
@@ -64,7 +65,7 @@ export function SearchFilters({ search, options }: Props) {
       dir: search.dir,
       size: search.size === undefined ? undefined : String(search.size),
     });
-    router.push(`/cables${cableSearchQuery(next)}`);
+    navigate(`/cables${cableSearchQuery(next)}`);
   }
 
   const text = (value: number | string | undefined) =>
@@ -81,7 +82,7 @@ export function SearchFilters({ search, options }: Props) {
       onSubmit={submit}
       role="search"
       aria-label="Buscar cables"
-      className="space-y-4 rounded-lg border p-4"
+      className="bg-card space-y-4 rounded-lg border p-4"
     >
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1 space-y-1.5 sm:min-w-56">
@@ -106,6 +107,14 @@ export function SearchFilters({ search, options }: Props) {
         >
           <SlidersHorizontalIcon />
           Filtros{activeCount > 0 ? ` (${activeCount})` : ""}
+          {/* Gira al abrir el panel: se ve que el botón despliega algo. */}
+          <ChevronDownIcon
+            aria-hidden
+            className={cn(
+              "transition-transform motion-safe:duration-200",
+              expanded && "rotate-180",
+            )}
+          />
         </Button>
       </div>
 
@@ -189,8 +198,13 @@ export function SearchFilters({ search, options }: Props) {
         </div>
 
         <details open={advancedActive} className="group">
-          <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-sm text-sm transition-colors outline-none select-none focus-visible:ring-3">
+          <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-sm transition-colors outline-none select-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
             Más filtros
+            {/* Gira al abrir: en escritorio también se ve que el bloque se despliega. */}
+            <ChevronDownIcon
+              aria-hidden
+              className="size-4 transition-transform group-open:rotate-180 motion-safe:duration-200"
+            />
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Filter label="Equipo (exacto, en origen o destino)" htmlFor="equipment">
@@ -280,12 +294,12 @@ export function SearchFilters({ search, options }: Props) {
         </details>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit">Buscar</Button>
-        <Button type="button" variant="ghost" onClick={() => router.push("/cables")}>
-          Limpiar filtros
-        </Button>
-      </div>
+      <FormActions
+        submitLabel="Buscar"
+        pending={pending}
+        clearHref="/cables"
+        active={Boolean(search.q) || activeCount > 0}
+      />
     </form>
   );
 }

@@ -19,3 +19,4 @@ export * from "./drawings";
 export * from "./drawings-storage";
 export * from "./wiring";
 export * from "./list-filters";
+export * from "./location-search";

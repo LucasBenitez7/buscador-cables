@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
+import { EQUIPMENT_LIST_SORT_LABELS, optionsOf, parseEquipmentListSearch } from "@cables/shared";
+import { ListToolbar } from "@/components/list-toolbar";
+import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { equipmentHref } from "@/lib/links";
 import { EQUIPMENT_MAX, searchEquipment } from "@/server/equipment/service";
 import { requireUser } from "@/server/session";
@@ -20,11 +19,18 @@ export default async function EquipmentSearchPage({
   searchParams: SearchParams;
 }) {
   await requireUser();
-  const params = await searchParams;
-  const raw = params.q;
-  const query = (typeof raw === "string" ? raw : "").trim().slice(0, EQUIPMENT_MAX);
-  const sort = params.sort === "name" ? "name" : "cables";
+  const search = parseEquipmentListSearch(await searchParams);
+  const query = search.q ?? "";
+  const sort = search.sort ?? "cables";
   const matches = await searchEquipment(query, sort);
+  // Lo que se muestra por defecto no cuenta como «puesto»: Limpiar solo si hay algo más.
+  const active = Boolean(query || (search.sort && search.sort !== "cables"));
+
+  const count = query
+    ? matches.length === 0
+      ? "Ningún equipo contiene ese código."
+      : `${matches.length} ${matches.length === 1 ? "equipo" : "equipos"}${matches.length >= 60 ? " (los 60 con más cables; afina la búsqueda)" : ""}`
+    : "Los equipos con más cables. Escribe un código para buscar uno.";
 
   return (
     <div className="space-y-6">
@@ -36,62 +42,49 @@ export default async function EquipmentSearchPage({
         </p>
       </div>
 
-      <form
-        action="/equipment"
-        role="search"
-        aria-label="Buscar equipos"
-        className="flex flex-wrap items-end gap-3 rounded-lg border p-4"
-      >
-        <div className="min-w-0 flex-1 space-y-1.5 sm:min-w-56">
-          <Label htmlFor="equipment-q">Código del equipo</Label>
-          <Input
-            id="equipment-q"
-            name="q"
-            type="search"
-            defaultValue={query}
-            maxLength={EQUIPMENT_MAX}
-            placeholder="99BMA10, 99CXJ…"
-            autoComplete="off"
-            spellCheck={false}
-            className="font-mono uppercase"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="equipment-sort">Orden</Label>
-          <NativeSelect id="equipment-sort" name="sort" defaultValue={sort}>
-            <option value="cables">Más cables primero</option>
-            <option value="name">Código (A-Z)</option>
-          </NativeSelect>
-        </div>
-        <Button type="submit">Buscar</Button>
-      </form>
+      <PendingListProvider>
+        <ListToolbar
+          action="/equipment"
+          label="Buscar equipos"
+          search={{
+            name: "q",
+            label: "Código del equipo",
+            value: query,
+            placeholder: "99BMA10, 99CXJ…",
+            mono: true,
+            maxLength: EQUIPMENT_MAX,
+          }}
+          sort={{
+            name: "sort",
+            value: sort,
+            defaultValue: "cables",
+            options: optionsOf(EQUIPMENT_LIST_SORT_LABELS),
+          }}
+          active={active}
+          count={count}
+        />
 
-      <p role="status" className="text-muted-foreground text-sm">
-        {query
-          ? matches.length === 0
-            ? "Ningún equipo contiene ese código."
-            : `${matches.length} ${matches.length === 1 ? "equipo" : "equipos"}${matches.length >= 60 ? " (los 60 con más cables; afina la búsqueda)" : ""}`
-          : "Los equipos con más cables. Escribe un código para buscar uno."}
-      </p>
-
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {matches.map((match) => (
-          <li
-            key={match.equipment}
-            className="bg-card hover:border-primary/50 hover:bg-muted/40 has-focus-visible:ring-ring/50 relative space-y-1 rounded-lg border p-3 text-sm transition-colors has-focus-visible:ring-3"
-          >
-            <Link
-              href={equipmentHref(match.equipment)}
-              className="text-primary font-mono text-base font-semibold break-all outline-none after:absolute after:inset-0 after:rounded-lg"
-            >
-              {match.equipment}
-            </Link>
-            <p className="text-muted-foreground">
-              {match.cables} {match.cables === 1 ? "cable" : "cables"}
-            </p>
-          </li>
-        ))}
-      </ul>
+        <PendingResults>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {matches.map((match) => (
+              <li
+                key={match.equipment}
+                className="bg-card hover:border-primary/50 hover:bg-muted/40 has-focus-visible:ring-ring/50 relative space-y-1 rounded-lg border p-3 text-sm transition-colors has-focus-visible:ring-3"
+              >
+                <Link
+                  href={equipmentHref(match.equipment)}
+                  className="text-primary font-mono text-base font-semibold break-all outline-none after:absolute after:inset-0 after:rounded-lg"
+                >
+                  {match.equipment}
+                </Link>
+                <p className="text-muted-foreground">
+                  {match.cables} {match.cables === 1 ? "cable" : "cables"}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </PendingResults>
+      </PendingListProvider>
     </div>
   );
 }

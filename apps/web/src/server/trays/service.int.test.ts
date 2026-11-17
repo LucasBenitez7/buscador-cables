@@ -2,7 +2,7 @@ import { prisma } from "@cables/db";
 import { parseCableSearch } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { searchCables } from "@/server/cables/search";
-import { getTrayDetail, searchTrays } from "./service";
+import { getTrayDetail, searchTrays, trayLevels } from "./service";
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
@@ -120,6 +120,59 @@ describe("searchTrays", () => {
 
     expect(result).toMatchObject({ total: 3, page: 2, pageCount: 2 });
     expect(result.items.map((tray) => tray.code)).toEqual(["99UXA00L22051"]);
+  });
+
+  const codes = async (search: Parameters<typeof searchTrays>[0], pageSize?: number) =>
+    (await searchTrays(search, pageSize)).items.map((tray) => tray.code);
+
+  it("filters by type and by voltage level", async () => {
+    expect(await codes({ kind: "LADDER" })).toEqual(["99UXA00L22036", "99UXA00L22051"]);
+    expect(await codes({ kind: "CONDUIT" })).toEqual(["99UXA00C20101"]);
+    expect(await codes({ level: 2 })).toEqual(["99UXA00L22036", "99UXA00L22051"]);
+    expect(await codes({ level: 1 })).toEqual([]);
+  });
+
+  it("filters the trays where a cable waits with its loose end", async () => {
+    expect(await codes({ waiting: true })).toEqual(["99UXA00L22036"]);
+    expect(await codes({ waiting: true, kind: "CONDUIT" })).toEqual([]);
+  });
+
+  it("sorts by code in both directions", async () => {
+    expect(await codes({ sort: "code" })).toEqual([
+      "99UXA00C20101",
+      "99UXA00L22036",
+      "99UXA00L22051",
+    ]);
+    expect(await codes({ sort: "code-desc" })).toEqual([
+      "99UXA00L22051",
+      "99UXA00L22036",
+      "99UXA00C20101",
+    ]);
+  });
+
+  it("sorts the trays with more cables waiting first, counting only active cables", async () => {
+    // Dos cables dados de baja esperan en el tubo: no deben subirlo al primer puesto.
+    const conduit = await prisma.tray.findUniqueOrThrow({ where: { code: "99UXA00C20101" } });
+    await prisma.cable.createMany({
+      data: [1, 2].map((n) => ({
+        code: `99XAB10T1-DEL${n}`,
+        installationStatus: "PARTIALLY_LAID",
+        looseEnd: "ORIGIN",
+        looseEndTrayId: conduit.id,
+        deletedAt: new Date(),
+      })),
+    });
+    expect(await codes({ sort: "waiting" })).toEqual([
+      "99UXA00L22036",
+      "99UXA00C20101",
+      "99UXA00L22051",
+    ]);
+    // La misma ordenación, página a página: la segunda página es el tubo.
+    expect(await codes({ sort: "waiting", page: 2 }, 1)).toEqual(["99UXA00C20101"]);
+  });
+
+  it("lists the voltage levels the trays have", async () => {
+    expect(await trayLevels()).toEqual([2]);
   });
 });
 

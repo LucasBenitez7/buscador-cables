@@ -218,7 +218,7 @@ describe("ActivityFilters", () => {
     fireEvent.change(screen.getByLabelText("Quién"), { target: { value: "u1" } });
     fireEvent.change(screen.getByLabelText("Qué hizo"), { target: { value: "CONNECTED" } });
     fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "2026-11-12" } });
-    fireEvent.click(screen.getByRole("button", { name: "Filtrar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
 
     expect(push).toHaveBeenCalledWith("/activity?actor=u1&action=CONNECTED&to=2026-11-12");
   });
@@ -228,7 +228,12 @@ describe("ActivityFilters", () => {
 
     expect(screen.queryByLabelText("Quién")).toBeNull();
     expect(screen.getByLabelText("Qué hizo")).toHaveValue("LAID");
-    fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
-    expect(push).toHaveBeenCalledWith("/activity/me");
+    expect(screen.getByRole("link", { name: "Limpiar" })).toHaveAttribute("href", "/activity/me");
+  });
+
+  it("greys out «Limpiar» while nothing is filtered (page and size do not count)", () => {
+    render(<ActivityFilters basePath="/activity" search={{ page: 3, size: 100 }} />);
+
+    expect(screen.getByRole("button", { name: "Limpiar" })).toBeDisabled();
   });
 });

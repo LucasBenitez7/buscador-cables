@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { permissionsOfRole } from "@cables/shared";
 import { prisma } from "@cables/db";
 import { cableActionSchema, createCableSchema, updateCableSchema } from "@cables/shared";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { HISTORY_LIMIT, getCableDetail } from "./detail";
 import { runCableAction } from "./field-actions";
 import { createCable, deleteCable, getCableForEdit, updateCable } from "./service";
@@ -369,5 +369,59 @@ describe("getCableDetail: loads of the lists in the history", () => {
     const everything = await getCableDetail(id, { origin: "all" });
     expect(everything?.history.map((entry) => entry.action)).toEqual(["UPDATED", "CREATED"]);
     expect((await getCableDetail(id, { origin: "loads" }))?.historyTotal).toBe(1);
+  });
+});
+
+// El corte se fija a partir de ahora mismo: los eventos que crea `newCable` (con la hora real)
+// quedan antes del corte y no se muestran; el que se crea con fecha posterior sí.
+describe("getCableDetail: history start", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  let saved: string | undefined;
+
+  beforeEach(() => {
+    saved = process.env.HISTORY_START;
+    process.env.HISTORY_START = new Date(Date.now() + DAY).toISOString();
+  });
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env.HISTORY_START;
+    else process.env.HISTORY_START = saved;
+  });
+
+  it("does not show the history, the counts, the people or the last action from before it", async () => {
+    const { id } = await newCable();
+    const after = new Date(Date.now() + 2 * DAY);
+    await prisma.cableEvent.create({
+      data: {
+        cableId: id,
+        userId: actor.id,
+        action: "UPDATED",
+        changes: { notes: { from: null, to: "tras el corte" } },
+        createdAt: after,
+      },
+    });
+
+    const detail = await getCableDetail(id);
+
+    expect(detail?.history.map((entry) => entry.action)).toEqual(["UPDATED"]);
+    expect(detail).toMatchObject({
+      historyTotal: 1,
+      historyAll: 1,
+      historyPeople: [{ id: actor.id, label: "Tomás Gil" }],
+      lastAction: null,
+    });
+  });
+
+  it("shows no history at all when everything is from before the start", async () => {
+    const { id } = await newCable();
+
+    const detail = await getCableDetail(id);
+
+    expect(detail).toMatchObject({
+      history: [],
+      historyTotal: 0,
+      historyAll: 0,
+      historyPeople: [],
+    });
   });
 });

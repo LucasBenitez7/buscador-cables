@@ -6,6 +6,7 @@ import {
   hasPermission,
   parseCableSearch,
 } from "@cables/shared";
+import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { Button } from "@/components/ui/button";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import { SearchResults } from "@/features/search/components/search-results";
@@ -50,12 +51,16 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
         </p>
       ) : null}
 
-      <SearchFilters search={search} options={options} />
-      <SearchResults
-        search={search}
-        result={result}
-        actions={canAct ? { permissions: user.permissions, locations } : undefined}
-      />
+      <PendingListProvider>
+        <SearchFilters search={search} options={options} />
+        <PendingResults>
+          <SearchResults
+            search={search}
+            result={result}
+            actions={canAct ? { permissions: user.permissions, locations } : undefined}
+          />
+        </PendingResults>
+      </PendingListProvider>
     </div>
   );
 }

@@ -135,7 +135,7 @@ export const parseUserEventSearch = (params: RawSearchParams): UserEventSearch =
 export const ACTIVITY_ORIGINS = ["people", "loads", "all"] as const;
 export type ActivityOrigin = (typeof ACTIVITY_ORIGINS)[number];
 export const ACTIVITY_ORIGIN_LABELS: Record<ActivityOrigin, string> = {
-  people: "Personas",
+  people: "En campo",
   loads: "Cargas de listados",
   all: "Todo",
 };
@@ -198,3 +198,24 @@ export type EquipmentSearch = z.infer<typeof equipmentSearchSchema>;
 
 export const parseEquipmentSearch = (params: RawSearchParams): EquipmentSearch =>
   equipmentSearchSchema.parse(firstParams(params));
+
+// ---------------------------------------------------------------------------
+// Equipment list (búsqueda de equipos). Distinto de la ficha de un equipo: aquí solo hay el
+// código y el orden.
+// ---------------------------------------------------------------------------
+
+export const EQUIPMENT_LIST_SORTS = ["cables", "name", "name-desc"] as const;
+export const EQUIPMENT_LIST_SORT_LABELS: Record<(typeof EQUIPMENT_LIST_SORTS)[number], string> = {
+  cables: "Más cables primero",
+  name: "Código (A-Z)",
+  "name-desc": "Código (Z-A)",
+};
+
+export const equipmentListSearchSchema = z.object({
+  q: text,
+  sort: oneOf(EQUIPMENT_LIST_SORTS),
+});
+export type EquipmentListSearch = z.infer<typeof equipmentListSearchSchema>;
+
+export const parseEquipmentListSearch = (params: RawSearchParams): EquipmentListSearch =>
+  equipmentListSearchSchema.parse(firstParams(params));

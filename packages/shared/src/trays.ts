@@ -3,6 +3,9 @@
  * drawings. See docs/DATOS-PROYECTO.md.
  */
 
+import { z } from "zod";
+import { firstParams, pageSizeSchema, pageSchema, type RawSearchParams } from "./url-params";
+
 /** The Prisma enums must list exactly the same members. */
 export const CABLE_LEVELS = ["L1", "L2", "L3", "L4"] as const;
 export const TRAY_KINDS = ["LADDER", "GRID", "SPECIAL", "CONDUIT", "DUCT", "OTHER"] as const;
@@ -136,26 +139,70 @@ export const TRAY_PAGE_SIZE = 60;
 /** Page sizes the tray list offers (multiples of 3, it is a three-column grid). */
 export const TRAY_PAGE_SIZES = [TRAY_PAGE_SIZE, 120, 240] as const;
 
-export type TraySearch = { q?: string; page?: number; size?: number };
+/** Orders of the tray list. The default is by code, A-Z. */
+export const TRAY_SORTS = ["code", "code-desc", "waiting"] as const;
+export type TraySort = (typeof TRAY_SORTS)[number];
+export const TRAY_SORT_LABELS: Record<TraySort, string> = {
+  code: "Código (A-Z)",
+  "code-desc": "Código (Z-A)",
+  waiting: "Más cables esperando primero",
+};
 
-/** `/trays?q=…&page=…&size=…`: invalid values are ignored, like the cable search. */
-export function parseTraySearch(params: Record<string, string | string[] | undefined>): TraySearch {
-  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
-  const q = first(params.q)?.trim();
-  const page = Number(first(params.page));
-  const size = Number(first(params.size));
-  return {
-    ...(q && q.length <= 50 ? { q: normalizeTrayCode(q) } : {}),
-    ...(Number.isInteger(page) && page >= 1 && page <= 10_000 ? { page } : {}),
-    ...((TRAY_PAGE_SIZES as readonly number[]).includes(size) ? { size } : {}),
-  };
+export type TraySearch = {
+  q?: string;
+  kind?: TrayKind;
+  /** Voltage level of the code (1-4, "L1"…"L4"). */
+  level?: number;
+  /** Only trays where some active cable waits with its loose end. */
+  waiting?: boolean;
+  sort?: TraySort;
+  page?: number;
+  size?: number;
+};
+
+const traySearchSchema = z.object({
+  q: z
+    .string()
+    .trim()
+    .max(50)
+    .transform((value) => (value === "" ? undefined : normalizeTrayCode(value)))
+    .optional()
+    .catch(undefined),
+  kind: z.enum(TRAY_KINDS).optional().catch(undefined),
+  level: z.coerce.number().int().min(1).max(4).optional().catch(undefined),
+  waiting: z
+    .literal("1")
+    .transform(() => true)
+    .optional()
+    .catch(undefined),
+  sort: z.enum(TRAY_SORTS).optional().catch(undefined),
+  page: pageSchema,
+  size: pageSizeSchema(TRAY_PAGE_SIZES),
+});
+
+/**
+ * `/trays?q=…&kind=…&level=…&waiting=1&sort=…&page=…&size=…`. Like the cable search, an invalid
+ * value is ignored instead of failing the page, so a shared or hand-edited link always opens.
+ */
+export function parseTraySearch(params: RawSearchParams): TraySearch {
+  const parsed = traySearchSchema.parse(firstParams(params));
+  return Object.fromEntries(
+    Object.entries(parsed).filter(([, value]) => value !== undefined),
+  ) as TraySearch;
 }
 
-/** Query string for tray list links, without empty values, page 1 or the default size. */
+/**
+ * Query string for tray list links, without empty values or the defaults (page 1, the default
+ * size and order).
+ */
 export function trayQuery(search: TraySearch, overrides: Partial<TraySearch> = {}): string {
-  const { q, page, size } = { ...search, ...overrides };
+  const { q, kind, level, waiting, sort, page, size } = { ...search, ...overrides };
   const params = new URLSearchParams();
   if (q) params.set("q", q);
+  if (kind) params.set("kind", kind);
+  if (level) params.set("level", String(level));
+  if (waiting) params.set("waiting", "1");
+  if (sort && sort !== "code") params.set("sort", sort);
   if (page && page > 1) params.set("page", String(page));
   if (size && size !== TRAY_PAGE_SIZE) params.set("size", String(size));
   const query = params.toString();
