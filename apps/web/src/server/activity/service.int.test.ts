@@ -201,3 +201,25 @@ describe("getActivityEvent", () => {
     expect(await getActivityEvent("../../etc", VIEWER)).toBeNull();
   });
 });
+
+// Las cargas de los listados escriben un movimiento por cable: por defecto no se ven.
+describe("listActivity: origin", () => {
+  it("shows what people do by default, and the loads only when asked for", async () => {
+    await prisma.cableEvent.create({
+      data: {
+        id: "eload00000000001",
+        cableId: "c1",
+        userId: "ana",
+        action: "UPDATED",
+        source: "PROJECT_LOAD",
+        changes: { revision: { from: "2", to: "3" } },
+        createdAt: new Date("2026-11-12T10:00:00Z"),
+      },
+    });
+
+    expect(await ids({})).not.toContain("eload00000000001");
+    expect(await ids({ origin: "loads" })).toEqual(["eload00000000001"]);
+    expect(await ids({ origin: "all" })).toContain("eload00000000001");
+    expect(await ids({ origin: "all" })).toContain("e1");
+  });
+});

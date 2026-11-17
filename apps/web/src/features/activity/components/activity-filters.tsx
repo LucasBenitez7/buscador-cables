@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import type { ComponentProps, FormEvent, ReactNode } from "react";
 import {
   CABLE_ACTIONS,
+  ACTIVITY_ORIGINS,
+  ACTIVITY_ORIGIN_LABELS,
   CABLE_ACTION_LABELS,
   DATE_SORTS,
   DATE_SORT_LABELS,
@@ -45,7 +47,7 @@ export function ActivityFilters({ basePath, search, users }: Props) {
       aria-label="Filtrar movimientos"
       className="space-y-4 rounded-lg border p-4"
     >
-      <div className={`grid gap-3 sm:grid-cols-2 ${users ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+      <div className={`grid gap-3 sm:grid-cols-2 ${users ? "lg:grid-cols-6" : "lg:grid-cols-5"}`}>
         {users ? (
           <Field label="Quién" htmlFor="actor">
             <SearchableSelect
@@ -57,6 +59,15 @@ export function ActivityFilters({ basePath, search, users }: Props) {
             />
           </Field>
         ) : null}
+        <Field label="Origen" htmlFor="origin">
+          <NativeSelect id="origin" name="origin" defaultValue={search.origin ?? "people"}>
+            {ACTIVITY_ORIGINS.map((origin) => (
+              <option key={origin} value={origin}>
+                {ACTIVITY_ORIGIN_LABELS[origin]}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
         <Field label="Qué hizo" htmlFor="action">
           <Select id="action" name="action" defaultValue={search.action}>
             {CABLE_ACTIONS.map((action) => (

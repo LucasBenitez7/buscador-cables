@@ -9,6 +9,7 @@ import {
   cableActionAvailability,
   cableSheetKey,
   canRunCableAction,
+  ACTIVITY_ORIGIN_LABELS,
   CABLE_ACTIONS,
   DATE_SORT_LABELS,
   formatDecimal,
@@ -385,8 +386,21 @@ export default async function CablePage({
           label="Filtrar el historial"
           anchor="historial"
           keep={{ vista: view }}
-          active={Boolean(historySearch.action || historySearch.person || historySearch.sort)}
+          active={Boolean(
+            historySearch.origin ||
+            historySearch.action ||
+            historySearch.person ||
+            historySearch.sort,
+          )}
           fields={[
+            {
+              kind: "select",
+              name: "origin",
+              label: "Origen",
+              value: historySearch.origin,
+              options: optionsOf(ACTIVITY_ORIGIN_LABELS),
+              emptyLabel: null,
+            },
             {
               kind: "select",
               name: "action",
@@ -419,7 +433,23 @@ export default async function CablePage({
         />
         {cable.historyTotal !== cable.historyAll ? (
           <p role="status" className="text-muted-foreground text-sm">
-            {cable.historyTotal} de {cable.historyAll} movimientos cumplen los filtros.
+            {historySearch.origin || historySearch.action || historySearch.person ? (
+              `${cable.historyTotal} de ${cable.historyAll} movimientos cumplen los filtros.`
+            ) : (
+              // Solo se ocultan las cargas de los listados (el filtro por defecto).
+              <>
+                {cable.historyAll - cable.historyTotal === 1
+                  ? "1 entrada de cargas de listados oculta"
+                  : `${cable.historyAll - cable.historyTotal} entradas de cargas de listados ocultas`}{" "}
+                ·{" "}
+                <Link
+                  href={`/cables/${cable.id}?vista=${view}&origin=all#historial`}
+                  className={INLINE_LINK}
+                >
+                  Ver todo
+                </Link>
+              </>
+            )}
           </p>
         ) : null}
         {cable.historyTotal > cable.history.length ? (
