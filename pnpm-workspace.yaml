@@ -14,3 +14,11 @@ onlyBuiltDependencies:
   - prisma
   - sharp
   - unrs-resolver
+
+# Avisos de `pnpm audit` revisados y aceptados (el CI falla con cualquier otro de gravedad alta).
+# Quitar cada uno en cuanto haya versión arreglada.
+auditConfig:
+  ignoreGhsas:
+    # picomatch: ReDoS con extglobs repetidos (2026-11-17). Sin versión arreglada. Llega por
+    # better-auth > vitest (herramienta de tests); la web no lo usa al atender peticiones.
+    - GHSA-fc5q-39xc-vjpf
