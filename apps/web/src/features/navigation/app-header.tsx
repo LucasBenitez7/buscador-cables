@@ -16,8 +16,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BrandLogo } from "@/components/brand-logo";
@@ -225,11 +223,8 @@ function UserMenu({
         <UserBadge user={user} />
         <ChevronDownIcon aria-hidden className="text-muted-foreground size-4" />
       </DropdownMenuTrigger>
+      {/* El nombre y el rol ya están en el botón: el menú no los repite. */}
       <DropdownMenuContent {...hover.content}>
-        <DropdownMenuLabel>
-          <UserBadge user={user} />
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
         {items.map((item) => (
           <DropdownMenuItem key={item.href} asChild data-current={isActive(item, pathname)}>
             <Link href={item.href} aria-current={isActive(item, pathname) ? "page" : undefined}>
@@ -237,7 +232,11 @@ function UserMenu({
             </Link>
           </DropdownMenuItem>
         ))}
-        <DropdownMenuItem disabled={pending} onSelect={() => void signOut()}>
+        <DropdownMenuItem
+          disabled={pending}
+          onSelect={() => void signOut()}
+          className="text-destructive focus:bg-destructive/15 focus:text-destructive"
+        >
           {pending ? "Saliendo…" : "Cerrar sesión"}
         </DropdownMenuItem>
       </DropdownMenuContent>

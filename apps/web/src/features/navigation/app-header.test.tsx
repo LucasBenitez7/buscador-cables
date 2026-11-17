@@ -189,6 +189,12 @@ describe("AppHeader: menus on a computer", () => {
       "href",
       "/activity/me",
     );
-    expect(within(menu).getByRole("menuitem", { name: "Cerrar sesión" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Cerrar sesión" })).toHaveClass(
+      "text-destructive",
+    );
+    // El nombre y el rol ya están en el botón: el menú no los repite.
+    expect(within(menu).queryByText("Ada")).toBeNull();
+    expect(within(menu).queryByText("Administrador")).toBeNull();
+    expect(within(menu).getAllByRole("menuitem")).toHaveLength(2);
   });
 });
