@@ -367,7 +367,7 @@ export default async function CablePage({
             )}
           </Section>
 
-          <section id="historial" className="scroll-mt-20 space-y-3">
+          <section id="historial" className="scroll-mt-28 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
               <h2 className="text-base font-semibold">
                 Historial

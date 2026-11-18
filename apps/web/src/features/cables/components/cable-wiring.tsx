@@ -75,16 +75,22 @@ export function CableWiring({ cableId, version, wires, jumpers, equipment, canEd
   const switchId = useId();
   const showColour = wires.some((wire) => wire.colour);
 
-  // The rows as they would be saved, and which wires the user touched.
+  // The rows as they would be saved, and which wires the user touched. Out of the edit mode
+  // the table shows only what is saved: whatever was typed and not saved is gone from view.
   const rows = useMemo(
     () =>
-      wires.map((wire) => ({
-        ...wire,
-        ...(Object.fromEntries(
-          WIRING_FIELDS.map((field) => [field, normalizeTerminal(draft[wire.position]?.[field])]),
-        ) as Record<WiringField, string | null>),
-      })),
-    [draft, wires],
+      editing
+        ? wires.map((wire) => ({
+            ...wire,
+            ...(Object.fromEntries(
+              WIRING_FIELDS.map((field) => [
+                field,
+                normalizeTerminal(draft[wire.position]?.[field]),
+              ]),
+            ) as Record<WiringField, string | null>),
+          }))
+        : wires,
+    [draft, editing, wires],
   );
   const changes = rows.flatMap((row, index) =>
     WIRING_FIELDS.filter((field) => row[field] !== wires[index]![field]).map(() => row.position),
@@ -113,8 +119,11 @@ export function CableWiring({ cableId, version, wires, jumpers, equipment, canEd
     setEditing(true);
   }
 
+  /** Cancel or leave the edit mode: what was typed and not saved is thrown away. */
   function stopEditing() {
     setEditing(false);
+    setDraft(draftOf(wires));
+    setNotes("");
     setServerDuplicates([]);
   }
 
