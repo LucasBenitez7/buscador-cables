@@ -29,7 +29,7 @@ export function Section({
       <Collapsible
         id={id}
         defaultOpen={defaultOpen}
-        className="group/section scroll-mt-20 space-y-3"
+        className="group/section scroll-mt-28 space-y-3"
       >
         <summary className="hover:text-primary focus-visible:ring-ring/50 flex cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-sm border-b pb-2 outline-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
           <h2 className="flex items-center gap-2 text-base font-semibold">
@@ -49,7 +49,7 @@ export function Section({
     );
   }
   return (
-    <section id={id} className="scroll-mt-20 space-y-3">
+    <section id={id} className="scroll-mt-28 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
         <h2 className="text-base font-semibold">{title}</h2>
         {action}
@@ -61,21 +61,23 @@ export function Section({
 
 /**
  * Links to the blocks of a long page ("Tabla de hilos · Hoja original · Historial"), so the
- * people in the field jump straight to what they need.
+ * people in the field jump straight to what they need. Meant for a few fixed blocks, not for
+ * long lists. It always takes one line (what does not fit scrolls sideways): its height is
+ * fixed, so the blocks' `scroll-mt-28` keeps their title clear of it and of the header.
  */
 export function JumpLinks({ links }: { links: readonly { id: string; label: string }[] }) {
   return (
     // Fija bajo la cabecera mientras se baja por la página: siempre a un toque.
     <nav
       aria-label="Ir a"
-      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-30 -mx-4 flex flex-wrap items-center gap-1.5 border-b px-4 py-2 text-sm backdrop-blur sm:-mx-6 sm:px-6"
+      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-30 -mx-4 flex [scrollbar-width:none] flex-nowrap items-center gap-1.5 overflow-x-auto border-b px-4 py-2 text-sm whitespace-nowrap backdrop-blur sm:-mx-6 sm:px-6"
     >
-      <span className="text-muted-foreground mr-1 text-xs">Ir a:</span>
+      <span className="text-muted-foreground mr-1 shrink-0 text-xs">Ir a:</span>
       {links.map((link) => (
         <a
           key={link.id}
           href={`#${link.id}`}
-          className="bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 rounded-full border px-3 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3"
+          className="bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-inset"
         >
           {link.label}
         </a>

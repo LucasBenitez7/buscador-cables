@@ -12,7 +12,7 @@ import {
   optionsOf,
   parseEquipmentSearch,
 } from "@cables/shared";
-import { JumpLinks, Section } from "@/components/detail";
+import { Section } from "@/components/detail";
 import { FilterForm } from "@/components/filter-form";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { Badge } from "@/components/ui/badge";
@@ -162,15 +162,6 @@ export default async function EquipmentPage({
             <p role="status" className="text-muted-foreground text-sm">
               {shown} de {totals.ends} cumplen los filtros.
             </p>
-          ) : null}
-
-          {groups.length > 1 ? (
-            <JumpLinks
-              links={groups.map((group) => ({
-                id: stripId(group.block),
-                label: group.block ?? "Sin regletero",
-              }))}
-            />
           ) : null}
 
           {groups.length === 0 ? (
