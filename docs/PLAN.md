@@ -143,7 +143,8 @@ empiezan en la fase 6.
 - Repositorio **público** en la cuenta de GitHub del responsable. Con cuenta gratuita, solo un
   repo público permite obligar a pasar el CI (protección de ramas) y trae gratis CodeQL, la
   revisión de dependencias y el bloqueo de secretos. El repo no contiene datos reales.
-- Rama por defecto del repo: **`dev`** (los PR apuntan ahí sin tocar nada, y `main` va por
+- Rama por defecto del repo: **`dev`** (cambiada a `main` al pasar a producción: ver
+  `CONTRIBUTING.md`, «Ramas»). Entonces: los PR apuntan ahí sin tocar nada, y `main` va por
   detrás: está en la fase 1).
 - Flujo: `feat/*`, `fix/*`, `chore/*` y `docs/*` → **PR a `dev`** → CI en verde → merge con
   **merge commit** (equivale a `--no-ff`) → se borra la rama. Detalle en `CONTRIBUTING.md`.

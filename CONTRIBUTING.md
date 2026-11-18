@@ -3,8 +3,8 @@
 ## Ramas
 
 ```
-main      ← producción. Solo recibe dev por un PR de release, cuando lo pida el responsable.
- └─ dev   ← integración y rama por defecto en GitHub. Solo cambia por PR con el CI en verde.
+main      ← producción y rama por defecto en GitHub. Solo recibe dev por un PR de release.
+ └─ dev   ← desarrollo: todo el trabajo entra aquí. Solo cambia por PR con el CI en verde.
      ├─ feat/f<fase>-<nombre>        una por fase          ej. feat/f5-traceability
      ├─ fix/<descripcion>            corrección            ej. fix/search-empty-filter
      ├─ chore/<descripcion>          tooling, deps, config ej. chore/ci-cache
@@ -13,6 +13,9 @@ hotfix/<descripcion>                 sale de main, se mergea a main Y a dev
 ```
 
 - Nunca se hace commit directo en `main` ni en `dev`.
+- **La rama por defecto en GitHub es `main`** (producción), no `dev`. Por eso los PR se abren
+  siempre con `--base dev`, y los workflows programados o manuales (como la copia de seguridad)
+  solo se ejecutan con lo que ya está en `main`.
 - **Una sola rama `feat/*` por fase** (decisión del 2026-11-12). Todo el trabajo de la fase
   (lógica, servidor, interfaz, tests y documentación) va en ella como commits separados, y se
   mergea en `dev` con un único PR al terminar la fase. Las ramas `fix/*`, `chore/*` y `docs/*`
