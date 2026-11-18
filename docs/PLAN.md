@@ -749,7 +749,7 @@ Desplegado el 2026-11-15 (PR #35) en `cables.lsbstack.com`.
       reales (`pnpm data:load`).
 - [x] Comprobaciones del manual (salud, planos, correos de alta y aprobación, cron).
 - [ ] Copias de seguridad: automáticas en Railway si el plan las tiene, y la manual semanal.
-- [ ] Publicar la **v1.0.0** (tag) cuando producción funcione.
+- [x] Publicar la **v1.0.0** (tag y GitHub Release, publicados el 2026-11-18 sobre el PR #35).
 
 ## Fase 11 — Conexionado (v1.1.0)
 
