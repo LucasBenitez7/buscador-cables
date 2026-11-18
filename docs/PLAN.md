@@ -748,7 +748,8 @@ Desplegado el 2026-11-15 (PR #35) en `cables.lsbstack.com`.
 - [x] Primer administrador (`pnpm db:seed` con `NODE_ENV=production`) y carga de los datos
       reales (`pnpm data:load`).
 - [x] Comprobaciones del manual (salud, planos, correos de alta y aprobación, cron).
-- [ ] Copias de seguridad: automáticas en Railway si el plan las tiene, y la manual semanal.
+- [ ] Copias de seguridad: el plan de Railway no las incluye; copia diaria cifrada en R2 con
+      GitHub Actions (`backup.yml`, ver `docs/DESPLIEGUE.md`, «Copias de seguridad»).
 - [x] Publicar la **v1.0.0** (tag y GitHub Release, publicados el 2026-11-18 sobre el PR #35).
 
 ## Fase 11 — Conexionado (v1.1.0)
