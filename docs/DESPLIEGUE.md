@@ -237,7 +237,8 @@ Para lanzarla a mano (por ejemplo, **antes de cada carga de datos**): GitHub →
    | `BACKUP_S3_ACCESS_KEY_ID`     | Access Key ID del token del bucket de copias          |
    | `BACKUP_S3_SECRET_ACCESS_KEY` | Secret Access Key del token del bucket de copias      |
 
-5. Lánzala a mano una vez y comprueba que el fichero aparece en el bucket.
+5. Lánzala a mano una vez y comprueba que el fichero aparece en el bucket. GitHub solo la
+   ofrece cuando el workflow ya está en `main` (la rama por defecto), es decir, tras una release.
 
 ### 9.2 Restaurar una copia
 

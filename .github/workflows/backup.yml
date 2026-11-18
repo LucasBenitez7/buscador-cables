@@ -10,7 +10,8 @@ name: Copia de seguridad
 on:
   schedule:
     # Cada día a las 02:00 UTC (03:00 en invierno y 04:00 en verano en España). GitHub solo
-    # lanza los workflows programados desde la rama por defecto (dev).
+    # lanza los workflows programados (y los manuales) desde la rama por defecto, que es `main`:
+    # un cambio en este archivo no cuenta hasta que llega a `main` con una release.
     - cron: "0 2 * * *"
   # A mano desde la pestaña Actions, por ejemplo antes de cargar datos.
   workflow_dispatch:
