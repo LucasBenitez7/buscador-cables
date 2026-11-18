@@ -41,8 +41,8 @@ quedan pendientes como mejoras futuras del proyecto, fuera de la v1.0.0. Se pasa
 la fase 10; sus casillas se conservan abajo para retomarlas cuando se decida.
 
 Cada fase termina con todos los tests en verde en `dev`. Desde la fase 4.5, todo llega a `dev`
-por Pull Request y con el CI en verde. Las versiones de la tabla son orientativas: `dev` → `main`
-(y sus tags) solo se hace al final del proyecto o cuando lo decida el responsable.
+por Pull Request y con el CI en verde. Las versiones de la tabla son orientativas: lo que llega a
+producción y su tag se decide en cada release (ver «Releases y tags» en `CONTRIBUTING.md`).
 
 ---
 
@@ -143,12 +143,13 @@ empiezan en la fase 6.
 - Repositorio **público** en la cuenta de GitHub del responsable. Con cuenta gratuita, solo un
   repo público permite obligar a pasar el CI (protección de ramas) y trae gratis CodeQL, la
   revisión de dependencias y el bloqueo de secretos. El repo no contiene datos reales.
-- Rama por defecto del repo: **`dev`** (los PR apuntan ahí sin tocar nada, y `main` va por
+- Rama por defecto del repo: **`dev`** (cambiada a `main` al pasar a producción: ver
+  `CONTRIBUTING.md`, «Ramas»). Entonces: los PR apuntan ahí sin tocar nada, y `main` va por
   detrás: está en la fase 1).
 - Flujo: `feat/*`, `fix/*`, `chore/*` y `docs/*` → **PR a `dev`** → CI en verde → merge con
   **merge commit** (equivale a `--no-ff`) → se borra la rama. Detalle en `CONTRIBUTING.md`.
-- `main` no cambia de regla: solo recibe `dev` al final del proyecto o cuando lo pida el
-  responsable (también por PR `dev` → `main`).
+- `main` solo recibe `dev` cuando lo pide el responsable, por PR `dev` → `main`. Desde el
+  2026-11-15 es producción (reglas actuales en `CONTRIBUTING.md`, «Releases y tags»).
 - **Tema oscuro único** con acento azul; nunca fondos blancos. Paleta en
   `docs/ARQUITECTURA.md` → "Interfaz: tema oscuro".
 
@@ -736,18 +737,21 @@ Rama `feat/drawings-sheets-security-readme`.
 
 ### Lo que hace el responsable (cuentas y claves)
 
-- [ ] Llevar `dev` a `main` por PR (producción sale de `main`).
-- [ ] Railway: base de datos, migraciones y usuario `cables_app` sin propiedad ni `TRUNCATE`.
-- [ ] Cloudflare R2: bucket privado, tokens de escritura (local) y de lectura (Vercel);
+Desplegado el 2026-11-15 (PR #35) en `cables.lsbstack.com`.
+
+- [x] Llevar `dev` a `main` por PR (producción sale de `main`).
+- [x] Railway: base de datos, migraciones y usuario `cables_app` sin propiedad ni `TRUNCATE`.
+- [x] Cloudflare R2: bucket privado, tokens de escritura (local) y de lectura (Vercel);
       `pnpm data:upload`.
-- [ ] Resend: dominio verificado y API key.
-- [ ] Vercel (plan Pro: es para un cliente): proyecto con raíz `apps/web`, rama de producción
+- [x] Resend: dominio verificado y API key.
+- [x] Vercel (plan Pro: es para un cliente): proyecto con raíz `apps/web`, rama de producción
       `main`, variables de entorno y dominio.
-- [ ] Primer administrador (`pnpm db:seed` con `NODE_ENV=production`) y carga de los datos
+- [x] Primer administrador (`pnpm db:seed` con `NODE_ENV=production`) y carga de los datos
       reales (`pnpm data:load`).
-- [ ] Comprobaciones del manual (salud, planos, correos de alta y aprobación, cron).
-- [ ] Copias de seguridad: automáticas en Railway si el plan las tiene, y la manual semanal.
-- [ ] Publicar la **v1.0.0** (tag) cuando producción funcione.
+- [x] Comprobaciones del manual (salud, planos, correos de alta y aprobación, cron).
+- [ ] Copias de seguridad: el plan de Railway no las incluye; copia diaria cifrada en R2 con
+      GitHub Actions (`backup.yml`, ver `docs/DESPLIEGUE.md`, «Copias de seguridad»).
+- [x] Publicar la **v1.0.0** (tag y GitHub Release, publicados el 2026-11-18 sobre el PR #35).
 
 ## Fase 11 — Conexionado (v1.1.0)
 
@@ -825,8 +829,10 @@ vez de teselas (≈4.460 ficheros en lugar de más de 150.000).
 
 ### Lo que hace el responsable al desplegar la fase 11
 
-- [ ] Las migraciones se aplican solas en el despliegue (`vercel.json`).
-- [ ] `pnpm data:extract` → `pnpm data:render` (dibuja también las hojas de cable) →
+Desplegado el 2026-11-17 junto con la fase 12 (PR #49).
+
+- [x] Las migraciones se aplican solas en el despliegue (`vercel.json`).
+- [x] `pnpm data:extract` → `pnpm data:render` (dibuja también las hojas de cable) →
       `pnpm data:upload` → `pnpm data:load --as <correo>` contra producción.
 
 ## Fase 12 — Roles y permisos desde la web (v1.2.0)

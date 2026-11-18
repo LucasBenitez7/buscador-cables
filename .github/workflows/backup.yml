@@ -1,0 +1,140 @@
+name: Copia de seguridad
+
+# Copia diaria de la base de producción: pg_dump → restaurar en una base temporal y comprobarla
+# → cifrar con age → subir a un bucket privado de R2. Cómo se configura y cómo se restaura:
+# docs/DESPLIEGUE.md, «Copias de seguridad».
+#
+# El repo es público y los logs de Actions también: nada de este workflow imprime datos de la
+# base. La copia sale del runner solo cifrada, y la clave privada para abrirla no está en GitHub.
+
+on:
+  schedule:
+    # Cada día a las 02:00 UTC (03:00 en invierno y 04:00 en verano en España). GitHub solo
+    # lanza los workflows programados (y los manuales) desde la rama por defecto, que es `main`:
+    # un cambio en este archivo no cuenta hasta que llega a `main` con una release.
+    - cron: "0 2 * * *"
+  # A mano desde la pestaña Actions, por ejemplo antes de cargar datos.
+  workflow_dispatch:
+
+# El workflow no necesita el repo ni el token de GitHub.
+permissions: {}
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+env:
+  # pg_dump debe ser de la misma versión mayor que la base o más nuevo.
+  PG_IMAGE: postgres:18-alpine
+
+jobs:
+  backup:
+    name: copia
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Base temporal donde se restaura la copia para comprobar que sirve.
+    services:
+      restore:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: restore
+          POSTGRES_PASSWORD: restore
+          POSTGRES_DB: restore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U restore -d restore"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Comprobar la configuración
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+        run: |
+          missing=0
+          for name in BACKUP_DATABASE_URL BACKUP_AGE_RECIPIENT BACKUP_S3_ENDPOINT \
+                      BACKUP_S3_BUCKET BACKUP_S3_ACCESS_KEY_ID BACKUP_S3_SECRET_ACCESS_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Falta el secret $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Instalar age
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+          age --version
+
+      - name: Copiar la base de producción
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/backup"
+          docker run --rm \
+            -e BACKUP_DATABASE_URL \
+            -v "$RUNNER_TEMP/backup:/backup" \
+            "$PG_IMAGE" \
+            sh -c 'pg_dump "$BACKUP_DATABASE_URL" --format=custom --no-owner --no-acl --file /backup/cables.dump'
+          size=$(stat -c %s "$RUNNER_TEMP/backup/cables.dump")
+          echo "Copia hecha: $size bytes"
+          if [ "$size" -lt 10000 ]; then
+            echo "::error::La copia es demasiado pequeña ($size bytes)"
+            exit 1
+          fi
+
+      - name: Restaurar la copia en una base temporal
+        run: |
+          docker run --rm --network host \
+            -e PGPASSWORD=restore \
+            -v "$RUNNER_TEMP/backup:/backup" \
+            "$PG_IMAGE" \
+            pg_restore --host localhost --username restore --dbname restore \
+              --no-owner --no-acl --exit-on-error /backup/cables.dump
+
+      - name: Comprobar que la copia tiene datos
+        run: |
+          # Solo se comprueba que no estén vacías: los recuentos no se imprimen (logs públicos).
+          for table in '"user"' cable cable_event location tray _prisma_migrations; do
+            rows=$(docker run --rm --network host -e PGPASSWORD=restore "$PG_IMAGE" \
+              psql --host localhost --username restore --dbname restore \
+                --tuples-only --no-align --command "SELECT count(*) FROM $table")
+            if [ "${rows:-0}" -lt 1 ]; then
+              echo "::error::La tabla $table está vacía en la copia"
+              exit 1
+            fi
+            echo "$table: con datos"
+          done
+
+      - name: Cifrar la copia
+        env:
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          age --recipient "$BACKUP_AGE_RECIPIENT" \
+            --output "$RUNNER_TEMP/backup/cables.dump.age" "$RUNNER_TEMP/backup/cables.dump"
+          rm "$RUNNER_TEMP/backup/cables.dump"
+
+      - name: Subir la copia a R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          # R2 no acepta las sumas de comprobación que el CLI de AWS añade por defecto.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+        run: |
+          key="daily/cables-$(date -u +%Y-%m-%dT%H%MZ).dump.age"
+          aws s3 cp "$RUNNER_TEMP/backup/cables.dump.age" "s3://$BACKUP_S3_BUCKET/$key" \
+            --endpoint-url "$BACKUP_S3_ENDPOINT" --only-show-errors
+          echo "Subida: $key"

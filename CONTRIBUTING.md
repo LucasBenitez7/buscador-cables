@@ -3,8 +3,8 @@
 ## Ramas
 
 ```
-main      ← producción. Solo recibe dev al terminar el proyecto o cuando lo decida el responsable.
- └─ dev   ← integración y rama por defecto en GitHub. Solo cambia por PR con el CI en verde.
+main      ← producción y rama por defecto en GitHub. Solo recibe dev por un PR de release.
+ └─ dev   ← desarrollo: todo el trabajo entra aquí. Solo cambia por PR con el CI en verde.
      ├─ feat/f<fase>-<nombre>        una por fase          ej. feat/f5-traceability
      ├─ fix/<descripcion>            corrección            ej. fix/search-empty-filter
      ├─ chore/<descripcion>          tooling, deps, config ej. chore/ci-cache
@@ -13,6 +13,9 @@ hotfix/<descripcion>                 sale de main, se mergea a main Y a dev
 ```
 
 - Nunca se hace commit directo en `main` ni en `dev`.
+- **La rama por defecto en GitHub es `main`** (producción), no `dev`. Por eso los PR se abren
+  siempre con `--base dev`, y los workflows programados o manuales (como la copia de seguridad)
+  solo se ejecutan con lo que ya está en `main`.
 - **Una sola rama `feat/*` por fase** (decisión del 2026-11-12). Todo el trabajo de la fase
   (lógica, servidor, interfaz, tests y documentación) va en ella como commits separados, y se
   mergea en `dev` con un único PR al terminar la fase. Las ramas `fix/*`, `chore/*` y `docs/*`
@@ -57,12 +60,9 @@ Reglas del flujo:
   Commits. El PR de una fase se puede abrir pronto para ver el CI en cada push, pero solo se
   mergea cuando la fase está terminada.
 - Los PR de Dependabot también van a `dev` y pasan el mismo CI.
-- Un agente de IA abre el PR por su cuenta, pero **pide confirmación antes de mergearlo**,
-  igual que antes con `git merge`.
-
-> **Hasta completar el bloque 1 de la fase 4.5** no hay remoto: se sigue mergeando en local
-> (`git merge --no-ff` en `dev`) y sin push. Primero se suben `main` y `dev` tal como están;
-> la primera rama que entra por PR es `chore/ci-workflow`.
+- Un agente de IA abre el PR por su cuenta, pero **pide confirmación antes de mergearlo**.
+- Si un comando de git está prohibido por la configuración de permisos, no se busca otro que
+  logre lo mismo: se pregunta.
 
 ## CI (GitHub Actions)
 
@@ -74,42 +74,70 @@ Reglas del flujo:
 | CodeQL                 | PR a `dev` y semanal     | Análisis estático de seguridad (JavaScript/TypeScript)                          |
 | Dependency review      | PR                       | Que el PR no añade dependencias con vulnerabilidades altas o críticas conocidas |
 | Dependabot             | Semanal                  | PRs agrupados con actualizaciones de npm y de GitHub Actions, contra `dev`      |
+| `backup.yml`           | Diario y a mano          | Copia de la base de producción, comprobada, cifrada y subida a R2               |
 | Secret scanning        | Cada push                | Bloquea el push si contiene un secreto reconocible (token, clave…)              |
 
-Lo que está en la tabla y aún no existe se construye en la fase 4.5 (ver `docs/PLAN.md`).
 Todos los checks obligatorios deben estar en verde para mergear.
 
 ### Cierre de fase
 
 Una fase se da por cerrada **en `dev`** cuando se cumplen **todos** sus criterios de aceptación
-de `docs/PLAN.md` y `pnpm check` está en verde en `dev`. Cerrar una fase **no** implica merge a
-`main` (decisión del 2026-11-11).
+de `docs/PLAN.md` y `pnpm check` está en verde en `dev`. Cerrar una fase no lleva por sí solo a
+producción: eso es una release.
 
-### Merge a `main` (solo al final o cuando lo diga el responsable)
+## Releases y tags
 
-`main` recibe `dev` únicamente al terminar el proyecto o cuando el responsable lo pida
-expresamente. Nadie (tampoco un agente) lo propone ni lo hace por su cuenta.
+`main` es lo que está en producción (Vercel despliega desde `main`). Solo recibe `dev` por un PR
+de release, **cuando el responsable lo pida**. Nadie, tampoco un agente, lo hace por su cuenta.
 
-Desde la fase 4.5 también es un PR (`dev` → `main`, merge commit) con el CI en verde. Después
-se etiqueta el merge con la versión:
+### Qué versión toca (SemVer)
+
+| Cambio desde la última release                     | Versión | Ejemplo           |
+| -------------------------------------------------- | ------- | ----------------- |
+| Solo arreglos y mejoras pequeñas                   | parche  | `v1.2.2 → v1.2.3` |
+| Una fase o funcionalidad nueva                     | menor   | `v1.2.3 → v1.3.0` |
+| Algo que rompe (datos, permisos, forma de trabajo) | mayor   | `v1.3.0 → v2.0.0` |
+
+La versión de cada fase en `docs/PLAN.md` es orientativa: manda lo que de verdad sale.
+
+### Cómo se hace
 
 ```bash
+# 1. PR de release (CI en verde y OK del responsable antes del merge)
 gh pr create --base main --head dev --title "chore(release): vX.Y.Z"
 gh pr merge --merge
-git tag -a vX.Y.Z <commit-del-merge> -m "Fase N: …"
-git push origin vX.Y.Z                                  # se publica con el OK del responsable
+
+# 2. Tag anotado sobre el commit de merge en main
+git fetch
+git tag -a vX.Y.Z origin/main -m "vX.Y.Z: <resumen en español>"
+
+# 3. Publicar el tag (con el OK del responsable)
+git push origin vX.Y.Z
+
+# 4. GitHub Release con notas para quien usa la app
+gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes "..."
 ```
 
-### Tags de versión
-
-- Un tag anotado `vX.Y.Z` por cada merge de `dev` en `main` (la versión de cada fase está en
-  `docs/PLAN.md`). El mensaje dice qué fase cierra.
-- Un agente puede crearlos cuando el responsable se lo pida, pero **pide confirmación antes de
-  publicarlos**.
+- Las notas de la release, en español, cuentan lo que cambia para quien usa la web (no la lista
+  de commits). No hay CHANGELOG aparte: las GitHub Releases son el historial de versiones.
 - **Un tag publicado no se mueve ni se borra**: quien ya lo descargó tendría otra versión. Si
   un tag es incorrecto, se publica una versión nueva.
-- Tags actuales: `v0.1.0` (fase 0) y `v0.2.0` (fase 1). Se rehicieron el 2026-11-11 sobre los
-  commits del historial reescrito, antes de publicarlos.
+- La versión de `package.json` no se usa (la app no se publica como paquete).
+
+### Versiones publicadas
+
+| Tag      | PR a `main` | Qué trae                                                         |
+| -------- | ----------- | ---------------------------------------------------------------- |
+| `v0.1.0` | —           | Fase 0: fundamentos del repositorio                              |
+| `v0.2.0` | —           | Fase 1: autenticación y usuarios                                 |
+| `v1.0.0` | #35         | Primer despliegue en producción (fases 2 a 10)                   |
+| `v1.1.0` | #49         | Fase 11: conexionado (salió junto con la fase 12)                |
+| `v1.2.0` | #49         | Fase 12: roles y permisos desde la web                           |
+| `v1.2.1` | #53         | Listas más claras, carga visible e historial desde el 17/11      |
+| `v1.2.2` | #55         | Funciones en Frankfurt, barra de carga y «Cargando…» en la ficha |
+
+Los PR #38, #43 y #51 llevaron mejoras a producción sin tag propio; quedan incluidas en la
+versión siguiente.
 
 ## Commits — Conventional Commits (en inglés)
 
