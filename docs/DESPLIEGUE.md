@@ -183,25 +183,84 @@ sesiones caducadas y los contadores de intentos de más de un día.
 
 ## 9. Copias de seguridad
 
-Si el plan de Railway incluye copias automáticas de la base, actívalas. Además, una copia
-manual antes de cada carga de datos y cada semana, guardada fuera del repositorio (lleva datos
-del cliente) y cifrada si sale de tu equipo. Con Docker, usando **la misma versión mayor que la
-base** (`postgres:16-alpine` si Railway tiene la 16):
+El plan de Railway no incluye copias automáticas, así que las hace el workflow
+`.github/workflows/backup.yml`, gratis, **cada día a las 02:00 UTC**:
 
-```bash
-docker run --rm postgres:16-alpine pg_dump "<URL de migración>" --format=custom --no-owner > cables-AAAA-MM-DD.dump
-```
+1. `pg_dump` de la base de producción con un usuario de **solo lectura** (`cables_backup`).
+2. Restaura la copia en una base temporal y comprueba que las tablas principales tienen datos.
+   Si la copia sale rota o vacía, el workflow falla y GitHub avisa por correo.
+3. La cifra con [age](https://age-encryption.org) usando una clave pública. Solo la clave
+   privada, que no está en GitHub, puede abrirla.
+4. La sube a un bucket privado de R2 solo para copias (`daily/cables-<fecha>.dump.age`). Una
+   regla del bucket borra las de más de 30 días.
 
-**Restaurar** en una base vacía (nueva en Railway, o local para comprobar la copia):
+Para lanzarla a mano (por ejemplo, **antes de cada carga de datos**): GitHub → **Actions** →
+**Copia de seguridad** → **Run workflow**.
 
-```bash
-docker run --rm -i postgres:16-alpine pg_restore --no-owner --dbname "<URL de la base vacía>" < cables-AAAA-MM-DD.dump
-```
+### 9.1 Configurarla (una vez)
 
-Después, crea otra vez el usuario `cables_app` (paso 2.4) y cambia las URL en Vercel.
+1. **Claves de age**, en tu equipo:
 
-Probado el 2026-11-15 con la base local: copia y restauración dan los mismos recuentos de
-cables, bandejas, historial, usuarios y migraciones, con los triggers de inmutabilidad en su
-sitio.
+   ```bash
+   docker run --rm alpine:3.22 sh -c "apk add -q age && age-keygen"
+   ```
+
+   o, con age instalado, `age-keygen`. Imprime la clave privada (`AGE-SECRET-KEY-…`) y la
+   pública (`age1…`). **Guarda la privada en tu gestor de contraseñas**: sin ella no se puede
+   abrir ninguna copia. La pública va en GitHub.
+
+2. **Usuario de solo lectura** en la consola de datos de Railway (o con
+   `psql "<URL de migración>"`), con una contraseña larga generada:
+
+   ```sql
+   CREATE ROLE cables_backup LOGIN PASSWORD '<contraseña>';
+   GRANT pg_read_all_data TO cables_backup;
+   ```
+
+   `pg_read_all_data` lee todas las tablas, también las que se creen más adelante, y no puede
+   escribir nada. Su URL es la pública de Railway con este usuario y contraseña.
+
+3. **Bucket en R2:** **Create bucket** → `buscador-cables-copias` (privado). En su
+   **Settings → Object lifecycle rules**, una regla que borre los objetos con prefijo `daily/`
+   a los 30 días. Después, **Manage API tokens → Create API token** con permiso **Object Read &
+   Write** solo para ese bucket.
+
+4. **Secrets en GitHub:** repo → **Settings → Secrets and variables → Actions → New
+   repository secret**:
+
+   | Secret                        | Valor                                                 |
+   | ----------------------------- | ----------------------------------------------------- |
+   | `BACKUP_DATABASE_URL`         | URL pública de Railway con el usuario `cables_backup` |
+   | `BACKUP_AGE_RECIPIENT`        | Clave pública de age (`age1…`)                        |
+   | `BACKUP_S3_ENDPOINT`          | `https://<id-de-cuenta>.r2.cloudflarestorage.com`     |
+   | `BACKUP_S3_BUCKET`            | `buscador-cables-copias`                              |
+   | `BACKUP_S3_ACCESS_KEY_ID`     | Access Key ID del token del bucket de copias          |
+   | `BACKUP_S3_SECRET_ACCESS_KEY` | Secret Access Key del token del bucket de copias      |
+
+5. Lánzala a mano una vez y comprueba que el fichero aparece en el bucket.
+
+### 9.2 Restaurar una copia
+
+1. Descarga el fichero `.dump.age` desde el bucket (panel de R2 → bucket → el objeto →
+   **Download**).
+2. Descífralo con la clave privada, guardada en un fichero `clave-age.txt` que **borras al
+   terminar**:
+
+   ```bash
+   docker run --rm -v "$PWD:/work" -w /work alpine:3.22 sh -c "apk add -q age && age --decrypt --identity clave-age.txt --output cables.dump cables-AAAA-MM-DDTHHMMZ.dump.age"
+   ```
+
+3. Restaura en una base **vacía** (nueva en Railway, o local para comprobar la copia), con la
+   misma versión mayor que la de producción:
+
+   ```bash
+   docker run --rm -v "$PWD:/work" postgres:18-alpine pg_restore --no-owner --no-acl --exit-on-error --dbname "<URL de la base vacía>" /work/cables.dump
+   ```
+
+4. Crea otra vez los usuarios `cables_app` (paso 2.4) y `cables_backup` (9.1), y cambia las URL
+   en Vercel y en GitHub.
+
+Los ficheros descifrados llevan datos del cliente: nunca dentro del repositorio, y bórralos al
+terminar.
 
 Las teselas no necesitan copia aparte: se regeneran desde los PDF con `pnpm data:render`.

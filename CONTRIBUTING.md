@@ -71,6 +71,7 @@ Reglas del flujo:
 | CodeQL                 | PR a `dev` y semanal     | Análisis estático de seguridad (JavaScript/TypeScript)                          |
 | Dependency review      | PR                       | Que el PR no añade dependencias con vulnerabilidades altas o críticas conocidas |
 | Dependabot             | Semanal                  | PRs agrupados con actualizaciones de npm y de GitHub Actions, contra `dev`      |
+| `backup.yml`           | Diario y a mano          | Copia de la base de producción, comprobada, cifrada y subida a R2               |
 | Secret scanning        | Cada push                | Bloquea el push si contiene un secreto reconocible (token, clave…)              |
 
 Todos los checks obligatorios deben estar en verde para mergear.
