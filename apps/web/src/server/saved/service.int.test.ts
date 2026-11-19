@@ -1,5 +1,5 @@
 import { prisma } from "@cables/db";
-import { saveItemsSchema, type SaveItemsInput } from "@cables/shared";
+import { SAVED_ITEMS_MAX, saveItemsSchema, type SaveItemsInput } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   SavedServiceError,
@@ -104,7 +104,7 @@ describe("saveItems", () => {
       expect.objectContaining({ code: "99UXA00L22036", kind: "LADDER", voltageLevel: 2 }),
     ]);
     // El equipo, sin importar mayúsculas: dos cables llegan a 99BMA.
-    expect(folder?.equipment).toEqual([expect.objectContaining({ equipment: "99bma", cables: 2 })]);
+    expect(folder?.equipment).toEqual([expect.objectContaining({ equipment: "99BMA", cables: 2 })]);
     expect((await listFolders("juan")).find((f) => f.id === b.id)?.counts).toEqual({
       CABLE: 1,
       TRAY: 1,
@@ -160,7 +160,76 @@ describe("saveItems", () => {
   });
 });
 
+describe("saveItems: repaso antes de la release", () => {
+  /** Fills a folder up to the limit with made-up trays (only the count matters). */
+  const fill = (folderId: string, count: number) =>
+    prisma.savedItem.createMany({
+      data: Array.from({ length: count }, (_, n) => ({
+        folderId,
+        kind: "TRAY" as const,
+        key: `99RELLENO${n}`,
+      })),
+    });
+
+  it("a «new» folder with the name of one already there saves in it", async () => {
+    const { id } = await createFolder("juan", "Armario 99BMA");
+
+    const result = await save("juan", { refs: [cable("c1")], newFolder: "Armario 99BMA" });
+
+    expect(result.folders).toEqual(["Armario 99BMA"]);
+    expect((await getFolder("juan", id))?.cables.map((item) => item.id)).toEqual(["c1"]);
+    expect(await prisma.savedFolder.count({ where: { userId: "juan" } })).toBe(1);
+  });
+
+  it("leaves no empty new folder behind when saving fails", async () => {
+    const full = await createFolder("juan", "Llena");
+    await fill(full.id, SAVED_ITEMS_MAX);
+
+    await expect(
+      save("juan", { refs: [cable("c1")], add: [full.id], newFolder: "Nueva" }),
+    ).rejects.toThrow(/no puede tener más de/);
+    expect((await listFolders("juan")).map((folder) => folder.name)).toEqual(["Llena"]);
+  });
+
+  it("does not count what a full folder already holds", async () => {
+    const full = await createFolder("juan", "Llena");
+    await fill(full.id, SAVED_ITEMS_MAX - 1);
+    await save("juan", { refs: [cable("c1")], add: [full.id] });
+
+    await expect(save("juan", { refs: [cable("c1")], add: [full.id] })).resolves.toBeTruthy();
+  });
+
+  it("saves an equipment once, whatever its case", async () => {
+    const { id } = await createFolder("juan", "A");
+    await save("juan", { refs: [{ kind: "EQUIPMENT", key: "99bma" }], add: [id] });
+    await save("juan", { refs: [{ kind: "EQUIPMENT", key: "99BMA" }], add: [id] });
+
+    expect((await getFolder("juan", id))?.equipment).toEqual([
+      expect.objectContaining({ equipment: "99BMA", cables: 2 }),
+    ]);
+  });
+});
+
 describe("moveItems", () => {
+  it("never fills the other folder past the limit", async () => {
+    const a = await createFolder("juan", "A");
+    const full = await createFolder("juan", "Llena");
+    await prisma.savedItem.createMany({
+      data: Array.from({ length: SAVED_ITEMS_MAX }, (_, n) => ({
+        folderId: full.id,
+        kind: "TRAY" as const,
+        key: `99RELLENO${n}`,
+      })),
+    });
+    await save("juan", { refs: [cable("c1")], add: [a.id] });
+    const [item] = (await getFolder("juan", a.id))!.cables;
+
+    await expect(
+      moveItems("juan", { folderId: a.id, itemIds: [item!.itemId], toFolderId: full.id }),
+    ).rejects.toThrow(/no puede tener más de/);
+    expect((await getFolder("juan", a.id))?.cables).toHaveLength(1);
+  });
+
   it("moves to another folder of the same person, or takes out", async () => {
     const a = await createFolder("juan", "A");
     const b = await createFolder("juan", "B");

@@ -78,6 +78,12 @@ describe("SelectionProvider", () => {
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
+  it("offers nothing to choose in an empty list", () => {
+    render(<List shown={[]} />);
+
+    expect(screen.queryByRole("button", { name: "Seleccionar" })).toBeNull();
+  });
+
   it("chooses rows one by one and every row with one tick", () => {
     render(<List />);
     start();

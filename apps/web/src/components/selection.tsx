@@ -210,7 +210,8 @@ export function SelectionProvider({
 /** «Seleccionar», next to the count of the list. Hidden while choosing (the bar takes over). */
 export function SelectionToggle({ className }: { className?: string }) {
   const context = useContext(SelectionContext);
-  if (!context || context.selecting) return null;
+  // Sin filas no hay nada que elegir.
+  if (!context || context.selecting || context.shown === 0) return null;
   return (
     <Button type="button" variant="outline" size="sm" className={className} onClick={context.start}>
       Seleccionar
