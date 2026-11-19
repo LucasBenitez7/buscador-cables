@@ -124,7 +124,6 @@ const item = {
     installationStatus: "LAID",
     connectionStatus: "CONNECTED",
     testStatus: "NOT_TESTED",
-    currentLocationId: null,
     looseEnd: null,
     looseEndTray: null,
     originId: "o",
@@ -169,7 +168,9 @@ describe("SearchResults", () => {
     expect(table.getByRole("link", { name: "SH-50" })).toHaveAttribute("href", "/cables/c1");
     expect(table.getByText("3×2,5 mm²")).toBeInTheDocument();
     expect(table.getByText("120,5 m")).toBeInTheDocument();
-    expect(table.getByText(/Tomás · 11\/11\/26, 10:30/)).toBeInTheDocument();
+    // Sin columna «Último movimiento» (fase 14).
+    expect(table.queryByText(/Tomás · 11\/11\/26, 10:30/)).toBeNull();
+    expect(table.queryByRole("columnheader", { name: /Último movimiento/ })).toBeNull();
   });
 
   it("labels origin and destination and links their equipment and location", () => {
@@ -205,10 +206,12 @@ describe("SearchResults", () => {
     const card = within(screen.getByRole("listitem"));
 
     expect(card.getByRole("link", { name: "SH-50" })).toHaveAttribute("href", "/cables/c1");
-    expect(card.getByText("Control · 3×2,5 mm² · 120,5 m")).toBeInTheDocument();
     expect(card.getByText("Caldera 1 › Bandeja norte")).toBeInTheDocument();
     expect(card.getByText("Caldera 2 › Armario local")).toBeInTheDocument();
-    expect(card.getByText("Datos editados")).toBeInTheDocument();
+    // Solo lo que se usa en campo: ni datos técnicos, ni último movimiento, ni «Conexionado».
+    expect(card.queryByText("Control · 3×2,5 mm² · 120,5 m")).toBeNull();
+    expect(card.queryByText("Datos editados")).toBeNull();
+    expect(card.queryByRole("link", { name: /Conexionado/ })).toBeNull();
   });
 
   it("shows the equipment of each end and where a loose end waits", () => {
@@ -296,11 +299,7 @@ describe("SearchResults", () => {
     expect(screen.queryByRole("button", { name: "Acción" })).toBeNull();
 
     rerender(
-      <SearchResults
-        search={{}}
-        result={result}
-        actions={{ ...permissionsOfRole("TECHNICIAN"), locations: [] }}
-      />,
+      <SearchResults search={{}} result={result} actions={permissionsOfRole("TECHNICIAN")} />,
     );
     fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Acción" }));
 
@@ -326,16 +325,3 @@ describe("SearchResults", () => {
 });
 
 // Fase 11: quien conecta va directo a la pestaña Conexionado desde el buscador.
-describe("SearchResults: wiring link", () => {
-  it("links each cable straight to its wiring tab, in the table and in the cards", () => {
-    render(
-      <SearchResults search={{}} result={{ items: [item], total: 1, page: 1, pageCount: 1 }} />,
-    );
-
-    const links = screen.getAllByRole("link", { name: "Conexionado del cable SH-50" });
-    expect(links).toHaveLength(2);
-    for (const link of links) {
-      expect(link).toHaveAttribute("href", `/cables/${item.id}?vista=conexionado`);
-    }
-  });
-});

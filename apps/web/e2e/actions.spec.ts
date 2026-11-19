@@ -1,14 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { CABLES, USERS, storageStatePath } from "./support/data";
-import { cableHeader, openCable, runAction } from "./support/cables";
-
-const STORE = "Planta E2E › Almacén";
-const YARD = "Planta E2E › Patio";
+import { cableHeader, openActions, openCable, openSection, runAction } from "./support/cables";
 
 test.describe("técnico", () => {
   test.use({ storageState: storageStatePath("technician") });
 
-  test("tiende, conecta los dos extremos, enrolla y mueve un cable", async ({ page }) => {
+  test("tiende, conecta los dos extremos y desconecta un cable", async ({ page }) => {
     const { code } = CABLES.actions;
     await openCable(page, code);
     const badges = cableHeader(page);
@@ -27,33 +24,27 @@ test.describe("técnico", () => {
     );
     await expect(badges).toContainText("Conectado");
 
-    await runAction(page, "Enrollar", (dialog) =>
-      dialog.getByLabel("Dónde queda enrollado").selectOption({ label: YARD }),
-    );
-    await expect(badges).toContainText("Enrollado");
-    await expect(page.getByText(`Ahora está en: ${YARD}`)).toBeVisible();
-
-    await runAction(page, "Mover", async (dialog) => {
-      await dialog.getByLabel("Nuevo sitio").selectOption({ label: STORE });
-      await dialog.getByLabel("Nota (opcional)").fill("Vuelve al almacén hasta la parada");
+    await runAction(page, "Desconectar", async (dialog) => {
+      await dialog.getByLabel("Ambos extremos").check();
+      await dialog.getByLabel("Nota (opcional)").fill("Se suelta hasta la parada");
     });
-    await expect(page.getByText(`Ahora está en: ${STORE}`)).toBeVisible();
+    await expect(notice).toHaveText(`Movimiento registrado en ${code}: desconectado.`);
 
     // Historial, del más reciente al más antiguo.
+    await openSection(page, /^Historial/);
     const mine = page.getByRole("listitem").filter({ hasText: USERS.technician.name });
-    await expect(mine).toHaveCount(5);
-    await expect(mine.nth(0)).toContainText("Movido");
-    await expect(mine.nth(0)).toContainText("“Vuelve al almacén hasta la parada”");
-    await expect(mine.nth(1)).toContainText("Enrollado");
-    await expect(mine.nth(2)).toContainText("Conectado");
-    await expect(mine.nth(4)).toContainText("Tendido");
+    await expect(mine).toHaveCount(4);
+    await expect(mine.nth(0)).toContainText("Desconectado");
+    await expect(mine.nth(0)).toContainText("“Se suelta hasta la parada”");
+    await expect(mine.nth(1)).toContainText("Conectado");
+    await expect(mine.nth(3)).toContainText("Tendido");
 
     await page
       .getByRole("navigation", { name: "Principal" })
       .getByRole("link", { name: "Mi actividad" })
       .click();
     await expect(page.getByRole("heading", { name: "Mi actividad" })).toBeVisible();
-    await expect(page.getByRole("link", { name: code, exact: true })).toHaveCount(5);
+    await expect(page.getByRole("link", { name: code, exact: true })).toHaveCount(4);
   });
 
   test("avisa si otra persona registró un movimiento a la vez", async ({ page, context }) => {
@@ -64,10 +55,7 @@ test.describe("técnico", () => {
     await runAction(other, "Tender");
     await expect(cableHeader(other)).toContainText("Tendido");
 
-    await page
-      .getByRole("region", { name: "Acciones" })
-      .getByRole("button", { name: "Tender", exact: true })
-      .click();
+    await (await openActions(page)).getByRole("button", { name: "Tender", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: "Tender", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText(
@@ -83,8 +71,9 @@ test.describe("técnico", () => {
     const badges = cableHeader(page);
 
     // Una bandeja fuera del recorrido hay que confirmarla.
-    await page
-      .getByRole("region", { name: "Acciones" })
+    await (
+      await openActions(page)
+    )
       .getByRole("button", { name: "Tender a medias", exact: true })
       .click();
     const dialog = page.getByRole("dialog");
@@ -115,6 +104,7 @@ test.describe("técnico", () => {
     await expect(badges).toContainText("Tendido");
     await expect(badges).toContainText("Solo origen");
 
+    await openSection(page, /^Historial/);
     const mine = page.getByRole("listitem").filter({ hasText: USERS.technician.name });
     await expect(mine.nth(0)).toContainText("terminó de tender el cable");
     await expect(mine.nth(2)).toContainText(
@@ -137,7 +127,7 @@ test.describe("técnico", () => {
 
   test("un técnico no puede retirar ni corregir", async ({ page }) => {
     await openCable(page, CABLES.search.code);
-    const actions = page.getByRole("region", { name: "Acciones" });
+    const actions = await openActions(page);
 
     await expect(actions.getByRole("button", { name: "Desconectar" })).toBeEnabled();
     await expect(actions.getByRole("button", { name: "Retirar" })).toHaveCount(0);
@@ -169,6 +159,7 @@ test.describe("supervisor", () => {
     await expect(badges).toContainText("Tendido");
     await expect(badges).toContainText("Conectado");
 
+    await openSection(page, /^Historial/);
     const mine = page.getByRole("listitem").filter({ hasText: USERS.supervisor.name });
     await expect(mine).toHaveCount(2);
     await expect(mine.first()).toContainText("Corrección");

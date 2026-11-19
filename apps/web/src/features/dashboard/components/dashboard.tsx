@@ -12,13 +12,14 @@ import {
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CODE_LINK, TEXT_LINK_SM } from "@/components/ui/text-link";
 import {
   CONNECTION_VARIANT,
   INSTALLATION_VARIANT,
   TEST_VARIANT,
 } from "@/features/cables/components/cable-status-badges";
+import { TONE_FILL } from "@/features/cables/status-tones";
+import { QuickSearch } from "@/features/search/components/quick-search";
 import { HealthCard } from "@/features/system/components/health-card";
 import type { ActivityEntry } from "@/server/activity/service";
 import type { CableProgress, Dashboard as DashboardData } from "@/server/dashboard/service";
@@ -38,7 +39,7 @@ const percent = (value: number, total: number) =>
  * `getDashboard`): what a role may not see never reaches the browser.
  */
 export function Dashboard({ data }: { data: DashboardData }) {
-  const { progress, myActivity, team, admin } = data;
+  const { progress, lastExcel, toReview, myActivity, team, admin } = data;
 
   // Columna lateral: lo más útil para cada rol junto al avance de la obra.
   const side = admin ? (
@@ -77,11 +78,29 @@ export function Dashboard({ data }: { data: DashboardData }) {
         </div>
       ) : null}
 
+      {toReview ? (
+        <div
+          role="status"
+          className="border-warning/40 bg-warning/10 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm"
+        >
+          <p>
+            <span className="text-warning font-semibold">
+              {count(toReview)}{" "}
+              {toReview === 1 ? "discrepancia nueva pendiente" : "discrepancias nuevas pendientes"}
+            </span>{" "}
+            de revisar con el Excel.
+          </p>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/review">Revisar</Link>
+          </Button>
+        </div>
+      ) : null}
+
       {admin ? <MissingDrawings drawings={admin.drawings} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <ProgressPanel progress={progress} />
+          <ProgressPanel progress={progress} lastExcel={lastExcel} />
         </div>
         {side}
       </div>
@@ -141,76 +160,42 @@ function Panel({
   );
 }
 
-/** Two plain GET forms: the search pages already read `?q=`. */
-function QuickSearch() {
-  return (
-    <section aria-label="Búsqueda rápida" className="grid gap-3 md:grid-cols-2">
-      <SearchBox
-        action="/cables"
-        id="home-cable"
-        label="Buscar un cable"
-        placeholder="Código, equipo o descripción"
-      />
-      <SearchBox
-        action="/trays"
-        id="home-tray"
-        label="Buscar una bandeja"
-        placeholder="99UXA00L22036…"
-        code
-      />
-    </section>
-  );
-}
-
-function SearchBox({
-  action,
-  id,
-  label,
-  placeholder,
-  code,
+function ProgressPanel({
+  progress,
+  lastExcel,
 }: {
-  action: string;
-  id: string;
-  label: string;
-  placeholder: string;
-  code?: boolean;
+  progress: CableProgress;
+  lastExcel: DashboardData["lastExcel"];
 }) {
-  return (
-    <form
-      action={action}
-      role="search"
-      aria-label={label}
-      className="bg-card space-y-2 rounded-lg border p-4"
-    >
-      <label htmlFor={id} className="text-sm font-semibold">
-        {label}
-      </label>
-      <div className="flex gap-2">
-        <Input
-          id={id}
-          name="q"
-          type="search"
-          placeholder={placeholder}
-          autoComplete="off"
-          spellCheck={false}
-          className={cn("min-w-0 flex-1", code && "font-mono uppercase")}
-        />
-        <Button type="submit">Buscar</Button>
-      </div>
-    </form>
-  );
-}
-
-function ProgressPanel({ progress }: { progress: CableProgress }) {
   const { total, laid, connected, installation } = progress;
   return (
     <Panel title="Avance de la obra" href="/cables" linkLabel="Ver cables" className="h-full">
-      <p className="text-muted-foreground text-sm">
-        <span className="text-foreground text-3xl font-semibold tabular-nums">{count(total)}</span>{" "}
-        cables en el proyecto
-      </p>
-      <Meter label="Tendidos" value={laid} total={total} barClassName="bg-primary" />
-      <Meter label="Conectados" value={connected} total={total} barClassName="bg-success" />
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-sm">
+          <span className="text-foreground text-3xl font-semibold tabular-nums">
+            {count(total)}
+          </span>{" "}
+          cables en el proyecto
+        </p>
+        {lastExcel.length > 0 ? (
+          // Hasta qué Excel llega el avance: uno por fila, que se lea de un vistazo.
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
+            {lastExcel.map((excel) => (
+              <div key={excel.kind} className="contents">
+                <dt className="text-muted-foreground">{excel.label}</dt>
+                <dd className="font-medium">Excel del {excel.excelDay}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+      </div>
+      <Meter label="Tendidos" value={laid} total={total} barClassName={TONE_FILL.laid} />
+      <Meter
+        label="Conectados"
+        value={connected}
+        total={total}
+        barClassName={TONE_FILL.connected}
+      />
       <Meter
         label="Timbrados"
         value={progress.tested}

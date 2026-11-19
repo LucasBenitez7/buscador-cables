@@ -1,8 +1,10 @@
 "use client";
 
 import { cn } from "cn";
+import { ChevronUpIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
+  useId,
   useState,
   useTransition,
   type ComponentProps,
@@ -41,7 +43,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { SearchableSelect, toOptions } from "@/components/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { runCableActionAction, type CableFormResult } from "@/features/cables/actions";
 
@@ -54,7 +55,6 @@ type Props = {
   state: CableState;
   /** Computed on the server with `cableActionAvailability` for the current user. */
   availability: CableActionAvailability[];
-  locations: ActionOption[];
   /** History entries a supervisor can correct, newest first. */
   events?: ActionOption[];
   /** Codes of the trays on the cable's planned route, suggested for the loose end. */
@@ -70,12 +70,10 @@ const DESCRIPTIONS: Record<CableFieldAction, string> = {
   LAID: "El cable queda tendido entre su origen y su destino, todavía sin conectar.",
   PARTIALLY_LAID:
     "El cable no llegó a su destino: una punta llega a su equipo y la otra está en una bandeja del camino. Elige la bandeja donde lo has encontrado.",
-  COILED: "El cable queda enrollado y desconectado en el sitio que indiques.",
   CONNECTED: "Indica qué extremo has conectado.",
   DISCONNECTED: "Indica qué extremo has desconectado.",
   TESTED:
     "Resultado de timbrar el cable (continuidad e identificación de los conductores). Si falla, explica qué en la nota.",
-  MOVED: "Indica a dónde has llevado el cable.",
   RETIRED: "El cable queda fuera de servicio y desconectado. Solo un supervisor puede deshacerlo.",
   CORRECTION:
     "Corrige un movimiento registrado por error. Indica cuál, cómo debe quedar el cable y por qué.",
@@ -122,7 +120,6 @@ export function CableActions({
   version,
   state,
   availability,
-  locations,
   events = [],
   routeTrays = [],
   compact = false,
@@ -133,6 +130,9 @@ export function CableActions({
   const [result, setResult] = useState<CableFormResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // La barra de abajo: plegada, solo el botón; desplegada, todas las acciones.
+  const [expanded, setExpanded] = useState(false);
+  const panelId = useId();
 
   const offered = compact
     ? availability.filter((item) => item.action !== "CORRECTION")
@@ -140,12 +140,12 @@ export function CableActions({
   if (offered.length === 0) {
     return null;
   }
-  const blocked = offered.filter((item) => item.disabledReason !== null);
   const current = offered.find((item) => item.action === open);
 
   function openDialog(action: CableFieldAction) {
     setResult(null);
     setNotice(null);
+    setExpanded(false);
     setOpen(action);
   }
 
@@ -188,7 +188,6 @@ export function CableActions({
             <ActionFields
               action={open}
               state={state}
-              locations={locations}
               events={events}
               routeTrays={routeTrays}
               errors={fieldErrors}
@@ -227,26 +226,17 @@ export function CableActions({
             <DialogTitle>
               Registrar acción · <span className="font-mono">{code}</span>
             </DialogTitle>
-            <DialogDescription>Elige qué has hecho con el cable.</DialogDescription>
+            <DialogDescription className="sr-only">
+              Elige qué has hecho con el cable.
+            </DialogDescription>
           </DialogHeader>
-          <ul className="space-y-2">
-            {offered.map((item) => (
-              <li key={item.action}>
-                <Button
-                  type="button"
-                  variant={item.action === "RETIRED" ? "destructive" : "outline"}
-                  className="w-full justify-start"
-                  disabled={item.disabledReason !== null}
-                  onClick={() => openDialog(item.action)}
-                >
-                  {item.label}
-                </Button>
-                {item.disabledReason ? (
-                  <p className="text-muted-foreground mt-0.5 px-1 text-xs">{item.disabledReason}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          {/* Los mismos botones que el panel de la ficha. */}
+          <ActionButtons
+            offered={offered}
+            idPrefix={`${panelId}-picker`}
+            onPick={openDialog}
+            className="space-y-2"
+          />
         </DialogContent>
       ) : null}
     </Dialog>
@@ -278,59 +268,69 @@ export function CableActions({
   }
 
   return (
-    <section aria-labelledby="cable-actions-title" className="space-y-3">
-      <h2 id="cable-actions-title" className="text-base font-medium">
-        Acciones
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {offered.map((item) => (
-          <Button
-            key={item.action}
-            type="button"
-            variant={item.action === "RETIRED" ? "destructive" : "outline"}
-            disabled={item.disabledReason !== null}
-            title={item.disabledReason ?? undefined}
-            onClick={() => openDialog(item.action)}
-          >
-            {item.label}
-          </Button>
-        ))}
-      </div>
-      {notice ? (
-        <p role="status" className="text-success text-sm">
-          {notice}
-        </p>
-      ) : null}
-      {blocked.length > 0 ? (
-        <details className="text-muted-foreground text-sm">
-          <summary className="hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-sm transition-colors outline-none select-none focus-visible:ring-3">
-            Por qué hay acciones desactivadas
-          </summary>
-          <ul className="mt-2 space-y-1 pl-4">
-            {blocked.map((item) => (
-              <li key={item.action}>
-                <span className="text-foreground">{item.label}:</span> {item.disabledReason}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+    <>
+      {/* Hueco al final de la página: la barra fija no tapa lo último de la ficha. */}
+      <div aria-hidden className="h-20" />
+      <section
+        aria-labelledby="cable-actions-title"
+        className={cn(
+          "bg-card fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_var(--background)]",
+          // Abierto, un borde azul apagado marca dónde empieza el panel sobre la ficha.
+          expanded && "border-t-2 border-t-[color-mix(in_oklch,var(--primary)_45%,var(--card))]",
+        )}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setExpanded(false);
+        }}
+      >
+        <div className="mx-auto max-w-6xl space-y-3 px-4 py-2 sm:px-6">
+          <h2 id="cable-actions-title" className="sr-only">
+            Acciones
+          </h2>
+          {notice ? (
+            <p role="status" className="text-success text-sm font-medium">
+              {notice}
+            </p>
+          ) : null}
+          <div id={panelId} hidden={!expanded} className="max-h-[55dvh] overflow-y-auto">
+            <ActionButtons
+              offered={offered}
+              idPrefix={panelId}
+              onPick={openDialog}
+              className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
+            />
+          </div>
+          {/* En el móvil, a todo el ancho; en el escritorio, un botón normal a la derecha. */}
+          <div className="flex md:justify-end">
+            <Button
+              type="button"
+              className="h-10 w-full text-base md:h-9 md:w-auto md:px-6"
+              aria-expanded={expanded}
+              aria-controls={panelId}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? "Cerrar" : "Registrar acción"}
+              <ChevronUpIcon
+                aria-hidden
+                className={cn("size-5 transition-transform", expanded && "rotate-180")}
+              />
+            </Button>
+          </div>
+        </div>
+      </section>
       {dialog}
-    </section>
+    </>
   );
 }
 
 function ActionFields({
   action,
   state,
-  locations,
   events,
   routeTrays,
   errors,
 }: {
   action: CableFieldAction;
   state: CableState;
-  locations: ActionOption[];
   events: ActionOption[];
   routeTrays: string[];
   errors: Record<string, string>;
@@ -349,22 +349,6 @@ function ActionFields({
             confirmOffRoute
           />
         </>
-      );
-    case "COILED":
-      return (
-        <Field id="action-location" label="Dónde queda enrollado" error={errors.locationId}>
-          <LocationSelect name="locationId" locations={locations} defaultValue="" />
-        </Field>
-      );
-    case "MOVED":
-      return (
-        <Field id="action-location" label="Nuevo sitio" error={errors.locationId}>
-          <LocationSelect
-            name="locationId"
-            locations={locations.filter((location) => location.id !== state.currentLocationId)}
-            defaultValue=""
-          />
-        </Field>
       );
     case "TESTED":
       return (
@@ -468,18 +452,6 @@ function ActionFields({
                 </option>
               ))}
             </Select>
-          </Field>
-          <Field
-            id="action-location"
-            label="Dónde está (si no está tendido)"
-            error={errors.currentLocationId}
-          >
-            <LocationSelect
-              name="currentLocationId"
-              locations={locations}
-              defaultValue={state.currentLocationId ?? ""}
-              emptyLabel="Sin ubicación física"
-            />
           </Field>
           <Field
             id="action-loose-end"
@@ -667,25 +639,49 @@ function Select(props: ComponentProps<"select">) {
   return <NativeSelect {...props} />;
 }
 
-function LocationSelect({
-  name,
-  locations,
-  defaultValue,
-  emptyLabel,
+/**
+ * The buttons of the field actions, the same in the bar of the cable record and in the
+ * «Acción» dialog of the search: solid backgrounds (also when disabled, so nothing shows
+ * through), the app's blue on hover and «Retirar» in red. Only buttons: the reason a button
+ * is disabled is read by screen readers.
+ */
+function ActionButtons({
+  offered,
+  idPrefix,
+  onPick,
+  className,
 }: {
-  name: string;
-  locations: ActionOption[];
-  defaultValue: string;
-  emptyLabel?: string;
+  offered: CableActionAvailability[];
+  idPrefix: string;
+  onPick: (action: CableFieldAction) => void;
+  className?: string;
 }) {
   return (
-    <SearchableSelect
-      id="action-location"
-      name={name}
-      defaultValue={defaultValue}
-      options={toOptions(locations)}
-      emptyLabel={emptyLabel}
-      placeholder="Elige una ubicación"
-    />
+    <ul className={className}>
+      {offered.map((item) => (
+        <li key={item.action}>
+          <Button
+            type="button"
+            className={cn(
+              "border-border h-11 w-full text-base disabled:opacity-100 md:h-10",
+              item.action === "RETIRED"
+                ? "text-destructive bg-[color-mix(in_oklch,var(--destructive)_22%,var(--secondary))] hover:bg-[color-mix(in_oklch,var(--destructive)_32%,var(--secondary))] active:bg-[color-mix(in_oklch,var(--destructive)_40%,var(--secondary))]"
+                : "bg-secondary text-foreground hover:bg-[color-mix(in_oklch,var(--primary)_22%,var(--secondary))] active:bg-[color-mix(in_oklch,var(--primary)_32%,var(--secondary))]",
+              "disabled:bg-background disabled:text-muted-foreground",
+            )}
+            disabled={item.disabledReason !== null}
+            aria-describedby={item.disabledReason ? `${idPrefix}-${item.action}` : undefined}
+            onClick={() => onPick(item.action)}
+          >
+            {item.label}
+          </Button>
+          {item.disabledReason ? (
+            <span id={`${idPrefix}-${item.action}`} className="sr-only">
+              {item.disabledReason}
+            </span>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   );
 }

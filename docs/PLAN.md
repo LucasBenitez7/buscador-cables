@@ -26,13 +26,18 @@ hizo qué y cuándo.
 | 6    | Diseño responsive y E2E       | v0.7.0  | Menú y vistas para móvil, E2E de las fases 1-5        |
 | 7    | Datos reales del proyecto     | v0.8.0  | Cables, bandejas y estado cargados desde los PDFs     |
 | 7.5  | Planos y trabajo en campo     | v0.8.1  | Plano con la bandeja marcada, timbrado, dónde está    |
-| 8    | Importación masiva y panel    | —       | _Mejora futura_: CSV/Excel masivo, dashboard          |
+| 8    | Importación masiva y panel    | —       | _Sustituida por la fase 14_                           |
 | 9    | Modo sin conexión (PWA)       | —       | _Mejora futura_: consulta offline + cola de cambios   |
 | 10   | Producción y endurecimiento   | v1.0.0  | Despliegue Vercel + Railway, seguridad, backups, docs |
 | 11   | Conexionado                   | v1.1.0  | Hilos y bornas, hoja original, edición, equipos       |
 | 12   | Roles y permisos              | v1.2.0  | Roles editables y permisos extra desde la web         |
+| 13   | Uso en campo                  | v1.3.0  | Ficha con el plano primero, colores, buscador único   |
+| 14   | Estado diario desde el Excel  | v1.4.0  | Excel del día, pendientes de revisar, panel           |
+| 15   | Listados: imprimir y ordenar  | v1.5.0  | Elegir filas, PDF y copiar nombres, ordenar por más   |
+| 16   | Guardados y roles             | v1.6.0  | Guardados con carpetas, roles uno al lado del otro    |
 
-**Total: 14 fases (0 a 12, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16).** El 2026-11-13 la fase 6 se
+**Total: 18 fases (0 a 16, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
+13 a la 15, el 2026-11-18; la 16, el 2026-11-19).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
@@ -653,7 +658,9 @@ el PR #33; resumen en `docs/REVISIONES.md`.
 
 ## Fase 8 — Importación masiva y panel (mejora futura)
 
-> **Pendiente, mejora futura** (decisión del 2026-11-13): no entra en la v1.0.0.
+> **Sustituida por la fase 14** (decisión del 2026-11-18). La carga del Excel y el panel pasan
+> a la fase 14, pensados para un Excel que cambia cada día. La exportación y los QR se
+> descartan de momento. Las casillas se conservan como estaban.
 
 Viene de la fase 6, de donde salió el 2026-11-13.
 
@@ -749,7 +756,7 @@ Desplegado el 2026-11-15 (PR #35) en `cables.lsbstack.com`.
 - [x] Primer administrador (`pnpm db:seed` con `NODE_ENV=production`) y carga de los datos
       reales (`pnpm data:load`).
 - [x] Comprobaciones del manual (salud, planos, correos de alta y aprobación, cron).
-- [ ] Copias de seguridad: el plan de Railway no las incluye; copia diaria cifrada en R2 con
+- [x] Copias de seguridad: el plan de Railway no las incluye; copia diaria cifrada en R2 con
       GitHub Actions (`backup.yml`, ver `docs/DESPLIEGUE.md`, «Copias de seguridad»).
 - [x] Publicar la **v1.0.0** (tag y GitHub Release, publicados el 2026-11-18 sobre el PR #35).
 
@@ -895,6 +902,142 @@ Repaso de listas e historial (2026-11-17, sin cambios en la base ni en los datos
       etiqueta, «Expandir / Contraer todo» y menú de acciones en pantallas táctiles.
 - [x] Flecha en «Filtros» y «Más filtros» del buscador de cables; sin badges «Fijo» / «De
       siempre» en la lista de roles.
+
+## Repaso de la web (2026-11-18, `fix/ui-review`)
+
+- [x] Conexionado: al cancelar o salir del modo editar, la tabla vuelve a lo guardado (antes
+      seguía mostrando lo escrito sin guardar).
+- [x] «Ir a»: fuera de la página de equipos (eran muchos botones); en el resto ocupa una sola
+      línea y al saltar ya no tapa el título del bloque.
+- [x] Usuarios: la caja «Qué puede hacer cada rol» empieza a la altura de la de Cuentas.
+
+## Fase 13 — Uso en campo (v1.3.0)
+
+Añadida el 2026-11-18. Rama `feat/f13-field-ux`. La web se usa sobre todo en el móvil, en obra,
+para buscar y mirar planos: que lo importante esté arriba y se vea bien, también para quien
+no está acostumbrado a usarla.
+
+- [x] Colores de estado únicos en toda la web (planos, etiquetas, bandejas, equipos, panel),
+      con los estados finales de la fase 14 (No tendido, Tendido a medias, Tendido, Retirado).
+      En el plano, marcas que destaquen sobre el dibujo: hoy «Falta» (gris) casi no se ve y
+      «Tendido» (verde) se confunde con las bandejas.
+- [x] Ficha del cable: pestañas Recorrido / Conexionado claras; en Recorrido, el
+      plano primero; en Conexionado, el estado de cada punta y la tabla de bornas plegada.
+- [x] Acciones en un botón fijo abajo que abre un panel, en vez de ocupar el principio de la
+      ficha.
+- [x] Bloques plegables más claros: toda la barra se pulsa, con «Mostrar» / «Ocultar».
+- [x] Bandejas y equipos con el mismo criterio: el plano arriba, lo secundario plegado.
+- [x] Buscador único en el inicio: cables, bandejas, equipos y ubicaciones con sugerencias
+      agrupadas mientras se escribe; un código exacto lleva directo a su ficha.
+- [x] Tests y E2E.
+
+Hecho también: en el móvil, los formularios de filtros (listas de bandejas, equipos y
+ubicaciones; un equipo, el historial, usuarios) enseñan el primer campo y despliegan el resto
+con «Más filtros»; cada extremo del cable dice si esa punta está conectada.
+
+Repaso de estilos con el usuario (2026-11-19), igual en cable, bandeja, equipo y ubicación:
+
+- [x] Cabecera corta: el código (más pequeño) y su estado; servicio, nivel y marcado
+      alternativo pasan a «Datos del cable».
+- [x] «Editar» y «Ver sus cables en el buscador» al lado del código, como texto subrayado; si
+      no caben, bajo él. Las barras de los bloques solo pliegan y despliegan, y son más finas.
+- [x] Planos y hoja original siempre a la vista (sin plegar) y primero; en Conexionado, la
+      hoja original arriba del todo.
+- [x] Selector de hojas compacto: botones pequeños en una fila y una línea con lo que muestra.
+- [x] Marcas del plano: un solo borde de color, sin relleno.
+- [x] Pestañas más bajas y con color; «Ir a» en azul. En el escritorio, pestañas y
+      «Registrar acción» con un ancho limitado.
+
+## Fase 14 — Estado diario desde el Excel (v1.4.0)
+
+Añadida el 2026-11-18; sustituye a la fase 8. Rama `feat/f14-excel-status`. El estado del
+proyecto llega en dos Excel (eléctrico e instrumentación) que se suben cada día desde la web.
+
+Decisiones que siguen valiendo:
+
+- **Lectura en el navegador** (`read-excel-file`): manda solo los datos que hacen falta, por
+  partes; el servidor lo vuelve a validar todo. Hojas y columnas por nombre, con alternativas;
+  si falta una, lo dice y no aplica nada. La fecha del Excel sale del nombre del archivo y se
+  puede cambiar. No se aplica un Excel más antiguo que el último aplicado de su tipo.
+- **Estados**: «Tendido» o «No tendido», y la conexión por puntas (solo el eléctrico la trae).
+  «Tendido a medias» y la punta suelta se marcan en campo. Se ignoran «Check», «Error» y
+  «Correcto/Incorrecto». Fuera «En almacén», «Enrollado», «Enrollar» y «Mover».
+- **Qué cambia el Excel**: estado, conexión, fecha de tendido, empresa, bobina y metros reales;
+  nunca origen, destino, tipo ni longitud del listado. Una celda vacía no borra nada. Metros
+  reales: en el eléctrico, por tramo (total / número de secciones); en instrumentación, de la
+  hoja «Table» («PULLED [m]»), y de una tirada repetida vale la más nueva.
+- **Vista previa guardada** (Cambios, Nuevos, Discrepancias): se desmarcan filas, y las
+  desmarcadas vuelven con el siguiente Excel; se aplica por lotes, decidiendo cada fila otra
+  vez. Los cables nuevos llevan la etiqueta «Solo datos del Excel».
+- **Discrepancias**: una persona marcó en la web, antes de la fecha del Excel, algo que el Excel
+  contradice (el mismo día o después, gana la web). El cable conserva lo de la web hasta que
+  alguien decide en «Pendientes de revisar» («Mantener lo de la web» o «Aceptar lo del Excel»,
+  una a una o varias a la vez). Nunca se cierran solas. La tarjeta enseña el estado actual del
+  cable y avisa si alguien lo cambió después; «Seleccionar todas» no acepta esas.
+- **Avisos**: el inicio y «Pendientes de revisar» solo cuentan las discrepancias abiertas desde
+  que cada persona abrió esa pantalla; no van al botón del menú ni a «Gestión».
+- **Carga del proyecto**: la primera carga (solo administradores) se guarda con su origen y no
+  se ve en la actividad, el historial ni la última acción.
+- **Historial**: nunca se borra nada; lo del Excel sale con su fecha y quién lo subió, y cada
+  decisión con quién decidió y qué corrige.
+
+- [x] Estados finales, lector de los dos Excel y datos nuevos del cable (empresa, bobina,
+      metros reales, fecha de tendido).
+- [x] Importación: vista previa, aplicar por lotes, carga del proyecto oculta.
+- [x] «Pendientes de revisar», avisos solo de lo nuevo y decisiones en bloque.
+- [x] Panel: fecha del último Excel y discrepancias nuevas.
+- [x] Repaso de estilos con el usuario: componentes comunes, sin textos de ayuda.
+- [x] Tests, E2E y manual de usuario.
+
+## Fase 15 — Listados: imprimir, copiar y ordenar (v1.5.0)
+
+Añadida el 2026-11-19. Rama `feat/f15-lists`. Va antes que guardados y roles (decidido el
+2026-11-19). Toca todas las pantallas con listas o tablas (cables, equipos y su ficha,
+bandejas, ubicaciones…).
+
+Decisiones (2026-11-19):
+
+- **Elegir**: un botón «Seleccionar» enseña las casillas y una barra fija abajo con cuántas
+  hay, «Copiar» e «Imprimir». Sin él, la lista se ve y se pulsa como siempre.
+- **Seleccionar todas**: una sola casilla, encima de la lista (y en la cabecera de la tabla).
+  En una lista con páginas elige todo lo que cumple los filtros, no solo la página (lo da el
+  servidor). Lo elegido se mantiene al cambiar de página y se vacía al cambiar los filtros.
+- **Imprimir**: el diálogo del navegador con una hoja limpia (título, fecha y los códigos);
+  desde ahí se imprime o se guarda como PDF. Sin dependencias nuevas.
+
+- [x] Elegir filas: casillas en cada fila y «Seleccionar todas».
+- [x] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
+- [x] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
+- [x] Repaso de la ordenación en todos los listados: «más cables primero» y «menos» en
+      bandejas, y lo mismo donde tenga sentido; siempre respetando los filtros activos.
+- [x] Tests y E2E.
+
+Hecho también: en las fichas con dos listas (bandeja) solo se elige en una a la vez; lo que
+se copia de una ubicación es su código y su nombre; el texto de la lista de equipos dice
+cuáles de los 60 enseña según el orden elegido.
+
+## Fase 16 — Guardados y roles (v1.6.0)
+
+Añadida el 2026-11-18. Rama `feat/f16-saved-roles`. Sin prisa. Era la fase 15: pasó detrás
+de los listados el 2026-11-19.
+
+Decisiones (2026-11-19):
+
+- **Carpetas de un solo nivel**, de cada persona (nadie más las ve), con cables, bandejas y
+  equipos.
+- **Guardar** desde la ficha (cable, bandeja, equipo) y, de golpe, desde la barra de lo
+  elegido en una lista (fase 15).
+- **Una cosa puede estar en varias carpetas**; «Mover» la pasa de una carpeta a otra.
+
+- [x] Guardados: cada persona guarda cables, bandejas y equipos en carpetas suyas (crear,
+      renombrar, mover, quitar, borrar).
+- [x] Roles uno al lado del otro: en portátil, tabla con los permisos en filas y los roles en
+      columnas; en móvil, dos roles frente a frente con las diferencias resaltadas.
+- [x] Tests y E2E.
+
+Hecho también: «Solo diferencias» en la comparación de roles, que es una sola lista de
+permisos, sin títulos de sección (decidido con el usuario). Guardar no recarga la ficha, para
+que su aviso se vea.
 
 ---
 

@@ -1,9 +1,12 @@
 "use client";
 
-import type { FormEvent, ReactNode } from "react";
+import { cn } from "cn";
+import { ChevronDownIcon, SlidersHorizontalIcon } from "lucide-react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { FormActions } from "@/components/form-actions";
 import { ListSummary } from "@/components/list-summary";
 import { usePendingNavigation } from "@/components/pending-list";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -57,7 +60,8 @@ type Props = {
 /**
  * La barra de búsqueda de las listas: búsqueda, orden y filtros con el mismo aspecto y el
  * mismo orden de campos. Es un GET que funciona sin JavaScript; con él, va a una URL limpia sin
- * los valores vacíos ni el orden por defecto, y muestra «Cargando…» mientras navega.
+ * los valores vacíos ni el orden por defecto, y muestra «Cargando…» mientras navega. En el
+ * móvil solo se ve la búsqueda; el orden y los filtros se despliegan con «Más filtros».
  */
 export function ListToolbar({
   action,
@@ -71,6 +75,12 @@ export function ListToolbar({
   countAside,
 }: Props) {
   const { navigate, pending } = usePendingNavigation();
+  const [expanded, setExpanded] = useState(false);
+  const moreId = useId();
+  // Lo puesto aparte de la búsqueda: se cuenta en el botón aunque esté plegado.
+  const hiddenActive =
+    (sort && sort.value !== sort.defaultValue ? 1 : 0) +
+    filters.filter((filter) => (filter.kind === "checkbox" ? filter.checked : filter.value)).length;
   const keepQuery = new URLSearchParams(keep).toString();
   const clear = `${action}${keepQuery ? `?${keepQuery}` : ""}`;
   const idOf = (name: string) => `toolbar-${action.replace(/\W+/g, "-")}-${name}`;
@@ -129,7 +139,34 @@ export function ListToolbar({
 
         {/* 2. Cómo: el orden y los filtros, en una fila (dos columnas en el móvil). */}
         {sort || filters.length > 0 ? (
-          <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full md:hidden"
+            aria-expanded={expanded}
+            aria-controls={moreId}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            <SlidersHorizontalIcon />
+            {expanded ? "Menos filtros" : "Más filtros"}
+            {hiddenActive > 0 ? ` (${hiddenActive})` : ""}
+            <ChevronDownIcon
+              aria-hidden
+              className={cn(
+                "transition-transform motion-safe:duration-200",
+                expanded && "rotate-180",
+              )}
+            />
+          </Button>
+        ) : null}
+        {sort || filters.length > 0 ? (
+          <div
+            id={moreId}
+            className={cn(
+              "grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap",
+              !expanded && "max-md:hidden",
+            )}
+          >
             {sort ? (
               <div className="min-w-0 space-y-1.5 sm:w-52">
                 <Label htmlFor={idOf(sort.name)}>Orden</Label>

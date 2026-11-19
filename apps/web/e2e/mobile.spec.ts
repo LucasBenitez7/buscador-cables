@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { CABLES, storageStatePath } from "./support/data";
+import { CABLES, SEARCH_QUERY, storageStatePath } from "./support/data";
+import { openActions, openCable } from "./support/cables";
 
 // Proyecto "mobile" (Pixel 7): cómo se usa la app en planta, con el móvil.
 test.use({ storageState: storageStatePath("technician") });
@@ -32,7 +33,7 @@ test("los filtros se despliegan y los resultados son tarjetas", async ({ page })
     has: page.getByRole("link", { name: CABLES.mobile.code, exact: true }),
   });
   await expect(card).toBeVisible();
-  await expect(card).toContainText("Enrollado");
+  await expect(card).toContainText("No tendido");
 });
 
 test("registra una acción desde la tarjeta sin abrir la ficha", async ({ page }) => {
@@ -45,10 +46,44 @@ test("registra una acción desde la tarjeta sin abrir la ficha", async ({ page }
   await card.getByRole("button", { name: "Acción" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText(`Registrar acción · ${code}`);
-  await dialog.getByRole("button", { name: "Mover" }).click();
-  await dialog.getByLabel("Nuevo sitio").selectOption({ label: "Planta E2E › Almacén" });
-  await dialog.getByRole("button", { name: "Mover" }).click();
+  await dialog.getByRole("button", { name: "Tender", exact: true }).click();
+  await dialog.getByRole("button", { name: "Tender", exact: true }).click();
 
   await expect(dialog).toBeHidden();
-  await expect(card.getByRole("status")).toHaveText(`Movimiento registrado en ${code}: movido.`);
+  await expect(card.getByRole("status")).toHaveText(`Movimiento registrado en ${code}: tendido.`);
+});
+
+test("la ficha empieza por lo que se usa en campo y las acciones están abajo", async ({ page }) => {
+  const { code } = CABLES.waiting;
+  await openCable(page, code);
+
+  // Pestañas grandes y, debajo, el recorrido; lo secundario empieza plegado.
+  const tabs = page.getByRole("navigation", { name: "Vista del cable" });
+  await expect(tabs.getByRole("link", { name: "Recorrido" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(page.getByRole("list", { name: "Tramos del recorrido" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Origen" })).toBeHidden();
+
+  // La barra de acciones queda fija abajo, dentro de la pantalla, y se despliega.
+  const toggle = page.getByRole("button", { name: "Registrar acción" });
+  await expect(toggle).toBeInViewport();
+  const actions = await openActions(page);
+  await expect(actions.getByRole("button", { name: "Timbrar", exact: true })).toBeInViewport();
+  await actions.getByRole("button", { name: "Cerrar" }).click();
+  await expect(actions.getByRole("button", { name: "Timbrar", exact: true })).toBeHidden();
+});
+
+test("en las tarjetas se eligen cables y la barra de abajo los copia", async ({ page }) => {
+  await page.goto(`/cables?q=${SEARCH_QUERY}`);
+  await page.getByRole("button", { name: "Seleccionar" }).click();
+
+  // La casilla está sobre la tarjeta: marcarla no abre el cable.
+  await page.getByRole("checkbox", { name: `Elegir ${CABLES.search.code}` }).check();
+  await expect(page).toHaveURL(/\/cables\?q=/);
+  const bar = page.getByRole("region", { name: "Elegidos" });
+  await expect(bar.getByRole("status")).toHaveText("1 elegido");
+  await expect(bar.getByRole("button", { name: "Copiar" })).toBeInViewport();
+  await expect(bar.getByRole("button", { name: "Imprimir" })).toBeInViewport();
 });

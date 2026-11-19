@@ -1,11 +1,12 @@
 import "server-only";
 import { prisma, Prisma } from "@cables/db";
+import type { EquipmentListSort } from "@cables/shared";
 import { escapeLike } from "@/server/like";
 import { groupEquipmentEnds, type EquipmentGroup } from "./group";
 
 /** Longest equipment tag accepted from a URL or the search box. */
 export const EQUIPMENT_MAX = 120;
-const SEARCH_LIMIT = 60;
+export const EQUIPMENT_LIMIT = 60;
 
 export type EquipmentMatch = { equipment: string; cables: number };
 
@@ -15,7 +16,7 @@ export type EquipmentMatch = { equipment: string; cables: number };
  */
 export async function searchEquipment(
   query: string,
-  sort: "cables" | "name" | "name-desc" = "cables",
+  sort: EquipmentListSort = "cables",
 ): Promise<EquipmentMatch[]> {
   const text = query.trim().slice(0, EQUIPMENT_MAX);
   const pattern = `%${escapeLike(text)}%`;
@@ -35,9 +36,11 @@ export async function searchEquipment(
         ? Prisma.sql`equipment`
         : sort === "name-desc"
           ? Prisma.sql`equipment DESC`
-          : Prisma.sql`cables DESC, equipment`
+          : sort === "cables-asc"
+            ? Prisma.sql`cables, equipment`
+            : Prisma.sql`cables DESC, equipment`
     }
-    LIMIT ${SEARCH_LIMIT}`;
+    LIMIT ${EQUIPMENT_LIMIT}`;
 }
 
 export type EquipmentDetail = {

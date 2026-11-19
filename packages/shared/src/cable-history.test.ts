@@ -140,3 +140,18 @@ describe("describeCableEvent: timbrado", () => {
     ).toBe("timbró el cable y encontró un fallo");
   });
 });
+
+describe("describeCableEvent: Excel del día", () => {
+  const sentence = (action: "EXCEL_UPDATED" | "EXCEL_REVIEWED", changes: object = {}) =>
+    describeCableEvent({ action, changes, fromLocation: null, toLocation: null });
+
+  it("tells an update of the Excel and both decisions on a discrepancy apart", () => {
+    expect(sentence("EXCEL_UPDATED")).toBe("actualizó el cable según el Excel");
+    expect(
+      sentence("EXCEL_REVIEWED", { installationStatus: { from: "LAID", to: "NOT_LAID" } }),
+    ).toBe("aceptó lo del Excel en una discrepancia");
+    expect(sentence("EXCEL_REVIEWED")).toBe(
+      "mantuvo lo de la web en una discrepancia con el Excel",
+    );
+  });
+});

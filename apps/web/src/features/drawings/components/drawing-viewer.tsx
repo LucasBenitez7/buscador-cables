@@ -8,12 +8,17 @@ import type { Viewer } from "openseadragon";
 import { isCableSheetKey, type DrawingMark } from "@cables/shared";
 import { BrandLoader } from "@/components/loading";
 import { Button } from "@/components/ui/button";
+import { TONE_BORDER } from "@/features/cables/status-tones";
 
 /** A point to highlight on the sheet. `emphasis` ones get the arrow and the zoom. */
 export type ViewerMark = DrawingMark & {
   /** Short text next to the mark ("1", "Aquí"): route steps are numbered. */
   label?: string;
-  tone?: "primary" | "success" | "warning" | "muted";
+  /**
+   * `target` (default): what is being looked for, with the arrow. On a route, the state of each
+   * tray: `laid`, `pending` (not laid yet or no data) and `loose` (where the loose end waits).
+   */
+  tone?: "target" | "laid" | "pending" | "loose";
 };
 
 type Props = {
@@ -33,16 +38,18 @@ type OpenSeadragonModule = typeof OpenSeadragon;
 /** Marks the eye should go to: the drawn code or the section flag, not the table rows. */
 const isPrimary = (mark: ViewerMark) => mark.kind !== "table";
 
+// Los colores de los estados, los mismos que en las etiquetas y en el recorrido.
 const TONE_FRAME: Record<NonNullable<ViewerMark["tone"]>, string> = {
-  primary: "border-warning bg-warning/15",
-  warning: "border-warning bg-warning/15",
-  success: "border-success bg-success/10",
-  muted: "border-muted-foreground bg-muted-foreground/10",
+  target: TONE_BORDER.partial,
+  loose: TONE_BORDER.partial,
+  laid: TONE_BORDER.laid,
+  pending: TONE_BORDER.pending,
 };
 
 /** The arrow and the pulse go only to what is being looked for (on a route, where it is). */
 const isHighlighted = (mark: ViewerMark) =>
-  mark.kind !== "table" && (mark.tone ?? "primary") !== "success" && mark.tone !== "muted";
+  mark.kind !== "table" &&
+  (mark.tone === undefined || mark.tone === "target" || mark.tone === "loose");
 
 /** Without a stored size (older data), a small square around the point. */
 const DEFAULT_SIZE = { w: 0.012, h: 0.008 };
@@ -73,11 +80,12 @@ export function markFrame(mark: ViewerMark, aspect: number) {
 function frameElement(mark: ViewerMark): HTMLElement {
   const element = document.createElement("div");
   element.dataset.mark = mark.kind;
-  element.dataset.tone = mark.tone ?? "primary";
+  element.dataset.tone = mark.tone ?? "target";
   element.className = cn(
+    // Solo el borde, de un color: lo que hay debajo se sigue leyendo.
     "pointer-events-none rounded-sm",
-    TONE_FRAME[mark.tone ?? "primary"],
-    isHighlighted(mark) ? "border-[3px]" : "border-2",
+    TONE_FRAME[mark.tone ?? "target"],
+    isHighlighted(mark) ? "border-4" : "border-[3px]",
     mark.kind === "table" && "border-dashed",
   );
   return element;

@@ -1,7 +1,9 @@
 import "server-only";
 import { Prisma, prisma } from "@cables/db";
+import { SELECT_ALL_MAX } from "@/server/select-all";
 import {
   SEARCH_PAGE_SIZE,
+  VISIBLE_EVENT_SOURCES,
   effectiveSort,
   hasActivityFilters,
   normalizeCableCode,
@@ -19,7 +21,11 @@ import {
   type LocationOption,
   type Option,
 } from "@/server/cables/service";
-import { historyStart, visibleLastAction } from "@/server/activity/history-start";
+import {
+  historyStart,
+  visibleEventsWhere,
+  visibleLastAction,
+} from "@/server/activity/history-start";
 import { escapeLike } from "@/server/like";
 import { findSubtreeIds } from "@/server/locations/service";
 
@@ -129,7 +135,6 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
     conditions.push(Prisma.sql`(
       c."originId" IN (${list})
       OR c."destinationId" IN (${list})
-      OR c."currentLocationId" IN (${list})
     )`);
   }
 
@@ -178,10 +183,11 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
   if (hasActivityFilters(search)) {
     // Todas las condiciones sobre el mismo evento: "cables que conectó Juan esta semana".
     // Los días se cuentan en hora de Madrid, como los ve la gente en planta.
-    // Lo anterior al corte (la carga inicial) no cuenta como actividad.
+    // Lo anterior al corte y la carga del proyecto no cuentan como actividad.
     const event: Prisma.Sql[] = [
       Prisma.sql`e."cableId" = c."id"`,
       Prisma.sql`e."createdAt" >= ${historyStart()}`,
+      Prisma.sql`e."source"::text IN (${Prisma.join([...VISIBLE_EVENT_SOURCES])})`,
     ];
     if (search.actor) event.push(Prisma.sql`e."userId" = ${search.actor}`);
     if (search.action) event.push(Prisma.sql`e."action" = ${search.action}::"CableAction"`);
@@ -201,8 +207,9 @@ function orderBy(search: CableSearch): Prisma.Sql {
   // `dir` solo puede ser "asc" o "desc" (lo valida el esquema), nunca texto del usuario.
   const direction = Prisma.raw(dir === "desc" ? "DESC" : "ASC");
   const natural = naturalCodeOrder(Prisma.raw("ASC"));
-  // Misma regla que la columna «Última acción»: una anterior al corte cuenta como vacía.
-  const shownLastAt = Prisma.sql`CASE WHEN c."lastActionAt" >= ${historyStart()} THEN c."lastActionAt" END`;
+  // Misma regla que la columna «Última acción»: una anterior al corte o de la carga del
+  // proyecto cuenta como vacía.
+  const shownLastAt = Prisma.sql`CASE WHEN c."lastActionAt" >= ${historyStart()} AND c."lastActionSource"::text IN (${Prisma.join([...VISIBLE_EVENT_SOURCES])}) THEN c."lastActionAt" END`;
 
   switch (sort) {
     case "relevance": {
@@ -233,10 +240,13 @@ const locationLabel = (location: { name: string; parent: { name: string } | null
  * Searches active cables. Filtering, sorting and paging run in one SQL query
  * over ids; the page of cables is then loaded with its related names.
  */
-export async function searchCables(
+/**
+ * The WHERE of a search and how many cables match. When nothing contains the code typed,
+ * the codes most alike (`fuzzy`). Null when a filter can never match.
+ */
+async function findMatches(
   search: CableSearch,
-  pageSize = search.size ?? SEARCH_PAGE_SIZE,
-): Promise<CableSearchResult> {
+): Promise<{ where: Prisma.Sql; count: number; fuzzy: boolean } | null> {
   const countWhere = async (fuzzy: boolean) => {
     const conditions = await buildConditions(search, fuzzy);
     if (conditions === null) {
@@ -245,21 +255,43 @@ export async function searchCables(
     const where = Prisma.join(conditions, " AND ");
     const [{ total }] = await prisma.$queryRaw<[{ total: bigint }]>`
       SELECT count(*) AS total FROM "cable" c WHERE ${where}`;
-    return { where, count: Number(total) };
+    return { where, count: Number(total), fuzzy };
   };
 
   // Primero coincidencias exactas (subcadena); si no hay ninguna y se buscaba un
   // código, códigos parecidos. Así "sh50" no devuelve cientos de "SH-…" cortos.
-  let fuzzy = false;
-  let found = await countWhere(false);
+  const found = await countWhere(false);
   if (found?.count === 0 && search.q && normalizeCableCode(search.q)) {
-    fuzzy = true;
-    found = await countWhere(true);
+    return countWhere(true);
   }
+  return found;
+}
+
+/**
+ * Every code that matches the search, in the order of the list (for «Seleccionar las N que
+ * cumplen los filtros»). Null when there are more than `SELECT_ALL_MAX`.
+ */
+export async function searchCableCodes(
+  search: CableSearch,
+): Promise<{ id: string; code: string }[] | null> {
+  const found = await findMatches(search);
+  if (!found || found.count === 0) return [];
+  if (found.count > SELECT_ALL_MAX) return null;
+  return prisma.$queryRaw<{ id: string; code: string }[]>`
+    SELECT c."id", c."code" FROM "cable" c
+    WHERE ${found.where}
+    ORDER BY ${orderBy(search)}`;
+}
+
+export async function searchCables(
+  search: CableSearch,
+  pageSize = search.size ?? SEARCH_PAGE_SIZE,
+): Promise<CableSearchResult> {
+  const found = await findMatches(search);
   if (!found) {
     return { items: [], total: 0, page: 1, pageCount: 0 };
   }
-  const { where, count } = found;
+  const { where, count, fuzzy } = found;
   const pageCount = Math.ceil(count / pageSize);
   const page = Math.min(search.page ?? 1, Math.max(pageCount, 1));
   if (count === 0) {
@@ -291,6 +323,7 @@ export async function searchCables(
       testStatus: true,
       lastAction: true,
       lastActionAt: true,
+      lastActionSource: true,
       type: { select: { name: true } },
       color: { select: { name: true, hex: true } },
       origin: { select: { name: true, parent: { select: { name: true } } } },
@@ -310,7 +343,8 @@ export async function searchCables(
     if (!cable) {
       return [];
     }
-    const showLastAction = visibleLastAction(cable.lastActionAt, true) === true;
+    const showLastAction =
+      visibleLastAction(cable.lastActionAt, cable.lastActionSource, true) === true;
     return [
       {
         id: cable.id,
@@ -372,7 +406,7 @@ export async function getSearchOptions(): Promise<SearchOptions> {
     listLocationOptions({ includePlants: true }),
     // Only who appears in the history: the filter is not a list of every account.
     prisma.user.findMany({
-      where: { cableEvents: { some: { createdAt: { gte: historyStart() } } } },
+      where: { cableEvents: { some: visibleEventsWhere() } },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

@@ -1,12 +1,49 @@
 import { ChevronDownIcon } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { ChipRow } from "./chip-row";
 import { Collapsible } from "./collapsible";
 
+/** The code at the top of a record (cable, tray, equipment, location): the same everywhere. */
+export const RECORD_TITLE = "font-mono text-xl font-semibold tracking-tight break-all";
+
 /**
- * A titled block of a record page (cable, tray). `action` (a button or link about the whole
- * block) sits at the right of the title, where it is seen before the list. `collapsible`
- * blocks (long tables, drawings) fold with a click on their title, to get further down the
- * page without scrolling past them; they start open unless `defaultOpen` is false. `id` is
+ * The code of a record and, right next to it, what can be done with it (`SectionLink`s:
+ * «Editar», «Ver en el buscador»). When they do not fit beside the code they go under it.
+ */
+export function RecordTitle({ title, actions }: { title: string; actions?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <h1 className={RECORD_TITLE}>{title}</h1>
+      {actions ? (
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">{actions}</div>
+      ) : null}
+    </div>
+  );
+}
+
+/** The look of `SectionLink`, also for a button that does the same kind of thing («Guardar»). */
+export const SECTION_LINK =
+  "text-primary border-primary/50 hover:border-primary focus-visible:ring-ring/50 border-b text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2";
+
+/**
+ * What can be done with a block or a record ("Ver en el buscador", "Editar"), next to its
+ * title: plain text with a line under it, no box, so it does not compete with the title.
+ */
+export function SectionLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link href={href} className={SECTION_LINK}>
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * A titled block of a record page (cable, tray). `action` (a `SectionLink` about the whole
+ * block) sits right next to the title, and goes under it when it does not fit. `collapsible`
+ * blocks fold with a click anywhere on their bar, to get further down the page without
+ * scrolling past them; they start open unless `defaultOpen` is false. The drawings are never
+ * collapsible: they are what people come for. `id` is
  * the anchor of the quick links at the top of the page; jumping there opens the block.
  */
 export function Section({
@@ -29,28 +66,31 @@ export function Section({
       <Collapsible
         id={id}
         defaultOpen={defaultOpen}
-        className="group/section scroll-mt-20 space-y-3"
+        className="group/section scroll-mt-28 space-y-3"
       >
-        <summary className="hover:text-primary focus-visible:ring-ring/50 flex cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-sm border-b pb-2 outline-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
-          <h2 className="flex items-center gap-2 text-base font-semibold">
+        {/* Toda la barra se pulsa, y dice con palabras qué pasa al pulsarla: no hace falta
+            saber qué significa una flecha. */}
+        <summary className="bg-card hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-lg border px-3 py-1.5 transition-colors outline-none select-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
+          <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="text-[0.95rem] font-semibold">{title}</h2>
+            {action}
+          </span>
+          <span className="text-primary inline-flex shrink-0 items-center gap-1 text-sm font-medium">
+            <span className="group-open/section:hidden">Mostrar</span>
+            <span className="hidden group-open/section:inline">Ocultar</span>
             <ChevronDownIcon
               aria-hidden
-              className="text-muted-foreground size-4 -rotate-90 transition-transform group-open/section:rotate-0"
+              className="size-4 transition-transform group-open/section:rotate-180"
             />
-            {title}
-          </h2>
-          <span className="text-muted-foreground text-xs group-open/section:hidden">
-            Plegado · pulsa para verlo
           </span>
-          {action ? <span className="hidden group-open/section:inline">{action}</span> : null}
         </summary>
         <div className="space-y-3">{children}</div>
       </Collapsible>
     );
   }
   return (
-    <section id={id} className="scroll-mt-20 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
+    <section id={id} className="scroll-mt-28 space-y-3">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b pb-2">
         <h2 className="text-base font-semibold">{title}</h2>
         {action}
       </div>
@@ -61,50 +101,56 @@ export function Section({
 
 /**
  * Links to the blocks of a long page ("Tabla de hilos · Hoja original · Historial"), so the
- * people in the field jump straight to what they need.
+ * people in the field jump straight to what they need. Meant for a few fixed blocks, not for
+ * long lists. It always takes one line (what does not fit scrolls sideways): its height is
+ * fixed, so the blocks' `scroll-mt-28` keeps their title clear of it and of the header.
  */
 export function JumpLinks({ links }: { links: readonly { id: string; label: string }[] }) {
   return (
     // Fija bajo la cabecera mientras se baja por la página: siempre a un toque.
-    <nav
+    <ChipRow
+      role="navigation"
       aria-label="Ir a"
-      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-30 -mx-4 flex flex-wrap items-center gap-1.5 border-b px-4 py-2 text-sm backdrop-blur sm:-mx-6 sm:px-6"
+      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-30 -mx-4 items-center gap-1.5 border-b px-4 py-2 text-sm whitespace-nowrap backdrop-blur sm:-mx-6 sm:px-6"
     >
-      <span className="text-muted-foreground mr-1 text-xs">Ir a:</span>
+      <span className="text-foreground mr-1 shrink-0 text-xs font-medium">Ir a:</span>
       {links.map((link) => (
         <a
           key={link.id}
           href={`#${link.id}`}
-          className="bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 rounded-full border px-3 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3"
+          className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 focus-visible:ring-ring/50 shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-inset"
         >
           {link.label}
         </a>
       ))}
-    </nav>
-  );
-}
-
-/** The grid of labelled values of a record, on a card so it reads as one block. */
-export function DataList({ children }: { children: ReactNode }) {
-  return (
-    <dl className="bg-card grid gap-x-6 gap-y-4 rounded-lg border p-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-      {children}
-    </dl>
+    </ChipRow>
   );
 }
 
 /**
- * One labelled value of a record's data list. The label is small and muted, the value stands
- * out; a missing value shows a faint dash so the filled ones are easy to spot.
+ * A block of labelled values of a record, on a card: one row per value, the name on the left
+ * and the value on the right. The optional title goes above the card, not as a row. A block
+ * whose values are all empty is not shown.
+ */
+export function DataList({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="space-y-1.5 [&:not(:has(dd))]:hidden">
+      {title ? <h3 className="text-primary px-1 text-sm font-semibold">{title}</h3> : null}
+      <dl className="bg-card divide-border divide-y rounded-lg border text-[15px]">{children}</dl>
+    </section>
+  );
+}
+
+/**
+ * One labelled value: the name on the left, the value in bold on the right. A long value
+ * wraps on several lines, still on the right; an empty one is not shown at all.
  */
 export function Item({ label, children }: { label: string; children: ReactNode }) {
-  const empty = children === null || children === undefined || children === "";
+  if (children === null || children === undefined || children === "") return null;
   return (
-    <div className="space-y-0.5">
-      <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</dt>
-      <dd className={empty ? "text-muted-foreground/60" : "font-medium break-words"}>
-        {empty ? "—" : children}
-      </dd>
+    <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+      <dt className="text-foreground/85 max-w-[45%] shrink-0">{label}</dt>
+      <dd className="min-w-0 text-right font-semibold break-words">{children}</dd>
     </div>
   );
 }

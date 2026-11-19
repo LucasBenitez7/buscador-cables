@@ -5,7 +5,7 @@
  * old link always opens.
  */
 import { z } from "zod";
-import { CABLE_ACTIONS } from "./cables";
+import { CABLE_ACTIONS, type CableEventSource } from "./cables";
 import { daySchema, firstParams, pageSchema, type RawSearchParams } from "./url-params";
 
 const text = z
@@ -129,23 +129,31 @@ export const parseUserEventSearch = (params: RawSearchParams): UserEventSearch =
 // ---------------------------------------------------------------------------
 
 /**
- * The load of the lists writes one event per cable (4.459 at once): by default the activity
- * and the history show what people do, and the loads only when asked for.
+ * The load of the project (the lists, and the first Excel) writes one event per cable, and is
+ * never shown: not in the activity, the history of a cable nor its last action (fase 14). The
+ * Excel of the day is shown.
  */
-export const ACTIVITY_ORIGINS = ["people", "loads", "all"] as const;
+export const VISIBLE_EVENT_SOURCES = [
+  "APP",
+  "EXCEL",
+] as const satisfies readonly CableEventSource[];
+
+export function isVisibleEventSource(source: CableEventSource): boolean {
+  return (VISIBLE_EVENT_SOURCES as readonly CableEventSource[]).includes(source);
+}
+
+export const ACTIVITY_ORIGINS = ["people", "excel", "all"] as const;
 export type ActivityOrigin = (typeof ACTIVITY_ORIGINS)[number];
 export const ACTIVITY_ORIGIN_LABELS: Record<ActivityOrigin, string> = {
   people: "En campo",
-  loads: "Cargas de listados",
+  excel: "Excel",
   all: "Todo",
 };
 
-/** The event sources (`CableEvent.source`) an origin shows; null for all of them. */
-export function originSources(
-  origin: ActivityOrigin | undefined,
-): ("APP" | "PROJECT_LOAD")[] | null {
-  if (origin === "all") return null;
-  return origin === "loads" ? ["PROJECT_LOAD"] : ["APP"];
+/** The event sources an origin shows: never the load of the project. */
+export function originSources(origin: ActivityOrigin | undefined): CableEventSource[] {
+  if (origin === "all") return [...VISIBLE_EVENT_SOURCES];
+  return origin === "excel" ? ["EXCEL"] : ["APP"];
 }
 
 // ---------------------------------------------------------------------------
@@ -204,9 +212,11 @@ export const parseEquipmentSearch = (params: RawSearchParams): EquipmentSearch =
 // código y el orden.
 // ---------------------------------------------------------------------------
 
-export const EQUIPMENT_LIST_SORTS = ["cables", "name", "name-desc"] as const;
-export const EQUIPMENT_LIST_SORT_LABELS: Record<(typeof EQUIPMENT_LIST_SORTS)[number], string> = {
+export const EQUIPMENT_LIST_SORTS = ["cables", "cables-asc", "name", "name-desc"] as const;
+export type EquipmentListSort = (typeof EQUIPMENT_LIST_SORTS)[number];
+export const EQUIPMENT_LIST_SORT_LABELS: Record<EquipmentListSort, string> = {
   cables: "Más cables primero",
+  "cables-asc": "Menos cables primero",
   name: "Código (A-Z)",
   "name-desc": "Código (Z-A)",
 };

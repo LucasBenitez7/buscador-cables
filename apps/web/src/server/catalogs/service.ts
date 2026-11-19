@@ -13,7 +13,7 @@ export class CatalogServiceError extends Error {}
 
 type ItemData = { name: string; hex: string | null };
 
-/** Same operations for the three catalog tables. Only colors store `hex`. */
+/** Same operations for the catalog tables. Only colors store `hex`. */
 type CatalogStore = {
   list(): Promise<CatalogItem[]>;
   findByName(name: string): Promise<{ id: string } | null>;
@@ -86,6 +86,23 @@ const stores: Record<CatalogKind, CatalogStore> = {
       await prisma.manufacturer.delete({ where: { id } });
     },
   },
+  company: {
+    list: async () =>
+      (await prisma.company.findMany({ ...byName, include: withCount })).map(toItem),
+    findByName: (name) =>
+      prisma.company.findFirst({ where: insensitive(name), select: { id: true } }),
+    create: async ({ name }) =>
+      toItem(await prisma.company.create({ data: { name }, include: withCount })),
+    update: async (id, { name }) => {
+      await prisma.company.update({ where: { id }, data: { name } });
+    },
+    countCables: async (id) =>
+      (await prisma.company.findUnique({ where: { id }, include: withCount }))?._count.cables ??
+      null,
+    remove: async (id) => {
+      await prisma.company.delete({ where: { id } });
+    },
+  },
 };
 
 function duplicate(kind: CatalogKind): CatalogServiceError {
@@ -97,12 +114,13 @@ function duplicate(kind: CatalogKind): CatalogServiceError {
 export type Catalogs = Record<CatalogKind, CatalogItem[]>;
 
 export async function listCatalogs(): Promise<Catalogs> {
-  const [cableType, color, manufacturer] = await Promise.all([
+  const [cableType, color, manufacturer, company] = await Promise.all([
     stores.cableType.list(),
     stores.color.list(),
     stores.manufacturer.list(),
+    stores.company.list(),
   ]);
-  return { cableType, color, manufacturer };
+  return { cableType, color, manufacturer, company };
 }
 
 export async function createCatalogItem(input: CreateCatalogItemInput): Promise<CatalogItem> {

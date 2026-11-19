@@ -93,6 +93,7 @@ async function seedSampleData() {
       await tx.cableType.createMany({ data: data.cableTypes });
       await tx.color.createMany({ data: data.colors });
       await tx.manufacturer.createMany({ data: data.manufacturers });
+      await tx.company.createMany({ data: data.companies });
       await tx.tray.createMany({ data: data.trays });
       await tx.trayDrawing.createMany({ data: data.trayDrawings });
       // Las bandejas van antes que los cables (punta suelta) y los cables antes que su recorrido.

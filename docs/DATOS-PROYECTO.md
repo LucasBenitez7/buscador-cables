@@ -268,6 +268,43 @@ recarga actualiza siempre el del listado y solo cambia el de campo si nadie lo c
 listado cambia una borna corregida en campo, se queda la de campo y el informe lo dice. Si un
 hilo cambia de nombre o desaparece, sus correcciones se pierden, también con aviso.
 
+## Estado diario: los dos Excel (fase 14)
+
+El estado en campo llega cada día en dos Excel, uno eléctrico y otro de instrumentación, con
+las mismas hojas y columnas. Pesan 6–8 MB y tienen muchas hojas: solo se lee la de los cables.
+El lector es `readExcelStatus()` (`packages/shared/src/excel-status.ts`): busca la hoja y las
+columnas **por su nombre**, con nombres alternativos y sin importar mayúsculas, espacios ni
+tildes (`EXCEL_SHEETS`). Si falta una columna, no lee nada y dice cuál.
+
+| Dato                   | Eléctrico (hoja «MASTER CABLE»)                    | Instrumentación (hoja «Tabl IC Maestra»)             |
+| ---------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| Código                 | «Cable Code»                                       | «TAG»                                                |
+| Estado                 | «Estado cable (unificado)»                         | «ESTADO»                                             |
+| Fecha real de tendido  | «Fecha tendido»                                    | «Fecha de tendido»                                   |
+| Empresa que lo tendió  | «Company Real»                                     | «Company Real»                                       |
+| Bobina y su estado     | «Bobina usada» (o «Bobina»), «Estado Bobina»       | «Bobina Real en campo» (o «Bobina»), «Estado Bobina» |
+| Metros reales y tramos | «Cantidad de metros [REAL]», «Numero de secciones» | — (solo la longitud del listado)                     |
+
+Traducción del estado:
+
+| Excel             | App                                                   |
+| ----------------- | ----------------------------------------------------- |
+| No Tendido        | No tendido (y desconectado)                           |
+| Tendido           | Tendido, sin conectar (instrumentación: sin conexión) |
+| Conectado Origen  | Tendido, conectado en origen                          |
+| Conectado Destino | Tendido, conectado en destino                         |
+| Conectado         | Tendido, conectado                                    |
+
+- Se ignoran «Check», «Error» y la columna «Correcto/Incorrecto»; las filas sin estado, con un
+  código no válido o con un código repetido salen como ignoradas, con la fila y el motivo.
+- Los metros reales son los del circuito entero: los de cada tramo son metros / número de
+  secciones (936 m en 18 secciones son 52 m por cable). Un cable no tendido no tiene fecha
+  ni metros reales.
+- Las fechas pueden venir como fecha, como número de serie de Excel o como texto `d/m/aaaa`.
+  La fecha del Excel se saca del nombre del archivo (`…_16.11.26.xlsx` → 16/11/2026).
+- Con el Excel del 16/11/2026: el eléctrico da ~1.710 cables y el de instrumentación ~2.580.
+  Con la web cruzan ~4.140; ~205 están solo en el Excel y ~320 solo en la web.
+
 ## Dónde se ve en la app
 
 - **Ficha del cable**: extremos (equipo, cubículo o prensaestopas, KKS, sala) y recorrido

@@ -58,9 +58,8 @@ async function newCable(overrides: Record<string, string> = {}) {
     code: "sh50",
     originId: places.origin,
     destinationId: places.destination,
-    installationStatus: "IN_STOCK",
+    installationStatus: "NOT_LAID",
     connectionStatus: "DISCONNECTED",
-    currentLocationId: places.store,
     ...overrides,
   });
   return createCable(technician, input);
@@ -90,7 +89,6 @@ describe("runCableAction", () => {
     expect(cable).toMatchObject({
       installationStatus: "LAID",
       connectionStatus: "DISCONNECTED",
-      currentLocationId: null,
       version: 2,
       lastAction: "LAID",
       lastActionById: technician.id,
@@ -101,10 +99,7 @@ describe("runCableAction", () => {
       action: "LAID",
       userId: technician.id,
       notes: "Bandeja sur",
-      changes: {
-        installationStatus: { from: "IN_STOCK", to: "LAID" },
-        currentLocationId: { from: places.store, to: null },
-      },
+      changes: { installationStatus: { from: "NOT_LAID", to: "LAID" } },
     });
   });
 
@@ -120,35 +115,19 @@ describe("runCableAction", () => {
     expect(cable).toMatchObject({ connectionStatus: "CONNECTED", connectedById: supervisor.id });
   });
 
-  it("coils a connected cable and records where it went", async () => {
+  // Fase 14: ya no se enrolla ni se mueve; la ubicación que tuviera el cable se conserva.
+  it("keeps the old current location of a cable untouched", async () => {
     const { id } = await newCable();
-    await act(technician, id, { action: "LAID" });
-    await act(technician, id, { action: "CONNECTED", end: "BOTH" });
+    await prisma.cable.update({ where: { id }, data: { currentLocationId: places.store } });
 
-    await act(technician, id, { action: "COILED", locationId: places.yard });
+    await act(technician, id, { action: "LAID" });
 
     expect(await cableOf(id)).toMatchObject({
-      installationStatus: "COILED",
-      connectionStatus: "DISCONNECTED",
-      currentLocationId: places.yard,
+      installationStatus: "LAID",
+      currentLocationId: places.store,
     });
-    expect(await lastEvent(id)).toMatchObject({
-      action: "COILED",
-      fromLocationId: null,
-      toLocationId: places.yard,
-      changes: { connectionStatus: { from: "CONNECTED", to: "DISCONNECTED" } },
-    });
-  });
-
-  it("moves a cable in stock and stores both locations in the event", async () => {
-    const { id } = await newCable();
-
-    await act(technician, id, { action: "MOVED", locationId: places.yard });
-
-    expect(await lastEvent(id)).toMatchObject({
-      action: "MOVED",
-      fromLocationId: places.store,
-      toLocationId: places.yard,
+    expect((await lastEvent(id)).changes).toEqual({
+      installationStatus: { from: "NOT_LAID", to: "LAID" },
     });
   });
 
@@ -165,20 +144,28 @@ describe("runCableAction", () => {
   it("refuses a stale version: somebody else acted in between", async () => {
     const { id } = await newCable();
     const stale = cableActionSchema.parse({ cableId: id, version: "1", action: "LAID" });
-    await act(technician, id, { action: "MOVED", locationId: places.yard });
+    await act(technician, id, { action: "TESTED", result: "OK" });
 
     await expect(runCableAction(technician, stale)).rejects.toThrow(/Otra persona/);
-    expect((await cableOf(id)).installationStatus).toBe("IN_STOCK");
+    expect((await cableOf(id)).installationStatus).toBe("NOT_LAID");
   });
 
   it("lets only one of two simultaneous actions through", async () => {
     const { id } = await newCable();
-    const request = (locationId: string) =>
-      cableActionSchema.parse({ cableId: id, version: "1", action: "MOVED", locationId });
+    const request = (end: string) =>
+      cableActionSchema.parse({
+        cableId: id,
+        version: "1",
+        action: "PARTIALLY_LAID",
+        looseEnd: end,
+        trayCode: "99UXA00L22036",
+        confirmOffRoute: "1",
+      });
+    await prisma.tray.create({ data: { code: "99UXA00L22036", kind: "LADDER" } });
 
     const results = await Promise.allSettled([
-      runCableAction(technician, request(places.yard)),
-      runCableAction(supervisor, request(places.origin)),
+      runCableAction(technician, request("ORIGIN")),
+      runCableAction(supervisor, request("DESTINATION")),
     ]);
 
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
@@ -186,7 +173,9 @@ describe("runCableAction", () => {
     expect(rejected && rejected.status === "rejected" && rejected.reason).toBeInstanceOf(
       CableServiceError,
     );
-    expect(await prisma.cableEvent.count({ where: { cableId: id, action: "MOVED" } })).toBe(1);
+    expect(
+      await prisma.cableEvent.count({ where: { cableId: id, action: "PARTIALLY_LAID" } }),
+    ).toBe(1);
     expect((await cableOf(id)).version).toBe(2);
   });
 
@@ -206,13 +195,12 @@ describe("runCableAction", () => {
     await act(supervisor, id, {
       action: "CORRECTION",
       correctsEventId: retirement.id,
-      installationStatus: "IN_STOCK",
+      installationStatus: "NOT_LAID",
       connectionStatus: "DISCONNECTED",
-      currentLocationId: places.store,
       notes: "Era otro cable",
     });
 
-    expect((await cableOf(id)).installationStatus).toBe("IN_STOCK");
+    expect((await cableOf(id)).installationStatus).toBe("NOT_LAID");
     expect(await lastEvent(id)).toMatchObject({
       action: "CORRECTION",
       correctsEventId: retirement.id,
@@ -229,20 +217,11 @@ describe("runCableAction", () => {
       act(supervisor, first.id, {
         action: "CORRECTION",
         correctsEventId: otherEvent.id,
-        installationStatus: "COILED",
+        installationStatus: "LAID",
         connectionStatus: "DISCONNECTED",
-        currentLocationId: places.yard,
         notes: "Prueba",
       }),
     ).rejects.toThrow("El movimiento que quieres corregir no es de este cable.");
-  });
-
-  it("rejects a location that does not exist", async () => {
-    const { id } = await newCable();
-
-    await expect(act(technician, id, { action: "MOVED", locationId: "missing" })).rejects.toThrow(
-      "La ubicación elegida ya no existe.",
-    );
   });
 
   it("rejects actions on a deleted cable and on an unknown one", async () => {
@@ -270,9 +249,9 @@ describe("runCableAction: cables loaded from the project lists", () => {
       },
     });
 
-    await expect(
-      act(technician, cable.id, { action: "MOVED", locationId: places.yard }),
-    ).rejects.toThrow(/registra primero cómo está/);
+    await expect(act(technician, cable.id, { action: "CONNECTED", end: "BOTH" })).rejects.toThrow(
+      /Solo se puede conectar un cable tendido/,
+    );
     await act(technician, cable.id, { action: "LAID" });
 
     expect(await cableOf(cable.id)).toMatchObject({
@@ -317,7 +296,6 @@ describe("runCableAction: partial laying", () => {
     });
     expect(cable).toMatchObject({
       installationStatus: "PARTIALLY_LAID",
-      currentLocationId: null,
       looseEnd: "DESTINATION",
       looseEndTray: { code: "99UXA00L22051" },
       installedById: technician.id,
@@ -325,7 +303,7 @@ describe("runCableAction: partial laying", () => {
     });
     // The history stores the tray code, readable without a lookup.
     expect((await lastEvent(id)).changes).toMatchObject({
-      installationStatus: { from: "IN_STOCK", to: "PARTIALLY_LAID" },
+      installationStatus: { from: "NOT_LAID", to: "PARTIALLY_LAID" },
       looseEnd: { from: null, to: "DESTINATION" },
       looseEndTray: { from: null, to: "99UXA00L22051" },
     });
@@ -371,7 +349,7 @@ describe("runCableAction: partial laying", () => {
     ).rejects.toThrow(
       "La bandeja 99UXB00L22001 no está en el recorrido previsto del cable. Si el cable está ahí, confírmalo.",
     );
-    expect((await cableOf(id)).installationStatus).toBe("IN_STOCK");
+    expect((await cableOf(id)).installationStatus).toBe("NOT_LAID");
   });
 
   it("accepts a tray off the planned route when the user confirms it", async () => {

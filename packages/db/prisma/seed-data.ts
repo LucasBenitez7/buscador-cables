@@ -9,8 +9,7 @@
  */
 
 export type LocationType = "PLANT" | "AREA" | "UNIT" | "SITE";
-export type InstallationStatus =
-  "UNVERIFIED" | "IN_STOCK" | "COILED" | "PARTIALLY_LAID" | "LAID" | "RETIRED";
+export type InstallationStatus = "UNVERIFIED" | "NOT_LAID" | "PARTIALLY_LAID" | "LAID" | "RETIRED";
 export type ConnectionStatus = "DISCONNECTED" | "ORIGIN_ONLY" | "DESTINATION_ONLY" | "CONNECTED";
 export type CableLevel = "L1" | "L2" | "L3" | "L4";
 export type TrayKind = "LADDER" | "GRID" | "SPECIAL" | "CONDUIT" | "DUCT" | "OTHER";
@@ -86,12 +85,19 @@ export type SeedCable = {
   destinationRoom: string | null;
   originId: string;
   destinationId: string;
-  currentLocationId: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
   looseEnd: CableEndSide | null;
   looseEndTrayId: string | null;
   notes: string | null;
+  // Lo que trae el Excel diario (fase 14).
+  laidOn: Date | null;
+  companyId: string | null;
+  reel: string | null;
+  reelStatus: string | null;
+  actualLengthM: number | null;
+  actualLengthTotalM: number | null;
+  actualSections: number | null;
 };
 
 export type SeedData = {
@@ -99,6 +105,7 @@ export type SeedData = {
   cableTypes: SeedCableType[];
   colors: SeedCatalogItem[];
   manufacturers: SeedCatalogItem[];
+  companies: SeedCatalogItem[];
   trays: SeedTray[];
   trayDrawings: SeedTrayDrawing[];
   cables: SeedCable[];
@@ -567,7 +574,9 @@ const OBSERVATIONS = [
 export function generateSeedData(options: { cables?: number; seed?: number } = {}): SeedData {
   const total = options.cables ?? 4500;
   const random = createRandom(options.seed ?? 20261113);
-  const { locations, buildings, store } = buildLocations();
+  // Los datos del Excel (fase 14) salen de otra secuencia: no cambian el resto de los datos.
+  const excelRandom = createRandom((options.seed ?? 20261113) + 14);
+  const { locations, buildings } = buildLocations();
   const { trays, drawings, byBuilding, ducts } = buildTrays(buildings, random);
 
   const allTypes = [...INSTRUMENT_TYPES, ...Object.values(POWER_TYPES).flat()];
@@ -578,6 +587,7 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
   }));
   const colors = COLORS.map((color) => ({ id: `seed-color-${slug(color.name)}`, ...color }));
   const manufacturers = MANUFACTURERS.map((name) => ({ id: `seed-mfr-${slug(name)}`, name }));
+  const companies = COMPANIES.map((name) => ({ id: `seed-company-${slug(name)}`, name }));
 
   const room = (buildingCode: string, suffix?: string) => {
     const building = buildings.get(buildingCode)!;
@@ -760,12 +770,18 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
     | "lengthM"
     | "lengthPending"
     | "sourcePage"
-    | "currentLocationId"
     | "installationStatus"
     | "connectionStatus"
     | "looseEnd"
     | "looseEndTrayId"
     | "notes"
+    | "laidOn"
+    | "companyId"
+    | "reel"
+    | "reelStatus"
+    | "actualLengthM"
+    | "actualLengthTotalM"
+    | "actualSections"
   > & { type: TypeSpec };
 
   function pushCable(
@@ -786,13 +802,12 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
     });
 
     const routeTrays = route.flatMap((step) => (step.tray ? [step.tray] : []));
-    // Like the real load: many cables nobody has checked yet, the rest as found in the field.
+    // Like the project after the daily Excel: a few cables with no data, the rest as found.
     const status = random.weighted<InstallationStatus>({
-      UNVERIFIED: 30,
-      LAID: 35,
+      UNVERIFIED: 8,
+      LAID: 45,
       PARTIALLY_LAID: routeTrays.length > 0 ? 10 : 0,
-      COILED: 7,
-      IN_STOCK: 15,
+      NOT_LAID: 34,
       RETIRED: 3,
     });
     let connectionStatus: ConnectionStatus = "DISCONNECTED";
@@ -814,20 +829,29 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
         connectionStatus = looseEnd === "DESTINATION" ? "ORIGIN_ONLY" : "DESTINATION_ONLY";
       }
     }
-    const currentLocationId =
-      status === "IN_STOCK"
-        ? store.id
-        : status === "COILED"
-          ? random.pick([base.originId, base.destinationId, store.id])
-          : null;
-
     const lengthM =
       localLength > 0
         ? localLength
         : Math.max(8, routeTrays.length * random.int(6, 14) + random.int(5, 30));
+    // Lo tendido, casi siempre con su fecha, empresa y bobina; los metros reales solo en los
+    // eléctricos (L2-L4), repartidos entre los cables del circuito.
+    const laid = status === "LAID" || status === "PARTIALLY_LAID";
+    const fromExcel = laid && excelRandom.chance(0.9);
+    const sections = base.level === "L1" ? null : (base.cablesPerCircuit ?? 1);
+    const actualLengthM =
+      fromExcel && status === "LAID" && sections !== null
+        ? Math.round(lengthM * (0.9 + excelRandom.next() * 0.25))
+        : null;
     cables.push({
       ...fields,
       id,
+      laidOn: fromExcel ? new Date(Date.UTC(2026, 5, 1 + excelRandom.int(0, 165))) : null,
+      companyId: fromExcel ? excelRandom.pick(companies).id : null,
+      reel: fromExcel ? `B-${excelRandom.int(100, 480)}` : null,
+      reelStatus: fromExcel ? excelRandom.pick(["En obra", "En almacén"]) : null,
+      actualLengthM,
+      actualLengthTotalM: actualLengthM === null ? null : actualLengthM * (sections ?? 1),
+      actualSections: actualLengthM === null ? null : sections,
       typeId: `seed-type-${type.key}`,
       conductors: type.conductors,
       crossSectionMm2: type.section,
@@ -836,7 +860,6 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
       lengthM,
       lengthPending: base.level !== "L1" && random.chance(0.015),
       sourcePage: nextPage(base.sourceDocument),
-      currentLocationId,
       installationStatus: status,
       connectionStatus,
       looseEnd,
@@ -850,6 +873,7 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
     cableTypes,
     colors,
     manufacturers,
+    companies,
     trays,
     trayDrawings: drawings,
     cables,
@@ -867,6 +891,8 @@ const COLORS = [
 ] as const;
 
 const MANUFACTURERS = ["Fabricante A", "Fabricante B", "Fabricante C"] as const;
+/** Empresas que tienden los cables (fase 14): inventadas. */
+const COMPANIES = ["Montajes Norte", "Instalaciones del Sur"] as const;
 
 const slug = (value: string) =>
   value

@@ -3,6 +3,7 @@
 import { cn } from "cn";
 import { useState, type KeyboardEvent } from "react";
 import { CATALOG_KINDS, CATALOG_LABELS, type CatalogItem, type CatalogKind } from "@cables/shared";
+import { ChipRow } from "@/components/chip-row";
 import { CatalogSection } from "./catalog-section";
 
 type Props = { catalogs: Record<CatalogKind, CatalogItem[]> };
@@ -27,11 +28,13 @@ export function CatalogTabs({ catalogs }: Props) {
 
   return (
     <div className="space-y-5">
-      <div
+      <ChipRow
         role="tablist"
         aria-label="Catálogos"
         onKeyDown={onKeyDown}
-        className="bg-muted/40 grid grid-cols-3 gap-1 rounded-lg border p-1"
+        // Una sola fila fina: si no caben, se desliza de lado.
+        // En el móvil se desliza con el dedo; en el portátil se ve la barra si no caben.
+        className="-mx-4 gap-2 px-4 pb-1 sm:mx-0 sm:px-0"
       >
         {CATALOG_KINDS.map((kind) => {
           const selected = kind === active;
@@ -46,17 +49,17 @@ export function CatalogTabs({ catalogs }: Props) {
               tabIndex={selected ? 0 : -1}
               onClick={() => setActive(kind)}
               className={cn(
-                "focus-visible:ring-ring/50 flex min-w-0 flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-center text-sm leading-tight font-medium transition-colors outline-none focus-visible:ring-3 sm:flex-row sm:gap-2 sm:px-3",
+                "focus-visible:ring-ring/50 flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3",
                 selected
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-secondary text-foreground hover:bg-muted",
               )}
             >
               {CATALOG_LABELS[kind].plural}
               <span
                 className={cn(
-                  "rounded-full px-1.5 text-xs tabular-nums",
-                  selected ? "bg-primary-foreground/15" : "bg-muted",
+                  "tabular-nums",
+                  selected ? "text-primary-foreground" : "text-foreground/80",
                 )}
               >
                 {catalogs[kind].length}
@@ -64,7 +67,7 @@ export function CatalogTabs({ catalogs }: Props) {
             </button>
           );
         })}
-      </div>
+      </ChipRow>
 
       {CATALOG_KINDS.map((kind) => (
         <div

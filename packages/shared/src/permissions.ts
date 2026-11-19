@@ -25,10 +25,8 @@ export const PERMISSIONS = [
   "cable:update",
   "cable:delete",
   "cable:lay",
-  "cable:coil",
   "cable:connect",
   "cable:disconnect",
-  "cable:move",
   "cable:test",
   "cable:wiring",
   "cable:retire",
@@ -98,12 +96,6 @@ export const PERMISSION_GROUPS: readonly {
         label: "Tender cables",
         help: "También a medias, con dónde quedó la punta.",
       },
-      { id: "cable:coil", label: "Enrollar cables", help: "Dejar un cable enrollado en un sitio." },
-      {
-        id: "cable:move",
-        label: "Mover cables",
-        help: "Cambiar de sitio un cable enrollado o en almacén.",
-      },
       { id: "cable:connect", label: "Conectar", help: "Marcar conectada una punta o las dos." },
       {
         id: "cable:disconnect",
@@ -131,14 +123,18 @@ export const PERMISSION_GROUPS: readonly {
       {
         id: "cable:correct",
         label: "Corregir movimientos",
-        help: "Corregir el estado de un cable o un movimiento mal registrado.",
+        help: "Corregir el estado de un cable o un movimiento mal registrado, y decidir las discrepancias con el Excel.",
       },
       {
         id: "cable:delete",
         label: "Dar de baja cables",
         help: "Quitar un cable de la lista (no se borra su historial).",
       },
-      { id: "import:run", label: "Importar listados", help: "Cargar datos desde ficheros." },
+      {
+        id: "import:run",
+        label: "Subir el Excel del día",
+        help: "Ver su vista previa y aplicarla o descartarla.",
+      },
     ],
   },
   {
@@ -190,10 +186,8 @@ const TECHNICIAN_PERMISSIONS: readonly Permission[] = [
   "cable:create",
   "cable:update",
   "cable:lay",
-  "cable:coil",
   "cable:connect",
   "cable:disconnect",
-  "cable:move",
   "cable:test",
   "cable:wiring",
 ];

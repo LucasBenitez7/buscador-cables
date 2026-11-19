@@ -8,7 +8,6 @@ const state: CableState = {
   installationStatus: "PARTIALLY_LAID",
   connectionStatus: "ORIGIN_ONLY",
   testStatus: "NOT_TESTED",
-  currentLocationId: null,
   looseEnd: "DESTINATION",
   looseEndTray: "99UXA00L22051",
   originId: "99BMA",
@@ -84,5 +83,21 @@ describe("CableEnds", () => {
     expect(destination.getByText("Equipo sin indicar")).toBeInTheDocument();
     expect(destination.getByText("99 › 99UX › 99UXA › 99UXA16RA001")).toBeInTheDocument();
     expect(destination.getByText(/Punta suelta en/)).toBeInTheDocument();
+  });
+
+  it("says at each end whether it is connected there", () => {
+    render(
+      <CableEnds
+        state={{ ...state, connectionStatus: "ORIGIN_ONLY" }}
+        ends={{ origin: end({ equipment: "99BMA" }), destination: end({ equipment: "99BMB" }) }}
+      />,
+    );
+
+    expect(
+      within(screen.getByRole("region", { name: "Origen" })).getByText("Conectado aquí"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Destino" })).getByText("Sin conectar aquí"),
+    ).toBeInTheDocument();
   });
 });

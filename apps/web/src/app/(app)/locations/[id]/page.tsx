@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
+import { ListSummary } from "@/components/list-summary";
+import {
+  SelectAllRow,
+  SelectCheckbox,
+  SelectionAside,
+  SelectionProvider,
+} from "@/components/selection";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
+import { selectAllCablesAction } from "@/features/search/actions";
+import { locationLabel } from "@/lib/location-label";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { LOCATION_TYPE_LABELS } from "@cables/shared";
-import { DataList, Item, Section } from "@/components/detail";
-import { Button } from "@/components/ui/button";
+import { DataList, Item, RecordTitle, Section, SectionLink } from "@/components/detail";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { decodeRouteParam } from "@/lib/route-params";
 import { INLINE_LINK, locationCablesHref, locationHref, traysByCodeHref } from "@/lib/links";
@@ -18,7 +27,6 @@ export const dynamic = "force-dynamic";
 const ROLE_TEXT = {
   origin: "sale de aquí",
   destination: "llega aquí",
-  here: "guardado aquí",
 } as const;
 
 type Params = Promise<{ id: string }>;
@@ -61,7 +69,16 @@ export default async function LocationPage({ params }: { params: Params }) {
             ))}
           </ol>
         </nav>
-        <h1 className="font-mono text-3xl font-semibold tracking-tight">{location.name}</h1>
+        <RecordTitle
+          title={location.name}
+          actions={
+            location.cables > 0 ? (
+              <SectionLink href={locationCablesHref(location.id)}>
+                Ver sus cables en el buscador
+              </SectionLink>
+            ) : null
+          }
+        />
         <p className="text-muted-foreground">
           {typeLabel}
           {location.name !== location.code ? (
@@ -73,7 +90,7 @@ export default async function LocationPage({ params }: { params: Params }) {
         </p>
       </header>
 
-      <Section title="Datos" collapsible>
+      <Section title="Datos de la ubicación" collapsible>
         <DataList>
           <Item label="Tipo">{typeLabel}</Item>
           <Item label="Código">
@@ -103,81 +120,86 @@ export default async function LocationPage({ params }: { params: Params }) {
             </Item>
           ) : null}
         </DataList>
-        <p className="text-muted-foreground text-xs">
-          Los cables cuentan si empiezan, terminan o están guardados aquí o en cualquier sitio que
-          contiene.
-        </p>
       </Section>
 
       {location.someCables.length > 0 ? (
-        <Section
-          title={`Cables (${location.cables})`}
-          collapsible
-          action={
-            <Button asChild variant="outline" size="sm">
-              <Link href={locationCablesHref(location.id)}>
-                {location.cables > location.someCables.length
-                  ? `Ver los ${location.cables} en el buscador`
-                  : "Filtrar en el buscador"}
-              </Link>
-            </Button>
-          }
-        >
-          <ShowMore
-            as="ul"
-            className="bg-card divide-y rounded-lg border"
-            noun="cables"
-            items={location.someCables.map((cable) => (
-              <li
-                key={cable.id}
-                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 text-sm"
-              >
-                <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
-                  {cable.code}
-                </Link>
-                <span className="text-muted-foreground text-xs">
-                  {cable.roles.map((role) => ROLE_TEXT[role]).join(" y ")}
-                  {cable.otherEnd ? (
-                    <>
-                      {" "}
-                      · {cable.roles[0] === "origin" ? "hacia" : "desde"}{" "}
-                      <EquipmentLink equipment={cable.otherEnd} />
-                    </>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          />
+        <Section title={`Cables (${location.cables})`} collapsible>
+          <SelectionProvider
+            title={`${location.name} · cables`}
+            items={location.someCables.map((cable) => ({ key: cable.id, label: cable.code }))}
+            total={location.cables}
+            selectAll={selectAllCablesAction.bind(null, { location: location.id })}
+            scope="shown"
+            actions={<SaveChosenButton kind="CABLE" />}
+          >
+            <div className="space-y-3">
+              <ListSummary aside={<SelectionAside />}>{null}</ListSummary>
+              <SelectAllRow />
+              <ShowMore
+                as="ul"
+                className="bg-card divide-y rounded-lg border"
+                noun="cables"
+                items={location.someCables.map((cable) => (
+                  <li
+                    key={cable.id}
+                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 text-sm"
+                  >
+                    <span className="flex items-center gap-2 self-center">
+                      <SelectCheckbox item={{ key: cable.id, label: cable.code }} />
+                      <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
+                        {cable.code}
+                      </Link>
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {cable.roles.map((role) => ROLE_TEXT[role]).join(" y ")}
+                      {cable.otherEnd ? (
+                        <>
+                          {" "}
+                          · {cable.roles[0] === "origin" ? "hacia" : "desde"}{" "}
+                          <EquipmentLink equipment={cable.otherEnd} />
+                        </>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              />
+            </div>
+          </SelectionProvider>
         </Section>
       ) : null}
 
       {location.children.length > 0 ? (
-        <Section
-          title={`Contiene (${location.children.length})`}
-          collapsible
-          action={
-            location.cables > 0 ? (
-              <Button asChild variant="outline" size="sm">
-                <Link href={locationCablesHref(location.id)}>Ver sus cables en el buscador</Link>
-              </Button>
-            ) : null
-          }
-        >
-          <ul className="bg-card divide-y rounded-lg border">
-            {location.children.map((child) => (
-              <li
-                key={child.id}
-                className="flex flex-wrap items-baseline gap-x-3 px-3 py-2 text-sm"
-              >
-                <Link href={locationHref(child.id)} className={CODE_LINK}>
-                  {child.name}
-                </Link>
-                <span className="text-muted-foreground text-xs">
-                  {LOCATION_TYPE_LABELS[child.type]}
-                </span>
-              </li>
-            ))}
-          </ul>
+        <Section title={`Contiene (${location.children.length})`} collapsible>
+          <SelectionProvider
+            title={`${location.name} · contiene`}
+            items={location.children.map((child) => ({
+              key: child.id,
+              label: locationLabel(child),
+            }))}
+          >
+            <div className="space-y-3">
+              <ListSummary aside={<SelectionAside />}>{null}</ListSummary>
+              <SelectAllRow />
+              <ul className="bg-card divide-y rounded-lg border">
+                {location.children.map((child) => (
+                  <li
+                    key={child.id}
+                    className="flex flex-wrap items-baseline gap-x-3 px-3 py-2 text-sm"
+                  >
+                    <span className="flex items-center gap-2 self-center">
+                      <SelectCheckbox item={{ key: child.id, label: locationLabel(child) }} />
+                      <Link href={locationHref(child.id)} className={CODE_LINK}>
+                        {child.name}
+                      </Link>
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {LOCATION_TYPE_LABELS[child.type]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </SelectionProvider>
         </Section>
       ) : null}
     </article>

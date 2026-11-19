@@ -4,15 +4,18 @@ import {
   CABLE_FIELD_ACTIONS,
   canRunCableAction,
   hasPermission,
+  cableSearchQuery,
   parseCableSearch,
 } from "@cables/shared";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
+import { SelectionProvider } from "@/components/selection";
 import { Button } from "@/components/ui/button";
 import { SearchFilters } from "@/features/search/components/search-filters";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
+import { selectAllCablesAction } from "@/features/search/actions";
 import { SearchResults } from "@/features/search/components/search-results";
 import { deletedCableCode } from "@/lib/route-params";
 import { getSearchOptions, searchCables } from "@/server/cables/search";
-import { listLocationOptions } from "@/server/cables/service";
 import { requireUser } from "@/server/session";
 
 export const metadata: Metadata = { title: "Cables" };
@@ -28,11 +31,7 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
   const deleted = deletedCableCode(params.deleted);
   // Solo quien puede registrar alguna acción ve la columna "Acción" (los VIEWER, no).
   const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user, action));
-  const [result, options, locations] = await Promise.all([
-    searchCables(search),
-    getSearchOptions(),
-    canAct ? listLocationOptions() : Promise.resolve([]),
-  ]);
+  const [result, options] = await Promise.all([searchCables(search), getSearchOptions()]);
 
   return (
     <div className="space-y-6">
@@ -53,13 +52,22 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
 
       <PendingListProvider>
         <SearchFilters search={search} options={options} />
-        <PendingResults>
-          <SearchResults
-            search={search}
-            result={result}
-            actions={canAct ? { permissions: user.permissions, locations } : undefined}
-          />
-        </PendingResults>
+        <SelectionProvider
+          title="Cables"
+          items={result.items.map((cable) => ({ key: cable.id, label: cable.code }))}
+          total={result.total}
+          selectAll={selectAllCablesAction.bind(null, search)}
+          resetKey={cableSearchQuery(search, { page: undefined, size: undefined })}
+          actions={<SaveChosenButton kind="CABLE" />}
+        >
+          <PendingResults>
+            <SearchResults
+              search={search}
+              result={result}
+              actions={canAct ? { permissions: user.permissions } : undefined}
+            />
+          </PendingResults>
+        </SelectionProvider>
       </PendingListProvider>
     </div>
   );

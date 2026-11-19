@@ -41,7 +41,6 @@ export async function runCableAction(
       installationStatus: true,
       connectionStatus: true,
       testStatus: true,
-      currentLocationId: true,
       originId: true,
       destinationId: true,
       originEquipment: true,
@@ -82,13 +81,6 @@ export async function runCableAction(
       (request.action === "PARTIALLY_LAID" && request.confirmOffRoute),
   );
 
-  const newLocationId = outcome.next.currentLocationId;
-  if (newLocationId && newLocationId !== cable.currentLocationId) {
-    const exists = await prisma.location.count({ where: { id: newLocationId } });
-    if (exists === 0) {
-      throw new CableServiceError("La ubicación elegida ya no existe.");
-    }
-  }
   if (input.action === "CORRECTION") {
     const corrected = await prisma.cableEvent.count({
       where: { id: input.correctsEventId, cableId: cable.id },
@@ -110,6 +102,7 @@ export async function runCableAction(
         lastAction: request.action,
         lastActionById: actor.id,
         lastActionAt: now,
+        lastActionSource: "APP",
         ...(request.action === "LAID" || request.action === "PARTIALLY_LAID"
           ? { installedById: actor.id, installedAt: now }
           : {}),
@@ -126,8 +119,6 @@ export async function runCableAction(
         action: request.action,
         changes: outcome.changes,
         notes: request.notes,
-        fromLocationId: outcome.fromLocationId,
-        toLocationId: outcome.toLocationId,
         correctsEventId: input.action === "CORRECTION" ? input.correctsEventId : null,
         createdAt: now,
       },

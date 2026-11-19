@@ -1,8 +1,11 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { cn } from "cn";
+import { ChevronDownIcon, SlidersHorizontalIcon } from "lucide-react";
+import { useId, useState, type FormEvent } from "react";
 import { FormActions } from "@/components/form-actions";
 import { usePendingNavigation } from "@/components/pending-list";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -39,11 +42,16 @@ type Props = {
 /**
  * The filters and order of a list, the same everywhere. A GET form, so it also works without
  * JavaScript; with it, it goes to a clean URL without the empty values. The server reads the
- * URL with Zod and ignores anything invalid.
+ * URL with Zod and ignores anything invalid. On a phone only the first field shows; the rest
+ * unfold with «Más filtros», so the list is not pushed a screen down.
  */
 export function FilterForm({ action, label, fields, keep = {}, active = false, anchor }: Props) {
   const hash = anchor ? `#${anchor}` : "";
   const { navigate, pending } = usePendingNavigation();
+  const [expanded, setExpanded] = useState(false);
+  const moreId = useId();
+  // Filtros puestos aparte del primero: se cuentan en el botón aunque estén plegados.
+  const hiddenActive = fields.slice(1).filter((field) => field.value).length;
   const clear = `${action}${new URLSearchParams(keep).size > 0 ? `?${new URLSearchParams(keep)}` : ""}${hash}`;
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -73,10 +81,14 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
         <input key={name} type="hidden" name={name} value={value} />
       ))}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {fields.map((field) => {
+        {fields.map((field, index) => {
           const id = `filter-${action.replace(/\W+/g, "-")}-${field.name}`;
           return (
-            <div key={field.name} className="min-w-0 space-y-1.5">
+            <div
+              key={field.name}
+              id={index === 1 ? moreId : undefined}
+              className={cn("min-w-0 space-y-1.5", index > 0 && !expanded && "max-md:hidden")}
+            >
               <Label htmlFor={id}>{field.label}</Label>
               {field.kind === "select" ? (
                 <NativeSelect
@@ -110,6 +122,27 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
           );
         })}
       </div>
+      {fields.length > 1 ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full md:hidden"
+          aria-expanded={expanded}
+          aria-controls={moreId}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <SlidersHorizontalIcon />
+          {expanded ? "Menos filtros" : "Más filtros"}
+          {hiddenActive > 0 ? ` (${hiddenActive})` : ""}
+          <ChevronDownIcon
+            aria-hidden
+            className={cn(
+              "transition-transform motion-safe:duration-200",
+              expanded && "rotate-180",
+            )}
+          />
+        </Button>
+      ) : null}
       <FormActions
         // «Buscar» si hay un cuadro de texto; si solo hay filtros, «Aplicar».
         submitLabel={fields.some((field) => field.kind === "text") ? "Buscar" : "Aplicar"}

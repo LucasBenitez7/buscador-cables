@@ -14,7 +14,7 @@ test.describe("consulta", () => {
     await expect(nav(page).getByRole("link", { name: "Usuarios" })).toHaveCount(0);
 
     await openCable(page, CABLES.search.code);
-    await expect(page.getByRole("link", { name: "Editar datos" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Editar", exact: true })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Acciones" })).toHaveCount(0);
   });
 
@@ -67,6 +67,7 @@ test.describe("administrador", () => {
       "Bandejas",
       "Equipos",
       "Ubicaciones",
+      "Guardados",
       "Actividad",
     ]);
     // La administración va en "Gestión" (con el número de cuentas pendientes, si las hay) y

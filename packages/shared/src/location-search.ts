@@ -11,12 +11,13 @@ import {
 } from "./locations";
 import { firstParams, type RawSearchParams } from "./url-params";
 
-export const LOCATION_SORTS = ["code", "name", "cables"] as const;
+export const LOCATION_SORTS = ["code", "name", "cables", "cables-asc"] as const;
 export type LocationSort = (typeof LOCATION_SORTS)[number];
 export const LOCATION_SORT_LABELS: Record<LocationSort, string> = {
   code: "Código (A-Z)",
   name: "Nombre (A-Z)",
   cables: "Más cables primero",
+  "cables-asc": "Menos cables primero",
 };
 
 export type LocationSearch = {
@@ -94,7 +95,7 @@ export function filterLocationTree<T extends Searchable>(
   return { tree: prune(tree), matches };
 }
 
-/** Orders the siblings at every level: by code, by name, or the most cables first. */
+/** Orders the siblings at every level: by code, by name, or by cables (most or fewest first). */
 export function sortLocationTree<T extends Searchable>(
   tree: readonly LocationNode<T>[],
   sort: LocationSort,
@@ -105,7 +106,9 @@ export function sortLocationTree<T extends Searchable>(
       ? (a, b) => a.code.localeCompare(b.code, "es", { numeric: true })
       : sort === "cables"
         ? (a, b) => b.cableCount - a.cableCount || byName(a, b)
-        : byName;
+        : sort === "cables-asc"
+          ? (a, b) => a.cableCount - b.cableCount || byName(a, b)
+          : byName;
   const sortList = (nodes: readonly LocationNode<T>[]): LocationNode<T>[] =>
     [...nodes].sort(compare).map((node) => ({ ...node, children: sortList(node.children) }));
   return sortList(tree);

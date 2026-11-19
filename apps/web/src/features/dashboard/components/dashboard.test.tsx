@@ -1,8 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ActivityEntry } from "@/server/activity/service";
 import type { CableProgress, Dashboard as DashboardData } from "@/server/dashboard/service";
 import { Dashboard } from "./dashboard";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const progress: CableProgress = {
   total: 200,
@@ -10,8 +12,7 @@ const progress: CableProgress = {
   connected: 20,
   installation: {
     UNVERIFIED: 100,
-    IN_STOCK: 10,
-    COILED: 30,
+    NOT_LAID: 40,
     PARTIALLY_LAID: 10,
     LAID: 50,
     RETIRED: 0,
@@ -37,20 +38,44 @@ const entry: ActivityEntry = {
   detailHref: null,
 };
 
-const viewer: DashboardData = { progress, myActivity: null, team: null, admin: null };
+const viewer: DashboardData = {
+  progress,
+  lastExcel: [],
+  toReview: null,
+  myActivity: null,
+  team: null,
+  admin: null,
+};
 
 describe("Dashboard", () => {
+  it("says up to which Excel the progress goes, and what waits for a decision", () => {
+    render(
+      <Dashboard
+        data={{
+          ...viewer,
+          lastExcel: [{ kind: "ELECTRICAL", label: "Eléctrico", excelDay: "16/11/2026" }],
+          toReview: 3,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Excel del 16/11/2026")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("3 discrepancias nuevas pendientes");
+    expect(screen.getByRole("link", { name: "Revisar" })).toHaveAttribute("href", "/review");
+  });
+
+  it("shows no notice when nothing waits", () => {
+    render(<Dashboard data={{ ...viewer, toReview: 0 }} />);
+
+    expect(screen.queryByRole("link", { name: "Revisar" })).toBeNull();
+    expect(screen.queryByText(/Excel del/)).toBeNull();
+  });
+
   it("shows everybody the quick search and the progress of the works", () => {
     render(<Dashboard data={viewer} />);
 
-    expect(screen.getByRole("search", { name: "Buscar un cable" })).toHaveAttribute(
-      "action",
-      "/cables",
-    );
-    expect(screen.getByRole("search", { name: "Buscar una bandeja" })).toHaveAttribute(
-      "action",
-      "/trays",
-    );
+    // Un solo buscador para todo; sin JavaScript, va a la búsqueda de cables.
+    expect(screen.getByRole("search", { name: "Buscar" })).toHaveAttribute("action", "/cables");
     expect(screen.getByRole("progressbar", { name: "Tendidos" })).toHaveAttribute(
       "aria-valuenow",
       "25",

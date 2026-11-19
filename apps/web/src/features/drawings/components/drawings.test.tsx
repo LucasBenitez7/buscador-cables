@@ -201,8 +201,8 @@ describe("markFrame", () => {
         width={1000}
         height={1000}
         marks={[
-          { x: 0.2, y: 0.2, w: 0.02, h: 0.01, kind: "flag", tone: "warning", label: "3" },
-          { x: 0.4, y: 0.4, w: 0.02, h: 0.01, kind: "flag", tone: "success", label: "2" },
+          { x: 0.2, y: 0.2, w: 0.02, h: 0.01, kind: "flag", tone: "loose", label: "3" },
+          { x: 0.4, y: 0.4, w: 0.02, h: 0.01, kind: "flag", tone: "laid", label: "2" },
         ]}
         label="Recorrido"
       />,
@@ -259,18 +259,18 @@ describe("TrayDrawings", () => {
       />,
     );
 
-    // Fase 10: las hojas, con título y cada una con su número en grande.
-    expect(screen.getByRole("heading", { name: "Hojas donde aparece (2)" })).toBeInTheDocument();
+    // Fase 13: botones pequeños en una fila y, debajo, una línea con lo que muestra la elegida.
     const list = screen.getByRole("group", { name: "Hojas donde aparece" });
     expect(within(list).getAllByRole("button")[0]).toHaveTextContent("Hoja 03");
-    expect(within(list).getAllByRole("button")[0]).toHaveTextContent("Sin imagen todavía");
+    expect(within(list).getAllByRole("button")[0]).toHaveTextContent("DRW-0024");
     expect(within(list).getAllByRole("button")[1]).toHaveAttribute("aria-pressed", "true");
-    expect(within(list).getAllByRole("button")[1]).toHaveTextContent("TABLAS");
+    expect(screen.getByText(/TABLAS/)).toBeInTheDocument();
     await waitFor(() => expect(osd.state.options?.tileSources).toContain("EJ-ELE-DRW-0024_02"));
 
     fireEvent.click(within(list).getAllByRole("button")[0]!);
     expect(
       screen.getByText("La imagen de este plano todavía no está disponible."),
     ).toBeInTheDocument();
+    expect(screen.getByText(/sin imagen todavía/)).toBeInTheDocument();
   });
 });

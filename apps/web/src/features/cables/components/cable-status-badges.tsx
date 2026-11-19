@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUS_LABELS,
@@ -7,34 +8,28 @@ import {
   type TestStatus,
 } from "@cables/shared";
 import { Badge } from "@/components/ui/badge";
-
-type BadgeVariant = "default" | "outline" | "info" | "success" | "warning" | "destructive";
+import {
+  CONNECTION_TONE,
+  INSTALLATION_TONE,
+  TEST_TONE,
+  TONE_BADGE,
+  type StatusTone,
+  type ToneBadgeVariant,
+} from "@/features/cables/status-tones";
 
 /**
- * Verde: conectado. Azul: tendido. Ámbar: a medias. Rojo: retirado. El resto, neutro.
- * Cada badge lleva un punto del mismo color para distinguir los estados de un vistazo.
+ * The badge of each state, in the colours of `status-tones.ts`: the same as on the drawings,
+ * the route and the dashboard. Each badge has a dot of its colour, to tell them apart at a
+ * glance in a long list.
  */
-export const INSTALLATION_VARIANT: Record<InstallationStatus, BadgeVariant> = {
-  UNVERIFIED: "outline",
-  IN_STOCK: "outline",
-  COILED: "default",
-  PARTIALLY_LAID: "warning",
-  LAID: "info",
-  RETIRED: "destructive",
-};
+const variants = <T extends string>(tones: Record<T, StatusTone>) =>
+  Object.fromEntries(
+    Object.entries(tones).map(([status, tone]) => [status, TONE_BADGE[tone as StatusTone]]),
+  ) as Record<T, ToneBadgeVariant>;
 
-export const CONNECTION_VARIANT: Record<ConnectionStatus, BadgeVariant> = {
-  DISCONNECTED: "outline",
-  ORIGIN_ONLY: "warning",
-  DESTINATION_ONLY: "warning",
-  CONNECTED: "success",
-};
-
-export const TEST_VARIANT: Record<TestStatus, BadgeVariant> = {
-  NOT_TESTED: "outline",
-  TESTED_OK: "success",
-  TESTED_FAILED: "destructive",
-};
+export const INSTALLATION_VARIANT = variants(INSTALLATION_TONE);
+export const CONNECTION_VARIANT = variants(CONNECTION_TONE);
+export const TEST_VARIANT = variants(TEST_TONE);
 
 /**
  * Installation and connection, and the timbrado when there is one. `showUntested` also shows
@@ -45,11 +40,14 @@ export function CableStatusBadges({
   connectionStatus,
   testStatus = "NOT_TESTED",
   showUntested = false,
+  children,
 }: {
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
   testStatus?: TestStatus;
   showUntested?: boolean;
+  /** More badges of the same row (the cable record adds «Solo datos del Excel»). */
+  children?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -68,6 +66,7 @@ export function CableStatusBadges({
           {TEST_STATUS_LABELS[testStatus]}
         </Badge>
       ) : null}
+      {children}
     </div>
   );
 }

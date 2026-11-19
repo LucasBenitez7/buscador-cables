@@ -4,6 +4,7 @@ import { NavigationProgress } from "@/components/navigation-progress";
 import { AppHeader } from "@/features/navigation/app-header";
 import type { NavItem } from "@/features/navigation/nav-items";
 import { requireUser } from "@/server/session";
+import { countNewDiscrepancies } from "@/server/excel-import/discrepancies";
 import { countPendingAccounts } from "@/server/users/service";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -12,6 +13,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const canManageUsers = hasPermission(user, "user:manage");
   // Lo que espera a esta persona, siempre a la vista en el menú. Solo se consulta si le toca.
   const pending = canManageUsers ? await countPendingAccounts() : 0;
+  const canReview = hasPermission(user, "cable:correct");
+  // Solo lo nuevo desde que abrió «Pendientes de revisar», y sin sumarlo al botón del menú.
+  const toReview = canReview ? await countNewDiscrepancies(user.id) : 0;
 
   // Cada uno ve solo las secciones que su rol permite.
   const seesTeamActivity = hasPermission(user, "activity:view");
@@ -21,6 +25,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     { href: "/trays", label: "Bandejas", match: "prefix" },
     { href: "/equipment", label: "Equipos", match: "prefix" },
     { href: "/locations", label: "Ubicaciones", match: "prefix" },
+    { href: "/saved", label: "Guardados", match: "prefix" },
     // Quien ve la de todos tiene la suya en su menú; el resto, en la fila principal.
     ...(seesTeamActivity
       ? [
@@ -28,6 +33,27 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           { href: "/activity/me", label: "Mi actividad", match: "prefix", place: "user" } as const,
         ]
       : [{ href: "/activity/me", label: "Mi actividad", match: "prefix" } as const]),
+    ...(hasPermission(user, "import:run")
+      ? [{ href: "/import", label: "Excel del día", match: "prefix", place: "manage" } as const]
+      : []),
+    ...(canReview
+      ? [
+          {
+            href: "/review",
+            label: "Pendientes de revisar",
+            match: "prefix",
+            place: "manage",
+            badge: {
+              count: toReview,
+              label:
+                toReview === 1
+                  ? "discrepancia nueva por revisar"
+                  : "discrepancias nuevas por revisar",
+              alone: true,
+            },
+          } as const,
+        ]
+      : []),
     ...(hasPermission(user, "catalog:manage")
       ? [{ href: "/catalogs", label: "Catálogos", match: "prefix", place: "manage" } as const]
       : []),

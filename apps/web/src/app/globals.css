@@ -46,6 +46,17 @@
   --destructive: oklch(0.68 0.19 25);
   --destructive-foreground: oklch(0.17 0.02 255);
 
+  /*
+   * Estados del tendido, iguales en toda la web (etiquetas, planos, recorrido, panel):
+   * azul = tendido, violeta = falta / no tendido, ámbar (warning) = a medias o punta suelta,
+   * verde (success) = conectado, rojo (destructive) = retirado. Azul y violeta se eligieron
+   * para destacar sobre los planos, que son blancos con bandejas verdes y cian.
+   */
+  --laid: oklch(0.66 0.18 262);
+  --laid-foreground: oklch(0.17 0.02 255);
+  --pending: oklch(0.7 0.2 325);
+  --pending-foreground: oklch(0.17 0.02 255);
+
   --chart-1: oklch(0.7 0.14 245);
   --chart-2: oklch(0.74 0.15 162);
   --chart-3: oklch(0.8 0.14 80);
@@ -89,6 +100,10 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-laid: var(--laid);
+  --color-laid-foreground: var(--laid-foreground);
+  --color-pending: var(--pending);
+  --color-pending-foreground: var(--pending-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -139,5 +154,56 @@
   :disabled,
   [aria-disabled="true"] {
     cursor: not-allowed;
+  }
+}
+
+/*
+ * «Imprimir» en las listas (fase 15): solo la hoja con los códigos elegidos, en negro sobre
+ * blanco. Es lo único que no sigue el tema oscuro, porque va al papel o a un PDF.
+ */
+[data-print-sheet] {
+  display: none;
+}
+
+/* Margen del papel: sin él, algunos navegadores (y el PDF) pegan los códigos al borde. */
+@page {
+  margin: 15mm;
+}
+
+@media print {
+  html.printing-selection {
+    color-scheme: light;
+  }
+  html.printing-selection body {
+    background: #fff;
+  }
+  html.printing-selection body > :not([data-print-sheet]) {
+    display: none !important;
+  }
+  html.printing-selection [data-print-sheet] {
+    display: block;
+    color: #000;
+    font-family: var(--font-geist-sans), sans-serif;
+  }
+  [data-print-sheet] h1 {
+    font-size: 16pt;
+    font-weight: 600;
+  }
+  [data-print-sheet] p {
+    margin: 2pt 0 12pt;
+    font-size: 10pt;
+    color: #444;
+  }
+  [data-print-sheet] ol {
+    columns: 3;
+    column-gap: 16pt;
+    list-style: none;
+    padding: 0;
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 10pt;
+    line-height: 1.6;
+  }
+  [data-print-sheet] li {
+    break-inside: avoid;
   }
 }

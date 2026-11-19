@@ -6,7 +6,9 @@ import {
   CABLE_FIELD_LABELS,
   CONNECTION_STATUS_LABELS,
   TEST_STATUS_LABELS,
-  INSTALLATION_STATUS_LABELS,
+  installationStatusLabel,
+  EXCEL_FIELD_LABELS,
+  formatExcelDay,
   PROJECT_FIELD_LABELS,
   describeCableEvent,
   formatDecimal,
@@ -25,7 +27,7 @@ import {
   type WireRow,
 } from "@cables/shared";
 import { listLocationOptions } from "@/server/cables/service";
-import { historyStart, visibleLastAction } from "@/server/activity/history-start";
+import { visibleEventsWhere, visibleLastAction } from "@/server/activity/history-start";
 
 /** A change as text, with a link for each value that has a page (a tray, a location). */
 export type ReadableChange = {
@@ -119,12 +121,24 @@ export type CableDetail = {
   crossSectionMm2: number | null;
   outerDiameterMm: number | null;
   lengthM: number | null;
+  /** Created by an Excel of the day: not in the project lists (no route nor wiring). */
+  excelOnly: boolean;
+  /** What the daily Excel says (fase 14). */
+  excel: {
+    /** Real date of laying, "YYYY-MM-DD". */
+    laidOn: string | null;
+    company: string | null;
+    reel: string | null;
+    reelStatus: string | null;
+    /** Real metres of this cable, of the whole circuit and how many sections it has. */
+    actualLengthM: number | null;
+    actualLengthTotalM: number | null;
+    actualSections: number | null;
+  };
   voltageRating: string | null;
   notes: string | null;
   origin: string | null;
   destination: string | null;
-  currentLocation: string | null;
-  currentLocationId: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
   testStatus: TestStatus;
@@ -135,7 +149,7 @@ export type CableDetail = {
   /**
    * The events that match the history filters (newest first unless asked otherwise), up to
    * `HISTORY_LIMIT`; `historyTotal` says how many match and `historyAll` how many there are
-   * from the history start on (`historyStart()`).
+   * that can be seen (`visibleEventsWhere()`).
    */
   history: CableHistoryEntry[];
   historyTotal: number;
@@ -202,7 +216,7 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
     case "manufacturerId":
       return lookups.manufacturers.get(text) ?? "(fabricante eliminado)";
     case "installationStatus":
-      return INSTALLATION_STATUS_LABELS[text as InstallationStatus] ?? text;
+      return installationStatusLabel(text);
     case "looseEnd":
       return CABLE_END_SIDE_LABELS[text as CableEndSide] ?? text;
     case "connectionStatus":
@@ -211,6 +225,8 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
       return TEST_STATUS_LABELS[text as TestStatus] ?? text;
     case "deletedAt":
       return dateFormat.format(new Date(text));
+    case "laidOn":
+      return /^\d{4}-\d{2}-\d{2}$/.test(text) ? formatExcelDay(text) : text;
     default:
       return typeof value === "number" ? formatDecimal(value) : text;
   }
@@ -246,6 +262,7 @@ export function readableChanges(changes: unknown, lookups: Lookups): ReadableCha
         field:
           CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
           PROJECT_FIELD_LABELS[field] ??
+          EXCEL_FIELD_LABELS[field] ??
           field,
         from: readableValue(field, change?.from, lookups),
         to: readableValue(field, change?.to, lookups),
@@ -270,11 +287,11 @@ export async function getCableDetail(
   historySearch: CableHistorySearch = {},
 ): Promise<CableDetail | null> {
   const sources = originSources(historySearch.origin);
-  // Lo anterior al corte (la carga inicial) no aparece en ningún sitio de la ficha.
-  const cutoff = historyStart();
+  // Lo anterior al corte y la carga del proyecto no aparecen en ningún sitio de la ficha.
+  const visible = visibleEventsWhere();
   const historyWhere = {
-    createdAt: { gte: cutoff },
-    ...(sources ? { source: { in: sources } } : {}),
+    ...visible,
+    source: { in: sources },
     ...(historySearch.action ? { action: historySearch.action } : {}),
     ...(historySearch.person ? { userId: historySearch.person } : {}),
   };
@@ -285,6 +302,7 @@ export async function getCableDetail(
       type: { select: { name: true } },
       color: { select: { name: true, hex: true } },
       manufacturer: { select: { name: true } },
+      company: { select: { name: true } },
       lastActionBy: { select: { name: true } },
       looseEndTray: { select: { code: true } },
       routeSteps: {
@@ -319,9 +337,9 @@ export async function getCableDetail(
     }),
     loadLookups(),
     prisma.cableEvent.count({ where: { cableId: cable.id, ...historyWhere } }),
-    prisma.cableEvent.count({ where: { cableId: cable.id, createdAt: { gte: cutoff } } }),
+    prisma.cableEvent.count({ where: { cableId: cable.id, ...visible } }),
     prisma.user.findMany({
-      where: { cableEvents: { some: { cableId: cable.id, createdAt: { gte: cutoff } } } },
+      where: { cableEvents: { some: { cableId: cable.id, ...visible } } },
       select: { id: true, name: true, role: true },
       orderBy: { name: "asc" },
     }),
@@ -344,7 +362,6 @@ export async function getCableDetail(
       installationStatus: cable.installationStatus,
       connectionStatus: cable.connectionStatus,
       testStatus: cable.testStatus,
-      currentLocationId: cable.currentLocationId,
       looseEnd: cable.looseEnd,
       looseEndTray: cable.looseEndTray?.code ?? null,
       // Cables from the project lists may know the equipment but not the room.
@@ -404,17 +421,26 @@ export async function getCableDetail(
     crossSectionMm2: toNumber(cable.crossSectionMm2),
     outerDiameterMm: toNumber(cable.outerDiameterMm),
     lengthM: toNumber(cable.lengthM),
+    excelOnly: cable.excelOnly,
+    excel: {
+      laidOn: cable.laidOn ? cable.laidOn.toISOString().slice(0, 10) : null,
+      company: cable.company?.name ?? null,
+      reel: cable.reel,
+      reelStatus: cable.reelStatus,
+      actualLengthM: toNumber(cable.actualLengthM),
+      actualLengthTotalM: toNumber(cable.actualLengthTotalM),
+      actualSections: cable.actualSections,
+    },
     voltageRating: cable.voltageRating,
     notes: cable.notes,
     origin: location(cable.originId),
     destination: location(cable.destinationId),
-    currentLocation: location(cable.currentLocationId),
-    currentLocationId: cable.currentLocationId,
     installationStatus: cable.installationStatus,
     connectionStatus: cable.connectionStatus,
     testStatus: cable.testStatus,
     lastAction: visibleLastAction(
       cable.lastActionAt,
+      cable.lastActionSource,
       cable.lastAction && cable.lastActionAt
         ? {
             action: cable.lastAction,

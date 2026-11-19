@@ -19,7 +19,7 @@ import {
   type Lookups,
   type ReadableChange,
 } from "@/server/cables/detail";
-import { historyStart } from "@/server/activity/history-start";
+import { historyStart, isVisibleEvent, visibleEventsWhere } from "@/server/activity/history-start";
 
 export type ActivityEntry = {
   id: string;
@@ -111,8 +111,8 @@ export async function getActivityEvent(
     prisma.cableEvent.findUnique({ where: { id }, include: EVENT_INCLUDE }),
     loadLookups(),
   ]);
-  // Lo anterior al corte (la carga inicial) no se muestra: como si no existiera.
-  if (!event || event.createdAt.getTime() < historyStart().getTime()) return null;
+  // Lo anterior al corte y la carga del proyecto no se muestran: como si no existieran.
+  if (!event || !isVisibleEvent(event)) return null;
   // Quién ve un movimiento (fase 12): quien lo hizo, quien ve la actividad del equipo y quien
   // ve los cables (es una entrada del historial de su ficha). Lo que no puede ver no existe.
   if (!canSeeCableEvent(viewer, event.userId)) return null;
@@ -160,7 +160,7 @@ export async function listActivity(
   const cutoff = historyStart();
   const from = search.from ? madridDayStart(search.from) : null;
   const where: Prisma.CableEventWhereInput = {
-    ...(sources ? { source: { in: sources } } : {}),
+    source: { in: sources },
     ...(search.actor ? { userId: search.actor } : {}),
     ...(search.action ? { action: search.action } : {}),
     createdAt: {
@@ -202,7 +202,7 @@ export async function listActivity(
 export async function listActivityUsers(): Promise<{ id: string; label: string }[]> {
   // Only who has registered something: the filter is not a list of every account.
   const users = await prisma.user.findMany({
-    where: { cableEvents: { some: { createdAt: { gte: historyStart() } } } },
+    where: { cableEvents: { some: visibleEventsWhere() } },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });

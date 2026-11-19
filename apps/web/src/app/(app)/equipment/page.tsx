@@ -1,16 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EQUIPMENT_LIST_SORT_LABELS, optionsOf, parseEquipmentListSearch } from "@cables/shared";
+import {
+  EQUIPMENT_LIST_SORT_LABELS,
+  optionsOf,
+  parseEquipmentListSearch,
+  type EquipmentListSort,
+} from "@cables/shared";
 import { ListToolbar } from "@/components/list-toolbar";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
+import {
+  SelectAllRow,
+  SelectCheckbox,
+  SelectionAside,
+  SelectionProvider,
+} from "@/components/selection";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { equipmentHref } from "@/lib/links";
-import { EQUIPMENT_MAX, searchEquipment } from "@/server/equipment/service";
+import { EQUIPMENT_LIMIT, EQUIPMENT_MAX, searchEquipment } from "@/server/equipment/service";
 import { requireUser } from "@/server/session";
 
 export const metadata: Metadata = { title: "Equipos" };
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/** Which equipment the list shows when there are more than it can: the first in the order. */
+const SHOWN_FIRST: Record<EquipmentListSort, string> = {
+  cables: "con más cables",
+  "cables-asc": "con menos cables",
+  name: "primeros por código (A-Z)",
+  "name-desc": "primeros por código (Z-A)",
+};
 
 /** Find a cabinet, box or panel to see every cable that lands in it (fase 11). */
 export default async function EquipmentSearchPage({
@@ -26,11 +46,13 @@ export default async function EquipmentSearchPage({
   // Lo que se muestra por defecto no cuenta como «puesto»: Limpiar solo si hay algo más.
   const active = Boolean(query || (search.sort && search.sort !== "cables"));
 
+  // Solo se ven los 60 primeros en el orden elegido: el texto dice cuáles son.
+  const which = SHOWN_FIRST[sort];
   const count = query
     ? matches.length === 0
       ? "Ningún equipo contiene ese código."
-      : `${matches.length} ${matches.length === 1 ? "equipo" : "equipos"}${matches.length >= 60 ? " (los 60 con más cables; afina la búsqueda)" : ""}`
-    : "Los equipos con más cables. Escribe un código para buscar uno.";
+      : `${matches.length} ${matches.length === 1 ? "equipo" : "equipos"}${matches.length >= EQUIPMENT_LIMIT ? ` (los ${EQUIPMENT_LIMIT} ${which}; afina la búsqueda)` : ""}`
+    : `Los ${EQUIPMENT_LIMIT} equipos ${which}. Escribe un código para buscar uno.`;
 
   return (
     <div className="space-y-6">
@@ -43,47 +65,59 @@ export default async function EquipmentSearchPage({
       </div>
 
       <PendingListProvider>
-        <ListToolbar
-          action="/equipment"
-          label="Buscar equipos"
-          search={{
-            name: "q",
-            label: "Código del equipo",
-            value: query,
-            placeholder: "99BMA10, 99CXJ…",
-            mono: true,
-            maxLength: EQUIPMENT_MAX,
-          }}
-          sort={{
-            name: "sort",
-            value: sort,
-            defaultValue: "cables",
-            options: optionsOf(EQUIPMENT_LIST_SORT_LABELS),
-          }}
-          active={active}
-          count={count}
-        />
+        <SelectionProvider
+          title="Equipos"
+          items={matches.map((match) => ({ key: match.equipment, label: match.equipment }))}
+          resetKey={`${query}|${sort}`}
+          actions={<SaveChosenButton kind="EQUIPMENT" />}
+        >
+          <ListToolbar
+            action="/equipment"
+            label="Buscar equipos"
+            search={{
+              name: "q",
+              label: "Código del equipo",
+              value: query,
+              placeholder: "99BMA10, 99CXJ…",
+              mono: true,
+              maxLength: EQUIPMENT_MAX,
+            }}
+            sort={{
+              name: "sort",
+              value: sort,
+              defaultValue: "cables",
+              options: optionsOf(EQUIPMENT_LIST_SORT_LABELS),
+            }}
+            active={active}
+            count={count}
+            countAside={matches.length > 0 ? <SelectionAside /> : null}
+          />
 
-        <PendingResults>
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {matches.map((match) => (
-              <li
-                key={match.equipment}
-                className="bg-card hover:border-primary/50 hover:bg-muted/40 has-focus-visible:ring-ring/50 relative space-y-1 rounded-lg border p-3 text-sm transition-colors has-focus-visible:ring-3"
-              >
-                <Link
-                  href={equipmentHref(match.equipment)}
-                  className="text-primary font-mono text-base font-semibold break-all outline-none after:absolute after:inset-0 after:rounded-lg"
+          <PendingResults className="space-y-3">
+            <SelectAllRow />
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {matches.map((match) => (
+                <li
+                  key={match.equipment}
+                  className="bg-card hover:border-primary/50 hover:bg-muted/40 has-focus-visible:ring-ring/50 relative space-y-1 rounded-lg border p-3 text-sm transition-colors has-focus-visible:ring-3"
                 >
-                  {match.equipment}
-                </Link>
-                <p className="text-muted-foreground">
-                  {match.cables} {match.cables === 1 ? "cable" : "cables"}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </PendingResults>
+                  <div className="flex items-center gap-2">
+                    <SelectCheckbox item={{ key: match.equipment, label: match.equipment }} />
+                    <Link
+                      href={equipmentHref(match.equipment)}
+                      className="text-primary font-mono text-base font-semibold break-all outline-none after:absolute after:inset-0 after:rounded-lg"
+                    >
+                      {match.equipment}
+                    </Link>
+                  </div>
+                  <p className="text-muted-foreground">
+                    {match.cables} {match.cables === 1 ? "cable" : "cables"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </PendingResults>
+        </SelectionProvider>
       </PendingListProvider>
     </div>
   );

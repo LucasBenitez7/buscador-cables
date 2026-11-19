@@ -17,9 +17,10 @@ Funciona en el ordenador y en el móvil o la tableta, desde el navegador.
 3. **Esperar la aprobación:** un administrador revisa la cuenta y le da un rol. Cuando la
    aprueba, llega otro correo y ya puedes entrar.
 
-En el ordenador, el menú de arriba tiene las secciones principales; **Gestión** agrupa
-Catálogos y Usuarios (con el número de cuentas pendientes), y el botón con **tu nombre** abre
-«Mi actividad» y «Cerrar sesión». En el móvil está todo en el botón ☰.
+En el ordenador, el menú de arriba tiene las secciones principales; **Gestión** agrupa Excel
+del día, Pendientes de revisar, Catálogos y Usuarios (con el número de cuentas pendientes), y
+el botón con **tu nombre** abre «Mi actividad» y «Cerrar sesión». En el móvil está todo en el
+botón ☰.
 
 **Fichas largas.** Arriba de cada ficha (cable, bandeja, equipo) hay una barra **«Ir a»**
 que se queda fija al bajar: un toque y vas a la tabla, al plano, a la hoja original o al
@@ -40,12 +41,12 @@ poner otra (caduca en una hora). Tras 10 contraseñas incorrectas seguidas, la c
 
 Cada rol puede hacer también todo lo de los anteriores.
 
-| Rol               | Para quién                   | Qué puede hacer                                                                                                            |
-| ----------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **Consulta**      | Quien solo necesita mirar    | Buscar cables y ver su ficha, recorrido e historial; ver bandejas, ubicaciones y planos.                                   |
-| **Técnico**       | Quien trabaja en campo       | Tender (también a medias), enrollar, mover, conectar, desconectar y timbrar; corregir bornas; dar de alta y editar cables. |
-| **Supervisor**    | Quien coordina la obra       | Ver la actividad de todo el equipo; retirar cables y corregir su estado; ubicaciones y catálogos.                          |
-| **Administrador** | Quien gestiona la aplicación | Aprobar cuentas, cambiar roles, desactivar cuentas, dar de alta usuarios y eliminar cables.                                |
+| Rol               | Para quién                   | Qué puede hacer                                                                                                                                   |
+| ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Consulta**      | Quien solo necesita mirar    | Buscar cables y ver su ficha, recorrido e historial; ver bandejas, ubicaciones y planos.                                                          |
+| **Técnico**       | Quien trabaja en campo       | Tender (también a medias), conectar, desconectar y timbrar; corregir bornas; dar de alta y editar cables.                                         |
+| **Supervisor**    | Quien coordina la obra       | Ver la actividad de todo el equipo; retirar cables y corregir su estado; ubicaciones y catálogos; subir el Excel del día y revisar discrepancias. |
+| **Administrador** | Quien gestiona la aplicación | Aprobar cuentas, cambiar roles, desactivar cuentas, dar de alta usuarios y eliminar cables.                                                       |
 
 La misma tabla está siempre a la vista en la página **Usuarios** del administrador.
 
@@ -64,9 +65,17 @@ nuevo.
 
 ## Inicio
 
-Lo primero que ves: buscador rápido de cable y bandeja, y el avance de la obra (cables
-tendidos, conectados y timbrados). Según el rol, también tu actividad reciente, el desglose por
+Lo primero que ves: **un solo buscador para todo** y el avance de la obra (cables tendidos,
+conectados y timbrados). Escribe parte de un código, un equipo o el nombre de una ubicación y,
+mientras escribes, salen unos pocos cables, bandejas, equipos y ubicaciones que coinciden, cada
+uno con su enlace. Si escribes un código entero y pulsas **Buscar** (o Intro), te lleva
+directo a su ficha. Según el rol, también tu actividad reciente, el desglose por
 estado, la actividad del equipo o las cuentas pendientes de aprobar.
+
+Bajo el número de cables, **hasta qué Excel llega el avance**: la fecha del último Excel
+aplicado de cada tipo («Eléctrico · Excel del 16/11/2026»). Quien revisa discrepancias ve
+además un aviso con las **nuevas** desde la última vez que abrió «Pendientes de revisar»; al
+entrar en esa pantalla, el aviso desaparece.
 
 ## Buscar cables
 
@@ -76,16 +85,25 @@ fabricante, sección, longitud, estado de instalación, conexión y timbrado, ni
 (exacto, en origen o destino) y bandeja. Los filtros quedan en la dirección de la página: se
 puede guardar o compartir una búsqueda copiando el enlace. En el móvil, el botón **Filtros ⌄**
 despliega todos los filtros; «Más filtros ⌄» abre los menos usados. La flecha gira cuando
-están abiertos.
+están abiertos. Igual en las demás listas con filtros (bandejas, equipos, ubicaciones, un
+equipo, el historial de un cable): en el móvil se ve el primer campo y **Más filtros**
+despliega el resto.
 
-Pulsa un código para abrir su **ficha**. Tiene dos pestañas, con las mismas acciones y el
-mismo historial arriba y abajo:
+Pulsa un código para abrir su **ficha**. Arriba, el código y su estado; al lado del código,
+**Editar** (si tu rol lo permite). El servicio, el nivel y el resto están en «Datos del
+cable». Debajo, dos pestañas:
 
-- **Recorrido** (quien tiende): datos, origen y destino, recorrido por bandejas y el plano con
-  el recorrido marcado.
-- **Conexionado** (quien conecta): la tabla de hilos con el regletero y la borna de cada uno
-  en origen y en destino, los puentes y la **hoja original del listado**, con zoom. En caso de
-  duda, manda la hoja original.
+- **Recorrido** (quien tiende): primero el **plano** con el recorrido marcado, siempre a la
+  vista; después las bandejas del recorrido y, plegados, los extremos y los datos del cable.
+- **Conexionado** (quien conecta): primero la **hoja original del listado**, con zoom (en caso
+  de duda, manda la hoja original); después los **extremos**, con si cada punta está
+  conectada, y, plegadas, las **bornas** (la tabla de hilos con el regletero y la borna de cada
+  uno en origen y en destino, y los puentes).
+
+Cada bloque se abre y se cierra pulsando su barra («Mostrar» / «Ocultar»); los planos no se
+pliegan. «Ir a» salta a cada bloque. El historial va al final, plegado, en las dos pestañas.
+Si un cable tiene varias hojas de plano, se elige con los botones «Hoja …» de encima del
+plano; debajo de ellos, una línea dice qué muestra la hoja elegida.
 
 En el buscador, cada cable tiene debajo de su código el enlace **Conexionado**, que abre la
 ficha directamente en esa pestaña. En la tabla de hilos, encima de «Origen» y «Destino» está
@@ -112,21 +130,22 @@ campo.
 
 ## Equipos
 
-**Equipos** busca un cuadro, caja o armario (ordenados por más cables o por código, A-Z o
-Z-A) y abre su página: los cables que llegan a él,
+**Equipos** busca un cuadro, caja o armario (ordenados por más o menos cables, o por código,
+A-Z o Z-A) y abre su página: los cables que llegan a él,
 agrupados por regletero, con sus bornas, el equipo del otro lado y si **esa punta** está
 conectada. «Solo pendientes de conectar» deja los que faltan. Es la forma de trabajar armario
 a armario. El código de un equipo, en cualquier ficha, lleva a su página.
 
 ## Registrar trabajo en un cable
 
-En la ficha (o en el buscador), el botón de acciones ofrece lo que tu rol permite y lo que tiene
-sentido en el estado actual del cable:
+En la ficha, el botón **Registrar acción** está siempre abajo, a mano con el pulgar. Al pulsarlo
+se despliegan las acciones en botones grandes (en el buscador, cada cable tiene su botón
+**Acción**). Ofrece lo que tu rol permite y lo que tiene sentido en el estado actual del cable;
+lo que no se puede hacer ahora sale apagado y dice por qué:
 
 - **Tender**: el cable queda tendido de punta a punta.
 - **Tender a medias**: queda una punta suelta. Indica en qué bandeja del recorrido se quedó
   (botones numerados); si está en una que no es del recorrido, se acepta confirmándolo.
-- **Enrollar**, **Mover**.
 - **Conectar** y **Desconectar**: por extremo (origen, destino o ambos).
 - **Timbrar**: resultado correcto o con fallo. Un fallo pide una nota que diga qué falla.
 - **Retirar** y **Corregir** (supervisor): siempre con el motivo.
@@ -137,9 +156,18 @@ cambio: recarga la página y repite la acción.
 ## Bandejas y planos
 
 **Bandejas** lista las bandejas con sus cables. Se buscan por código y se filtran por tipo,
-por nivel (L1-L4) o «Solo con cables esperando»; se ordenan por código (A-Z o Z-A) o con las
-que más cables esperan primero. La ficha de una bandeja enseña el plano con la
-bandeja marcada, qué cables pasan por ella y cuáles esperan con una punta suelta.
+por nivel (L1-L4) o «Solo con cables esperando»; se ordenan por código (A-Z o Z-A), por los
+cables que pasan (más o menos primero) o con las que más cables esperan primero. La ficha de una bandeja enseña el plano con la
+bandeja marcada, qué cables pasan por ella y cuáles esperan con una punta suelta. Junto al
+código, **Ver sus cables en el buscador** (igual en la ficha de un equipo y de una ubicación).
+
+Colores, iguales en toda la web (planos, recorrido, etiquetas y panel):
+
+- **Azul**: tendido.
+- **Violeta**: no tendido, o sin revisar (sin datos de ningún Excel).
+- **Ámbar**: a medias (tendido parcial, conectado en una sola punta) y la punta suelta; en el
+  plano de una bandeja, la bandeja que buscas, con la flecha.
+- **Verde**: conectado o timbrado correcto. **Rojo**: retirado o timbrado con fallo.
 
 En el plano:
 
@@ -163,7 +191,7 @@ La flecha abre o cierra una rama; «Expandir todo» y «Contraer todo», el árb
 - **Buscar**: nombre o código (no importan acentos ni mayúsculas). El árbol se abre solo
   hasta cada ubicación que coincide y la resalta.
 - **Filtrar** por tipo (planta, área, unidad, sitio) o «Solo con cables».
-- **Ordenar** por nombre, código o «Más cables primero».
+- **Ordenar** por nombre, código, «Más cables primero» o «Menos cables primero».
 - «N cables →» abre el buscador con los cables de esa ubicación y de todo lo que contiene.
 
 Quien gestiona ubicaciones añade, edita, mueve o elimina desde la fila: con ratón, los
@@ -174,6 +202,40 @@ Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
 **Ubicaciones, Bandejas y Equipos** tienen la misma barra: búsqueda, orden, filtros
 (cuando los hay), «Buscar» y «Limpiar» para volver a empezar.
 
+## Copiar o imprimir una lista
+
+En cualquier lista (cables, bandejas, equipos, ubicaciones y las listas de las fichas de una
+bandeja, un equipo o una ubicación), **Seleccionar**, junto al número de resultados, pone una
+casilla en cada fila y una barra abajo con cuántos hay elegidos.
+
+- Marca las filas una a una, o **Seleccionar todas**: en una lista con páginas elige todo lo
+  que cumple los filtros, no solo la página que se ve (hasta 5000). Lo elegido se mantiene al
+  cambiar de página y se vacía al cambiar los filtros.
+- **Copiar** copia los códigos, uno por línea, para pegarlos en un correo o un Excel; el botón
+  dice «✓ Copiado».
+- **Imprimir** abre la impresión con una hoja limpia: el título, la fecha y los códigos. Desde
+  ahí se imprime o se guarda como PDF.
+- **Cancelar** (o Esc) quita las casillas.
+
+De una ubicación se copia su código y su nombre; del resto, solo el código.
+
+## Guardados
+
+**Guardados** (en el menú) son tus carpetas de cables, bandejas y equipos. Solo las ves tú,
+sea cual sea tu rol.
+
+- **Guardar**: junto al código de un cable, una bandeja o un equipo. Marca las carpetas donde
+  lo quieres (las que ya lo tienen salen marcadas; desmarcar lo quita) o escribe el nombre de
+  una carpeta nueva. Una misma cosa puede estar en varias carpetas.
+- **De golpe**: en una lista, «Seleccionar», elige lo que quieras y **Guardar** en la barra de
+  abajo.
+- En **Guardados**, «Nueva carpeta» crea una vacía. Cada carpeta enseña sus cables, bandejas y
+  equipos; junto al nombre, **Renombrar** y **Borrar carpeta** (lo guardado en ella no se
+  toca en ningún otro sitio).
+- Dentro de una carpeta, «Seleccionar» y en la barra **Mover a…** otra carpeta, **Quitar**,
+  Copiar o Imprimir.
+- Un cable dado de baja después de guardarlo se sigue viendo, tachado.
+
 ## Actividad
 
 - **Mi actividad**: todo lo que has registrado, por días.
@@ -182,9 +244,9 @@ Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
   sitio: ni en Actividad, ni en el historial o el «Último movimiento» de un cable, ni en los
   filtros de actividad del buscador.
 - **Origen**: por defecto se ve lo que se hace **en campo** (tender, conectar, dar de alta un
-  cable a mano…). Las **cargas de listados** (una revisión nueva de un listado) escriben una
-  entrada por cable y no se ven por defecto: se eligen con «Cargas de listados» o «Todo», en
-  Actividad y en el historial de cada cable.
+  cable a mano…). **Excel** enseña lo que cambió cada Excel del día y **Todo**, las dos cosas.
+  Las **cargas del proyecto** (los listados y la primera carga del Excel) no se ven en ningún
+  sitio, ni siquiera con «Todo».
 - Al pulsar cualquier enlace, una **barra azul** arriba indica que la página está en camino.
 - Al cambiar un filtro, el orden o la página, la lista muestra **«Cargando…»** hasta que llega
   el resultado: no hace falta pulsar otra vez.
@@ -192,6 +254,64 @@ Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
   «Ver qué cambió» abre su página con cada hilo, antes y después.
 - **Actividad** (supervisor y administrador): lo de todo el equipo, con filtros por persona,
   acción y periodo.
+
+## Excel del día
+
+El estado de la obra llega en dos Excel, eléctrico e instrumentación, que se actualizan cada
+día. Se suben desde **Gestión → Excel del día** (supervisor y administrador).
+
+1. **Elige el archivo.** El navegador lo lee y reconoce si es el eléctrico o el de
+   instrumentación por su hoja. Propone la **fecha del Excel** sacada del nombre del archivo;
+   cámbiala si no es la buena. Si falta alguna columna, lo dice y no aplica nada. No se puede
+   subir un Excel con fecha anterior al último aplicado de su tipo (desharía lo más nuevo).
+2. **Preparar vista previa.** No cambia ningún cable todavía. Enseña, en pestañas:
+   - **Cambios**: lo que cambia en cables que ya están en la web.
+   - **Nuevos**: cables que están en el Excel y no en la web. Se crean con lo que trae el Excel
+     y llevan en su ficha la etiqueta **«Solo datos del Excel»** (sin recorrido ni conexionado).
+   - **Discrepancias**: una persona marcó en la web algo que el Excel contradice.
+3. **Desmarca** las filas que no quieras aplicar (una a una o «Desmarcar todas»). Las
+   desmarcadas vuelven a salir con el siguiente Excel.
+4. **Aplicar** (con su avance) o **Descartar**. Un Excel nuevo del mismo tipo sustituye a la
+   vista previa que esté esperando.
+
+**Qué cambia el Excel en un cable:** el estado (tendido o no tendido) y la conexión, la fecha de
+tendido, la empresa, la bobina y los metros reales. Nunca el origen, el destino, el tipo ni la
+longitud del listado. En instrumentación, los metros reales salen de la hoja «Table» (los
+metros tendidos de cada tirada); si un cable aparece dos veces, vale la tirada más nueva. Una
+**celda vacía no borra** lo que ya tiene el cable. Las filas con estados que no se usan
+(«Check», «Error»…) se ignoran. Los cables que no salen en el Excel no se tocan. En el
+historial, lo del Excel sale con su fecha y quién lo subió.
+
+**Carga del proyecto** (solo administrador): la primera vez, la casilla «Carga del proyecto»
+aplica el Excel sin discrepancias y sin que se vea en la actividad ni en los historiales. Deja de
+ofrecerse en cuanto se aplica un Excel del día de ese tipo.
+
+### Pendientes de revisar
+
+Una **discrepancia** es un cable que una persona marcó en la web (por ejemplo, tendido el 12/11)
+y que un Excel de fecha posterior contradice (no tendido el 16/11). Si lo marcó el mismo día del
+Excel o después, cuenta lo de la web y no hay discrepancia.
+
+- **No bloquean nada**: el resto del Excel se aplica igual. El cable conserva lo de la web y
+  sus datos (fecha, empresa, bobina, metros) se actualizan.
+- En **Gestión → Pendientes de revisar** (quien puede corregir movimientos) cada una enseña
+  lado a lado lo de la web, con quién y cuándo, y lo del Excel con su fecha. Debajo de cada
+  lado, su botón: **Mantener lo de la web** o **Aceptar lo del Excel**.
+- Si alguien **cambió el cable en la web después**, la tarjeta lo avisa («Cambiado en la web
+  después»), enseña su estado de ahora y, debajo, lo que decía antes.
+- **Varias a la vez**: marca las casillas, o «Seleccionar todas» (todas las pendientes, no solo
+  las de la página), y elige la decisión para todas. Con «Seleccionar todas» no se acepta lo
+  del Excel en los cables cambiados después: esos se deciden desde su tarjeta.
+- **Nunca se cierran solas.** Si llega otro Excel que la sigue contradiciendo, se actualiza su
+  fecha; si ya coincide con la web, lo avisa («El Excel del … ya coincide con la web»).
+- Cada decisión queda en el **historial del cable** con quién decidió, qué Excel era y qué
+  corrige. En **Revisadas** se ve lo decidido, con la opción elegida resaltada.
+- Tras **aceptar lo del Excel**, los Excel siguientes actualizan el estado sin preguntar. Tras
+  **mantener lo de la web**, un Excel posterior que lo contradiga abre otra discrepancia.
+- El número junto a «Pendientes de revisar» y el aviso del inicio cuentan solo las **nuevas**
+  (abiertas desde tu última visita a esa pantalla). Que un Excel posterior la vuelva a
+  contradecir no la hace nueva.
+- Un cable **dado de baja** no se toca: «Mantener lo de la web» solo cierra su discrepancia.
 
 ## Administración
 
@@ -224,6 +344,9 @@ En **Gestión → Roles y permisos**:
   hacer. Cada permiso está explicado. Un rol nuevo aparece al momento en Usuarios.
 - En la ficha de un rol se cambian sus permisos: **afecta al momento** a todas las personas que
   lo tienen. Un rol solo se borra si nadie lo tiene.
+- **Comparar roles**, debajo de la lista: en el ordenador, una tabla con los permisos en filas
+  y los roles en columnas; en el móvil, dos roles frente a frente, con lo que los diferencia
+  resaltado. «Solo diferencias» oculta lo que tienen todos igual.
 
 **Permisos extra de una persona**: en Usuarios, pulsa su nombre. Su ficha dice lo que puede
 hacer y si le viene de su rol o es un extra. Marca lo que necesite además de su rol y guarda.
