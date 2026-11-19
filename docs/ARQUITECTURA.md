@@ -297,7 +297,7 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   enlacen igual.
 - `Cable.testStatus` (`NOT_TESTED`, `TESTED_OK`, `TESTED_FAILED`) y la acción `TESTED`
   ("Timbrar", permiso `cable:test` para técnico, supervisor y administrador). Es
-  independiente del tendido y la conexión: tender, enrollar o mover no lo cambian; solo otro
+  independiente del tendido y la conexión: tender o conectar no lo cambian; solo otro
   timbrado o una corrección. Un fallo exige una nota.
 - Una punta suelta en una bandeja que no está en el recorrido previsto se acepta si quien la
   registra lo confirma (`confirmOffRoute`); las correcciones del supervisor no lo piden.
@@ -347,6 +347,29 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   opcional. Solo la ve quien gestiona cuentas.
 - Detalle de un movimiento (`/activity/[id]`): `canSeeCableEvent` (su autor, `activity:view`
   o `cable:read`).
+
+### Excel del día (fase 14)
+
+- **Lector** puro en `packages/shared/src/excel-status.ts`: busca la hoja y las columnas por
+  nombre (con alternativas, sin importar mayúsculas, espacios ni tildes) y traduce los estados.
+  Lo usa el navegador (`read-excel-file`, solo la hoja que hace falta) y lo valida el servidor.
+- **Reglas** puras en `packages/shared/src/excel-import.ts` (`planExcelRow`): qué hace cada fila
+  (nuevo, cambio, discrepancia o nada). Una celda vacía no borra datos. Lo marcado por una
+  persona antes de la fecha del Excel es discrepancia; el mismo día o después, gana la web.
+  El alta de un cable no cuenta como marca; «mantener lo de la web» sí, «aceptar lo del Excel»
+  no (el estado vuelve a ser del Excel).
+- **Subida por partes**: `startExcelPreview` → `addExcelPreviewPart` (1000 filas, unos 250 KB,
+  lejos del límite de una Server Action) → `finishExcelPreview`. Mientras llega
+  (`UPLOADING`) no se puede aplicar. Un candado por tipo (`pg_advisory_xact_lock`) evita que
+  dos subidas o lotes del mismo Excel se crucen.
+- **Aplicar por lotes** (`applyExcelBatch`, 200 filas por transacción): cada fila se decide
+  otra vez contra la base, por si alguien actuó después de la vista previa.
+- Tablas: `ExcelImport` (el Excel, su fecha, quién lo subió y su estado), `ExcelImportRow` (la
+  vista previa) y `CableDiscrepancy` (pendientes de revisar). Eventos con origen `EXCEL` y la
+  acción `EXCEL_UPDATED`; las decisiones, `EXCEL_REVIEWED`. La carga del proyecto usa el origen
+  `PROJECT_LOAD`, que no se muestra.
+- **Avisos de lo nuevo**: `User.discrepanciesSeenAt` guarda cuándo abrió cada persona
+  «Pendientes de revisar»; el menú y el inicio solo cuentan lo llegado después.
 
 ## Marca, cargas y avisos
 

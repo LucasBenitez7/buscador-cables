@@ -63,6 +63,10 @@ describe("project load from the Excel", () => {
     const detail = await getCableDetail(loaded.id, { origin: "all" });
     expect(detail!.history).toEqual([]);
     expect(detail!.lastAction).toBeNull();
+    // ZZ-2 no estaba en la web: lo creó el Excel y su ficha lo dice.
+    expect(detail!.excelOnly).toBe(false);
+    const created = await prisma.cable.findUniqueOrThrow({ where: { code: "ZZ-2" } });
+    expect((await getCableDetail(created.id))!.excelOnly).toBe(true);
     expect((await searchItem("ZZ-1")).lastAction).toBeNull();
     expect((await searchItem("ZZ-2")).lastAction).toBeNull();
 

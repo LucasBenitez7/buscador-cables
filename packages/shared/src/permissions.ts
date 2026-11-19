@@ -123,14 +123,18 @@ export const PERMISSION_GROUPS: readonly {
       {
         id: "cable:correct",
         label: "Corregir movimientos",
-        help: "Corregir el estado de un cable o un movimiento mal registrado.",
+        help: "Corregir el estado de un cable o un movimiento mal registrado, y decidir las discrepancias con el Excel.",
       },
       {
         id: "cable:delete",
         label: "Dar de baja cables",
         help: "Quitar un cable de la lista (no se borra su historial).",
       },
-      { id: "import:run", label: "Importar listados", help: "Cargar datos desde ficheros." },
+      {
+        id: "import:run",
+        label: "Subir el Excel del día",
+        help: "Ver su vista previa y aplicarla o descartarla.",
+      },
     ],
   },
   {

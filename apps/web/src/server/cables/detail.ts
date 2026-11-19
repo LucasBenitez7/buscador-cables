@@ -121,6 +121,8 @@ export type CableDetail = {
   crossSectionMm2: number | null;
   outerDiameterMm: number | null;
   lengthM: number | null;
+  /** Created by an Excel of the day: not in the project lists (no route nor wiring). */
+  excelOnly: boolean;
   /** What the daily Excel says (fase 14). */
   excel: {
     /** Real date of laying, "YYYY-MM-DD". */
@@ -419,6 +421,7 @@ export async function getCableDetail(
     crossSectionMm2: toNumber(cable.crossSectionMm2),
     outerDiameterMm: toNumber(cable.outerDiameterMm),
     lengthM: toNumber(cable.lengthM),
+    excelOnly: cable.excelOnly,
     excel: {
       laidOn: cable.laidOn ? cable.laidOn.toISOString().slice(0, 10) : null,
       company: cable.company?.name ?? null,

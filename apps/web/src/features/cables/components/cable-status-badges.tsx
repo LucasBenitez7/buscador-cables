@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   CONNECTION_STATUS_LABELS,
   INSTALLATION_STATUS_LABELS,
@@ -39,11 +40,14 @@ export function CableStatusBadges({
   connectionStatus,
   testStatus = "NOT_TESTED",
   showUntested = false,
+  children,
 }: {
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
   testStatus?: TestStatus;
   showUntested?: boolean;
+  /** More badges of the same row (the cable record adds «Solo datos del Excel»). */
+  children?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -62,6 +66,7 @@ export function CableStatusBadges({
           {TEST_STATUS_LABELS[testStatus]}
         </Badge>
       ) : null}
+      {children}
     </div>
   );
 }

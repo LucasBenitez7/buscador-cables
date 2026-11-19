@@ -1061,7 +1061,7 @@ se usa lo mismo (con un componente común), y no hay textos de ayuda en la inter
       menú ni a «Gestión». Las pendientes siguen ahí hasta que alguien decide.
 - [x] Decidir varias discrepancias a la vez: casillas, «Seleccionar todas» (todas las
       pendientes) y las dos decisiones para las marcadas; cada una con su evento.
-- [ ] Tests, E2E y manual de usuario.
+- [x] Tests, E2E y manual de usuario.
 - [ ] Al cerrar la fase, resumir esta sección: dejar las tareas y las decisiones que sigan
       valiendo, y quitar los planes intermedios y el repaso de estilos.
 

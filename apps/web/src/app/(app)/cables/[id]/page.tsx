@@ -35,6 +35,7 @@ import { hasDrawingImage } from "@/server/drawings/store";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
 import { RouteDrawings } from "@/features/drawings/components/route-drawings";
 import { getRouteSheets } from "@/server/drawings/route-sheets";
+import { Badge } from "@/components/ui/badge";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getCableDetail } from "@/server/cables/detail";
 import { requireUser, whenSignedIn } from "@/server/session";
@@ -129,7 +130,9 @@ export default async function CablePage({
           connectionStatus={cable.connectionStatus}
           testStatus={cable.testStatus}
           showUntested
-        />
+        >
+          {cable.excelOnly ? <Badge variant="outline">Solo datos del Excel</Badge> : null}
+        </CableStatusBadges>
       </header>
 
       {cable.deleted ? (
