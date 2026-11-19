@@ -165,6 +165,11 @@
   display: none;
 }
 
+/* Margen del papel: sin él, algunos navegadores (y el PDF) pegan los códigos al borde. */
+@page {
+  margin: 15mm;
+}
+
 @media print {
   html.printing-selection {
     color-scheme: light;
