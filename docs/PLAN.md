@@ -978,14 +978,45 @@ proyecto llega en dos Excel (eléctrico e instrumentación) que se actualizan ca
   metros reales (solo el Excel eléctrico; por tramo y en total). Con metros reales, la ficha
   muestra «Longitud prevista» y «Longitud real»; sin ellos, solo «Longitud».
 
+### Plan final (2026-11-19)
+
+Cambios visuales (ficha, «Subir Excel del día», «Pendientes de revisar», panel): primero
+capturas y visto bueno del usuario; después los E2E y el PR.
+
+- **Carga del proyecto**: lo que tiene ese origen no se ve en la actividad, el historial de la
+  ficha ni la última acción de la tabla. `HISTORY_START` se mantiene como opción: valen las dos.
+- **Estados**: nuevo «No tendido»; «En almacén» y «Enrollado» pasan a él con una migración.
+  «Sin revisar» se queda para los cables que no salen en ningún Excel; el Excel los pasa a
+  Tendido o No tendido. Desaparecen «Enrollar» y «Mover» con sus permisos; la ubicación actual
+  queda sin uso y no se borra nada. Los eventos antiguos conservan su texto.
+- **Lector**: función pura en `packages/shared`. Columnas por nombre con alternativas, sin
+  importar mayúsculas, espacios ni tildes. Traducción del estado del Excel: No Tendido → No
+  tendido; Tendido → Tendido sin conectar; Conectado Origen / Destino → Tendido y conectado en
+  esa punta; Conectado → Tendido y conectado. Metros reales por tramo = metros reales / número
+  de secciones.
+- **Qué actualiza el Excel** en un cable que ya existe: estado, conexión, fecha de tendido,
+  empresa, bobina y metros reales; nunca origen, destino, tipo ni longitud del listado. Los
+  cables que no salen en el Excel no se tocan, y cada Excel solo afecta a su disciplina.
+- **Discrepancia**: una persona marcó algo en la web antes de la fecha del Excel y el Excel lo
+  contradice; si lo marcó después, no cuenta. Nunca se cierran solas: si un Excel posterior ya
+  coincide, solo se avisa con su fecha. Decisiones: «Mantener lo de la web» o «Aceptar lo del
+  Excel», en el historial con quién decidió y qué corrige.
+- **Cables nuevos**: se crean con lo del Excel y llevan la etiqueta «Solo datos del Excel».
+- **Subida**: `read-excel-file` en el navegador (medir antes con el Excel real); fecha del Excel
+  sacada del nombre del archivo y editable; permiso propio; vista previa con Cambios, Nuevos y
+  Discrepancias; las filas desmarcadas no se aplican y vuelven con el siguiente Excel; un Excel
+  nuevo sustituye a la vista previa guardada; se aplica por lotes. «Carga del proyecto», solo
+  para administradores, es la primera carga.
+
 ### Tareas
 
 - [ ] Ocultar la carga del proyecto por su origen en todas las vistas.
-- [ ] Estados finales: migración de «En almacén» y «Enrollado» a «No tendido».
+- [ ] Estados finales: «No tendido», migración, fuera «Enrollar» y «Mover».
 - [ ] Lector de los dos Excel por nombre de columna, con sus tests (datos inventados).
-- [ ] Empresa, bobina y metros reales en el cable y su ficha.
+- [ ] Empresa, bobina, metros reales y fecha real de tendido en el cable y su ficha.
+- [ ] Modelo y servicio de importación: cambios, cables nuevos, discrepancias, por lotes.
+- [ ] «Subir Excel del día»: vista previa guardada, desmarcar filas, aplicar o descartar.
 - [ ] Primera carga como carga del proyecto, sin que se vea.
-- [ ] «Subir Excel del día»: vista previa guardada, desmarcar filas, cables nuevos.
 - [ ] «Pendientes de revisar» con su historial.
 - [ ] Panel: avance de tendido y conexión, fecha del último Excel, pendientes de revisar.
 - [ ] Tests, E2E y manual de usuario.
