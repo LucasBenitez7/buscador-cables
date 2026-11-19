@@ -114,7 +114,7 @@ export async function saveItemsAction(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, message: firstIssue(parsed.error) };
   try {
     const { saved, folders } = await saveItems(userId, parsed.data);
-    revalidatePath(SAVED_PATH, "layout");
+    // Sin revalidar: se guarda desde fichas y listas, que no cambian, y «Guardados» es dinámica.
     if (folders.length === 0) return { ok: true, message: "Guardados actualizados." };
     const what =
       saved === 1

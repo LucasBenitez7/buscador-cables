@@ -1,7 +1,6 @@
 "use client";
 
 import { BookmarkIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useId, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import type { SavedKind, SavedRef } from "@cables/shared";
 import { SECTION_LINK } from "@/components/detail";
@@ -27,7 +26,6 @@ type Props = {
  * ticked when only some are), and a new folder. Ticking adds, unticking takes out.
  */
 export function SaveDialog({ refs, what, trigger, onSaved }: Props) {
-  const router = useRouter();
   const formId = useId();
   const [open, setOpen] = useState(false);
   const [folders, setFolders] = useState<FolderChoice[] | null>(null);
@@ -76,7 +74,6 @@ export function SaveDialog({ refs, what, trigger, onSaved }: Props) {
       if (result.ok) {
         setOpen(false);
         onSaved?.(result.message);
-        router.refresh();
       }
     });
   };
