@@ -92,6 +92,10 @@ describe("readExcelFile", () => {
     expect(
       await readExcelFile(file("ic.xlsx"), sheets({ ...main, Table: [["CABLE TAG", "DATE"]] })),
     ).toEqual({ ok: false, message: "Faltan columnas en la hoja «Table»: PULLED [m]." });
+    // Si también fallan las columnas de la hoja principal, se dice eso primero.
+    expect(
+      await readExcelFile(file("ic.xlsx"), sheets({ "Tabl IC Maestra": [["TAG", "Fecha"]] })),
+    ).toEqual({ ok: false, message: expect.stringContaining("«Tabl IC Maestra»: ESTADO") });
   });
 
   it("says which columns are missing, and that the sheet is not there", async () => {

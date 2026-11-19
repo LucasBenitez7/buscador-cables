@@ -125,6 +125,6 @@ export async function decideDiscrepanciesAction(input: unknown) {
 export async function markDiscrepanciesSeenAction(): Promise<void> {
   const auth = await authorize("cable:correct");
   if (!auth.ok) return;
-  await markDiscrepanciesSeen(auth.user.id);
-  revalidatePath("/", "layout");
+  // Only when the warnings change: otherwise the page would be rendered twice on every visit.
+  if (await markDiscrepanciesSeen(auth.user.id)) revalidatePath("/", "layout");
 }

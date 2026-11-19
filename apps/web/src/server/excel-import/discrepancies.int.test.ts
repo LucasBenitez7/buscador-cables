@@ -95,6 +95,7 @@ describe("listDiscrepancies", () => {
     expect(list.items[0]).toMatchObject({
       cable: { code: "ZZ-1" },
       web: "Tendido",
+      webBefore: null,
       webBy: "Tomás",
       webAt: "12/11/26, 10:00",
       excel: "No tendido",
@@ -192,13 +193,45 @@ describe("decideDiscrepancy", () => {
     ).rejects.toThrow("no existe");
   });
 
-  it("refuses to accept the Excel on a cable removed in the web", async () => {
+  it("refuses to accept the Excel on a cable removed in the web, and keeping it touches nothing", async () => {
     const { cable, discrepancy } = await contradicted();
     await prisma.cable.update({ where: { id: cable.id }, data: { deletedAt: new Date() } });
 
     await expect(
       decideDiscrepancy(supervisor, { id: discrepancy.id, decision: "ACCEPT_EXCEL" }),
     ).rejects.toThrow("dado de baja");
+    await decideDiscrepancy(supervisor, { id: discrepancy.id, decision: "KEEP_WEB" });
+
+    expect(await prisma.cable.findUniqueOrThrow({ where: { id: cable.id } })).toMatchObject({
+      version: cable.version,
+      lastAction: null,
+    });
+    expect(await prisma.cableEvent.count({ where: { action: "EXCEL_REVIEWED" } })).toBe(0);
+    expect(
+      await prisma.cableDiscrepancy.findUniqueOrThrow({ where: { id: discrepancy.id } }),
+    ).toMatchObject({ status: "KEPT_WEB", decisionEventId: null });
+  });
+
+  it("shows the state the cable has now when somebody changed it after the discrepancy", async () => {
+    const { cable, discrepancy } = await contradicted();
+    await prisma.cable.update({
+      where: { id: cable.id },
+      data: { connectionStatus: "CONNECTED", version: { increment: 1 } },
+    });
+
+    expect((await listDiscrepancies({})).items[0]).toMatchObject({
+      web: "Tendido · Conectado",
+      webBefore: "Tendido",
+    });
+    // Con «Seleccionar todas» no se acepta sin mirarla; desde su tarjeta, sí.
+    const all = await decideDiscrepancies(supervisor, { all: true, decision: "ACCEPT_EXCEL" });
+    expect(all.decided).toBe(0);
+    expect(all.failed[0]!.message).toContain("cambió en la web después");
+    await decideDiscrepancy(supervisor, { id: discrepancy.id, decision: "ACCEPT_EXCEL" });
+    expect(await prisma.cable.findUniqueOrThrow({ where: { id: cable.id } })).toMatchObject({
+      installationStatus: "NOT_LAID",
+      connectionStatus: "DISCONNECTED",
+    });
   });
 });
 
@@ -215,6 +248,20 @@ describe("new since the last visit", () => {
 
     await contradicted("ZZ-2");
     expect(await countNewDiscrepancies(supervisor.id)).toBe(1);
+  });
+
+  it("does not warn again when a later Excel contradicts or agrees with a pending one", async () => {
+    await contradicted("ZZ-1");
+    expect(await markDiscrepanciesSeen(supervisor.id)).toBe(true);
+    expect(await markDiscrepanciesSeen(supervisor.id)).toBe(false);
+
+    // El Excel del día siguiente dice lo mismo: sigue pendiente, pero no es nueva.
+    await applyExcel([notLaid("ZZ-1")], "2026-11-17");
+    expect(await countNewDiscrepancies(supervisor.id)).toBe(0);
+    // Y el siguiente ya coincide con la web: solo se avisa en la tarjeta.
+    await applyExcel([{ ...notLaid("ZZ-1"), installationStatus: "LAID" }], "2026-11-18");
+    expect(await countNewDiscrepancies(supervisor.id)).toBe(0);
+    expect((await listDiscrepancies({})).items[0]!.agreesOn).toBe("18/11/2026");
   });
 });
 

@@ -9,6 +9,7 @@ import {
   excelPreviewStartSchema,
   excelRowSelectionSchema,
   excelStatusRowSchema,
+  formatExcelDay,
   hasPermission,
   planExcelRow,
   type ExcelCableSnapshot,
@@ -261,6 +262,17 @@ export async function startExcelPreview(actor: Actor, rawInput: unknown): Promis
           "Ya se han aplicado Excel del día de este tipo: la carga del proyecto es solo la primera.",
         );
       }
+    }
+    // An older file would undo what a newer one already applied: the Excel marks no person.
+    const latest = await tx.excelImport.findFirst({
+      where: { kind: input.kind, status: "APPLIED" },
+      orderBy: { excelDate: "desc" },
+      select: { excelDate: true },
+    });
+    if (latest && dayOf(latest.excelDate)! > input.excelDate) {
+      throw new ExcelImportError(
+        `Ya se aplicó el Excel del ${formatExcelDay(dayOf(latest.excelDate)!)} de este tipo: no se puede aplicar uno anterior. Revisa la fecha.`,
+      );
     }
     const now = new Date();
     await tx.excelImport.updateMany({
@@ -589,18 +601,28 @@ async function createCable(
 ) {
   const { tx, now, source, uploadedById, importId } = context;
   const data = await cableData(tx, context.companies, changes);
-  const cable = await tx.cable.create({
-    data: {
-      ...(data as Prisma.CableUncheckedCreateInput),
-      code: row.code,
-      excelOnly: true,
-      lastAction: "CREATED",
-      lastActionById: uploadedById,
-      lastActionAt: now,
-      lastActionSource: source,
-    },
-    select: { id: true },
-  });
+  const cable = await tx.cable
+    .create({
+      data: {
+        ...(data as Prisma.CableUncheckedCreateInput),
+        code: row.code,
+        excelOnly: true,
+        lastAction: "CREATED",
+        lastActionById: uploadedById,
+        lastActionAt: now,
+        lastActionSource: source,
+      },
+      select: { id: true },
+    })
+    .catch((error: unknown) => {
+      // Somebody registered it in the web meanwhile: the next try sees it as a change.
+      if (isUniqueViolation(error)) {
+        throw new ExcelImportError(
+          `El cable ${row.code} se ha dado de alta en la web mientras se aplicaba el Excel. Vuelve a pulsar «Aplicar» para seguir.`,
+        );
+      }
+      throw error;
+    });
   await tx.cableEvent.create({
     data: {
       cableId: cable.id,

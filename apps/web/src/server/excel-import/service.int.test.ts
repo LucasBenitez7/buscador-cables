@@ -429,6 +429,29 @@ describe("applyExcelBatch", () => {
     expect((await cableOf("ZZ-1")).installationStatus).toBe("LAID");
   });
 
+  it("refuses an Excel older than the last one applied of its kind, not the same day", async () => {
+    await newCable("ZZ-1");
+    await applyAll(
+      supervisor,
+      (await createExcelPreview(supervisor, input([row("ZZ-1")]))).importId,
+    );
+
+    await expect(
+      createExcelPreview(supervisor, input([row("ZZ-1")], { excelDate: "2026-11-15" })),
+    ).rejects.toThrow("Ya se aplicó el Excel del 16/11/2026 de este tipo");
+    // El mismo día (un archivo corregido) y el otro tipo de Excel, sí.
+    await expect(createExcelPreview(supervisor, input([row("ZZ-1")]))).resolves.toBeDefined();
+    await expect(
+      createExcelPreview(
+        supervisor,
+        input([row("ZZ-1", { connectionStatus: null, sections: null })], {
+          kind: "INSTRUMENTATION",
+          excelDate: "2026-11-15",
+        }),
+      ),
+    ).resolves.toBeDefined();
+  });
+
   it("discards a preview without applying anything", async () => {
     await newCable("ZZ-1");
     const { importId } = await createExcelPreview(supervisor, input([row("ZZ-1")]));

@@ -228,7 +228,8 @@ día. Se suben desde **Gestión → Excel del día** (supervisor y administrador
 
 1. **Elige el archivo.** El navegador lo lee y reconoce si es el eléctrico o el de
    instrumentación por su hoja. Propone la **fecha del Excel** sacada del nombre del archivo;
-   cámbiala si no es la buena. Si falta alguna columna, lo dice y no aplica nada.
+   cámbiala si no es la buena. Si falta alguna columna, lo dice y no aplica nada. No se puede
+   subir un Excel con fecha anterior al último aplicado de su tipo (desharía lo más nuevo).
 2. **Preparar vista previa.** No cambia ningún cable todavía. Enseña, en pestañas:
    - **Cambios**: lo que cambia en cables que ya están en la web.
    - **Nuevos**: cables que están en el Excel y no en la web. Se crean con lo que trae el Excel
@@ -243,9 +244,9 @@ día. Se suben desde **Gestión → Excel del día** (supervisor y administrador
 tendido, la empresa, la bobina y los metros reales. Nunca el origen, el destino, el tipo ni la
 longitud del listado. En instrumentación, los metros reales salen de la hoja «Table» (los
 metros tendidos de cada tirada); si un cable aparece dos veces, vale la tirada más nueva. Una
-**celda vacía no borra** lo que ya tiene el cable. Las filas con
-estados que no se usan («Check», «Error»…) se ignoran. Los cables que no salen en el Excel no se
-tocan. En el historial, lo del Excel sale con su fecha y quién lo subió.
+**celda vacía no borra** lo que ya tiene el cable. Las filas con estados que no se usan
+(«Check», «Error»…) se ignoran. Los cables que no salen en el Excel no se tocan. En el
+historial, lo del Excel sale con su fecha y quién lo subió.
 
 **Carga del proyecto** (solo administrador): la primera vez, la casilla «Carga del proyecto»
 aplica el Excel sin discrepancias y sin que se vea en la actividad ni en los historiales. Deja de
@@ -262,8 +263,11 @@ Excel o después, cuenta lo de la web y no hay discrepancia.
 - En **Gestión → Pendientes de revisar** (quien puede corregir movimientos) cada una enseña
   lado a lado lo de la web, con quién y cuándo, y lo del Excel con su fecha. Debajo de cada
   lado, su botón: **Mantener lo de la web** o **Aceptar lo del Excel**.
+- Si alguien **cambió el cable en la web después**, la tarjeta lo avisa («Cambiado en la web
+  después»), enseña su estado de ahora y, debajo, lo que decía antes.
 - **Varias a la vez**: marca las casillas, o «Seleccionar todas» (todas las pendientes, no solo
-  las de la página), y elige la decisión para todas.
+  las de la página), y elige la decisión para todas. Con «Seleccionar todas» no se acepta lo
+  del Excel en los cables cambiados después: esos se deciden desde su tarjeta.
 - **Nunca se cierran solas.** Si llega otro Excel que la sigue contradiciendo, se actualiza su
   fecha; si ya coincide con la web, lo avisa («El Excel del … ya coincide con la web»).
 - Cada decisión queda en el **historial del cable** con quién decidió, qué Excel era y qué
@@ -271,7 +275,9 @@ Excel o después, cuenta lo de la web y no hay discrepancia.
 - Tras **aceptar lo del Excel**, los Excel siguientes actualizan el estado sin preguntar. Tras
   **mantener lo de la web**, un Excel posterior que lo contradiga abre otra discrepancia.
 - El número junto a «Pendientes de revisar» y el aviso del inicio cuentan solo las **nuevas**
-  desde tu última visita a esa pantalla.
+  (abiertas desde tu última visita a esa pantalla). Que un Excel posterior la vuelva a
+  contradecir no la hace nueva.
+- Un cable **dado de baja** no se toca: «Mantener lo de la web» solo cierra su discrepancia.
 
 ## Administración
 

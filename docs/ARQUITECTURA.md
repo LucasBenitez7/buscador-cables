@@ -363,7 +363,8 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - **Subida por partes**: `startExcelPreview` → `addExcelPreviewPart` (1000 filas, unos 250 KB,
   lejos del límite de una Server Action) → `finishExcelPreview`. Mientras llega
   (`UPLOADING`) no se puede aplicar. Un candado por tipo (`pg_advisory_xact_lock`) evita que
-  dos subidas o lotes del mismo Excel se crucen.
+  dos subidas o lotes del mismo Excel se crucen. `startExcelPreview` rechaza un Excel con
+  fecha anterior al último aplicado de su tipo.
 - **Aplicar por lotes** (`applyExcelBatch`, 200 filas por transacción): cada fila se decide
   otra vez contra la base, por si alguien actuó después de la vista previa.
 - Tablas: `ExcelImport` (el Excel, su fecha, quién lo subió y su estado), `ExcelImportRow` (la
@@ -371,7 +372,12 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   acción `EXCEL_UPDATED`; las decisiones, `EXCEL_REVIEWED`. La carga del proyecto usa el origen
   `PROJECT_LOAD`, que no se muestra.
 - **Avisos de lo nuevo**: `User.discrepanciesSeenAt` guarda cuándo abrió cada persona
-  «Pendientes de revisar»; el menú y el inicio solo cuentan lo llegado después.
+  «Pendientes de revisar»; el menú y el inicio solo cuentan las discrepancias creadas después
+  (por `createdAt`: un Excel que vuelve a contradecir una pendiente la actualiza, pero no la
+  hace nueva). La acción que lo marca solo revalida el layout si había algo nuevo.
+- **Decidir** (`decideDiscrepancy`): la lista enseña el estado actual del cable y, si cambió
+  desde la discrepancia, lo que decía antes. Decidiendo todas a la vez (`blind`) no se acepta
+  el Excel en esos cables. En un cable dado de baja no se escribe nada.
 
 ## Marca, cargas y avisos
 

@@ -202,6 +202,7 @@ function DiscrepancyCard({
         <Link href={`/cables/${item.cable.id}`} className={CODE_LINK}>
           {item.cable.code}
         </Link>
+        {item.webBefore ? <Badge variant="warning">Cambiado en la web después</Badge> : null}
         {item.agreesOn ? (
           <Badge variant="info">El Excel del {item.agreesOn} ya coincide con la web</Badge>
         ) : null}
@@ -211,7 +212,11 @@ function DiscrepancyCard({
         <Side
           label="En la web"
           state={item.web}
-          detail={`${item.webBy} · ${item.webAt}`}
+          detail={
+            item.webBefore
+              ? `Antes: ${item.webBefore} (${item.webBy} · ${item.webAt})`
+              : `${item.webBy} · ${item.webAt}`
+          }
           tone={tone(item, "KEEP_WEB")}
           verdict={item.decision?.kind === "KEEP_WEB" ? DECIDED_LABELS.KEEP_WEB : null}
         />

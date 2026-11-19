@@ -37,6 +37,11 @@ const readWithLibrary: SheetReader = async (file, sheet) => {
   }
 };
 
+const missing = (sheet: string, columns: readonly string[]) => ({
+  ok: false as const,
+  message: `Faltan columnas en la hoja «${sheet}»: ${columns.join(", ")}.`,
+});
+
 /** The real metres of a kind that keeps them in another sheet; a message when they cannot be read. */
 async function readLengths(
   file: File,
@@ -49,12 +54,7 @@ async function readLengths(
     const table = await readSheet(file, sheet);
     if (!table) continue;
     const result = readExcelLengths(kind, table);
-    if (!result.ok) {
-      return {
-        ok: false,
-        message: `Faltan columnas en la hoja «${sheet}»: ${result.missingColumns.join(", ")}.`,
-      };
-    }
+    if (!result.ok) return missing(sheet, result.missingColumns);
     return { ok: true, lengths: result.lengths };
   }
   return {
@@ -76,15 +76,13 @@ export async function readExcelFile(
       for (const sheet of EXCEL_SHEETS[kind].sheetNames) {
         const table = await readSheet(file, sheet);
         if (!table) continue;
+        // The columns of the main sheet first: its header alone says what is missing.
+        const columns = readExcelStatus(kind, table.slice(0, 1));
+        if (!columns.ok) return missing(sheet, columns.missingColumns);
         const lengths = await readLengths(file, kind, readSheet);
         if (!lengths.ok) return lengths;
         const result = readExcelStatus(kind, table, lengths.lengths);
-        if (!result.ok) {
-          return {
-            ok: false,
-            message: `Faltan columnas en la hoja «${sheet}»: ${result.missingColumns.join(", ")}.`,
-          };
-        }
+        if (!result.ok) return missing(sheet, result.missingColumns);
         return {
           ok: true,
           kind,

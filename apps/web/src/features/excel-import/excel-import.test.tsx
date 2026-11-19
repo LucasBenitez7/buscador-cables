@@ -221,16 +221,33 @@ describe("DecisionButtons", () => {
 });
 
 describe("DiscrepancyList", () => {
-  const item = (id: string, code: string) => ({
+  const item = (id: string, code: string, webBefore: string | null = null) => ({
     id,
     cable: { id: `c-${id}`, code },
     web: "Tendido",
+    webBefore,
     webBy: "Tomás",
     webAt: "12/11/26, 10:30",
     excel: "No tendido",
     excelDay: "16/11/2026",
     agreesOn: null,
     decision: null,
+  });
+
+  it("says when somebody changed the cable in the web after the discrepancy", () => {
+    render(
+      <DiscrepancyList
+        items={[item("d1", "ZZ-1", "Tendido · Conectado")]}
+        pending
+        total={1}
+        empty="Nada."
+      />,
+    );
+
+    expect(screen.getByText("Cambiado en la web después")).toBeInTheDocument();
+    expect(
+      screen.getByText("Antes: Tendido · Conectado (Tomás · 12/11/26, 10:30)"),
+    ).toBeInTheDocument();
   });
 
   it("decides every pending one batch by batch and keeps the result on the screen", async () => {
