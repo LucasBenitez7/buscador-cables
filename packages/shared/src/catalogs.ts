@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 /**
- * Administrable catalogs used by the cable form: cable types ("Potencia",
- * "Control"…), colors (with an optional hex swatch) and manufacturers.
+ * Administrable catalogs: cable types ("Potencia", "Control"…), colors (with an optional hex
+ * swatch), manufacturers and the companies that lay the cables (fase 14, from the Excel).
  */
-export const CATALOG_KINDS = ["cableType", "color", "manufacturer"] as const;
+export const CATALOG_KINDS = ["cableType", "company", "color", "manufacturer"] as const;
 
 export type CatalogKind = (typeof CATALOG_KINDS)[number];
 
@@ -12,6 +12,7 @@ export const CATALOG_LABELS: Record<CatalogKind, { singular: string; plural: str
   cableType: { singular: "Tipo de cable", plural: "Tipos de cable" },
   color: { singular: "Color", plural: "Colores" },
   manufacturer: { singular: "Fabricante", plural: "Fabricantes" },
+  company: { singular: "Empresa", plural: "Empresas" },
 };
 
 const catalogNameSchema = z

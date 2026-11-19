@@ -315,3 +315,49 @@ function isoDay(year: number, month: number, dayOfMonth: number): string | null 
   if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== dayOfMonth) return null;
   return date.toISOString().slice(0, 10);
 }
+
+// ---------------------------------------------------------------------------
+// How the cable record shows it
+// ---------------------------------------------------------------------------
+
+/** "2026-07-11" → "11/07/2026": dates of the Excel, always with the day, never "hoy". */
+export function formatExcelDay(day: string): string {
+  const [year, month, dayOfMonth] = day.split("-");
+  return `${dayOfMonth}/${month}/${year}`;
+}
+
+const metres = (value: number) => `${String(value).replace(".", ",")} m`;
+
+/**
+ * The length rows of a cable: «Longitud» alone, or «Longitud prevista» and «Longitud real»
+ * when the Excel brings the real metres. A circuit of several sections says the metres of
+ * each cable and of the whole circuit.
+ */
+export function cableLengthItems(cable: {
+  lengthM: number | null;
+  lengthPending: boolean;
+  actualLengthM: number | null;
+  actualLengthTotalM: number | null;
+  actualSections: number | null;
+}): { label: string; value: string | null }[] {
+  const planned =
+    cable.lengthM === null && !cable.lengthPending
+      ? null
+      : `${cable.lengthM === null ? "Sin longitud" : metres(cable.lengthM)}${cable.lengthPending ? " (pendiente)" : ""}`;
+  if (cable.actualLengthM === null) return [{ label: "Longitud", value: planned }];
+  const sections = cable.actualSections ?? 1;
+  const real =
+    sections > 1 && cable.actualLengthTotalM !== null
+      ? `${metres(cable.actualLengthM)} por tramo · ${metres(cable.actualLengthTotalM)} en total, ${sections} tramos`
+      : metres(cable.actualLengthM);
+  return [
+    { label: "Longitud prevista", value: planned },
+    { label: "Longitud real", value: real },
+  ];
+}
+
+/** "B-101 · En obra": the reel and its state, whichever the Excel brings. */
+export function reelText(reel: string | null, reelStatus: string | null): string | null {
+  const parts = [reel, reelStatus].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(" · ") : null;
+}

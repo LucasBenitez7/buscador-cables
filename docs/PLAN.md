@@ -1013,7 +1013,7 @@ capturas y visto bueno del usuario; después los E2E y el PR.
 - [x] Ocultar la carga del proyecto por su origen en todas las vistas.
 - [x] Estados finales: «No tendido», migración, fuera «Enrollar» y «Mover».
 - [x] Lector de los dos Excel por nombre de columna, con sus tests (datos inventados).
-- [ ] Empresa, bobina, metros reales y fecha real de tendido en el cable y su ficha.
+- [x] Empresa, bobina, metros reales y fecha real de tendido en el cable y su ficha.
 - [ ] Modelo y servicio de importación: cambios, cables nuevos, discrepancias, por lotes.
 - [ ] «Subir Excel del día»: vista previa guardada, desmarcar filas, aplicar o descartar.
 - [ ] Primera carga como carga del proyecto, sin que se vea.

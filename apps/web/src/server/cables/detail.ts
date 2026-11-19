@@ -119,6 +119,18 @@ export type CableDetail = {
   crossSectionMm2: number | null;
   outerDiameterMm: number | null;
   lengthM: number | null;
+  /** What the daily Excel says (fase 14). */
+  excel: {
+    /** Real date of laying, "YYYY-MM-DD". */
+    laidOn: string | null;
+    company: string | null;
+    reel: string | null;
+    reelStatus: string | null;
+    /** Real metres of this cable, of the whole circuit and how many sections it has. */
+    actualLengthM: number | null;
+    actualLengthTotalM: number | null;
+    actualSections: number | null;
+  };
   voltageRating: string | null;
   notes: string | null;
   origin: string | null;
@@ -283,6 +295,7 @@ export async function getCableDetail(
       type: { select: { name: true } },
       color: { select: { name: true, hex: true } },
       manufacturer: { select: { name: true } },
+      company: { select: { name: true } },
       lastActionBy: { select: { name: true } },
       looseEndTray: { select: { code: true } },
       routeSteps: {
@@ -401,6 +414,15 @@ export async function getCableDetail(
     crossSectionMm2: toNumber(cable.crossSectionMm2),
     outerDiameterMm: toNumber(cable.outerDiameterMm),
     lengthM: toNumber(cable.lengthM),
+    excel: {
+      laidOn: cable.laidOn ? cable.laidOn.toISOString().slice(0, 10) : null,
+      company: cable.company?.name ?? null,
+      reel: cable.reel,
+      reelStatus: cable.reelStatus,
+      actualLengthM: toNumber(cable.actualLengthM),
+      actualLengthTotalM: toNumber(cable.actualLengthTotalM),
+      actualSections: cable.actualSections,
+    },
     voltageRating: cable.voltageRating,
     notes: cable.notes,
     origin: location(cable.originId),

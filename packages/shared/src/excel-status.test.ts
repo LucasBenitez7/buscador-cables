@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  cableLengthItems,
   detectExcelKind,
   excelDateFromFileName,
   excelStatusRowSchema,
   findExcelSheet,
+  formatExcelDay,
   normalizeHeader,
   readExcelStatus,
+  reelText,
   type ExcelCell,
 } from "./excel-status";
 
@@ -333,5 +336,45 @@ describe("excelStatusRowSchema", () => {
     ]) {
       expect(excelStatusRowSchema.safeParse({ ...valid, ...wrong }).success).toBe(false);
     }
+  });
+});
+
+describe("cable record texts", () => {
+  const base = {
+    lengthM: 50,
+    lengthPending: false,
+    actualLengthM: null,
+    actualLengthTotalM: null,
+    actualSections: null,
+  };
+
+  it("shows only «Longitud» without real metres", () => {
+    expect(cableLengthItems(base)).toEqual([{ label: "Longitud", value: "50 m" }]);
+    expect(cableLengthItems({ ...base, lengthM: null, lengthPending: true })).toEqual([
+      { label: "Longitud", value: "Sin longitud (pendiente)" },
+    ]);
+  });
+
+  it("shows the planned and the real length when the Excel brings it", () => {
+    expect(cableLengthItems({ ...base, actualLengthM: 52.5, actualSections: 1 })).toEqual([
+      { label: "Longitud prevista", value: "50 m" },
+      { label: "Longitud real", value: "52,5 m" },
+    ]);
+  });
+
+  it("explains the metres of a circuit of several sections", () => {
+    expect(
+      cableLengthItems({ ...base, actualLengthM: 52, actualLengthTotalM: 936, actualSections: 18 }),
+    ).toContainEqual({
+      label: "Longitud real",
+      value: "52 m por tramo · 936 m en total, 18 tramos",
+    });
+  });
+
+  it("writes the dates with their day and joins the reel with its state", () => {
+    expect(formatExcelDay("2026-07-11")).toBe("11/07/2026");
+    expect(reelText("B-101", "En obra")).toBe("B-101 · En obra");
+    expect(reelText(null, "En obra")).toBe("En obra");
+    expect(reelText(null, null)).toBeNull();
   });
 });

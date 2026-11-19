@@ -10,7 +10,7 @@ import {
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "user" CASCADE',
+    'TRUNCATE "cable_event", "cable", "tray", "location", "cable_type", "color", "manufacturer", "company", "user" CASCADE',
   );
 });
 
@@ -108,5 +108,29 @@ describe("catalog service", () => {
     );
 
     expect((await listCatalogs()).manufacturer.map((item) => item.name)).toEqual(["Nexans"]);
+  });
+
+  // Fase 14: la empresa que tendió el cable, que trae el Excel, se edita aquí.
+  it("manages the companies that lay the cables like any other catalog", async () => {
+    const north = await createCatalogItem({
+      kind: "company",
+      name: "Montajes Norte",
+      hex: null,
+    });
+    await expect(
+      createCatalogItem({ kind: "company", name: "montajes norte", hex: null }),
+    ).rejects.toThrow("Ya existe un elemento con ese nombre en empresas.");
+    await updateCatalogItem({
+      kind: "company",
+      id: north.id,
+      name: "Montajes del Norte",
+      hex: null,
+    });
+    await prisma.cable.create({ data: { code: "SH-3", companyId: north.id } });
+
+    expect((await listCatalogs()).company).toEqual([
+      { id: north.id, name: "Montajes del Norte", hex: null, cableCount: 1 },
+    ]);
+    await expect(deleteCatalogItem("company", north.id)).rejects.toThrow(/lo usa 1 cable/);
   });
 });

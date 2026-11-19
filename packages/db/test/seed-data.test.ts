@@ -179,4 +179,22 @@ describe("generateSeedData", () => {
       expect(color.hex).toMatch(/^#[0-9A-F]{6}$/);
     }
   });
+
+  // Fase 14: lo que trae el Excel diario, solo en los cables tendidos.
+  it("fills the Excel data only on laid cables, and the real metres only on electrical ones", () => {
+    const companies = new Set(data.companies.map((company) => company.id));
+    const withExcel = data.cables.filter((cable) => cable.laidOn !== null);
+
+    expect(withExcel.length).toBeGreaterThan(1000);
+    for (const cable of data.cables) {
+      const laid = ["LAID", "PARTIALLY_LAID"].includes(cable.installationStatus);
+      if (!laid) expect(cable.laidOn).toBeNull();
+      if (cable.companyId) expect(companies).toContain(cable.companyId);
+      if (cable.actualLengthM !== null) {
+        expect(cable.level).not.toBe("L1");
+        expect(cable.actualLengthTotalM).toBe(cable.actualLengthM * (cable.actualSections ?? 1));
+      }
+    }
+    expect(data.cables.some((cable) => (cable.actualSections ?? 0) > 1)).toBe(true);
+  });
 });

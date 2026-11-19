@@ -247,6 +247,17 @@ model Manufacturer {
   @@map("manufacturer")
 }
 
+/// Empresa que tendió el cable (fase 14): la trae el Excel diario y se edita en Catálogos.
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cables    Cable[]
+
+  @@map("company")
+}
+
 // ---------------------------------------------------------------------------
 // Cables y trazabilidad (fases 3 a 5)
 // ---------------------------------------------------------------------------
@@ -337,10 +348,24 @@ model Cable {
   outerDiameterMm  Decimal?      @db.Decimal(8, 2)
   lengthM          Decimal?      @db.Decimal(10, 2)
   voltageRating    String?
-  originId         String?
-  origin           Location?     @relation("CableOrigin", fields: [originId], references: [id], onDelete: Restrict)
-  destinationId    String?
-  destination      Location?     @relation("CableDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+
+  // Lo que trae el Excel diario (fase 14).
+  /// Fecha real de tendido según el Excel.
+  laidOn             DateTime? @db.Date
+  companyId          String?
+  company            Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// Bobina de la que salió y su estado ("En obra"…), tal como los escribe el Excel.
+  reel               String?
+  reelStatus         String?
+  /// Metros reales de este cable (un tramo del circuito) y del circuito entero, y en cuántos
+  /// tramos se reparte (solo el Excel eléctrico).
+  actualLengthM      Decimal?  @db.Decimal(10, 2)
+  actualLengthTotalM Decimal?  @db.Decimal(10, 2)
+  actualSections     Int?
+  originId           String?
+  origin             Location? @relation("CableOrigin", fields: [originId], references: [id], onDelete: Restrict)
+  destinationId      String?
+  destination        Location? @relation("CableDestination", fields: [destinationId], references: [id], onDelete: Restrict)
 
   // Extremos tal y como vienen en los listados. `originId`/`destinationId` apuntan a la sala
   // o al edificio; aquí va el equipo exacto.
@@ -411,6 +436,7 @@ model Cable {
   @@index([typeId])
   @@index([colorId])
   @@index([manufacturerId])
+  @@index([companyId])
   @@index([lastActionById, lastActionAt])
   @@index([level])
   @@index([looseEndTrayId])
