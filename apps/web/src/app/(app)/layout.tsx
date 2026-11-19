@@ -18,7 +18,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const toReview = canReview ? await countNewDiscrepancies(user.id) : 0;
 
   // Cada uno ve solo las secciones que su rol permite.
-  const seesTeamActivity = hasPermission(user, "activity:view");
   const items: NavItem[] = [
     { href: "/", label: "Inicio", match: "exact" },
     { href: "/cables", label: "Cables", match: "prefix" },
@@ -26,13 +25,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     { href: "/equipment", label: "Equipos", match: "prefix" },
     { href: "/locations", label: "Ubicaciones", match: "prefix" },
     { href: "/saved", label: "Guardados", match: "prefix" },
-    // Quien ve la de todos tiene la suya en su menú; el resto, en la fila principal.
-    ...(seesTeamActivity
-      ? [
-          { href: "/activity", label: "Actividad", match: "exact" } as const,
-          { href: "/activity/me", label: "Mi actividad", match: "prefix", place: "user" } as const,
-        ]
-      : [{ href: "/activity/me", label: "Mi actividad", match: "prefix" } as const]),
+    // Una sola «Actividad» para todos: quien ve la de todos elige la persona con sus filtros.
+    { href: "/activity", label: "Actividad", match: "prefix" },
     ...(hasPermission(user, "import:run")
       ? [{ href: "/import", label: "Excel del día", match: "prefix", place: "manage" } as const]
       : []),

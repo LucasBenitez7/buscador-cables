@@ -41,9 +41,9 @@ test.describe("técnico", () => {
 
     await page
       .getByRole("navigation", { name: "Principal" })
-      .getByRole("link", { name: "Mi actividad" })
+      .getByRole("link", { name: "Actividad", exact: true })
       .click();
-    await expect(page.getByRole("heading", { name: "Mi actividad" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Actividad" })).toBeVisible();
     await expect(page.getByRole("link", { name: code, exact: true })).toHaveCount(4);
   });
 
@@ -169,7 +169,7 @@ test.describe("supervisor", () => {
       .getByRole("navigation", { name: "Principal" })
       .getByRole("link", { name: "Actividad", exact: true })
       .click();
-    await expect(page.getByRole("heading", { name: "Actividad reciente" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Actividad" })).toBeVisible();
     const entries = page.getByRole("listitem").filter({ hasText: USERS.supervisor.name });
     await expect(entries.filter({ hasText: code })).toHaveCount(2);
   });

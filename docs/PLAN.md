@@ -1052,7 +1052,7 @@ y después) y se aplica cuando el usuario da el visto bueno.
 - [x] «Seleccionar todos» sin guion: vacía o marcada.
 - [x] Ficha de ubicación: con más cables de los que trae, «Ver los N cables en el buscador»
       con el total real (decidido con el usuario: el listado de Ubicaciones se queda igual).
-- [ ] Una sola «Actividad» en el menú; quien ve la de todos filtra por persona.
+- [x] Una sola «Actividad» en el menú; quien ve la de todos filtra por persona.
 - [ ] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».
 - [ ] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
 - [ ] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.

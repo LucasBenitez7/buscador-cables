@@ -1,39 +1,16 @@
-import type { Metadata } from "next";
-import { parseActivitySearch } from "@cables/shared";
-import { ActivityFilters } from "@/features/activity/components/activity-filters";
-import { PendingListProvider, PendingResults } from "@/components/pending-list";
-import { ActivityList } from "@/features/activity/components/activity-list";
-import { listActivity } from "@/server/activity/service";
+import { redirect } from "next/navigation";
+import { hasPermission } from "@cables/shared";
 import { requireUser } from "@/server/session";
 
-export const metadata: Metadata = { title: "Mi actividad" };
-export const dynamic = "force-dynamic";
-
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-/** The current user's own field actions. The person is never taken from the URL. */
-export default async function MyActivityPage({ searchParams }: { searchParams: SearchParams }) {
+/**
+ * «Mi actividad» is now «Actividad» (fase 17). Old links land on the person's own activity:
+ * filtered by «Yo» for who sees everyone's, and the page as is for everybody else.
+ */
+export default async function MyActivityPage() {
   const user = await requireUser();
-  const { actor: _ignored, ...search } = parseActivitySearch(await searchParams);
-  const activity = await listActivity({ ...search, actor: user.id });
-
-  return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Mi actividad</h1>
-        <p className="text-muted-foreground text-sm">Lo que has registrado tú en los cables.</p>
-      </div>
-      <PendingListProvider>
-        <ActivityFilters basePath="/activity/me" search={search} />
-        <PendingResults>
-          <ActivityList
-            basePath="/activity/me"
-            search={search}
-            activity={activity}
-            showUser={false}
-          />
-        </PendingResults>
-      </PendingListProvider>
-    </div>
+  redirect(
+    hasPermission(user, "activity:view")
+      ? `/activity?actor=${encodeURIComponent(user.id)}`
+      : "/activity",
   );
 }

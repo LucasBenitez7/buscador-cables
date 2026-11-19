@@ -14,8 +14,8 @@ test("el menú se abre, marca la sección actual y se cierra al navegar", async 
   await expect(menu.getByRole("link", { name: "Cables" })).toHaveAttribute("aria-current", "page");
   await expect(menu.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
 
-  await menu.getByRole("link", { name: "Mi actividad" }).click();
-  await expect(page.getByRole("heading", { name: "Mi actividad" })).toBeVisible();
+  await menu.getByRole("link", { name: "Actividad", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Actividad" })).toBeVisible();
   await expect(menu).toBeHidden();
 });
 
