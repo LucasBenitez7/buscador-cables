@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EQUIPMENT_LIST_SORT_LABELS, optionsOf, parseEquipmentListSearch } from "@cables/shared";
+import {
+  EQUIPMENT_LIST_SORT_LABELS,
+  optionsOf,
+  parseEquipmentListSearch,
+  type EquipmentListSort,
+} from "@cables/shared";
 import { ListToolbar } from "@/components/list-toolbar";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import {
@@ -10,13 +15,21 @@ import {
   SelectionProvider,
 } from "@/components/selection";
 import { equipmentHref } from "@/lib/links";
-import { EQUIPMENT_MAX, searchEquipment } from "@/server/equipment/service";
+import { EQUIPMENT_LIMIT, EQUIPMENT_MAX, searchEquipment } from "@/server/equipment/service";
 import { requireUser } from "@/server/session";
 
 export const metadata: Metadata = { title: "Equipos" };
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/** Which equipment the list shows when there are more than it can: the first in the order. */
+const SHOWN_FIRST: Record<EquipmentListSort, string> = {
+  cables: "con más cables",
+  "cables-asc": "con menos cables",
+  name: "primeros por código (A-Z)",
+  "name-desc": "primeros por código (Z-A)",
+};
 
 /** Find a cabinet, box or panel to see every cable that lands in it (fase 11). */
 export default async function EquipmentSearchPage({
@@ -32,11 +45,13 @@ export default async function EquipmentSearchPage({
   // Lo que se muestra por defecto no cuenta como «puesto»: Limpiar solo si hay algo más.
   const active = Boolean(query || (search.sort && search.sort !== "cables"));
 
+  // Solo se ven los 60 primeros en el orden elegido: el texto dice cuáles son.
+  const which = SHOWN_FIRST[sort];
   const count = query
     ? matches.length === 0
       ? "Ningún equipo contiene ese código."
-      : `${matches.length} ${matches.length === 1 ? "equipo" : "equipos"}${matches.length >= 60 ? " (los 60 con más cables; afina la búsqueda)" : ""}`
-    : "Los equipos con más cables. Escribe un código para buscar uno.";
+      : `${matches.length} ${matches.length === 1 ? "equipo" : "equipos"}${matches.length >= EQUIPMENT_LIMIT ? ` (los ${EQUIPMENT_LIMIT} ${which}; afina la búsqueda)` : ""}`
+    : `Los ${EQUIPMENT_LIMIT} equipos ${which}. Escribe un código para buscar uno.`;
 
   return (
     <div className="space-y-6">

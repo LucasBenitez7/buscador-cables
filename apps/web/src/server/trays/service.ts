@@ -12,6 +12,7 @@ import {
   type InstallationStatus,
   type TrayKind,
   type TraySearch,
+  type TraySort,
 } from "@cables/shared";
 import { hasDrawingImage } from "@/server/drawings/store";
 import { escapeLike } from "@/server/like";
@@ -114,24 +115,42 @@ function trayWhere(search: TraySearch): Prisma.TrayWhereInput {
   };
 }
 
+/** Sorts that rank trays by a count (cables, waiting cables) instead of by code. */
+type RankedSort = "cables" | "cables-asc" | "waiting";
+const isRanked = (sort: TraySort | undefined): sort is RankedSort =>
+  sort === "cables" || sort === "cables-asc" || sort === "waiting";
+
 /**
- * Every tray that matches, most waiting cables first and then by code. Prisma cannot count only
- * the active cables in an `orderBy`, and there are a few hundred trays: they are ranked here.
+ * Every tray that matches, ranked by how many active cables go through it ("cables": most first;
+ * "cables-asc": fewest first) or wait in it ("waiting"), and then by code. Prisma cannot count
+ * only the active cables in an `orderBy`, and there are a few thousand trays: they are ranked here.
  */
-async function trayIdsByWaiting(where: Prisma.TrayWhereInput): Promise<string[]> {
-  const [trays, waiting] = await Promise.all([
+async function rankedTrayIds(where: Prisma.TrayWhereInput, sort: RankedSort): Promise<string[]> {
+  const [trays, rows] = await Promise.all([
     prisma.tray.findMany({ where, select: { id: true, code: true } }),
-    prisma.cable.groupBy({
-      by: ["looseEndTrayId"],
-      where: { ...ACTIVE, looseEndTrayId: { not: null } },
-      _count: { _all: true },
-    }),
+    sort === "waiting"
+      ? prisma.cable
+          .groupBy({
+            by: ["looseEndTrayId"],
+            where: { ...ACTIVE, looseEndTrayId: { not: null } },
+            _count: { _all: true },
+          })
+          .then((groups) => groups.map((row) => [row.looseEndTrayId, row._count._all] as const))
+      : // Como en la lista y la ficha: un recorrido puede nombrar dos veces la misma bandeja.
+        prisma.$queryRaw<{ trayId: string; cables: bigint }[]>`
+          SELECT s."trayId", count(DISTINCT s."cableId") AS cables
+          FROM "cable_route_step" s JOIN "cable" c ON c."id" = s."cableId"
+          WHERE c."deletedAt" IS NULL
+          GROUP BY s."trayId"`.then((groups) =>
+          groups.map((row) => [row.trayId, Number(row.cables)] as const),
+        ),
   ]);
-  const counts = new Map(waiting.map((row) => [row.looseEndTrayId, row._count._all]));
+  const counts = new Map<string | null, number>(rows);
+  const direction = sort === "cables-asc" ? 1 : -1;
   return trays
     .sort(
       (a, b) =>
-        (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0) ||
+        direction * ((counts.get(a.id) ?? 0) - (counts.get(b.id) ?? 0)) ||
         a.code.localeCompare(b.code, "es", { numeric: true }),
     )
     .map((tray) => tray.id);
@@ -147,7 +166,7 @@ export async function searchTrays(
   const pageCount = Math.ceil(total / pageSize);
   const page = Math.min(search.page ?? 1, Math.max(pageCount, 1));
   const start = (page - 1) * pageSize;
-  const ranked = search.sort === "waiting" ? await trayIdsByWaiting(where) : null;
+  const ranked = isRanked(search.sort) ? await rankedTrayIds(where, search.sort) : null;
   const pageIds = ranked?.slice(start, start + pageSize);
   const trays = await prisma.tray.findMany({
     where: pageIds ? { id: { in: pageIds } } : where,
@@ -199,8 +218,8 @@ export async function searchTrayCodes(search: TraySearch): Promise<string[] | nu
   const where = trayWhere(search);
   const total = await prisma.tray.count({ where });
   if (total > SELECT_ALL_MAX) return null;
-  if (search.sort === "waiting") {
-    const ids = await trayIdsByWaiting(where);
+  if (isRanked(search.sort)) {
+    const ids = await rankedTrayIds(where, search.sort);
     const trays = await prisma.tray.findMany({
       where: { id: { in: ids } },
       select: { id: true, code: true },

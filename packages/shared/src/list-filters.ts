@@ -212,9 +212,11 @@ export const parseEquipmentSearch = (params: RawSearchParams): EquipmentSearch =
 // código y el orden.
 // ---------------------------------------------------------------------------
 
-export const EQUIPMENT_LIST_SORTS = ["cables", "name", "name-desc"] as const;
-export const EQUIPMENT_LIST_SORT_LABELS: Record<(typeof EQUIPMENT_LIST_SORTS)[number], string> = {
+export const EQUIPMENT_LIST_SORTS = ["cables", "cables-asc", "name", "name-desc"] as const;
+export type EquipmentListSort = (typeof EQUIPMENT_LIST_SORTS)[number];
+export const EQUIPMENT_LIST_SORT_LABELS: Record<EquipmentListSort, string> = {
   cables: "Más cables primero",
+  "cables-asc": "Menos cables primero",
   name: "Código (A-Z)",
   "name-desc": "Código (Z-A)",
 };
