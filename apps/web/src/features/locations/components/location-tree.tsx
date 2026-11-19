@@ -11,6 +11,8 @@ import {
   type LocationNode,
   type LocationType,
 } from "@cables/shared";
+import { SelectCheckbox } from "@/components/selection";
+import { locationLabel } from "@/lib/location-label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -252,6 +254,7 @@ function TreeItem({
           ) : (
             <span className="w-5 md:w-3" aria-hidden />
           )}
+          <SelectCheckbox item={{ key: node.id, label: locationLabel(node) }} />
           <Badge variant="outline">{LOCATION_TYPE_LABELS[node.type]}</Badge>
           <Link
             href={`/locations/${encodeURIComponent(node.id)}`}

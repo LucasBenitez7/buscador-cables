@@ -11,6 +11,13 @@ import {
   normalizeTrayCode,
 } from "@cables/shared";
 import { DataList, Item, JumpLinks, RecordTitle, Section, SectionLink } from "@/components/detail";
+import { ListSummary } from "@/components/list-summary";
+import {
+  SelectAllRow,
+  SelectCheckbox,
+  SelectionAside,
+  SelectionProvider,
+} from "@/components/selection";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { TrayDrawings } from "@/features/drawings/components/tray-drawings";
@@ -99,7 +106,7 @@ export default async function TrayPage({ params }: { params: Params }) {
         {tray.waitingCables.length === 0 ? (
           <p className="text-muted-foreground text-sm">Ningún cable tiene aquí la punta suelta.</p>
         ) : (
-          <CableList cables={tray.waitingCables} />
+          <CableList title={`Bandeja ${tray.code} · esperando aquí`} cables={tray.waitingCables} />
         )}
       </Section>
 
@@ -107,7 +114,7 @@ export default async function TrayPage({ params }: { params: Params }) {
         {tray.routeCables.length === 0 ? (
           <p className="text-muted-foreground text-sm">Ningún recorrido cargado pasa por aquí.</p>
         ) : (
-          <CableList cables={tray.routeCables} />
+          <CableList title={`Bandeja ${tray.code} · pasan por aquí`} cables={tray.routeCables} />
         )}
       </Section>
 
@@ -131,52 +138,65 @@ export default async function TrayPage({ params }: { params: Params }) {
   );
 }
 
-function CableList({ cables }: { cables: TrayCable[] }) {
+/** One list of cables of the tray, with «Seleccionar» (fase 15). */
+function CableList({ title, cables }: { title: string; cables: TrayCable[] }) {
   return (
-    <ShowMore
-      as="ul"
-      className="bg-card divide-y rounded-lg border"
-      noun="cables"
-      items={cables.map((cable) => (
-        <li
-          key={cable.id}
-          className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
-        >
-          <div className="min-w-0 space-y-0.5">
-            <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
-              {cable.code}
-            </Link>
-            <p className="text-muted-foreground flex flex-wrap gap-x-1.5 text-xs">
-              {cable.level ? (
-                <>
-                  <Link href={levelCablesHref(cable.level)} className={INLINE_LINK}>
-                    {CABLE_LEVEL_LABELS[cable.level]}
+    <SelectionProvider
+      title={title}
+      items={cables.map((cable) => ({ key: cable.id, label: cable.code }))}
+    >
+      <div className="space-y-3">
+        <ListSummary aside={<SelectionAside />}>{null}</ListSummary>
+        <SelectAllRow />
+        <ShowMore
+          as="ul"
+          className="bg-card divide-y rounded-lg border"
+          noun="cables"
+          items={cables.map((cable) => (
+            <li
+              key={cable.id}
+              className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+            >
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <SelectCheckbox item={{ key: cable.id, label: cable.code }} />
+                  <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
+                    {cable.code}
                   </Link>
-                  <span aria-hidden>·</span>
-                </>
-              ) : null}
-              {cable.originEquipment || cable.destinationEquipment ? (
-                <span>
-                  de <EquipmentLink equipment={cable.originEquipment} /> a{" "}
-                  <EquipmentLink equipment={cable.destinationEquipment} />
-                </span>
-              ) : (
-                <span>{cable.description}</span>
-              )}
-            </p>
-            {cable.looseEndHere ? (
-              <p className="text-warning text-xs">
-                Punta de {CABLE_END_SIDE_LABELS[cable.looseEndHere].toLowerCase()} suelta aquí
-              </p>
-            ) : null}
-          </div>
-          <CableStatusBadges
-            installationStatus={cable.installationStatus}
-            connectionStatus={cable.connectionStatus}
-            testStatus={cable.testStatus}
-          />
-        </li>
-      ))}
-    />
+                </div>
+                <p className="text-muted-foreground flex flex-wrap gap-x-1.5 text-xs">
+                  {cable.level ? (
+                    <>
+                      <Link href={levelCablesHref(cable.level)} className={INLINE_LINK}>
+                        {CABLE_LEVEL_LABELS[cable.level]}
+                      </Link>
+                      <span aria-hidden>·</span>
+                    </>
+                  ) : null}
+                  {cable.originEquipment || cable.destinationEquipment ? (
+                    <span>
+                      de <EquipmentLink equipment={cable.originEquipment} /> a{" "}
+                      <EquipmentLink equipment={cable.destinationEquipment} />
+                    </span>
+                  ) : (
+                    <span>{cable.description}</span>
+                  )}
+                </p>
+                {cable.looseEndHere ? (
+                  <p className="text-warning text-xs">
+                    Punta de {CABLE_END_SIDE_LABELS[cable.looseEndHere].toLowerCase()} suelta aquí
+                  </p>
+                ) : null}
+              </div>
+              <CableStatusBadges
+                installationStatus={cable.installationStatus}
+                connectionStatus={cable.connectionStatus}
+                testStatus={cable.testStatus}
+              />
+            </li>
+          ))}
+        />
+      </div>
+    </SelectionProvider>
   );
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { Prisma, prisma } from "@cables/db";
+import { SELECT_ALL_MAX } from "@/server/select-all";
 import {
   SEARCH_PAGE_SIZE,
   VISIBLE_EVENT_SOURCES,
@@ -265,9 +266,6 @@ async function findMatches(
   }
   return found;
 }
-
-/** Most codes «Seleccionar todas» brings in one go: more is not a list anyone prints. */
-export const SELECT_ALL_MAX = 5000;
 
 /**
  * Every code that matches the search, in the order of the list (for «Seleccionar las N que

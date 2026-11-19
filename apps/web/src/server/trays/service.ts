@@ -15,6 +15,7 @@ import {
 } from "@cables/shared";
 import { hasDrawingImage } from "@/server/drawings/store";
 import { escapeLike } from "@/server/like";
+import { SELECT_ALL_MAX } from "@/server/select-all";
 
 export type TrayListItem = {
   code: string;
@@ -188,6 +189,31 @@ export async function searchTrays(
       waiting: tray._count.looseEndCables,
     })),
   };
+}
+
+/**
+ * Every tray code that matches the search, in the order of the list (for «Seleccionar todas
+ * las que cumplen los filtros»). Null when there are more than `SELECT_ALL_MAX`.
+ */
+export async function searchTrayCodes(search: TraySearch): Promise<string[] | null> {
+  const where = trayWhere(search);
+  const total = await prisma.tray.count({ where });
+  if (total > SELECT_ALL_MAX) return null;
+  if (search.sort === "waiting") {
+    const ids = await trayIdsByWaiting(where);
+    const trays = await prisma.tray.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, code: true },
+    });
+    const codeOf = new Map(trays.map((tray) => [tray.id, tray.code]));
+    return ids.flatMap((id) => codeOf.get(id) ?? []);
+  }
+  const trays = await prisma.tray.findMany({
+    where,
+    orderBy: { code: search.sort === "code-desc" ? "desc" : "asc" },
+    select: { code: true },
+  });
+  return trays.map((tray) => tray.code);
 }
 
 const cableSelect = {

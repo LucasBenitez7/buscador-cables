@@ -31,6 +31,10 @@ type SelectionState = {
   /** How many rows are shown now and how many match the filters. */
   shown: number;
   total: number;
+  /** How many are chosen, in every page. */
+  count: number;
+  /** Words of «Seleccionar todas»: a list with filters and pages, or one showing its first rows. */
+  scope: "filters" | "shown";
   /** Only in lists with pages: everything that matches the filters can be chosen at once. */
   everything?: {
     checked: boolean;
@@ -41,6 +45,9 @@ type SelectionState = {
 };
 
 const SelectionContext = createContext<SelectionState | null>(null);
+
+/** Sent when a list starts choosing, so that any other list on the page stops. */
+const START_EVENT = "selection:start";
 
 type Props = {
   /** Heading of the printed sheet («Cables», «Bandeja 99UXA…»). */
@@ -53,6 +60,12 @@ type Props = {
   selectAll?: () => Promise<SelectAllResult>;
   /** The filters (not the page): when it changes, the choice starts again. */
   resetKey?: string;
+  /**
+   * "filters" (default): a list with filters and pages («Seleccionar todas las que cumplen los
+   * filtros»). "shown": a list without filters that shows only its first rows, as a
+   * location's cables («Seleccionar todas»).
+   */
+  scope?: "filters" | "shown";
   children: ReactNode;
 };
 
@@ -68,10 +81,23 @@ export function SelectionProvider({
   total = items.length,
   selectAll,
   resetKey = "",
+  scope = "filters",
   children,
 }: Props) {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Map<string, string>>(() => new Map());
+  // Una ficha puede tener varias listas (bandeja: «Esperando aquí» y «Pasan por aquí»): solo
+  // una elige a la vez, para que no se apilen dos barras.
+  const [id] = useState(() => ({}));
+  useEffect(() => {
+    const onStart = (event: Event) => {
+      if ((event as CustomEvent<object>).detail === id) return;
+      setSelecting(false);
+      setSelected(new Map());
+    };
+    window.addEventListener(START_EVENT, onStart);
+    return () => window.removeEventListener(START_EVENT, onStart);
+  }, [id]);
   const [lastKey, setLastKey] = useState(resetKey);
   if (lastKey !== resetKey) {
     // Otros filtros, otra lista: lo elegido antes ya no cumple necesariamente.
@@ -121,9 +147,14 @@ export function SelectionProvider({
     page,
     togglePage,
     shown: items.length,
+    count: selected.size,
     total,
+    scope,
     everything,
-    start: () => setSelecting(true),
+    start: () => {
+      window.dispatchEvent(new CustomEvent(START_EVENT, { detail: id }));
+      setSelecting(true);
+    },
     isSelected: (key) => selected.has(key),
     toggle: (item) =>
       setSelected((current) => {
@@ -163,6 +194,19 @@ export function SelectionToggle({ className }: { className?: string }) {
 }
 
 /**
+ * What goes to the right of a list's count: «Seleccionar» and, after it, what the list already
+ * had there (the «Por página» picker). The same in every list.
+ */
+export function SelectionAside({ children }: { children?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <SelectionToggle />
+      {children}
+    </div>
+  );
+}
+
+/**
  * The tick of one row, only while choosing. It sits above a card's link (`relative z-10`), so
  * pressing it never opens the card.
  */
@@ -180,22 +224,36 @@ export function SelectCheckbox({ item, className }: { item: SelectionItem; class
   );
 }
 
-/** «Seleccionar todas» as one tick: ticked when the whole page is, half when only some are. */
-function PageCheckbox({ context, className }: { context: SelectionState; className?: string }) {
+/**
+ * «Seleccionar todas», one single tick (decidido el 2026-11-19): in a list with pages it takes
+ * everything that matches the filters, not only the page; otherwise, every row of the list.
+ * Half ticked when only some are chosen.
+ */
+function AllCheckbox({ context, className }: { context: SelectionState; className?: string }) {
+  const { everything } = context;
+  const checked = everything ? everything.checked : context.page === "all";
+  const some = everything ? context.count > 0 && !checked : context.page === "some";
   return (
     <input
       type="checkbox"
-      checked={context.page === "all"}
+      checked={checked}
+      disabled={everything?.loading}
       ref={(input) => {
-        if (input) input.indeterminate = context.page === "some";
+        if (input) input.indeterminate = some;
       }}
-      onChange={context.togglePage}
-      aria-label={
-        context.shown < context.total ? "Seleccionar todas las de esta página" : "Seleccionar todas"
-      }
+      onChange={everything ? everything.toggle : context.togglePage}
+      aria-label={allLabel(context)}
       className={cn("accent-primary size-5 shrink-0 md:size-4", className)}
     />
   );
+}
+
+/** The words of «Seleccionar todas»: with pages and filters, it says it takes every page. */
+function allLabel(context: SelectionState): string {
+  if (context.everything?.loading) return "Seleccionando…";
+  return context.everything && context.scope === "filters"
+    ? "Seleccionar todas las que cumplen los filtros"
+    : "Seleccionar todas";
 }
 
 /** The column of ticks of a table: its header, with «Seleccionar todas», only while choosing. */
@@ -204,50 +262,32 @@ export function SelectHeaderCell() {
   if (!context?.selecting) return null;
   return (
     <th scope="col" className="w-10 px-3 py-2">
-      <PageCheckbox context={context} className="mt-0.5 align-middle" />
+      <AllCheckbox context={context} className="mt-0.5 align-middle" />
     </th>
   );
 }
 
 /**
- * «Seleccionar todas» above a list of cards (or of rows without a table header), only while
- * choosing. The whole line is pressed.
+ * «Seleccionar todas» above a list, only while choosing. The whole line is pressed.
  */
 export function SelectAllRow({ className }: { className?: string }) {
   const context = useContext(SelectionContext);
   if (!context?.selecting || context.shown === 0) return null;
-  const { everything } = context;
-  const line = "flex min-h-10 cursor-pointer items-center gap-3 px-3 py-2";
+  const error = context.everything?.error;
   return (
-    <div className={cn("bg-card divide-y rounded-lg border text-sm font-medium", className)}>
-      {/* Primero todos los resultados y debajo la página (decidido el 2026-11-19). */}
-      {everything ? (
-        <div>
-          <label className={line}>
-            <input
-              type="checkbox"
-              checked={everything.checked}
-              disabled={everything.loading}
-              onChange={everything.toggle}
-              className="accent-primary size-5 shrink-0 md:size-4"
-            />
-            {everything.loading
-              ? "Seleccionando…"
-              : `Seleccionar todas las que cumplen los filtros (${context.total.toLocaleString("es-ES")})`}
-          </label>
-          {everything.error ? (
-            <p role="alert" className="text-destructive px-3 pb-2 text-xs font-normal">
-              {everything.error}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-      <label className={line}>
-        <PageCheckbox context={context} />
-        {context.shown < context.total
-          ? `Seleccionar todas las de esta página (${context.shown.toLocaleString("es-ES")})`
-          : `Seleccionar todas (${context.shown.toLocaleString("es-ES")})`}
+    <div className={cn("bg-card rounded-lg border text-sm font-medium", className)}>
+      <label className="flex min-h-10 cursor-pointer items-center gap-3 px-3 py-2">
+        <AllCheckbox context={context} />
+        {allLabel(context)}
+        {context.everything?.loading
+          ? null
+          : ` (${(context.everything ? context.total : context.shown).toLocaleString("es-ES")})`}
       </label>
+      {error ? (
+        <p role="alert" className="text-destructive px-3 pb-2 text-xs font-normal">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

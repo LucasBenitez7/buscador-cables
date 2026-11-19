@@ -999,9 +999,9 @@ Decisiones (2026-11-19):
 
 - **Elegir**: un botón «Seleccionar» enseña las casillas y una barra fija abajo con cuántas
   hay, «Copiar» e «Imprimir». Sin él, la lista se ve y se pulsa como siempre.
-- **Seleccionar todas**: marca la página; si hay más, ofrece «Seleccionar las N que cumplen los
-  filtros» (las da el servidor). Lo elegido se mantiene al cambiar de página y se vacía al
-  cambiar los filtros.
+- **Seleccionar todas**: una sola casilla, encima de la lista (y en la cabecera de la tabla).
+  En una lista con páginas elige todo lo que cumple los filtros, no solo la página (lo da el
+  servidor). Lo elegido se mantiene al cambiar de página y se vacía al cambiar los filtros.
 - **Imprimir**: el diálogo del navegador con una hoja limpia (título, fecha y los códigos);
   desde ahí se imprime o se guarda como PDF. Sin dependencias nuevas.
 

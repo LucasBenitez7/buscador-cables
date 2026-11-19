@@ -10,7 +10,9 @@ import {
 } from "@cables/shared";
 import { ListToolbar } from "@/components/list-toolbar";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
+import { SelectAllRow, SelectionAside, SelectionProvider } from "@/components/selection";
 import { LocationTree } from "@/features/locations/components/location-tree";
+import { locationLabel } from "@/lib/location-label";
 import { listLocationTree } from "@/server/locations/service";
 import { requireUser } from "@/server/session";
 
@@ -31,6 +33,14 @@ export default async function LocationsPage({ searchParams }: { searchParams: Se
   const count = filtered.matches.length;
   // Cambiar un criterio reabre el árbol con lo que cumple (y sus antepasados): se reinicia.
   const treeKey = `${search.q ?? ""}|${search.type ?? ""}|${search.cables ? 1 : 0}`;
+  // Lo que se puede elegir: lo que cumple la búsqueda (sin sus antepasados), en el orden del árbol.
+  const matching = new Set(filtered.matches);
+  type Node = (typeof shown)[number];
+  const flatten = (nodes: readonly Node[]): Node[] =>
+    nodes.flatMap((node) => [node, ...flatten(node.children)]);
+  const selectable = flatten(shown)
+    .filter((node) => !searching || matching.has(node.id))
+    .map((node) => ({ key: node.id, label: locationLabel(node) }));
 
   return (
     <div className="space-y-6">
@@ -43,56 +53,64 @@ export default async function LocationsPage({ searchParams }: { searchParams: Se
       </div>
 
       <PendingListProvider>
-        <ListToolbar
-          action="/locations"
-          label="Buscar ubicaciones"
-          search={{
-            name: "q",
-            label: "Nombre o código",
-            value: search.q ?? "",
-            placeholder: "99UXA, Sala de control…",
-            maxLength: 80,
-          }}
-          sort={{
-            name: "sort",
-            value: search.sort ?? "name",
-            defaultValue: "name",
-            options: optionsOf(LOCATION_SORT_LABELS),
-          }}
-          filters={[
-            {
-              kind: "select",
-              name: "type",
-              label: "Tipo",
-              value: search.type,
-              options: optionsOf(LOCATION_TYPE_LABELS),
-            },
-            {
-              kind: "checkbox",
-              name: "cables",
-              label: "Solo con cables",
-              checked: search.cables,
-            },
-          ]}
-          active={active}
-          count={
-            <>
-              <span className="text-foreground font-medium">{count.toLocaleString("es-ES")}</span>{" "}
-              {count === 1 ? "ubicación" : "ubicaciones"}
-            </>
-          }
-        />
-
-        <PendingResults>
-          <LocationTree
-            key={treeKey}
-            tree={shown}
-            allTree={tree}
-            canManage={canManage}
-            matches={filtered.matches}
-            searching={searching}
+        <SelectionProvider
+          title="Ubicaciones"
+          items={selectable}
+          resetKey={`${treeKey}|${search.sort ?? ""}`}
+        >
+          <ListToolbar
+            action="/locations"
+            label="Buscar ubicaciones"
+            search={{
+              name: "q",
+              label: "Nombre o código",
+              value: search.q ?? "",
+              placeholder: "99UXA, Sala de control…",
+              maxLength: 80,
+            }}
+            sort={{
+              name: "sort",
+              value: search.sort ?? "name",
+              defaultValue: "name",
+              options: optionsOf(LOCATION_SORT_LABELS),
+            }}
+            filters={[
+              {
+                kind: "select",
+                name: "type",
+                label: "Tipo",
+                value: search.type,
+                options: optionsOf(LOCATION_TYPE_LABELS),
+              },
+              {
+                kind: "checkbox",
+                name: "cables",
+                label: "Solo con cables",
+                checked: search.cables,
+              },
+            ]}
+            active={active}
+            count={
+              <>
+                <span className="text-foreground font-medium">{count.toLocaleString("es-ES")}</span>{" "}
+                {count === 1 ? "ubicación" : "ubicaciones"}
+              </>
+            }
+            countAside={selectable.length > 0 ? <SelectionAside /> : null}
           />
-        </PendingResults>
+
+          <PendingResults className="space-y-3">
+            <SelectAllRow />
+            <LocationTree
+              key={treeKey}
+              tree={shown}
+              allTree={tree}
+              canManage={canManage}
+              matches={filtered.matches}
+              searching={searching}
+            />
+          </PendingResults>
+        </SelectionProvider>
       </PendingListProvider>
     </div>
   );

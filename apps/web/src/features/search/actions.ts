@@ -2,7 +2,8 @@
 
 import { cableSearchSchema } from "@cables/shared";
 import type { SelectAllResult } from "@/components/selection";
-import { SELECT_ALL_MAX, searchCableCodes } from "@/server/cables/search";
+import { searchCableCodes } from "@/server/cables/search";
+import { SELECT_ALL_TOO_MANY } from "@/server/select-all";
 import { getCurrentUser } from "@/server/session";
 import { logError } from "@/server/log";
 
@@ -18,10 +19,7 @@ export async function selectAllCablesAction(raw: unknown): Promise<SelectAllResu
   try {
     const cables = await searchCableCodes(parsed.data);
     if (cables === null) {
-      return {
-        ok: false,
-        message: `Son más de ${SELECT_ALL_MAX.toLocaleString("es-ES")}: afina los filtros.`,
-      };
+      return { ok: false, message: SELECT_ALL_TOO_MANY };
     }
     return { ok: true, items: cables.map((cable) => ({ key: cable.id, label: cable.code })) };
   } catch (error) {

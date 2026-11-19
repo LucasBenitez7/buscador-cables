@@ -16,7 +16,7 @@ import {
   SelectCell,
   SelectCheckbox,
   SelectHeaderCell,
-  SelectionToggle,
+  SelectionAside,
 } from "@/components/selection";
 import { PendingLink } from "@/components/pending-list";
 import { CODE_LINK } from "@/components/ui/text-link";
@@ -77,8 +77,7 @@ export function SearchResults({ search, result, actions }: Props) {
       ) : null}
       <ListSummary
         aside={
-          <div className="flex flex-wrap items-center gap-3">
-            <SelectionToggle />
+          <SelectionAside>
             {result.total > SEARCH_PAGE_SIZES[0] ? (
               <PageSizePicker
                 sizes={SEARCH_PAGE_SIZES}
@@ -87,7 +86,7 @@ export function SearchResults({ search, result, actions }: Props) {
                 href={(size, page) => `/cables${cableSearchQuery(search, { size, page })}`}
               />
             ) : null}
-          </div>
+          </SelectionAside>
         }
       >
         <span className="text-foreground font-medium">{result.total.toLocaleString("es-ES")}</span>{" "}
