@@ -119,11 +119,24 @@ export function detectExcelKind(sheetNames: readonly string[]): ExcelKind | null
  * Null when there is none or it is not a real date.
  */
 export function excelDateFromFileName(fileName: string): string | null {
-  // The greedy start finds the last date: "rev10_16.11.26" is 16.11.26, not 10_16.11.
-  const last = /.*(?<!\d)(\d{1,2})[._-](\d{1,2})[._-](\d{4}|\d{2})(?!\d)/s.exec(fileName);
-  if (!last) return null;
-  const [, day, month, year] = last;
-  return isoDay(Number(year!.length === 2 ? `20${year}` : year), Number(month), Number(day));
+  // The numbers of the name, read from the end: "rev10_16.11.26" is 16.11.26, not 10_16.11.
+  // A single pass, never a backtracking pattern: the name comes from whoever uploads it.
+  const numbers = [...fileName.matchAll(/\d+/g)];
+  const joined = (a: RegExpExecArray, b: RegExpExecArray) =>
+    /^[._-]$/.test(fileName.slice(a.index + a[0].length, b.index));
+  for (let at = numbers.length - 3; at >= 0; at -= 1) {
+    const [day, month, year] = numbers.slice(at, at + 3) as [
+      RegExpExecArray,
+      RegExpExecArray,
+      RegExpExecArray,
+    ];
+    if (day[0].length > 2 || month[0].length > 2) continue;
+    if (year[0].length !== 2 && year[0].length !== 4) continue;
+    if (!joined(day, month) || !joined(month, year)) continue;
+    const fullYear = year[0].length === 2 ? `20${year[0]}` : year[0];
+    return isoDay(Number(fullYear), Number(month[0]), Number(day[0]));
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

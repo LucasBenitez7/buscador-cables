@@ -100,6 +100,14 @@ describe("excelDateFromFileName", () => {
   it("gives null without a real date", () => {
     expect(excelDateFromFileName("estado.xlsx")).toBeNull();
     expect(excelDateFromFileName("estado 31.02.26.xlsx")).toBeNull();
+    expect(excelDateFromFileName("estado 123.11.26.xlsx")).toBeNull();
+  });
+
+  it("reads a very long name in one pass", () => {
+    const started = performance.now();
+    expect(excelDateFromFileName(`${"1_".repeat(50_000)}a 16.11.26.xlsx`)).toBe("2026-11-16");
+    expect(excelDateFromFileName("1".repeat(100_000))).toBeNull();
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 });
 
