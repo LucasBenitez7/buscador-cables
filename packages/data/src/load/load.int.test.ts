@@ -169,6 +169,7 @@ describe("loadProjectData: first load", () => {
       sourcePage: 8,
       lastAction: "CREATED",
       lastActionById: userId,
+      lastActionSource: "PROJECT_LOAD",
     });
     expect(cable.lengthM?.toNumber()).toBe(137);
     expect(cable.crossSectionMm2?.toNumber()).toBe(0.5);

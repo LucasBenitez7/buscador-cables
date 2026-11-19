@@ -17,9 +17,10 @@ Funciona en el ordenador y en el móvil o la tableta, desde el navegador.
 3. **Esperar la aprobación:** un administrador revisa la cuenta y le da un rol. Cuando la
    aprueba, llega otro correo y ya puedes entrar.
 
-En el ordenador, el menú de arriba tiene las secciones principales; **Gestión** agrupa
-Catálogos y Usuarios (con el número de cuentas pendientes), y el botón con **tu nombre** abre
-«Mi actividad» y «Cerrar sesión». En el móvil está todo en el botón ☰.
+En el ordenador, el menú de arriba tiene las secciones principales; **Gestión** agrupa Excel
+del día, Pendientes de revisar, Catálogos y Usuarios (con el número de cuentas pendientes), y
+el botón con **tu nombre** abre «Mi actividad» y «Cerrar sesión». En el móvil está todo en el
+botón ☰.
 
 **Fichas largas.** Arriba de cada ficha (cable, bandeja, equipo) hay una barra **«Ir a»**
 que se queda fija al bajar: un toque y vas a la tabla, al plano, a la hoja original o al
@@ -40,12 +41,12 @@ poner otra (caduca en una hora). Tras 10 contraseñas incorrectas seguidas, la c
 
 Cada rol puede hacer también todo lo de los anteriores.
 
-| Rol               | Para quién                   | Qué puede hacer                                                                                                            |
-| ----------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **Consulta**      | Quien solo necesita mirar    | Buscar cables y ver su ficha, recorrido e historial; ver bandejas, ubicaciones y planos.                                   |
-| **Técnico**       | Quien trabaja en campo       | Tender (también a medias), enrollar, mover, conectar, desconectar y timbrar; corregir bornas; dar de alta y editar cables. |
-| **Supervisor**    | Quien coordina la obra       | Ver la actividad de todo el equipo; retirar cables y corregir su estado; ubicaciones y catálogos.                          |
-| **Administrador** | Quien gestiona la aplicación | Aprobar cuentas, cambiar roles, desactivar cuentas, dar de alta usuarios y eliminar cables.                                |
+| Rol               | Para quién                   | Qué puede hacer                                                                                                                                   |
+| ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Consulta**      | Quien solo necesita mirar    | Buscar cables y ver su ficha, recorrido e historial; ver bandejas, ubicaciones y planos.                                                          |
+| **Técnico**       | Quien trabaja en campo       | Tender (también a medias), conectar, desconectar y timbrar; corregir bornas; dar de alta y editar cables.                                         |
+| **Supervisor**    | Quien coordina la obra       | Ver la actividad de todo el equipo; retirar cables y corregir su estado; ubicaciones y catálogos; subir el Excel del día y revisar discrepancias. |
+| **Administrador** | Quien gestiona la aplicación | Aprobar cuentas, cambiar roles, desactivar cuentas, dar de alta usuarios y eliminar cables.                                                       |
 
 La misma tabla está siempre a la vista en la página **Usuarios** del administrador.
 
@@ -70,6 +71,11 @@ mientras escribes, salen unos pocos cables, bandejas, equipos y ubicaciones que 
 uno con su enlace. Si escribes un código entero y pulsas **Buscar** (o Intro), te lleva
 directo a su ficha. Según el rol, también tu actividad reciente, el desglose por
 estado, la actividad del equipo o las cuentas pendientes de aprobar.
+
+Bajo el número de cables, **hasta qué Excel llega el avance**: la fecha del último Excel
+aplicado de cada tipo («Eléctrico · Excel del 16/11/2026»). Quien revisa discrepancias ve
+además un aviso con las **nuevas** desde la última vez que abrió «Pendientes de revisar»; al
+entrar en esa pantalla, el aviso desaparece.
 
 ## Buscar cables
 
@@ -140,7 +146,6 @@ lo que no se puede hacer ahora sale apagado y dice por qué:
 - **Tender**: el cable queda tendido de punta a punta.
 - **Tender a medias**: queda una punta suelta. Indica en qué bandeja del recorrido se quedó
   (botones numerados); si está en una que no es del recorrido, se acepta confirmándolo.
-- **Enrollar**, **Mover**.
 - **Conectar** y **Desconectar**: por extremo (origen, destino o ambos).
 - **Timbrar**: resultado correcto o con fallo. Un fallo pide una nota que diga qué falla.
 - **Retirar** y **Corregir** (supervisor): siempre con el motivo.
@@ -159,7 +164,7 @@ código, **Ver sus cables en el buscador** (igual en la ficha de un equipo y de 
 Colores, iguales en toda la web (planos, recorrido, etiquetas y panel):
 
 - **Azul**: tendido.
-- **Violeta**: falta por tender o no hay datos.
+- **Violeta**: no tendido, o sin revisar (sin datos de ningún Excel).
 - **Ámbar**: a medias (tendido parcial, conectado en una sola punta) y la punta suelta; en el
   plano de una bandeja, la bandeja que buscas, con la flecha.
 - **Verde**: conectado o timbrado correcto. **Rojo**: retirado o timbrado con fallo.
@@ -205,9 +210,9 @@ Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
   sitio: ni en Actividad, ni en el historial o el «Último movimiento» de un cable, ni en los
   filtros de actividad del buscador.
 - **Origen**: por defecto se ve lo que se hace **en campo** (tender, conectar, dar de alta un
-  cable a mano…). Las **cargas de listados** (una revisión nueva de un listado) escriben una
-  entrada por cable y no se ven por defecto: se eligen con «Cargas de listados» o «Todo», en
-  Actividad y en el historial de cada cable.
+  cable a mano…). **Excel** enseña lo que cambió cada Excel del día y **Todo**, las dos cosas.
+  Las **cargas del proyecto** (los listados y la primera carga del Excel) no se ven en ningún
+  sitio, ni siquiera con «Todo».
 - Al pulsar cualquier enlace, una **barra azul** arriba indica que la página está en camino.
 - Al cambiar un filtro, el orden o la página, la lista muestra **«Cargando…»** hasta que llega
   el resultado: no hace falta pulsar otra vez.
@@ -215,6 +220,64 @@ Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
   «Ver qué cambió» abre su página con cada hilo, antes y después.
 - **Actividad** (supervisor y administrador): lo de todo el equipo, con filtros por persona,
   acción y periodo.
+
+## Excel del día
+
+El estado de la obra llega en dos Excel, eléctrico e instrumentación, que se actualizan cada
+día. Se suben desde **Gestión → Excel del día** (supervisor y administrador).
+
+1. **Elige el archivo.** El navegador lo lee y reconoce si es el eléctrico o el de
+   instrumentación por su hoja. Propone la **fecha del Excel** sacada del nombre del archivo;
+   cámbiala si no es la buena. Si falta alguna columna, lo dice y no aplica nada. No se puede
+   subir un Excel con fecha anterior al último aplicado de su tipo (desharía lo más nuevo).
+2. **Preparar vista previa.** No cambia ningún cable todavía. Enseña, en pestañas:
+   - **Cambios**: lo que cambia en cables que ya están en la web.
+   - **Nuevos**: cables que están en el Excel y no en la web. Se crean con lo que trae el Excel
+     y llevan en su ficha la etiqueta **«Solo datos del Excel»** (sin recorrido ni conexionado).
+   - **Discrepancias**: una persona marcó en la web algo que el Excel contradice.
+3. **Desmarca** las filas que no quieras aplicar (una a una o «Desmarcar todas»). Las
+   desmarcadas vuelven a salir con el siguiente Excel.
+4. **Aplicar** (con su avance) o **Descartar**. Un Excel nuevo del mismo tipo sustituye a la
+   vista previa que esté esperando.
+
+**Qué cambia el Excel en un cable:** el estado (tendido o no tendido) y la conexión, la fecha de
+tendido, la empresa, la bobina y los metros reales. Nunca el origen, el destino, el tipo ni la
+longitud del listado. En instrumentación, los metros reales salen de la hoja «Table» (los
+metros tendidos de cada tirada); si un cable aparece dos veces, vale la tirada más nueva. Una
+**celda vacía no borra** lo que ya tiene el cable. Las filas con estados que no se usan
+(«Check», «Error»…) se ignoran. Los cables que no salen en el Excel no se tocan. En el
+historial, lo del Excel sale con su fecha y quién lo subió.
+
+**Carga del proyecto** (solo administrador): la primera vez, la casilla «Carga del proyecto»
+aplica el Excel sin discrepancias y sin que se vea en la actividad ni en los historiales. Deja de
+ofrecerse en cuanto se aplica un Excel del día de ese tipo.
+
+### Pendientes de revisar
+
+Una **discrepancia** es un cable que una persona marcó en la web (por ejemplo, tendido el 12/11)
+y que un Excel de fecha posterior contradice (no tendido el 16/11). Si lo marcó el mismo día del
+Excel o después, cuenta lo de la web y no hay discrepancia.
+
+- **No bloquean nada**: el resto del Excel se aplica igual. El cable conserva lo de la web y
+  sus datos (fecha, empresa, bobina, metros) se actualizan.
+- En **Gestión → Pendientes de revisar** (quien puede corregir movimientos) cada una enseña
+  lado a lado lo de la web, con quién y cuándo, y lo del Excel con su fecha. Debajo de cada
+  lado, su botón: **Mantener lo de la web** o **Aceptar lo del Excel**.
+- Si alguien **cambió el cable en la web después**, la tarjeta lo avisa («Cambiado en la web
+  después»), enseña su estado de ahora y, debajo, lo que decía antes.
+- **Varias a la vez**: marca las casillas, o «Seleccionar todas» (todas las pendientes, no solo
+  las de la página), y elige la decisión para todas. Con «Seleccionar todas» no se acepta lo
+  del Excel en los cables cambiados después: esos se deciden desde su tarjeta.
+- **Nunca se cierran solas.** Si llega otro Excel que la sigue contradiciendo, se actualiza su
+  fecha; si ya coincide con la web, lo avisa («El Excel del … ya coincide con la web»).
+- Cada decisión queda en el **historial del cable** con quién decidió, qué Excel era y qué
+  corrige. En **Revisadas** se ve lo decidido, con la opción elegida resaltada.
+- Tras **aceptar lo del Excel**, los Excel siguientes actualizan el estado sin preguntar. Tras
+  **mantener lo de la web**, un Excel posterior que lo contradiga abre otra discrepancia.
+- El número junto a «Pendientes de revisar» y el aviso del inicio cuentan solo las **nuevas**
+  (abiertas desde tu última visita a esa pantalla). Que un Excel posterior la vuelva a
+  contradecir no la hace nueva.
+- Un cable **dado de baja** no se toca: «Mantener lo de la web» solo cierra su discrepancia.
 
 ## Administración
 

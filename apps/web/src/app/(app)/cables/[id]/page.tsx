@@ -6,6 +6,9 @@ import { cache } from "react";
 import {
   CABLE_ACTION_LABELS,
   CABLE_LEVEL_LABELS,
+  cableLengthItems,
+  formatExcelDay,
+  reelText,
   cableActionAvailability,
   cableSheetKey,
   canRunCableAction,
@@ -20,7 +23,7 @@ import {
 } from "@cables/shared";
 import { FilterForm } from "@/components/filter-form";
 import { ChangeList } from "@/components/change-list";
-import { INLINE_LINK, levelCablesHref, locationHref } from "@/lib/links";
+import { INLINE_LINK, levelCablesHref } from "@/lib/links";
 import { DataList, Item, JumpLinks, RecordTitle, Section, SectionLink } from "@/components/detail";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableViewTabs } from "@/features/cables/components/cable-view-tabs";
@@ -32,9 +35,9 @@ import { hasDrawingImage } from "@/server/drawings/store";
 import { CableEnds, CableRoute } from "@/features/cables/components/cable-route";
 import { RouteDrawings } from "@/features/drawings/components/route-drawings";
 import { getRouteSheets } from "@/server/drawings/route-sheets";
+import { Badge } from "@/components/ui/badge";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getCableDetail } from "@/server/cables/detail";
-import { listLocationOptions } from "@/server/cables/service";
 import { requireUser, whenSignedIn } from "@/server/session";
 
 export const dynamic = "force-dynamic";
@@ -87,11 +90,11 @@ export default async function CablePage({
     notFound();
   }
   const sheetKey = cableSheetKey(cable.code);
+  const lengths = cableLengthItems({ ...cable, ...cable.excel });
   const canEdit = !cable.deleted && hasPermission(user, "cable:update");
   // Dados de baja: sin acciones. El resto ve solo lo que su rol permite.
   const availability = cable.deleted ? [] : cableActionAvailability(user, cable.state);
-  const [locations, routeSheets, hasSheet] = await Promise.all([
-    availability.length > 0 ? listLocationOptions() : Promise.resolve([]),
+  const [routeSheets, hasSheet] = await Promise.all([
     view === "recorrido" ? getRouteSheets(cable.route, cable.state) : Promise.resolve([]),
     view === "conexionado" ? hasDrawingImage(sheetKey) : Promise.resolve(false),
   ]);
@@ -127,7 +130,9 @@ export default async function CablePage({
           connectionStatus={cable.connectionStatus}
           testStatus={cable.testStatus}
           showUntested
-        />
+        >
+          {cable.excelOnly ? <Badge variant="outline">Solo datos del Excel</Badge> : null}
+        </CableStatusBadges>
       </header>
 
       {cable.deleted ? (
@@ -185,22 +190,10 @@ export default async function CablePage({
 
               <Section title="Extremos" collapsible defaultOpen={false} id="extremos">
                 <CableEnds ends={cable.ends} state={cable.state} />
-                {cable.currentLocation ? (
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Ahora está en: </span>
-                    {cable.currentLocationId ? (
-                      <Link href={locationHref(cable.currentLocationId)} className={INLINE_LINK}>
-                        {cable.currentLocation}
-                      </Link>
-                    ) : (
-                      cable.currentLocation
-                    )}
-                  </p>
-                ) : null}
               </Section>
 
               <Section title="Datos del cable" collapsible defaultOpen={false} id="datos">
-                <DataList>
+                <DataList title="Qué es">
                   <Item label="Servicio">{cable.description}</Item>
                   <Item label="Nivel">
                     {cable.level ? (
@@ -258,13 +251,34 @@ export default async function CablePage({
                   <Item label="Nº de conductores">{cable.conductors}</Item>
                   <Item label="Sección">{withUnit(cable.crossSectionMm2, "mm²")}</Item>
                   <Item label="Diámetro exterior">{withUnit(cable.outerDiameterMm, "mm")}</Item>
-                  <Item label="Longitud">
-                    {cable.lengthM === null && !cable.lengthPending
-                      ? null
-                      : `${withUnit(cable.lengthM, "m") ?? "Sin longitud"}${cable.lengthPending ? " (pendiente)" : ""}`}
-                  </Item>
                   <Item label="Tensión nominal">{cable.voltageRating}</Item>
                   <Item label="Composición">{cable.composition}</Item>
+                </DataList>
+                {/* Lo que trae el Excel del día. */}
+                <DataList title="Tendido">
+                  <Item label="Fecha">
+                    {cable.excel.laidOn
+                      ? `${formatExcelDay(cable.excel.laidOn)}, según el Excel`
+                      : null}
+                  </Item>
+                  <Item label="Empresa">{cable.excel.company}</Item>
+                  <Item label="Bobina">{reelText(cable.excel.reel, cable.excel.reelStatus)}</Item>
+                  {lengths
+                    .filter((item) => item.label === "Longitud real")
+                    .map((item) => (
+                      <Item key={item.label} label={item.label}>
+                        {item.value}
+                      </Item>
+                    ))}
+                </DataList>
+                <DataList title="Proyecto">
+                  {lengths
+                    .filter((item) => item.label !== "Longitud real")
+                    .map((item) => (
+                      <Item key={item.label} label={item.label}>
+                        {item.value}
+                      </Item>
+                    ))}
                   <Item label="Circuito">
                     {cable.circuit
                       ? `${cable.circuit}${cable.cablesPerCircuit ? ` · ${cable.cablesPerCircuit} cables por circuito` : ""}`
@@ -285,10 +299,12 @@ export default async function CablePage({
                   <Item label="Alta">{dateFormat.format(cable.createdAt)}</Item>
                 </DataList>
                 {cable.notes ? (
-                  <div className="space-y-1 text-sm">
-                    <h3 className="text-muted-foreground">Notas</h3>
-                    <p className="whitespace-pre-line">{cable.notes}</p>
-                  </div>
+                  <section className="space-y-1.5">
+                    <h3 className="text-primary px-1 text-sm font-semibold">Notas</h3>
+                    <p className="bg-card rounded-lg border px-4 py-2.5 text-[15px] whitespace-pre-line">
+                      {cable.notes}
+                    </p>
+                  </section>
                 ) : null}
               </Section>
             </>
@@ -321,18 +337,6 @@ export default async function CablePage({
 
               <Section title="Extremos" collapsible id="extremos">
                 <CableEnds ends={cable.ends} state={cable.state} />
-                {cable.currentLocation ? (
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Ahora está en: </span>
-                    {cable.currentLocationId ? (
-                      <Link href={locationHref(cable.currentLocationId)} className={INLINE_LINK}>
-                        {cable.currentLocation}
-                      </Link>
-                    ) : (
-                      cable.currentLocation
-                    )}
-                  </p>
-                ) : null}
               </Section>
 
               <Section
@@ -477,7 +481,6 @@ export default async function CablePage({
         version={cable.version}
         state={cable.state}
         availability={availability}
-        locations={locations}
         events={correctableEvents}
         // Un recorrido puede nombrar dos veces la misma bandeja: se sugiere una sola vez.
         routeTrays={[

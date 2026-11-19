@@ -90,12 +90,14 @@ describe("equipment list search", () => {
 });
 
 describe("originSources", () => {
-  it("shows what people do by default, the loads or everything on request", () => {
+  it("shows what people do by default and never the load of the project", () => {
     expect(originSources(undefined)).toEqual(["APP"]);
     expect(originSources("people")).toEqual(["APP"]);
-    expect(originSources("loads")).toEqual(["PROJECT_LOAD"]);
-    expect(originSources("all")).toBeNull();
-    expect(parseCableHistorySearch({ origin: "loads" }).origin).toBe("loads");
+    expect(originSources("excel")).toEqual(["EXCEL"]);
+    expect(originSources("all")).toEqual(["APP", "EXCEL"]);
+    expect(originSources("all")).not.toContain("PROJECT_LOAD");
+    // An old link that asked for the loads opens with the default.
+    expect(parseCableHistorySearch({ origin: "loads" }).origin).toBeUndefined();
     expect(parseCableHistorySearch({ origin: "robots" }).origin).toBeUndefined();
   });
 });

@@ -18,6 +18,9 @@ const dbPackage = path.resolve(here, "../../../../packages/db");
 const prismaCli = path.join(dbPackage, "node_modules", "prisma", "build", "index.js");
 
 const TABLES = [
+  "cable_discrepancy",
+  "excel_import_row",
+  "excel_import",
   "cable_event",
   "cable",
   "tray",
@@ -25,6 +28,7 @@ const TABLES = [
   "cable_type",
   "color",
   "manufacturer",
+  "company",
   "session",
   "account",
   "verification",
@@ -140,8 +144,6 @@ async function prepare() {
         destinationId: destination.id,
         installationStatus: cable.status,
         connectionStatus: cable.connection,
-        currentLocationId:
-          cable.status === "IN_STOCK" ? store.id : cable.status === "COILED" ? yard.id : null,
         lastAction: "CREATED",
         lastActionById: userIds.admin!,
         lastActionAt: now,
@@ -167,12 +169,25 @@ async function prepare() {
           })),
         },
         events: {
-          create: {
-            userId: userIds.admin!,
-            action: "CREATED",
-            changes: { installationStatus: { from: null, to: cable.status } },
-            createdAt: now,
-          },
+          create: [
+            {
+              userId: userIds.admin!,
+              action: "CREATED",
+              changes: { installationStatus: { from: null, to: cable.status } },
+              createdAt: now,
+            },
+            // Lo tendió el técnico en la web antes de la fecha del Excel de prueba.
+            ...("laidInWebOn" in cable
+              ? [
+                  {
+                    userId: userIds.technician!,
+                    action: "LAID" as const,
+                    changes: { installationStatus: { from: "NOT_LAID", to: "LAID" } },
+                    createdAt: new Date(cable.laidInWebOn),
+                  },
+                ]
+              : []),
+          ],
         },
       },
     });

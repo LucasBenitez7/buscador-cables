@@ -3,7 +3,10 @@ import { prisma } from "@cables/db";
 import {
   CABLE_FIELD_ACTIONS,
   CONNECTION_STATUSES,
+  EXCEL_KINDS,
+  EXCEL_KIND_LABELS,
   INSTALLATION_STATUSES,
+  formatExcelDay,
   ROLES,
   TEST_STATUSES,
   canRunCableAction,
@@ -14,6 +17,7 @@ import {
 } from "@cables/shared";
 import { listActivity, type ActivityEntry } from "@/server/activity/service";
 import { hasDrawingImage } from "@/server/drawings/store";
+import { countNewDiscrepancies } from "@/server/excel-import/discrepancies";
 import { getHealth, type HealthStatus } from "@/server/health";
 
 /** How far the works have got: what everybody sees on the home page. */
@@ -38,6 +42,10 @@ export type CableProgress = {
  */
 export type Dashboard = {
   progress: CableProgress;
+  /** The date of the last Excel applied of each kind: how recent the progress is. */
+  lastExcel: { kind: string; label: string; excelDay: string }[];
+  /** Pending discrepancies new since they last opened «Pendientes de revisar». */
+  toReview: number | null;
   myActivity: ActivityEntry[] | null;
   team: {
     trays: number;
@@ -87,6 +95,30 @@ export async function getCableProgress(): Promise<CableProgress> {
   };
 }
 
+async function getLastExcel(): Promise<Dashboard["lastExcel"]> {
+  const found = await Promise.all(
+    EXCEL_KINDS.map((kind) =>
+      prisma.excelImport.findFirst({
+        where: { kind, status: "APPLIED" },
+        orderBy: { excelDate: "desc" },
+        select: { excelDate: true },
+      }),
+    ),
+  );
+  return EXCEL_KINDS.flatMap((kind, index) => {
+    const excel = found[index];
+    return excel
+      ? [
+          {
+            kind,
+            label: EXCEL_KIND_LABELS[kind],
+            excelDay: formatExcelDay(excel.excelDate.toISOString().slice(0, 10)),
+          },
+        ]
+      : [];
+  });
+}
+
 async function getTeamSummary(): Promise<NonNullable<Dashboard["team"]>> {
   // Las puntas sueltas no se cuentan aparte: la base garantiza que son los tendidos a medias.
   const [trays, recent] = await Promise.all([prisma.tray.count(), listActivity({}, RECENT)]);
@@ -120,11 +152,13 @@ export async function getDashboard(user: {
   permissions: readonly string[];
 }): Promise<Dashboard> {
   const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user, action));
-  const [progress, mine, team, admin] = await Promise.all([
+  const [progress, lastExcel, toReview, mine, team, admin] = await Promise.all([
     getCableProgress(),
+    getLastExcel(),
+    hasPermission(user, "cable:correct") ? countNewDiscrepancies(user.id) : null,
     canAct ? listActivity({ actor: user.id }, RECENT) : null,
     hasPermission(user, "activity:view") ? getTeamSummary() : null,
     hasPermission(user, "user:manage") ? getAdminSummary() : null,
   ]);
-  return { progress, myActivity: mine?.entries ?? null, team, admin };
+  return { progress, lastExcel, toReview, myActivity: mine?.entries ?? null, team, admin };
 }

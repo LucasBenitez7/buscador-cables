@@ -1,6 +1,7 @@
 import { ChevronDownIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ChipRow } from "./chip-row";
 import { Collapsible } from "./collapsible";
 
 /** The code at the top of a record (cable, tray, equipment, location): the same everywhere. */
@@ -106,9 +107,10 @@ export function Section({
 export function JumpLinks({ links }: { links: readonly { id: string; label: string }[] }) {
   return (
     // Fija bajo la cabecera mientras se baja por la página: siempre a un toque.
-    <nav
+    <ChipRow
+      role="navigation"
       aria-label="Ir a"
-      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-30 -mx-4 flex [scrollbar-width:none] flex-nowrap items-center gap-1.5 overflow-x-auto border-b px-4 py-2 text-sm whitespace-nowrap backdrop-blur sm:-mx-6 sm:px-6"
+      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-30 -mx-4 items-center gap-1.5 border-b px-4 py-2 text-sm whitespace-nowrap backdrop-blur sm:-mx-6 sm:px-6"
     >
       <span className="text-foreground mr-1 shrink-0 text-xs font-medium">Ir a:</span>
       {links.map((link) => (
@@ -120,31 +122,34 @@ export function JumpLinks({ links }: { links: readonly { id: string; label: stri
           {link.label}
         </a>
       ))}
-    </nav>
-  );
-}
-
-/** The grid of labelled values of a record, on a card so it reads as one block. */
-export function DataList({ children }: { children: ReactNode }) {
-  return (
-    <dl className="bg-card grid gap-x-6 gap-y-4 rounded-lg border p-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-      {children}
-    </dl>
+    </ChipRow>
   );
 }
 
 /**
- * One labelled value of a record's data list. The label is small and muted, the value stands
- * out; a missing value shows a faint dash so the filled ones are easy to spot.
+ * A block of labelled values of a record, on a card: one row per value, the name on the left
+ * and the value on the right. The optional title goes above the card, not as a row. A block
+ * whose values are all empty is not shown.
+ */
+export function DataList({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="space-y-1.5 [&:not(:has(dd))]:hidden">
+      {title ? <h3 className="text-primary px-1 text-sm font-semibold">{title}</h3> : null}
+      <dl className="bg-card divide-border divide-y rounded-lg border text-[15px]">{children}</dl>
+    </section>
+  );
+}
+
+/**
+ * One labelled value: the name on the left, the value in bold on the right. A long value
+ * wraps on several lines, still on the right; an empty one is not shown at all.
  */
 export function Item({ label, children }: { label: string; children: ReactNode }) {
-  const empty = children === null || children === undefined || children === "";
+  if (children === null || children === undefined || children === "") return null;
   return (
-    <div className="space-y-0.5">
-      <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</dt>
-      <dd className={empty ? "text-muted-foreground/60" : "font-medium break-words"}>
-        {empty ? "—" : children}
-      </dd>
+    <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+      <dt className="text-foreground/85 max-w-[45%] shrink-0">{label}</dt>
+      <dd className="min-w-0 text-right font-semibold break-words">{children}</dd>
     </div>
   );
 }

@@ -63,9 +63,8 @@ function createInput(overrides: Record<string, string> = {}) {
     lengthM: "120",
     originId: refs.origin,
     destinationId: refs.destination,
-    installationStatus: "IN_STOCK",
+    installationStatus: "NOT_LAID",
     connectionStatus: "DISCONNECTED",
-    currentLocationId: refs.store,
     ...overrides,
   });
 }
@@ -85,8 +84,8 @@ describe("createCable", () => {
     const cable = await prisma.cable.findUniqueOrThrow({ where: { id } });
     expect(code).toBe("SH-50");
     expect(cable).toMatchObject({
-      installationStatus: "IN_STOCK",
-      currentLocationId: refs.store,
+      installationStatus: "NOT_LAID",
+      currentLocationId: null,
       version: 1,
       lastAction: "CREATED",
       lastActionById: actor.id,
@@ -94,31 +93,32 @@ describe("createCable", () => {
     expect(cable.crossSectionMm2?.toNumber()).toBe(2.5);
 
     const [event] = await prisma.cableEvent.findMany({ where: { cableId: id } });
-    expect(event).toMatchObject({ action: "CREATED", userId: actor.id, toLocationId: refs.store });
+    expect(event).toMatchObject({ action: "CREATED", userId: actor.id, toLocationId: null });
     expect(event?.changes).toMatchObject({
       code: { from: null, to: "SH-50" },
       crossSectionMm2: { from: null, to: 2.5 },
-      installationStatus: { from: null, to: "IN_STOCK" },
+      installationStatus: { from: null, to: "NOT_LAID" },
     });
     expect(event?.createdAt.getTime()).toBe(cable.lastActionAt?.getTime());
   });
 
-  it("does not keep a current location for a laid cable", async () => {
-    const { id } = await createCable(
+  it("registers a cable as laid and connected, or as not checked yet", async () => {
+    const laid = await createCable(
       actor,
       createInput({ installationStatus: "LAID", connectionStatus: "CONNECTED" }),
     );
+    const unverified = await createCable(
+      actor,
+      createInput({ code: "SH-51", installationStatus: "UNVERIFIED" }),
+    );
 
-    expect((await prisma.cable.findUniqueOrThrow({ where: { id } })).currentLocationId).toBeNull();
-  });
-
-  // Revisión F0-F7 (B15): un cable sin revisar no tiene ubicación física.
-  it("does not keep a current location for a cable nobody has checked", async () => {
-    const { id } = await createCable(actor, createInput({ installationStatus: "UNVERIFIED" }));
-
-    const cable = await prisma.cable.findUniqueOrThrow({ where: { id } });
-    expect(cable.installationStatus).toBe("UNVERIFIED");
-    expect(cable.currentLocationId).toBeNull();
+    expect(await prisma.cable.findUniqueOrThrow({ where: { id: laid.id } })).toMatchObject({
+      installationStatus: "LAID",
+      connectionStatus: "CONNECTED",
+    });
+    expect(
+      (await prisma.cable.findUniqueOrThrow({ where: { id: unverified.id } })).installationStatus,
+    ).toBe("UNVERIFIED");
   });
 
   it("rejects duplicate codes, also from retired cables", async () => {
@@ -190,7 +190,6 @@ describe("updateCable", () => {
       createInput({
         installationStatus: "LAID",
         connectionStatus: "CONNECTED",
-        currentLocationId: "",
       }),
     );
 
@@ -205,15 +204,15 @@ describe("updateCable", () => {
     expect(cable.version).toBe(1);
   });
 
-  it("lets a cable in stock lose its origin, and a laid one change it", async () => {
-    const inStock = await createCable(actor, createInput());
+  it("lets a cable not laid yet lose its origin, and a laid one change it", async () => {
+    const notLaid = await createCable(actor, createInput());
     const laid = await createCable(
       actor,
-      createInput({ code: "SH-51", installationStatus: "LAID", currentLocationId: "" }),
+      createInput({ code: "SH-51", installationStatus: "LAID" }),
     );
 
     await expect(
-      updateCable(actor, await editInput(inStock.id, { originId: "" })),
+      updateCable(actor, await editInput(notLaid.id, { originId: "" })),
     ).resolves.toEqual({ changed: true });
     await expect(
       updateCable(actor, await editInput(laid.id, { originId: refs.store })),
@@ -221,10 +220,7 @@ describe("updateCable", () => {
   });
 
   it("accepts a laid cable without a room when the lists give its equipment", async () => {
-    const { id } = await createCable(
-      actor,
-      createInput({ installationStatus: "LAID", currentLocationId: "" }),
-    );
+    const { id } = await createCable(actor, createInput({ installationStatus: "LAID" }));
     await prisma.cable.update({ where: { id }, data: { originEquipment: "99BMA" } });
 
     await expect(updateCable(actor, await editInput(id, { originId: "" }))).resolves.toEqual({

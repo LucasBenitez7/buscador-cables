@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "CableAction" ADD VALUE 'EXCEL_REVIEWED';

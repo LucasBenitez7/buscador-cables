@@ -120,6 +120,7 @@ describe("CatalogTabs", () => {
     cableType: [{ id: "t1", name: "Control", hex: null, cableCount: 3 }],
     color: items,
     manufacturer: [],
+    company: [{ id: "e1", name: "Montajes Norte", hex: null, cableCount: 12 }],
   };
 
   it("shows one catalog at a time, with its size on the tab", () => {
@@ -144,5 +145,11 @@ describe("CatalogTabs", () => {
       "true",
     );
     expect(screen.getByRole("tab", { name: /Fabricantes/ })).toHaveFocus();
+
+    // Empresas va justo después de los tipos de cable.
+    fireEvent.keyDown(screen.getByRole("tab", { name: /Fabricantes/ }), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("tab", { name: /Tipos de cable/ }), { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: /Empresas/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("Montajes Norte");
   });
 });

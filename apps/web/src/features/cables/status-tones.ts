@@ -10,8 +10,7 @@ export type StatusTone = "laid" | "pending" | "partial" | "connected" | "retired
 
 export const INSTALLATION_TONE: Record<InstallationStatus, StatusTone> = {
   UNVERIFIED: "pending",
-  IN_STOCK: "pending",
-  COILED: "pending",
+  NOT_LAID: "pending",
   PARTIALLY_LAID: "partial",
   LAID: "laid",
   RETIRED: "retired",

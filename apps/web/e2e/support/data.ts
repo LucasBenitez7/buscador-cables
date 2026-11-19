@@ -47,14 +47,14 @@ export const CABLES = {
   searchSibling: {
     code: "99XAB10T1-W8002",
     level: "L1",
-    status: "IN_STOCK",
+    status: "NOT_LAID",
     connection: "DISCONNECTED",
     ends: ["99XAB10CT002", "99CXJ11"],
   },
   actions: {
     code: "99XAC10W2001",
     level: "L2",
-    status: "IN_STOCK",
+    status: "NOT_LAID",
     connection: "DISCONNECTED",
     ends: ["99BMA", "99XAC10AP001"],
   },
@@ -68,21 +68,21 @@ export const CABLES = {
   mobile: {
     code: "99XHA10P1-W8001",
     level: "L1",
-    status: "COILED",
+    status: "NOT_LAID",
     connection: "DISCONNECTED",
     ends: ["99XHA10CP001", "99CXJ12"],
   },
   concurrency: {
     code: "99XHA20W2001",
     level: "L2",
-    status: "IN_STOCK",
+    status: "NOT_LAID",
     connection: "DISCONNECTED",
     ends: ["99BMB", "99XHA20AP001"],
   },
   partial: {
     code: "99XLB10W2001",
     level: "L2",
-    status: "IN_STOCK",
+    status: "NOT_LAID",
     connection: "DISCONNECTED",
     ends: ["99BMB", "99XLB10AA101"],
     route: ["99UXA00L22036", "99UXA00L22051"],
@@ -97,6 +97,23 @@ export const CABLES = {
     route: ["99UXA00L22036", "99UXB00L22001"],
     looseEnd: "DESTINATION",
     looseTray: "99UXB00L22001",
+  },
+  // Fase 14: el Excel del día de `e2e/__fixtures__` lo pasa a tendido y conectado en origen.
+  excel: {
+    code: "99XAE10W2001",
+    level: "L2",
+    status: "NOT_LAID",
+    connection: "DISCONNECTED",
+    ends: ["99BMD", "99XAE10AP001"],
+  },
+  // Fase 14: tendido en la web el 12/11; el Excel del 16/11 dice que no: discrepancia.
+  review: {
+    code: "99XAE10W2002",
+    level: "L2",
+    status: "LAID",
+    connection: "DISCONNECTED",
+    ends: ["99BMD", "99XAE10AP002"],
+    laidInWebOn: "2026-11-12T09:00:00Z",
   },
   // Fase 11: tabla de conexionado (hilo, regletero y borna en origen y en destino).
   wiring: {

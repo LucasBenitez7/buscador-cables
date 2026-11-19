@@ -141,7 +141,6 @@ describe("generateSeedData", () => {
       if (status !== "LAID" && status !== "PARTIALLY_LAID") {
         expect(connection).toBe("DISCONNECTED");
       }
-      expect(cable.currentLocationId !== null).toBe(status === "IN_STOCK" || status === "COILED");
       expect(cable.looseEnd !== null).toBe(status === "PARTIALLY_LAID");
       if (status === "PARTIALLY_LAID") {
         const routeTrays = stepsByCable.get(cable.id)!.map((step) => step.trayId);
@@ -155,7 +154,7 @@ describe("generateSeedData", () => {
     }
     const statuses = new Set(data.cables.map((cable) => cable.installationStatus));
     expect(statuses).toEqual(
-      new Set(["UNVERIFIED", "IN_STOCK", "COILED", "PARTIALLY_LAID", "LAID", "RETIRED"]),
+      new Set(["UNVERIFIED", "NOT_LAID", "PARTIALLY_LAID", "LAID", "RETIRED"]),
     );
   });
 
@@ -179,5 +178,23 @@ describe("generateSeedData", () => {
     for (const color of data.colors) {
       expect(color.hex).toMatch(/^#[0-9A-F]{6}$/);
     }
+  });
+
+  // Fase 14: lo que trae el Excel diario, solo en los cables tendidos.
+  it("fills the Excel data only on laid cables, and the real metres only on electrical ones", () => {
+    const companies = new Set(data.companies.map((company) => company.id));
+    const withExcel = data.cables.filter((cable) => cable.laidOn !== null);
+
+    expect(withExcel.length).toBeGreaterThan(1000);
+    for (const cable of data.cables) {
+      const laid = ["LAID", "PARTIALLY_LAID"].includes(cable.installationStatus);
+      if (!laid) expect(cable.laidOn).toBeNull();
+      if (cable.companyId) expect(companies).toContain(cable.companyId);
+      if (cable.actualLengthM !== null) {
+        expect(cable.level).not.toBe("L1");
+        expect(cable.actualLengthTotalM).toBe(cable.actualLengthM * (cable.actualSections ?? 1));
+      }
+    }
+    expect(data.cables.some((cable) => (cable.actualSections ?? 0) > 1)).toBe(true);
   });
 });

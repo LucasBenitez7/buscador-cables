@@ -16,24 +16,18 @@ import type { Role } from "./permissions";
 
 const route = { originId: "origin", destinationId: "destination" };
 
-const inStock: CableState = {
-  installationStatus: "IN_STOCK",
+const notLaid: CableState = {
+  installationStatus: "NOT_LAID",
   connectionStatus: "DISCONNECTED",
   testStatus: "NOT_TESTED",
-  currentLocationId: "store",
   looseEnd: null,
   looseEndTray: null,
   ...route,
   deleted: false,
 };
-const coiled: CableState = {
-  ...inStock,
-  installationStatus: "COILED",
-  currentLocationId: "site-a",
-};
-const laid: CableState = { ...inStock, installationStatus: "LAID", currentLocationId: null };
+const laid: CableState = { ...notLaid, installationStatus: "LAID" };
 const connected: CableState = { ...laid, connectionStatus: "CONNECTED" };
-const retired: CableState = { ...inStock, installationStatus: "RETIRED" };
+const retired: CableState = { ...notLaid, installationStatus: "RETIRED" };
 
 function errorOf(state: CableState, input: CableActionInput) {
   const outcome = applyCableAction(state, input);
@@ -45,14 +39,12 @@ const stateValues = ({
   installationStatus,
   connectionStatus,
   testStatus,
-  currentLocationId,
   looseEnd,
   looseEndTray,
 }: CableState) => ({
   installationStatus,
   connectionStatus,
   testStatus,
-  currentLocationId,
   looseEnd,
   looseEndTray,
 });
@@ -69,17 +61,28 @@ describe("field actions", () => {
       expect(CABLE_ACTIONS).toContain(action);
     }
   });
+
+  // Fase 14: ya no se enrolla ni se mueve un cable; los eventos antiguos los conservan.
+  it("no longer offer coiling or moving a cable", () => {
+    expect(CABLE_FIELD_ACTIONS).not.toContain("COILED");
+    expect(CABLE_FIELD_ACTIONS).not.toContain("MOVED");
+    expect(CABLE_ACTIONS).toContain("COILED");
+    expect(CABLE_ACTIONS).toContain("MOVED");
+    for (const action of ["COILED", "MOVED"]) {
+      const request = { cableId: "c1", version: "1", action, locationId: "x" };
+      expect(cableActionSchema.safeParse(request).success).toBe(false);
+    }
+  });
 });
 
 describe("LAID (tender)", () => {
-  it("lays a cable from stock or coiled, clearing its physical location", () => {
-    for (const state of [inStock, coiled]) {
+  it("lays a cable that is not laid yet or has no data", () => {
+    for (const state of [notLaid, { ...notLaid, installationStatus: "UNVERIFIED" as const }]) {
       const outcome = nextOf(state, { action: "LAID" });
       expect(outcome.next).toEqual({
         installationStatus: "LAID",
         connectionStatus: "DISCONNECTED",
         testStatus: "NOT_TESTED",
-        currentLocationId: null,
         looseEnd: null,
         looseEndTray: null,
       });
@@ -91,7 +94,7 @@ describe("LAID (tender)", () => {
   });
 
   it("needs origin and destination", () => {
-    expect(errorOf({ ...inStock, destinationId: null }, { action: "LAID" })).toMatch(
+    expect(errorOf({ ...notLaid, destinationId: null }, { action: "LAID" })).toMatch(
       /origen y su destino/,
     );
   });
@@ -102,39 +105,17 @@ describe("LAID (tender)", () => {
 });
 
 describe("UNVERIFIED (sin revisar)", () => {
-  // Loaded from the project lists: nobody has checked it yet, and it has no physical location.
-  const unverified: CableState = {
-    ...inStock,
-    installationStatus: "UNVERIFIED",
-    currentLocationId: null,
-  };
+  // No data in any Excel: nobody has checked it yet.
+  const unverified: CableState = { ...notLaid, installationStatus: "UNVERIFIED" };
 
-  it("is a coherent state without a location", () => {
+  it("is a coherent state, never connected", () => {
     expect(validateCableState(unverified)).toBeNull();
     expect(validateCableState({ ...unverified, connectionStatus: "CONNECTED" })).toMatch(
       /Solo un cable tendido/,
     );
   });
 
-  // Revisión F0-F7 (B15): una corrección podía dejarlo "sin revisar" y con ubicación.
-  it("cannot have a physical location", () => {
-    expect(validateCableState({ ...unverified, currentLocationId: "store" })).toMatch(
-      /Un cable sin revisar no tiene ubicación/,
-    );
-    const outcome = applyCableAction(inStock, {
-      action: "CORRECTION",
-      correctsEventId: "e1",
-      installationStatus: "UNVERIFIED",
-      connectionStatus: "DISCONNECTED",
-      testStatus: "NOT_TESTED",
-      currentLocationId: inStock.currentLocationId,
-      looseEnd: null,
-      looseEndTray: null,
-    });
-    expect(outcome.ok).toBe(false);
-  });
-
-  it("is registered as found: laid, partially laid, coiled or retired", () => {
+  it("is registered as found: laid, partially laid or retired", () => {
     expect(nextOf(unverified, { action: "LAID" }).changes.installationStatus).toEqual({
       from: "UNVERIFIED",
       to: "LAID",
@@ -146,17 +127,10 @@ describe("UNVERIFIED (sin revisar)", () => {
         trayCode: "99UXA00L22036",
       }).next.installationStatus,
     ).toBe("PARTIALLY_LAID");
-    expect(nextOf(unverified, { action: "COILED", locationId: "site-a" }).next).toMatchObject({
-      installationStatus: "COILED",
-      currentLocationId: "site-a",
-    });
-    expect(nextOf(unverified, { action: "RETIRED" }).next.currentLocationId).toBeNull();
+    expect(nextOf(unverified, { action: "RETIRED" }).next.installationStatus).toBe("RETIRED");
   });
 
-  it("cannot be moved or connected before somebody checks it", () => {
-    expect(errorOf(unverified, { action: "MOVED", locationId: "site-a" })).toMatch(
-      /registra primero cómo está/,
-    );
+  it("cannot be connected before somebody lays it", () => {
     expect(errorOf(unverified, { action: "CONNECTED", end: "ORIGIN" })).toMatch(
       /Solo se puede conectar un cable tendido/,
     );
@@ -178,8 +152,8 @@ describe("PARTIALLY_LAID (tender a medias)", () => {
     looseEndTray: "99UXA00L22036",
   };
 
-  it("leaves one end waiting in a tray, from stock or coiled", () => {
-    for (const state of [inStock, coiled]) {
+  it("leaves one end waiting in a tray of a cable not laid yet", () => {
+    for (const state of [notLaid]) {
       const outcome = nextOf(state, {
         action: "PARTIALLY_LAID",
         looseEnd: "DESTINATION",
@@ -189,7 +163,6 @@ describe("PARTIALLY_LAID (tender a medias)", () => {
         installationStatus: "PARTIALLY_LAID",
         connectionStatus: "DISCONNECTED",
         testStatus: "NOT_TESTED",
-        currentLocationId: null,
         looseEnd: "DESTINATION",
         looseEndTray: "99UXA00L22036",
       });
@@ -235,7 +208,7 @@ describe("PARTIALLY_LAID (tender a medias)", () => {
   it("needs origin and destination, like laying", () => {
     expect(
       errorOf(
-        { ...inStock, destinationId: null },
+        { ...notLaid, destinationId: null },
         { action: "PARTIALLY_LAID", looseEnd: "DESTINATION", trayCode: "99UXA00L22036" },
       ),
     ).toMatch(/origen y su destino/);
@@ -262,7 +235,6 @@ describe("PARTIALLY_LAID (tender a medias)", () => {
       installationStatus: "LAID",
       connectionStatus: "ORIGIN_ONLY",
       testStatus: "NOT_TESTED",
-      currentLocationId: null,
       looseEnd: null,
       looseEndTray: null,
     });
@@ -273,25 +245,12 @@ describe("PARTIALLY_LAID (tender a medias)", () => {
     ]);
   });
 
-  it("clears the loose end when the cable is coiled or retired", () => {
-    for (const input of [
-      { action: "COILED", locationId: "site-a" },
-      { action: "RETIRED" },
-    ] as const) {
-      const outcome = nextOf(partial, input);
-      expect(outcome.next).toMatchObject({
-        connectionStatus: "DISCONNECTED",
-        looseEnd: null,
-        looseEndTray: null,
-      });
-    }
-    expect(nextOf(partial, { action: "RETIRED" }).next.currentLocationId).toBeNull();
-  });
-
-  it("is not moved like a cable in stock", () => {
-    expect(errorOf(partial, { action: "MOVED", locationId: "site-a" })).toMatch(
-      /primero enróllalo/,
-    );
+  it("clears the loose end when the cable is retired", () => {
+    expect(nextOf(partial, { action: "RETIRED" }).next).toMatchObject({
+      connectionStatus: "DISCONNECTED",
+      looseEnd: null,
+      looseEndTray: null,
+    });
   });
 
   it("is offered to technicians with the reason when it cannot be used", () => {
@@ -316,7 +275,6 @@ describe("validateCableState with a loose end", () => {
     installationStatus: "PARTIALLY_LAID",
     connectionStatus: "DISCONNECTED",
     testStatus: "NOT_TESTED",
-    currentLocationId: null,
     looseEnd: "DESTINATION",
     looseEndTray: "99UXA00L22036",
     ...route,
@@ -344,27 +302,6 @@ describe("validateCableState with a loose end", () => {
   });
 });
 
-describe("COILED (enrollar)", () => {
-  it("coils a laid and connected cable, disconnecting it and recording the move", () => {
-    const outcome = nextOf(connected, { action: "COILED", locationId: "site-b" });
-
-    expect(outcome.next).toEqual({
-      installationStatus: "COILED",
-      connectionStatus: "DISCONNECTED",
-      testStatus: "NOT_TESTED",
-      currentLocationId: "site-b",
-      looseEnd: null,
-      looseEndTray: null,
-    });
-    expect(outcome.changes.connectionStatus).toEqual({ from: "CONNECTED", to: "DISCONNECTED" });
-    expect(outcome).toMatchObject({ fromLocationId: null, toLocationId: "site-b" });
-  });
-
-  it("points to Mover for a cable that is already coiled", () => {
-    expect(errorOf(coiled, { action: "COILED", locationId: "site-b" })).toMatch(/usa Mover/);
-  });
-});
-
 describe("CONNECTED / DISCONNECTED (conectar / desconectar)", () => {
   it("connects end by end until both are connected", () => {
     const origin = nextOf(laid, { action: "CONNECTED", end: "ORIGIN" });
@@ -384,7 +321,7 @@ describe("CONNECTED / DISCONNECTED (conectar / desconectar)", () => {
   });
 
   it("only connects laid cables", () => {
-    for (const state of [inStock, coiled]) {
+    for (const state of [notLaid, { ...notLaid, installationStatus: "UNVERIFIED" as const }]) {
       expect(errorOf(state, { action: "CONNECTED", end: "ORIGIN" })).toMatch(/tendido/);
     }
   });
@@ -412,24 +349,6 @@ describe("CONNECTED / DISCONNECTED (conectar / desconectar)", () => {
   });
 });
 
-describe("MOVED (mover)", () => {
-  it("moves a cable in stock or coiled and records where from and to", () => {
-    const outcome = nextOf(coiled, { action: "MOVED", locationId: "site-b" });
-
-    expect(outcome.next.currentLocationId).toBe("site-b");
-    expect(outcome.changes).toEqual({ currentLocationId: { from: "site-a", to: "site-b" } });
-    expect(outcome).toMatchObject({ fromLocationId: "site-a", toLocationId: "site-b" });
-  });
-
-  it("does not move a laid cable", () => {
-    expect(errorOf(laid, { action: "MOVED", locationId: "site-b" })).toMatch(/primero enróllalo/);
-  });
-
-  it("rejects moving to the same location", () => {
-    expect(errorOf(coiled, { action: "MOVED", locationId: "site-a" })).toMatch(/ya está en esa/);
-  });
-});
-
 describe("RETIRED (retirar)", () => {
   it("retires a connected cable and disconnects it in the same step", () => {
     const outcome = nextOf(connected, { action: "RETIRED" });
@@ -438,23 +357,17 @@ describe("RETIRED (retirar)", () => {
       installationStatus: "RETIRED",
       connectionStatus: "DISCONNECTED",
       testStatus: "NOT_TESTED",
-      currentLocationId: null,
       looseEnd: null,
       looseEndTray: null,
     });
     expect(Object.keys(outcome.changes)).toEqual(["installationStatus", "connectionStatus"]);
   });
 
-  it("keeps the location of a retired cable that was in stock", () => {
-    expect(nextOf(inStock, { action: "RETIRED" }).next.currentLocationId).toBe("store");
-  });
-
   it("blocks every other action on a retired cable", () => {
     const attempts: CableActionInput[] = [
       { action: "LAID" },
-      { action: "COILED", locationId: "x" },
       { action: "CONNECTED", end: "BOTH" },
-      { action: "MOVED", locationId: "x" },
+      { action: "TESTED", result: "OK" },
       { action: "RETIRED" },
     ];
     for (const attempt of attempts) {
@@ -475,40 +388,39 @@ describe("CORRECTION (corregir)", () => {
   it("sets the corrected state, also on a retired cable", () => {
     const outcome = nextOf(retired, {
       ...correction,
-      installationStatus: "IN_STOCK",
+      installationStatus: "NOT_LAID",
       connectionStatus: "DISCONNECTED",
-      currentLocationId: "store",
     });
 
-    expect(outcome.next.installationStatus).toBe("IN_STOCK");
+    expect(outcome.next.installationStatus).toBe("NOT_LAID");
+  });
+
+  it("can take a cable back to «Sin revisar»", () => {
+    const outcome = nextOf(laid, {
+      ...correction,
+      installationStatus: "UNVERIFIED",
+      connectionStatus: "DISCONNECTED",
+    });
+
+    expect(outcome.changes.installationStatus).toEqual({ from: "LAID", to: "UNVERIFIED" });
   });
 
   it("rejects incoherent target states", () => {
     expect(
-      errorOf(inStock, {
+      errorOf(notLaid, {
         ...correction,
-        installationStatus: "COILED",
+        installationStatus: "NOT_LAID",
         connectionStatus: "CONNECTED",
-        currentLocationId: "site-a",
       }),
     ).toMatch(/Solo un cable tendido/);
-    expect(
-      errorOf(inStock, {
-        ...correction,
-        installationStatus: "COILED",
-        connectionStatus: "DISCONNECTED",
-        currentLocationId: null,
-      }),
-    ).toMatch(/Indica dónde está/);
   });
 
   it("rejects a correction that changes nothing", () => {
     expect(
-      errorOf(inStock, {
+      errorOf(notLaid, {
         ...correction,
-        installationStatus: "IN_STOCK",
+        installationStatus: "NOT_LAID",
         connectionStatus: "DISCONNECTED",
-        currentLocationId: "store",
       }),
     ).toMatch(/no cambia nada/);
   });
@@ -516,33 +428,31 @@ describe("CORRECTION (corregir)", () => {
 
 describe("deleted cables", () => {
   it("accept no action at all", () => {
-    expect(errorOf({ ...inStock, deleted: true }, { action: "MOVED", locationId: "x" })).toMatch(
-      /dado de baja/,
-    );
+    expect(errorOf({ ...notLaid, deleted: true }, { action: "LAID" })).toMatch(/dado de baja/);
   });
 });
 
 describe("TESTED (timbrar)", () => {
   it("records a correct timbrado without touching the rest of the state", () => {
-    const outcome = nextOf(coiled, { action: "TESTED", result: "OK" });
+    const outcome = nextOf(notLaid, { action: "TESTED", result: "OK" });
 
-    expect(outcome.next).toEqual({ ...stateValues(coiled), testStatus: "TESTED_OK" });
+    expect(outcome.next).toEqual({ ...stateValues(notLaid), testStatus: "TESTED_OK" });
     expect(outcome.changes).toEqual({
       testStatus: { from: "NOT_TESTED", to: "TESTED_OK" },
     });
   });
 
   it("records a failed one, and a new one replaces it", () => {
-    const failed = { ...coiled, testStatus: "TESTED_FAILED" as const };
+    const failed = { ...notLaid, testStatus: "TESTED_FAILED" as const };
 
-    expect(nextOf(coiled, { action: "TESTED", result: "FAILED" }).next.testStatus).toBe(
+    expect(nextOf(notLaid, { action: "TESTED", result: "FAILED" }).next.testStatus).toBe(
       "TESTED_FAILED",
     );
     expect(nextOf(failed, { action: "TESTED", result: "OK" }).next.testStatus).toBe("TESTED_OK");
   });
 
   it("refuses the same result twice, and keeps the timbrado when the cable is laid", () => {
-    const tested = { ...coiled, testStatus: "TESTED_OK" as const };
+    const tested = { ...notLaid, testStatus: "TESTED_OK" as const };
 
     expect(applyCableAction(tested, { action: "TESTED", result: "OK" })).toEqual({
       ok: false,
@@ -570,26 +480,10 @@ describe("TESTED (timbrar)", () => {
   });
 });
 
-describe("validateCableState", () => {
-  it("rejects a laid cable that still has a physical location", () => {
-    expect(
-      validateCableState({
-        installationStatus: "LAID",
-        connectionStatus: "DISCONNECTED",
-        testStatus: "NOT_TESTED",
-        currentLocationId: "store",
-        looseEnd: null,
-        looseEndTray: null,
-        ...route,
-      }),
-    ).toMatch(/no tiene ubicación física/);
-  });
-});
-
 describe("permissions", () => {
   it("lets technicians do field work but not retire or correct", () => {
     expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "CONNECTED")).toBe(true);
-    expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "MOVED")).toBe(true);
+    expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "LAID")).toBe(true);
     expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "RETIRED")).toBe(false);
     expect(canRunCableAction(permissionsOfRole("TECHNICIAN"), "CORRECTION")).toBe(false);
   });
@@ -622,20 +516,16 @@ describe("cableActionAvailability", () => {
     expect(Object.keys(actions)).toEqual([
       "LAID",
       "PARTIALLY_LAID",
-      "COILED",
       "CONNECTED",
       "DISCONNECTED",
       "TESTED",
-      "MOVED",
     ]);
     expect(actions.CONNECTED).toBeNull();
     expect(actions.TESTED).toBeNull();
     expect(actions.PARTIALLY_LAID).toBeNull();
-    expect(actions.COILED).toBeNull();
     expect(actions.LAID).toMatch(/ya está tendido/);
     // Sin ningún extremo conectado, el motivo no habla de "ese extremo".
     expect(actions.DISCONNECTED).toBe("El cable no está conectado.");
-    expect(actions.MOVED).toMatch(/primero enróllalo/);
   });
 
   it("enables connecting the missing end of a half-connected cable", () => {
@@ -650,7 +540,7 @@ describe("cableActionAvailability", () => {
 
     expect(actions.CORRECTION).toBeNull();
     expect(actions.RETIRED).toMatch(/retirado/);
-    expect(actions.MOVED).toMatch(/retirado/);
+    expect(actions.LAID).toMatch(/retirado/);
   });
 });
 
@@ -693,7 +583,6 @@ describe("cableActionSchema", () => {
       installationStatus: "PARTIALLY_LAID",
       connectionStatus: "ORIGIN_ONLY",
       testStatus: "NOT_TESTED",
-      currentLocationId: "",
       looseEnd: "DESTINATION",
       looseEndTray: "99UXA00L22036",
       notes: "La punta no llegó",
@@ -705,22 +594,22 @@ describe("cableActionSchema", () => {
     });
   });
 
-  it("parses a move from FormData strings", () => {
+  it("parses a connection from FormData strings", () => {
     const request = cableActionSchema.parse({
       ...base,
-      action: "MOVED",
-      locationId: "site-b",
+      action: "CONNECTED",
+      end: "BOTH",
       notes: "  ",
     });
 
     expect(request).toEqual({
       cableId: "c1",
       version: 3,
-      action: "MOVED",
-      locationId: "site-b",
+      action: "CONNECTED",
+      end: "BOTH",
       notes: null,
     });
-    expect(toCableActionInput(request)).toEqual({ action: "MOVED", locationId: "site-b" });
+    expect(toCableActionInput(request)).toEqual({ action: "CONNECTED", end: "BOTH" });
   });
 
   it("requires a reason to retire or correct", () => {
@@ -729,11 +618,8 @@ describe("cableActionSchema", () => {
     expect(retire.error?.issues[0]?.message).toBe("Indica el motivo");
   });
 
-  it("requires the end to connect and the location to move", () => {
+  it("requires the end to connect", () => {
     expect(cableActionSchema.safeParse({ ...base, action: "CONNECTED" }).success).toBe(false);
-    expect(cableActionSchema.safeParse({ ...base, action: "MOVED", locationId: "" }).success).toBe(
-      false,
-    );
   });
 
   it("rejects unknown actions and creation-only actions", () => {
@@ -742,7 +628,7 @@ describe("cableActionSchema", () => {
     }
   });
 
-  it("parses a correction with an optional location", () => {
+  it("parses a correction", () => {
     const request = cableActionSchema.parse({
       ...base,
       action: "CORRECTION",
@@ -750,7 +636,6 @@ describe("cableActionSchema", () => {
       installationStatus: "RETIRED",
       connectionStatus: "DISCONNECTED",
       testStatus: "TESTED_OK",
-      currentLocationId: "",
       notes: "Se marcó tendido por error",
     });
 
@@ -760,7 +645,6 @@ describe("cableActionSchema", () => {
       installationStatus: "RETIRED",
       connectionStatus: "DISCONNECTED",
       testStatus: "TESTED_OK",
-      currentLocationId: null,
       looseEnd: null,
       looseEndTray: null,
     });

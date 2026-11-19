@@ -139,17 +139,12 @@ export async function createCable(
   actor: Actor,
   input: CreateCableInput,
 ): Promise<{ id: string; code: string }> {
-  // Only a cable in stock or coiled has a place of its own: the form may still send the
-  // one chosen before switching to "tendido" or "sin revisar".
-  const hasOwnPlace =
-    input.installationStatus === "IN_STOCK" || input.installationStatus === "COILED";
-  const currentLocationId = hasOwnPlace ? input.currentLocationId : null;
   await assertCodeAvailable(prisma, input.code);
   await assertReferences(prisma, {
     typeId: input.typeId,
     colorId: input.colorId,
     manufacturerId: input.manufacturerId,
-    locationIds: [input.originId, input.destinationId, currentLocationId],
+    locationIds: [input.originId, input.destinationId],
   });
 
   const empty = Object.fromEntries(CABLE_EDITABLE_FIELDS.map((field) => [field, null])) as Record<
@@ -160,7 +155,6 @@ export async function createCable(
     ...diffFields(CABLE_EDITABLE_FIELDS, empty, inputValues(input)),
     installationStatus: { from: null, to: input.installationStatus },
     connectionStatus: { from: null, to: input.connectionStatus },
-    ...(currentLocationId ? { currentLocationId: { from: null, to: currentLocationId } } : {}),
   };
   const now = new Date();
 
@@ -171,10 +165,10 @@ export async function createCable(
           ...fieldData(input),
           installationStatus: input.installationStatus,
           connectionStatus: input.connectionStatus,
-          currentLocationId,
           lastAction: "CREATED",
           lastActionById: actor.id,
           lastActionAt: now,
+          lastActionSource: "APP",
         },
         select: { id: true, code: true },
       });
@@ -183,7 +177,6 @@ export async function createCable(
           cableId: cable.id,
           userId: actor.id,
           action: "CREATED",
-          toLocationId: currentLocationId,
           changes,
           createdAt: now,
         },
@@ -228,7 +221,6 @@ export async function updateCable(
       installationStatus: current.installationStatus,
       connectionStatus: current.connectionStatus,
       testStatus: current.testStatus,
-      currentLocationId: current.currentLocationId,
       looseEnd: current.looseEnd,
       looseEndTray: current.looseEndTrayId,
       originId: input.originId ?? current.originEquipment,
@@ -236,7 +228,7 @@ export async function updateCable(
     });
     if (stateError) {
       throw new CableServiceError(
-        `${stateError} Cambia primero su estado con una acción (enrollar, corregir…).`,
+        `${stateError} Cambia primero su estado con una acción (corregir…).`,
       );
     }
   }
@@ -259,6 +251,7 @@ export async function updateCable(
           lastAction: "UPDATED",
           lastActionById: actor.id,
           lastActionAt: now,
+          lastActionSource: "APP",
         },
       });
       if (count === 0) {
@@ -289,6 +282,7 @@ export async function deleteCable(actor: Actor, input: DeleteCableInput): Promis
         lastAction: "DELETED",
         lastActionById: actor.id,
         lastActionAt: now,
+        lastActionSource: "APP",
       },
     });
     if (count === 0) {

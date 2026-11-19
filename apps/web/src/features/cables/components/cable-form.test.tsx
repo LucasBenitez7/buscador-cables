@@ -87,15 +87,12 @@ describe("CableForm (alta)", () => {
     expect(mocks.createCableAction).not.toHaveBeenCalled();
   });
 
-  it("asks where the cable is unless it is laid", () => {
-    expect(screen.getByLabelText("Dónde está ahora")).toBeInTheDocument();
-
-    type("Instalación", "LAID");
-
+  it("starts as not laid and never asks where the cable is", () => {
+    expect(screen.getByLabelText("Instalación")).toHaveValue("NOT_LAID");
     expect(screen.queryByLabelText("Dónde está ahora")).toBeNull();
     expect(screen.queryByRole("option", { name: "Retirado" })).toBeNull();
-    type("Instalación", "UNVERIFIED");
-    expect(screen.queryByLabelText("Dónde está ahora")).toBeNull();
+    expect(screen.queryByRole("option", { name: "En almacén" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Enrollado" })).toBeNull();
 
     // A partial laying needs the tray of the loose end: it is recorded with its action.
     expect(screen.queryByRole("option", { name: "Tendido parcial" })).toBeNull();
@@ -105,14 +102,14 @@ describe("CableForm (alta)", () => {
     mocks.createCableAction.mockResolvedValue({ ok: true, message: "ok", id: "new1" });
     type("Código", "sh50");
     type("Longitud (m)", "120,5");
-    type("Dónde está ahora", "alm");
     fireEvent.click(screen.getByRole("button", { name: "Dar de alta" }));
 
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/cables/new1/edit?created=1"));
     const formData = mocks.createCableAction.mock.calls[0]?.[0] as FormData;
     expect(formData.get("code")).toBe("sh50");
     expect(formData.get("lengthM")).toBe("120,5");
-    expect(formData.get("currentLocationId")).toBe("alm");
+    expect(formData.get("installationStatus")).toBe("NOT_LAID");
+    expect(formData.has("currentLocationId")).toBe(false);
   });
 
   it("shows the errors returned by the server next to each field", async () => {
@@ -122,7 +119,6 @@ describe("CableForm (alta)", () => {
       fieldErrors: { code: "Ya existe un cable con el código SH-50." },
     });
     type("Código", "SH-50");
-    type("Dónde está ahora", "alm");
     fireEvent.click(screen.getByRole("button", { name: "Dar de alta" }));
 
     expect(await screen.findByText("Ya existe un cable con el código SH-50.")).toBeInTheDocument();

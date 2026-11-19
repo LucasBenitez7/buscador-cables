@@ -52,32 +52,37 @@ model UserPermissionGrant {
 }
 
 model User {
-  id               String                @id @default(cuid())
-  name             String
-  email            String                @unique
-  emailVerified    Boolean               @default(false)
-  image            String?
+  id                   String                @id @default(cuid())
+  name                 String
+  email                String                @unique
+  emailVerified        Boolean               @default(false)
+  image                String?
   /// Id del rol (`Role.id`). Los de siempre: "ADMIN", "SUPERVISOR", "TECHNICIAN", "VIEWER".
-  role             String                @default("VIEWER")
-  roleInfo         Role                  @relation(fields: [role], references: [id], onDelete: Restrict)
+  role                 String                @default("VIEWER")
+  roleInfo             Role                  @relation(fields: [role], references: [id], onDelete: Restrict)
   /// Permisos además de los de su rol.
-  permissionGrants UserPermissionGrant[] @relation("UserGrants")
-  grantsGiven      UserPermissionGrant[] @relation("UserGrantsGiven")
-  active           Boolean               @default(true)
+  permissionGrants     UserPermissionGrant[] @relation("UserGrants")
+  grantsGiven          UserPermissionGrant[] @relation("UserGrantsGiven")
+  active               Boolean               @default(true)
   /// Cuándo aprobó un administrador la cuenta. Null: registrada y pendiente de aprobación.
-  approvedAt       DateTime?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  sessions         Session[]
-  accounts         Account[]
+  approvedAt           DateTime?
+  /// Última vez que abrió «Pendientes de revisar»: el menú y el inicio solo avisan de lo nuevo.
+  discrepanciesSeenAt  DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  sessions             Session[]
+  accounts             Account[]
   // Trazabilidad (fase 5): qué hizo cada usuario sobre los cables.
-  cableEvents      CableEvent[]
-  lastActionCables Cable[]               @relation("CableLastActionBy")
-  installedCables  Cable[]               @relation("CableInstalledBy")
-  connectedCables  Cable[]               @relation("CableConnectedBy")
+  cableEvents          CableEvent[]
+  lastActionCables     Cable[]               @relation("CableLastActionBy")
+  installedCables      Cable[]               @relation("CableInstalledBy")
+  connectedCables      Cable[]               @relation("CableConnectedBy")
   // Auditoría de cuentas (fase 10): lo que hizo cada administrador y a quién.
-  userEventsDone   UserEvent[]           @relation("UserEventActor")
-  userEvents       UserEvent[]           @relation("UserEventTarget")
+  userEventsDone       UserEvent[]           @relation("UserEventActor")
+  userEvents           UserEvent[]           @relation("UserEventTarget")
+  // Excel diario (fase 14): lo que subió y lo que decidió cada uno.
+  excelImports         ExcelImport[]
+  decidedDiscrepancies CableDiscrepancy[]    @relation("DiscrepancyDecidedBy")
 
   @@map("user")
 }
@@ -247,14 +252,24 @@ model Manufacturer {
   @@map("manufacturer")
 }
 
+/// Empresa que tendió el cable (fase 14): la trae el Excel diario y se edita en Catálogos.
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cables    Cable[]
+
+  @@map("company")
+}
+
 // ---------------------------------------------------------------------------
 // Cables y trazabilidad (fases 3 a 5)
 // ---------------------------------------------------------------------------
 
 enum InstallationStatus {
-  UNVERIFIED // sin revisar: viene de los listados y nadie ha comprobado aún cómo está
-  IN_STOCK // en almacén
-  COILED // enrollado
+  UNVERIFIED // sin revisar: no sale en ningún Excel y nadie ha comprobado aún cómo está
+  NOT_LAID // no tendido (fase 14: sustituye a «en almacén» y «enrollado»)
   PARTIALLY_LAID // tendido a medias: una punta espera en una bandeja
   LAID // tendido
   RETIRED // retirado
@@ -279,15 +294,17 @@ enum CableAction {
   UPDATED
   LAID
   PARTIALLY_LAID
-  COILED
+  COILED // ya no se registra (fase 14); queda en eventos antiguos
   CONNECTED
   DISCONNECTED
-  MOVED
+  MOVED // ya no se registra (fase 14); queda en eventos antiguos
   RETIRED
   CORRECTION
   TESTED // timbrado
   DELETED // baja lógica (deletedAt)
   WIRING_EDITED // bornas corregidas en campo (modo editar del conexionado)
+  EXCEL_UPDATED // lo cambió el Excel del día (fase 14)
+  EXCEL_REVIEWED // una persona decidió una discrepancia con el Excel (fase 14)
 }
 
 /// Nivel del cable en los listados del proyecto (ver docs/DATOS-PROYECTO.md).
@@ -338,10 +355,24 @@ model Cable {
   outerDiameterMm  Decimal?      @db.Decimal(8, 2)
   lengthM          Decimal?      @db.Decimal(10, 2)
   voltageRating    String?
-  originId         String?
-  origin           Location?     @relation("CableOrigin", fields: [originId], references: [id], onDelete: Restrict)
-  destinationId    String?
-  destination      Location?     @relation("CableDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+
+  // Lo que trae el Excel diario (fase 14).
+  /// Fecha real de tendido según el Excel.
+  laidOn             DateTime? @db.Date
+  companyId          String?
+  company            Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// Bobina de la que salió y su estado ("En obra"…), tal como los escribe el Excel.
+  reel               String?
+  reelStatus         String?
+  /// Metros reales de este cable (un tramo del circuito) y del circuito entero, y en cuántos
+  /// tramos se reparte (solo el Excel eléctrico).
+  actualLengthM      Decimal?  @db.Decimal(10, 2)
+  actualLengthTotalM Decimal?  @db.Decimal(10, 2)
+  actualSections     Int?
+  originId           String?
+  origin             Location? @relation("CableOrigin", fields: [originId], references: [id], onDelete: Restrict)
+  destinationId      String?
+  destination        Location? @relation("CableDestination", fields: [destinationId], references: [id], onDelete: Restrict)
 
   // Extremos tal y como vienen en los listados. `originId`/`destinationId` apuntan a la sala
   // o al edificio; aquí va el equipo exacto.
@@ -373,34 +404,42 @@ model Cable {
   looseEndTrayId String?
   looseEndTray   Tray?            @relation("CableLooseEndTray", fields: [looseEndTrayId], references: [id], onDelete: Restrict)
 
-  /// Dónde está físicamente (si está enrollado o en almacén).
+  /// Dónde estaba físicamente un cable enrollado o en almacén. Sin uso desde la fase 14: se
+  /// conserva el dato, pero nada lo escribe ni lo muestra.
   currentLocationId  String?
   currentLocation    Location?          @relation("CableCurrent", fields: [currentLocationId], references: [id], onDelete: Restrict)
-  installationStatus InstallationStatus @default(IN_STOCK)
+  installationStatus InstallationStatus @default(NOT_LAID)
   connectionStatus   ConnectionStatus   @default(DISCONNECTED)
   testStatus         TestStatus         @default(NOT_TESTED)
 
   // Columnas resumen (desnormalizadas) para la tabla del buscador. Se actualizan
   // en la misma transacción que crea el CableEvent.
-  lastAction     CableAction?
-  lastActionById String?
-  lastActionBy   User?        @relation("CableLastActionBy", fields: [lastActionById], references: [id], onDelete: Restrict)
-  lastActionAt   DateTime?
-  installedById  String?
-  installedBy    User?        @relation("CableInstalledBy", fields: [installedById], references: [id], onDelete: Restrict)
-  installedAt    DateTime?
-  connectedById  String?
-  connectedBy    User?        @relation("CableConnectedBy", fields: [connectedById], references: [id], onDelete: Restrict)
-  connectedAt    DateTime?
+  lastAction       CableAction?
+  lastActionById   String?
+  lastActionBy     User?            @relation("CableLastActionBy", fields: [lastActionById], references: [id], onDelete: Restrict)
+  lastActionAt     DateTime?
+  /// Quién escribió la última acción: la de la carga del proyecto no se muestra (fase 14).
+  lastActionSource CableEventSource @default(APP)
+  installedById    String?
+  installedBy      User?            @relation("CableInstalledBy", fields: [installedById], references: [id], onDelete: Restrict)
+  installedAt      DateTime?
+  connectedById    String?
+  connectedBy      User?            @relation("CableConnectedBy", fields: [connectedById], references: [id], onDelete: Restrict)
+  connectedAt      DateTime?
 
-  notes     String?
+  notes           String?
+  /// Lo creó el Excel del día: no está en los listados del proyecto (sin recorrido ni
+  /// conexionado). Lleva la etiqueta «Solo datos del Excel».
+  excelOnly       Boolean            @default(false)
   /// Control de concurrencia y sincronización offline.
-  version   Int          @default(1)
+  version         Int                @default(1)
   /// Baja lógica: los cables nunca se borran.
-  deletedAt DateTime?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  events    CableEvent[]
+  deletedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  events          CableEvent[]
+  excelImportRows ExcelImportRow[]
+  discrepancies   CableDiscrepancy[]
 
   @@index([installationStatus, connectionStatus])
   @@index([originId])
@@ -409,6 +448,7 @@ model Cable {
   @@index([typeId])
   @@index([colorId])
   @@index([manufacturerId])
+  @@index([companyId])
   @@index([lastActionById, lastActionAt])
   @@index([level])
   @@index([looseEndTrayId])
@@ -589,36 +629,165 @@ model CableJumper {
 
 enum CableEventSource {
   APP // una persona, desde la aplicación
-  PROJECT_LOAD // la carga de los listados del proyecto (`pnpm data:load`)
+  PROJECT_LOAD // la carga del proyecto: los listados (`pnpm data:load`) y el primer Excel
+  EXCEL // el Excel del día, subido desde la web (fase 14)
 }
 
 /// Registro INMUTABLE de lo que hace cada usuario sobre un cable. Nunca se edita
 /// ni se borra: los errores se corrigen con un evento CORRECTION.
 model CableEvent {
-  id              String           @id @default(cuid())
+  id              String             @id @default(cuid())
   cableId         String
-  cable           Cable            @relation(fields: [cableId], references: [id], onDelete: Restrict)
+  cable           Cable              @relation(fields: [cableId], references: [id], onDelete: Restrict)
   userId          String
-  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user            User               @relation(fields: [userId], references: [id], onDelete: Restrict)
   action          CableAction
   fromLocationId  String?
-  fromLocation    Location?        @relation("EventFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  fromLocation    Location?          @relation("EventFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
   toLocationId    String?
-  toLocation      Location?        @relation("EventToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
+  toLocation      Location?          @relation("EventToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
   /// { campo: { from, to } }
   changes         Json
   notes           String?
   correctsEventId String?
-  correctsEvent   CableEvent?      @relation("EventCorrection", fields: [correctsEventId], references: [id], onDelete: Restrict)
-  corrections     CableEvent[]     @relation("EventCorrection")
+  correctsEvent   CableEvent?        @relation("EventCorrection", fields: [correctsEventId], references: [id], onDelete: Restrict)
+  corrections     CableEvent[]       @relation("EventCorrection")
   /// Quién escribió el evento: una persona en la app o la carga de los listados.
-  source          CableEventSource @default(APP)
+  source          CableEventSource   @default(APP)
+  /// El Excel que lo escribió: su fecha y quién lo subió («Según el Excel del dd/mm»).
+  excelImportId   String?
+  excelImport     ExcelImport?       @relation(fields: [excelImportId], references: [id], onDelete: Restrict)
+  /// Discrepancias: la de la persona que contradice el Excel y la que la decide.
+  discrepancies   CableDiscrepancy[] @relation("DiscrepancyWebEvent")
+  decisions       CableDiscrepancy[] @relation("DiscrepancyDecisionEvent")
   /// Hora real en campo (acciones hechas sin conexión).
   clientCreatedAt DateTime?
-  createdAt       DateTime         @default(now())
+  createdAt       DateTime           @default(now())
 
   @@index([cableId, createdAt])
   @@index([userId, createdAt])
   @@index([action, createdAt])
+  @@index([excelImportId])
   @@map("cable_event")
+}
+
+// ---------------------------------------------------------------------------
+// Excel diario de estado (fase 14)
+// ---------------------------------------------------------------------------
+
+/// Los dos Excel del proyecto. `EXCEL_KINDS` de `@cables/shared` lista los mismos.
+enum ExcelKind {
+  ELECTRICAL
+  INSTRUMENTATION
+}
+
+enum ExcelImportStatus {
+  UPLOADING // llegan las filas por partes: todavía no se puede aplicar
+  PREVIEW // vista previa guardada: no se ha aplicado nada
+  APPLYING // aplicándose por lotes
+  APPLIED
+  DISCARDED // descartada o sustituida por otro Excel
+}
+
+/// Qué hace una fila de la vista previa.
+enum ExcelRowKind {
+  CHANGE // cambia datos de un cable que ya existe
+  NEW // el cable no está en la web: se crea
+  DISCREPANCY // una persona marcó en la web algo que el Excel contradice
+}
+
+enum DiscrepancyStatus {
+  OPEN // pendiente de revisar: el cable conserva lo de la web
+  KEPT_WEB // se mantuvo lo de la web
+  ACCEPTED_EXCEL // se aceptó lo del Excel
+}
+
+/// Un Excel subido: su vista previa y, al aplicarlo, lo que cambió. Nunca se borra.
+model ExcelImport {
+  id                     String             @id @default(cuid())
+  kind                   ExcelKind
+  /// Fecha del Excel (la del nombre del archivo, editable al subirlo).
+  excelDate              DateTime           @db.Date
+  fileName               String
+  /// La primera carga: sus eventos no se ven y no hay discrepancias.
+  projectLoad            Boolean            @default(false)
+  status                 ExcelImportStatus  @default(PREVIEW)
+  uploadedById           String
+  uploadedBy             User               @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  /// Filas con cable que leyó el navegador y cuántas han llegado (se envían por partes), y las
+  /// que no se usan con su motivo.
+  rowCount               Int
+  receivedCount          Int                @default(0)
+  /// [{ row, code, reason }]
+  ignored                Json
+  /// Discrepancias abiertas con las que este Excel ya coincide: se avisa al aplicarlo.
+  agreeingDiscrepancyIds String[]
+  createdAt              DateTime           @default(now())
+  appliedAt              DateTime?
+  discardedAt            DateTime?
+  rows                   ExcelImportRow[]
+  events                 CableEvent[]
+  discrepancies          CableDiscrepancy[]
+
+  @@index([kind, status])
+  @@index([status, excelDate])
+  @@map("excel_import")
+}
+
+/// Una fila de la vista previa: un cable que el Excel cambia, crea o contradice.
+model ExcelImportRow {
+  id        String       @id @default(cuid())
+  importId  String
+  import    ExcelImport  @relation(fields: [importId], references: [id], onDelete: Restrict)
+  code      String
+  /// Null: el cable es nuevo.
+  cableId   String?
+  cable     Cable?       @relation(fields: [cableId], references: [id], onDelete: Restrict)
+  kind      ExcelRowKind
+  /// Lo que dice el Excel (`ExcelStatusRow`).
+  data      Json
+  /// Lo que se aplicará: { campo: { from, to } }.
+  changes   Json
+  /// Discrepancia: { web, excel, webEventId, webAt, discrepancyId }.
+  conflict  Json?
+  /// Las filas desmarcadas no se aplican y vuelven con el siguiente Excel.
+  selected  Boolean      @default(true)
+  appliedAt DateTime?
+
+  @@unique([importId, code])
+  @@index([importId, kind])
+  @@index([importId, selected, appliedAt])
+  @@map("excel_import_row")
+}
+
+/// Una persona marcó en la web algo que un Excel posterior contradice. Queda en «Pendientes de
+/// revisar» hasta que alguien decide; mientras, el cable conserva lo de la web.
+model CableDiscrepancy {
+  id              String            @id @default(cuid())
+  cableId         String
+  cable           Cable             @relation(fields: [cableId], references: [id], onDelete: Restrict)
+  /// El Excel que la abrió y el último que la contradice.
+  importId        String
+  import          ExcelImport       @relation(fields: [importId], references: [id], onDelete: Restrict)
+  excelDate       DateTime          @db.Date
+  /// El estado de la web y el del Excel: { installationStatus, connectionStatus }.
+  web             Json
+  excel           Json
+  /// El evento de la persona que marcó lo de la web.
+  webEventId      String
+  webEvent        CableEvent        @relation("DiscrepancyWebEvent", fields: [webEventId], references: [id], onDelete: Restrict)
+  /// Fecha de un Excel posterior que ya coincide con la web: solo se avisa, nunca se cierra sola.
+  agreesOn        DateTime?         @db.Date
+  status          DiscrepancyStatus @default(OPEN)
+  decidedById     String?
+  decidedBy       User?             @relation("DiscrepancyDecidedBy", fields: [decidedById], references: [id], onDelete: Restrict)
+  decidedAt       DateTime?
+  decisionEventId String?
+  decisionEvent   CableEvent?       @relation("DiscrepancyDecisionEvent", fields: [decisionEventId], references: [id], onDelete: Restrict)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([status, createdAt])
+  @@index([cableId, status])
+  @@map("cable_discrepancy")
 }

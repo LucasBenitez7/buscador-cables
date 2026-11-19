@@ -4,8 +4,7 @@ import { cableCodeSchema } from "./cable-code";
 /** The Prisma enums must list exactly the same members. */
 export const INSTALLATION_STATUSES = [
   "UNVERIFIED",
-  "IN_STOCK",
-  "COILED",
+  "NOT_LAID",
   "PARTIALLY_LAID",
   "LAID",
   "RETIRED",
@@ -18,6 +17,10 @@ export const CONNECTION_STATUSES = [
 ] as const;
 /** Timbrado: continuity / conductor identification test. */
 export const TEST_STATUSES = ["NOT_TESTED", "TESTED_OK", "TESTED_FAILED"] as const;
+/**
+ * Every action of the history. «Enrollado» (COILED) and «Movido» (MOVED) can no longer be
+ * registered (fase 14), but old events keep them.
+ */
 export const CABLE_ACTIONS = [
   "CREATED",
   "UPDATED",
@@ -32,10 +35,15 @@ export const CABLE_ACTIONS = [
   "TESTED",
   "DELETED",
   "WIRING_EDITED",
+  "EXCEL_UPDATED",
+  "EXCEL_REVIEWED",
 ] as const;
 
-/** Who wrote a history event. The Prisma enum `CableEventSource` must list the same members. */
-export const CABLE_EVENT_SOURCES = ["APP", "PROJECT_LOAD"] as const;
+/**
+ * Who wrote a history event: a person in the app, the load of the project (the lists and the
+ * first Excel) or the Excel of the day. The Prisma enum `CableEventSource` lists the same.
+ */
+export const CABLE_EVENT_SOURCES = ["APP", "PROJECT_LOAD", "EXCEL"] as const;
 export type CableEventSource = (typeof CABLE_EVENT_SOURCES)[number];
 
 export type InstallationStatus = (typeof INSTALLATION_STATUSES)[number];
@@ -45,12 +53,26 @@ export type CableAction = (typeof CABLE_ACTIONS)[number];
 
 export const INSTALLATION_STATUS_LABELS: Record<InstallationStatus, string> = {
   UNVERIFIED: "Sin revisar",
-  IN_STOCK: "En almacén",
-  COILED: "Enrollado",
+  NOT_LAID: "No tendido",
   PARTIALLY_LAID: "Tendido parcial",
   LAID: "Tendido",
   RETIRED: "Retirado",
 };
+
+/** States that no longer exist (fase 14) but old events of the history still show. */
+const RETIRED_INSTALLATION_STATUS_LABELS: Record<string, string> = {
+  IN_STOCK: "En almacén",
+  COILED: "Enrollado",
+};
+
+/** The label of an installation status as the history stores it, old ones included. */
+export function installationStatusLabel(value: string): string {
+  return (
+    INSTALLATION_STATUS_LABELS[value as InstallationStatus] ??
+    RETIRED_INSTALLATION_STATUS_LABELS[value] ??
+    value
+  );
+}
 
 export const CONNECTION_STATUS_LABELS: Record<ConnectionStatus, string> = {
   DISCONNECTED: "Desconectado",
@@ -79,6 +101,8 @@ export const CABLE_ACTION_LABELS: Record<CableAction, string> = {
   TESTED: "Timbrado",
   DELETED: "Baja",
   WIRING_EDITED: "Bornas corregidas",
+  EXCEL_UPDATED: "Excel del día",
+  EXCEL_REVIEWED: "Discrepancia revisada",
 };
 
 /** Fields a technician edits in the cable form (statuses change through actions). */
@@ -161,6 +185,17 @@ export const PROJECT_FIELD_LABELS: Record<string, string> = {
   wiringRevision: "Revisión del conexionado",
   wiring: "Conexionado",
   jumpers: "Puentes",
+};
+
+/** Fields that only the Excel of the day writes (fase 14), for the history. */
+export const EXCEL_FIELD_LABELS: Record<string, string> = {
+  laidOn: "Fecha de tendido",
+  company: "Empresa",
+  reel: "Bobina",
+  reelStatus: "Estado de la bobina",
+  actualLengthM: "Longitud real (m)",
+  actualLengthTotalM: "Metros reales del circuito",
+  actualSections: "Tramos del circuito",
 };
 
 // ---------------------------------------------------------------------------
@@ -270,7 +305,6 @@ export type CableFields = z.infer<typeof cableFieldsSchema>;
 export function validateInitialStatus(input: {
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
-  currentLocationId: string | null;
   originId: string | null;
   destinationId: string | null;
 }): string | null {
@@ -284,12 +318,6 @@ export function validateInitialStatus(input: {
   if (installationStatus !== "LAID" && connectionStatus !== "DISCONNECTED") {
     return "Solo un cable tendido puede estar conectado.";
   }
-  if (
-    (installationStatus === "IN_STOCK" || installationStatus === "COILED") &&
-    !input.currentLocationId
-  ) {
-    return "Indica dónde está el cable (almacén o lugar donde está enrollado).";
-  }
   if (installationStatus === "LAID" && (!input.originId || !input.destinationId)) {
     return "Un cable tendido necesita origen y destino.";
   }
@@ -300,7 +328,6 @@ export const createCableSchema = cableFieldsSchema
   .extend({
     installationStatus: z.enum(INSTALLATION_STATUSES, { error: "Estado de instalación no válido" }),
     connectionStatus: z.enum(CONNECTION_STATUSES, { error: "Estado de conexión no válido" }),
-    currentLocationId: optionalId,
   })
   // Origin and destination may be the same room: many instrumentation cables join two
   // pieces of equipment of the same room (docs/DATOS-PROYECTO.md).

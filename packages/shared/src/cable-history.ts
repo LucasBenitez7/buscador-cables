@@ -22,6 +22,14 @@ export const CHANGE_FIELD_ORDER = [
   "currentLocationId",
   "looseEnd",
   "looseEndTray",
+  // Lo que trae el Excel del día (fase 14), en el orden de la ficha.
+  "laidOn",
+  "company",
+  "reel",
+  "reelStatus",
+  "actualLengthM",
+  "actualLengthTotalM",
+  "actualSections",
   "deletedAt",
 ] as const;
 
@@ -139,5 +147,12 @@ export function describeCableEvent(event: CableEventForSentence): string {
       return "dio de baja el cable";
     case "WIRING_EDITED":
       return describeWiringEdit(event.changes);
+    case "EXCEL_UPDATED":
+      return "actualizó el cable según el Excel";
+    case "EXCEL_REVIEWED":
+      return changedTo(event.changes, "installationStatus") ||
+        changedTo(event.changes, "connectionStatus")
+        ? "aceptó lo del Excel en una discrepancia"
+        : "mantuvo lo de la web en una discrepancia con el Excel";
   }
 }

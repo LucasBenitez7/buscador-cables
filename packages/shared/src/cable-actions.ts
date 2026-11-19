@@ -25,11 +25,9 @@ import { normalizeTrayCode } from "./trays";
 export const CABLE_FIELD_ACTIONS = [
   "LAID",
   "PARTIALLY_LAID",
-  "COILED",
   "CONNECTED",
   "DISCONNECTED",
   "TESTED",
-  "MOVED",
   "RETIRED",
   "CORRECTION",
 ] as const satisfies readonly CableAction[];
@@ -40,11 +38,9 @@ export type CableFieldAction = (typeof CABLE_FIELD_ACTIONS)[number];
 export const CABLE_FIELD_ACTION_LABELS: Record<CableFieldAction, string> = {
   LAID: "Tender",
   PARTIALLY_LAID: "Tender a medias",
-  COILED: "Enrollar",
   CONNECTED: "Conectar",
   DISCONNECTED: "Desconectar",
   TESTED: "Timbrar",
-  MOVED: "Mover",
   RETIRED: "Retirar",
   CORRECTION: "Corregir",
 };
@@ -52,11 +48,9 @@ export const CABLE_FIELD_ACTION_LABELS: Record<CableFieldAction, string> = {
 export const CABLE_ACTION_PERMISSIONS: Record<CableFieldAction, Permission> = {
   LAID: "cable:lay",
   PARTIALLY_LAID: "cable:lay",
-  COILED: "cable:coil",
   CONNECTED: "cable:connect",
   DISCONNECTED: "cable:disconnect",
   TESTED: "cable:test",
-  MOVED: "cable:move",
   RETIRED: "cable:retire",
   CORRECTION: "cable:correct",
 };
@@ -97,7 +91,6 @@ export type CableState = {
   connectionStatus: ConnectionStatus;
   /** Timbrado: independent of laying and connection. */
   testStatus: TestStatus;
-  currentLocationId: string | null;
   /** Partially laid cable: which end is loose and the code of the tray where it waits. */
   looseEnd: CableEndSide | null;
   looseEndTray: string | null;
@@ -115,7 +108,6 @@ export const CABLE_STATE_FIELDS = [
   "installationStatus",
   "connectionStatus",
   "testStatus",
-  "currentLocationId",
   "looseEnd",
   "looseEndTray",
 ] as const;
@@ -126,11 +118,9 @@ export type CableStateValues = Pick<CableState, CableStateField>;
 export type CableActionInput =
   | { action: "LAID" }
   | { action: "PARTIALLY_LAID"; looseEnd: CableEndSide; trayCode: string }
-  | { action: "COILED"; locationId: string }
   | { action: "CONNECTED"; end: CableEnd }
   | { action: "DISCONNECTED"; end: CableEnd }
   | { action: "TESTED"; result: TestResult }
-  | { action: "MOVED"; locationId: string }
   | { action: "RETIRED" }
   | {
       action: "CORRECTION";
@@ -139,7 +129,6 @@ export type CableActionInput =
       connectionStatus: ConnectionStatus;
       /** Left out: the timbrado stays as it is. */
       testStatus?: TestStatus;
-      currentLocationId: string | null;
       looseEnd: CableEndSide | null;
       looseEndTray: string | null;
     };
@@ -149,9 +138,6 @@ export type CableActionOutcome =
       ok: true;
       next: CableStateValues;
       changes: Partial<Record<CableStateField, FieldChange>>;
-      /** For the CableEvent of a physical move (COILED, MOVED). */
-      fromLocationId: string | null;
-      toLocationId: string | null;
     }
   | { ok: false; error: string };
 
@@ -187,24 +173,12 @@ const looseEndText = (end: CableEndSide) =>
 export function validateCableState(
   state: CableStateValues & Pick<CableState, "originId" | "destinationId">,
 ) {
-  const { installationStatus, connectionStatus, currentLocationId, looseEnd, looseEndTray } = state;
+  const { installationStatus, connectionStatus, looseEnd, looseEndTray } = state;
   if (!isOnItsWay(installationStatus) && connectionStatus !== "DISCONNECTED") {
     return "Solo un cable tendido puede estar conectado.";
   }
   if (isOnItsWay(installationStatus) && (!state.originId || !state.destinationId)) {
     return "Un cable tendido necesita origen y destino.";
-  }
-  if (installationStatus === "UNVERIFIED" && currentLocationId !== null) {
-    return "Un cable sin revisar no tiene ubicación: si sabes dónde está, indica también su estado.";
-  }
-  if (isOnItsWay(installationStatus) && currentLocationId !== null) {
-    return "Un cable tendido no tiene ubicación física aparte de su recorrido.";
-  }
-  if (
-    (installationStatus === "IN_STOCK" || installationStatus === "COILED") &&
-    !currentLocationId
-  ) {
-    return "Indica dónde está el cable (almacén o lugar donde está enrollado).";
   }
   if (installationStatus === "PARTIALLY_LAID") {
     if (!looseEnd || !looseEndTray) {
@@ -227,13 +201,12 @@ function computeNext(
     installationStatus: state.installationStatus,
     connectionStatus: state.connectionStatus,
     testStatus: state.testStatus,
-    currentLocationId: state.currentLocationId,
     looseEnd: state.looseEnd,
     looseEndTray: state.looseEndTray,
   };
   const status = state.installationStatus;
   const settled = { looseEnd: null, looseEndTray: null };
-  // Laying, coiling or moving does not undo a timbrado: only a new one or a correction does.
+  // Laying does not undo a timbrado: only a new one or a correction does.
   const testStatus = state.testStatus;
 
   if (input.action !== "CORRECTION" && status === "RETIRED") {
@@ -252,7 +225,6 @@ function computeNext(
           installationStatus: "LAID",
           connectionStatus: state.connectionStatus,
           testStatus,
-          currentLocationId: null,
           ...settled,
         },
       };
@@ -271,23 +243,8 @@ function computeNext(
           installationStatus: "PARTIALLY_LAID",
           connectionStatus: state.connectionStatus,
           testStatus,
-          currentLocationId: null,
           looseEnd: input.looseEnd,
           looseEndTray: normalizeTrayCode(input.trayCode),
-        },
-      };
-    }
-    case "COILED": {
-      if (status === "COILED") {
-        return { error: "El cable ya está enrollado. Para cambiarlo de sitio, usa Mover." };
-      }
-      return {
-        next: {
-          installationStatus: "COILED",
-          connectionStatus: "DISCONNECTED",
-          testStatus,
-          currentLocationId: input.locationId,
-          ...settled,
         },
       };
     }
@@ -328,30 +285,12 @@ function computeNext(
       }
       return { next: { ...current, testStatus: next } };
     }
-    case "MOVED": {
-      if (status === "UNVERIFIED") {
-        return {
-          error:
-            "Nadie ha revisado aún este cable: registra primero cómo está (tendido, enrollado…).",
-        };
-      }
-      if (isOnItsWay(status)) {
-        return {
-          error: "Un cable tendido no se mueve: primero enróllalo o desconéctalo y enróllalo.",
-        };
-      }
-      if (input.locationId === state.currentLocationId) {
-        return { error: "El cable ya está en esa ubicación." };
-      }
-      return { next: { ...current, currentLocationId: input.locationId } };
-    }
     case "RETIRED": {
       return {
         next: {
           installationStatus: "RETIRED",
           connectionStatus: "DISCONNECTED",
           testStatus,
-          currentLocationId: isOnItsWay(status) ? null : state.currentLocationId,
           ...settled,
         },
       };
@@ -362,7 +301,6 @@ function computeNext(
           installationStatus: input.installationStatus,
           connectionStatus: input.connectionStatus,
           testStatus: input.testStatus ?? testStatus,
-          currentLocationId: input.currentLocationId,
           looseEnd: input.looseEnd,
           looseEndTray: input.looseEndTray ? normalizeTrayCode(input.looseEndTray) : null,
         },
@@ -404,14 +342,7 @@ export function applyCableAction(state: CableState, input: CableActionInput): Ca
     return { ok: false, error: "La acción no cambia nada en el cable." };
   }
 
-  const movesPhysically = input.action === "COILED" || input.action === "MOVED";
-  return {
-    ok: true,
-    next: result.next,
-    changes,
-    fromLocationId: movesPhysically ? state.currentLocationId : null,
-    toLocationId: movesPhysically ? result.next.currentLocationId : null,
-  };
+  return { ok: true, next: result.next, changes };
 }
 
 export function canRunCableAction(who: PermissionHolder, action: CableFieldAction): boolean {
@@ -428,7 +359,7 @@ export type CableActionAvailability = {
 /**
  * The actions a user may see for a cable: those their role allows, each with the reason it
  * is disabled in the cable's current state (if any). Actions that need extra input are
- * checked with the least demanding value (any location, the first end not yet connected…).
+ * checked with the least demanding value (any tray, the first end not yet connected…).
  */
 export function cableActionAvailability(
   who: PermissionHolder,
@@ -442,8 +373,7 @@ export function cableActionAvailability(
 }
 
 function probe(state: CableState, action: CableFieldAction): string | null {
-  // A location that differs from the current one, so "already there" never blocks the probe.
-  const anyOtherLocation = `${state.currentLocationId ?? ""}~probe`;
+  // A tray that differs from the current one, so "already there" never blocks the probe.
   const anyOtherTray = `${state.looseEndTray ?? ""}~PROBE`;
   const attemptsByAction: Record<CableFieldAction, CableActionInput[]> = {
     LAID: [{ action: "LAID" }],
@@ -452,11 +382,9 @@ function probe(state: CableState, action: CableFieldAction): string | null {
       looseEnd,
       trayCode: anyOtherTray,
     })),
-    COILED: [{ action: "COILED", locationId: anyOtherLocation }],
     CONNECTED: CABLE_ENDS.map((end) => ({ action: "CONNECTED", end })),
     DISCONNECTED: CABLE_ENDS.map((end) => ({ action: "DISCONNECTED", end })),
     TESTED: TEST_RESULTS.map((result) => ({ action: "TESTED", result })),
-    MOVED: [{ action: "MOVED", locationId: anyOtherLocation }],
     RETIRED: [{ action: "RETIRED" }],
     // A correction can always be attempted; its target state is validated when sent.
     CORRECTION: [],
@@ -495,7 +423,6 @@ const reasonNotes = z
 
 const common = { cableId: requiredId("Cable no válido"), version: versionSchema };
 const endField = z.enum(CABLE_ENDS, { error: "Elige qué extremo" });
-const locationField = requiredId("Elige una ubicación");
 const looseEndField = z.enum(CABLE_END_SIDES, { error: "Elige qué punta queda suelta" });
 const trayCodeField = z
   .string({ error: "Indica la bandeja" })
@@ -526,12 +453,6 @@ export const cableActionSchema = z.discriminatedUnion(
         .transform((value) => value === "1"),
       notes: optionalNotes,
     }),
-    z.object({
-      ...common,
-      action: z.literal("COILED"),
-      locationId: locationField,
-      notes: optionalNotes,
-    }),
     z.object({ ...common, action: z.literal("CONNECTED"), end: endField, notes: optionalNotes }),
     z.object({ ...common, action: z.literal("DISCONNECTED"), end: endField, notes: optionalNotes }),
     z
@@ -545,12 +466,6 @@ export const cableActionSchema = z.discriminatedUnion(
         path: ["notes"],
         message: "Indica qué falló",
       }),
-    z.object({
-      ...common,
-      action: z.literal("MOVED"),
-      locationId: locationField,
-      notes: optionalNotes,
-    }),
     z.object({ ...common, action: z.literal("RETIRED"), notes: reasonNotes }),
     z.object({
       ...common,
@@ -561,7 +476,6 @@ export const cableActionSchema = z.discriminatedUnion(
       }),
       connectionStatus: z.enum(CONNECTION_STATUSES, { error: "Estado de conexión no válido" }),
       testStatus: z.enum(TEST_STATUSES, { error: "Estado de timbrado no válido" }).optional(),
-      currentLocationId: z.string().optional().transform(emptyToNull),
       looseEnd: z
         .union([z.literal(""), looseEndField])
         .optional()
@@ -587,9 +501,6 @@ export function toCableActionInput(request: CableActionRequest): CableActionInpu
       return { action: request.action };
     case "PARTIALLY_LAID":
       return { action: request.action, looseEnd: request.looseEnd, trayCode: request.trayCode };
-    case "COILED":
-    case "MOVED":
-      return { action: request.action, locationId: request.locationId };
     case "CONNECTED":
     case "DISCONNECTED":
       return { action: request.action, end: request.end };
@@ -602,7 +513,6 @@ export function toCableActionInput(request: CableActionRequest): CableActionInpu
         installationStatus: request.installationStatus,
         connectionStatus: request.connectionStatus,
         ...(request.testStatus ? { testStatus: request.testStatus } : {}),
-        currentLocationId: request.currentLocationId,
         looseEnd: request.looseEnd,
         looseEndTray: request.looseEndTray,
       };

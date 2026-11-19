@@ -38,7 +38,10 @@ type Props = {
 export function AppHeader({ items, user }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const waiting = items.reduce((sum, item) => sum + (item.badge?.count ?? 0), 0);
+  const waiting = items.reduce(
+    (sum, item) => sum + (item.badge?.alone ? 0 : (item.badge?.count ?? 0)),
+    0,
+  );
   const main = items.filter((item) => (item.place ?? "main") === "main");
   const manage = items.filter((item) => item.place === "manage");
   const own = items.filter((item) => item.place === "user");
@@ -160,7 +163,10 @@ const MENU_TRIGGER =
 /** "Gestión": the administration sections, with the sum of what waits in them. */
 function ManageMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
   const active = items.some((item) => isActive(item, pathname));
-  const waiting = items.reduce((sum, item) => sum + (item.badge?.count ?? 0), 0);
+  const waiting = items.reduce(
+    (sum, item) => sum + (item.badge?.alone ? 0 : (item.badge?.count ?? 0)),
+    0,
+  );
   const hover = useHoverMenu();
   return (
     <DropdownMenu {...hover.root}>

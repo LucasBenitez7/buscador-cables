@@ -121,7 +121,7 @@ Reglas:
 ```prisma
 enum Role { ADMIN SUPERVISOR TECHNICIAN VIEWER }
 
-enum InstallationStatus { IN_STOCK COILED LAID RETIRED }        // almacén, enrollado, tendido, retirado
+enum InstallationStatus { UNVERIFIED NOT_LAID PARTIALLY_LAID LAID RETIRED } // fase 14
 enum ConnectionStatus  { DISCONNECTED ORIGIN_ONLY DESTINATION_ONLY CONNECTED }
 enum LocationType      { PLANT AREA UNIT SITE }                // central, área, reactor/unidad, sitio
 
@@ -169,8 +169,8 @@ model Cable {
   voltageRating      String?                      // "0,6/1 kV"
   originId           String?                      // de dónde sale
   destinationId      String?                      // a dónde llega
-  currentLocationId  String?                      // dónde está físicamente (si está enrollado/almacén)
-  installationStatus InstallationStatus @default(IN_STOCK)
+  currentLocationId  String?                      // sin uso desde la fase 14 (se conserva el dato)
+  installationStatus InstallationStatus @default(NOT_LAID)
   connectionStatus   ConnectionStatus   @default(DISCONNECTED)
   // Columnas resumen (desnormalizadas) para mostrar/filtrar en la tabla sin joins pesados.
   // Se actualizan en la misma transacción que crea el CableEvent.
@@ -195,6 +195,7 @@ model Cable {
 
 enum CableAction {
   CREATED UPDATED LAID COILED CONNECTED DISCONNECTED MOVED RETIRED CORRECTION DELETED
+  // COILED y MOVED ya no se registran (fase 14): solo quedan en eventos antiguos
 }
 
 // Registro INMUTABLE de lo que hace cada usuario sobre un cable (nunca se edita ni se borra).
@@ -235,9 +236,15 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - `CableRouteStep`: recorrido **ordenado** de cada cable (`position` ≥ 1). Cada paso guarda el
   texto del listado y, si es una bandeja conocida, la bandeja; en instrumentación, además, el
   tramo (`FIELD` campo / `ROOM` sala).
-- Estado `UNVERIFIED` (sin revisar): el estado con que entran los cables de los listados, que
-  nadie ha comprobado en campo. Sin ubicación física; no se mueve ni se conecta hasta que alguien
-  registra cómo está (tendido, tendido a medias, enrollado o retirado).
+- **Estados finales (fase 14)**: `NOT_LAID` (no tendido), `PARTIALLY_LAID`, `LAID` y `RETIRED`.
+  La migración `final_installation_statuses` pasó «En almacén» y «Enrollado» a `NOT_LAID` y
+  quitó los permisos `cable:coil` y `cable:move` de los roles. «Enrollar» y «Mover» ya no
+  existen; sus eventos antiguos se siguen leyendo (`installationStatusLabel()` da el texto de
+  los estados que ya no existen). `currentLocationId` se conserva, pero nada lo escribe ni lo
+  muestra, y no cuenta en los filtros por ubicación.
+- Estado `UNVERIFIED` (sin revisar): cables sin datos, que no salen en ningún Excel ni nadie ha
+  comprobado en campo. No se conecta hasta que alguien registra cómo está (tendido, tendido a
+  medias o retirado); el Excel lo pasa a tendido o no tendido.
 - Si un cable de los listados no tiene sala, el equipo de cada extremo cuenta como extremo
   conocido para poder tenderlo (`originId ?? originEquipment` al construir el estado).
 - Estado `PARTIALLY_LAID` (tendido parcial) y acción del mismo nombre. `Cable.looseEnd`
@@ -247,15 +254,17 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - `CableType.code`: código del tipo en el listado eléctrico (`C0802`). Los nombres de los tres
   catálogos son únicos sin distinguir mayúsculas (índice único sobre `lower(name)`).
 - `CableEvent.source` (`APP` / `PROJECT_LOAD`): quién escribió el evento, una persona en la
-  app o la carga de los listados. La carga lo usa para no pisar lo que alguien corrigió a mano.
-  En la interfaz, el filtro «Origen» los llama «En campo» (`people`) y «Cargas de listados»
-  (`loads`).
+  app o la carga del proyecto. La carga lo usa para no pisar lo que alguien corrigió a mano.
+  **La carga del proyecto nunca se ve** (fase 14): `VISIBLE_EVENT_SOURCES` (`packages/shared`)
+  dice qué orígenes se muestran, y `Cable.lastActionSource` guarda el de la última acción para
+  ocultarla también en la tabla y la ficha. En la interfaz, el filtro «Origen» ofrece «En
+  campo» (`people`) y «Todo» (`all`).
 - **Inicio del historial** (`HISTORY_START` en `packages/shared`, 17/11/2026 00:00 Madrid):
   lo anterior es la carga inicial (el alta de todos los cables) y se guarda pero no se
-  muestra. `historyStart()` y `visibleLastAction()` (`server/activity/history-start.ts`) lo
-  aplican en Actividad y el panel, el detalle de un movimiento (404), el historial, el filtro
-  «Quién» y la «Última acción» de la ficha, y los filtros, la columna y el orden de actividad
-  del buscador. No toca «Cambios en las cuentas» ni la búsqueda del motivo de borrado. La
+  muestra. `historyStart()`, `visibleEventsWhere()` y `visibleLastAction()`
+  (`server/activity/history-start.ts`) lo aplican, junto con el origen, en Actividad y el
+  panel, el detalle de un movimiento (404), el historial, el filtro «Quién» y la «Última
+  acción» de la ficha, y los filtros, la columna y el orden de actividad del buscador. No toca «Cambios en las cuentas» ni la búsqueda del motivo de borrado. La
   variable de entorno `HISTORY_START` lo cambia (los tests de integración la ponen en 1970).
 - Los límites de longitud de los textos de un cable (`CABLE_TEXT_LIMITS` en `packages/shared`)
   son los mismos en el formulario y en la carga.
@@ -288,7 +297,7 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   enlacen igual.
 - `Cable.testStatus` (`NOT_TESTED`, `TESTED_OK`, `TESTED_FAILED`) y la acción `TESTED`
   ("Timbrar", permiso `cable:test` para técnico, supervisor y administrador). Es
-  independiente del tendido y la conexión: tender, enrollar o mover no lo cambian; solo otro
+  independiente del tendido y la conexión: tender o conectar no lo cambian; solo otro
   timbrado o una corrección. Un fallo exige una nota.
 - Una punta suelta en una bandeja que no está en el recorrido previsto se acepta si quien la
   registra lo confirma (`confirmOffRoute`); las correcciones del supervisor no lo piden.
@@ -338,6 +347,37 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   opcional. Solo la ve quien gestiona cuentas.
 - Detalle de un movimiento (`/activity/[id]`): `canSeeCableEvent` (su autor, `activity:view`
   o `cable:read`).
+
+### Excel del día (fase 14)
+
+- **Lector** puro en `packages/shared/src/excel-status.ts`: busca la hoja y las columnas por
+  nombre (con alternativas, sin importar mayúsculas, espacios ni tildes) y traduce los estados.
+  Lo usa el navegador (`read-excel-file`, solo las hojas que hacen falta) y lo valida el
+  servidor. Los metros reales de instrumentación salen de otra hoja, la de las tiradas
+  («Table», `readExcelLengths`): de un cable repetido vale la tirada más nueva.
+- **Reglas** puras en `packages/shared/src/excel-import.ts` (`planExcelRow`): qué hace cada fila
+  (nuevo, cambio, discrepancia o nada). Una celda vacía no borra datos. Lo marcado por una
+  persona antes de la fecha del Excel es discrepancia; el mismo día o después, gana la web.
+  El alta de un cable no cuenta como marca; «mantener lo de la web» sí, «aceptar lo del Excel»
+  no (el estado vuelve a ser del Excel).
+- **Subida por partes**: `startExcelPreview` → `addExcelPreviewPart` (1000 filas, unos 250 KB,
+  lejos del límite de una Server Action) → `finishExcelPreview`. Mientras llega
+  (`UPLOADING`) no se puede aplicar. Un candado por tipo (`pg_advisory_xact_lock`) evita que
+  dos subidas o lotes del mismo Excel se crucen. `startExcelPreview` rechaza un Excel con
+  fecha anterior al último aplicado de su tipo.
+- **Aplicar por lotes** (`applyExcelBatch`, 200 filas por transacción): cada fila se decide
+  otra vez contra la base, por si alguien actuó después de la vista previa.
+- Tablas: `ExcelImport` (el Excel, su fecha, quién lo subió y su estado), `ExcelImportRow` (la
+  vista previa) y `CableDiscrepancy` (pendientes de revisar). Eventos con origen `EXCEL` y la
+  acción `EXCEL_UPDATED`; las decisiones, `EXCEL_REVIEWED`. La carga del proyecto usa el origen
+  `PROJECT_LOAD`, que no se muestra.
+- **Avisos de lo nuevo**: `User.discrepanciesSeenAt` guarda cuándo abrió cada persona
+  «Pendientes de revisar»; el menú y el inicio solo cuentan las discrepancias creadas después
+  (por `createdAt`: un Excel que vuelve a contradecir una pendiente la actualiza, pero no la
+  hace nueva). La acción que lo marca solo revalida el layout si había algo nuevo.
+- **Decidir** (`decideDiscrepancy`): la lista enseña el estado actual del cable y, si cambió
+  desde la discrepancia, lo que decía antes. Decidiendo todas a la vez (`blind`) no se acepta
+  el Excel en esos cables. En un cable dado de baja no se escribe nada.
 
 ## Marca, cargas y avisos
 

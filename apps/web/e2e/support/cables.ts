@@ -31,8 +31,15 @@ export const cableHeader = (page: Page) => page.locator("article > header");
  */
 export async function openActions(page: Page) {
   const actions = page.getByRole("region", { name: "Acciones" });
-  const toggle = actions.getByRole("button", { name: "Registrar acción" });
-  if (await toggle.isVisible()) await toggle.click();
+  const toggle = actions.getByRole("button", { name: /^(Registrar acción|Cerrar)$/ });
+  // La barra llega después de la carga: sin esperarla, una página recién abierta no la
+  // encontraba y el test se saltaba el desplegarla. Una pulsación antes de que la página
+  // responda se pierde: se vuelve a pulsar hasta que está desplegada de verdad.
+  await toggle.waitFor();
+  await expect(async () => {
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   return actions;
 }
 

@@ -202,9 +202,9 @@ describe("getActivityEvent", () => {
   });
 });
 
-// Las cargas de los listados escriben un movimiento por cable: por defecto no se ven.
+// La carga del proyecto escribe un movimiento por cable: nunca se ve (fase 14).
 describe("listActivity: origin", () => {
-  it("shows what people do by default, and the loads only when asked for", async () => {
+  it("never shows the load of the project, not even with «Todo»", async () => {
     await prisma.cableEvent.create({
       data: {
         id: "eload00000000001",
@@ -218,9 +218,9 @@ describe("listActivity: origin", () => {
     });
 
     expect(await ids({})).not.toContain("eload00000000001");
-    expect(await ids({ origin: "loads" })).toEqual(["eload00000000001"]);
-    expect(await ids({ origin: "all" })).toContain("eload00000000001");
+    expect(await ids({ origin: "all" })).not.toContain("eload00000000001");
     expect(await ids({ origin: "all" })).toContain("e1");
+    expect(await getActivityEvent("eload00000000001", VIEWER)).toBeNull();
   });
 });
 

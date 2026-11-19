@@ -33,10 +33,11 @@ hizo qué y cuándo.
 | 12   | Roles y permisos              | v1.2.0  | Roles editables y permisos extra desde la web         |
 | 13   | Uso en campo                  | v1.3.0  | Ficha con el plano primero, colores, buscador único   |
 | 14   | Estado diario desde el Excel  | v1.4.0  | Excel del día, pendientes de revisar, panel           |
-| 15   | Guardados y roles             | v1.5.0  | Guardados con carpetas, roles uno al lado del otro    |
+| 15   | Listados: imprimir y ordenar  | v1.5.0  | Elegir filas, PDF y copiar nombres, ordenar por más   |
+| 16   | Guardados y roles             | v1.6.0  | Guardados con carpetas, roles uno al lado del otro    |
 
-**Total: 17 fases (0 a 15, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
-13 a la 15, el 2026-11-18).** El 2026-11-13 la fase 6 se
+**Total: 18 fases (0 a 16, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
+13 a la 15, el 2026-11-18; la 16, el 2026-11-19).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
@@ -950,49 +951,61 @@ Repaso de estilos con el usuario (2026-11-19), igual en cable, bandeja, equipo y
 ## Fase 14 — Estado diario desde el Excel (v1.4.0)
 
 Añadida el 2026-11-18; sustituye a la fase 8. Rama `feat/f14-excel-status`. El estado del
-proyecto llega en dos Excel (eléctrico e instrumentación) que se actualizan cada día.
+proyecto llega en dos Excel (eléctrico e instrumentación) que se suben cada día desde la web.
 
-### Decisiones (2026-11-18)
+Decisiones que siguen valiendo:
 
-- **Subida desde la web**, sin automatizar: el navegador lee el Excel y manda solo las
-  columnas que hacen falta (los archivos pasan del límite de subida de Vercel); el servidor lo
-  vuelve a validar todo.
-- **Columnas por nombre**, no por posición, con nombres alternativos; si falta una, la vista
-  previa dice cuál y no aplica nada.
-- **Estados**: solo «Tendido» o «No tendido» (desaparecen «En almacén» y «Enrollado»); la
-  conexión, de origen, de destino o de las dos puntas (solo el eléctrico la trae). «Tendido a
-  medias» y la punta suelta se marcan en campo. Se ignoran «Check», «Error» y
-  «Correcto/Incorrecto».
-- **Vista previa guardada**: qué cambia, qué cables son nuevos y qué discrepancias hay; se
-  pueden desmarcar filas; nada se aplica hasta «Aplicar».
-- **Discrepancias**: una persona marcó en la web algo que el Excel contradice, y lo marcó antes
-  de la fecha del Excel. Quedan en «Pendientes de revisar» hasta que alguien decide; el cable
-  conserva lo de la web mientras tanto. Siempre con fechas, nunca «hoy» ni «ayer».
-- **Historial**: nunca se borra nada. Lo del Excel sale como «Según el Excel del dd/mm · subido
-  por …», y la decisión sobre una discrepancia, con quién decidió y qué corrige.
-- **La carga inicial no se ve**: se marca como carga del proyecto y se oculta por su origen en
-  la actividad, el historial y la última acción.
-- **Cables nuevos**: los que están en el Excel y no en la web se crean con lo que trae el
-  Excel; lo que solo traen los PDF (recorrido, conexionado) queda vacío.
-- **Datos nuevos**: empresa que tendió el cable (catálogo editable), bobina y su estado, y
-  metros reales (solo el Excel eléctrico; por tramo y en total). Con metros reales, la ficha
-  muestra «Longitud prevista» y «Longitud real»; sin ellos, solo «Longitud».
+- **Lectura en el navegador** (`read-excel-file`): manda solo los datos que hacen falta, por
+  partes; el servidor lo vuelve a validar todo. Hojas y columnas por nombre, con alternativas;
+  si falta una, lo dice y no aplica nada. La fecha del Excel sale del nombre del archivo y se
+  puede cambiar. No se aplica un Excel más antiguo que el último aplicado de su tipo.
+- **Estados**: «Tendido» o «No tendido», y la conexión por puntas (solo el eléctrico la trae).
+  «Tendido a medias» y la punta suelta se marcan en campo. Se ignoran «Check», «Error» y
+  «Correcto/Incorrecto». Fuera «En almacén», «Enrollado», «Enrollar» y «Mover».
+- **Qué cambia el Excel**: estado, conexión, fecha de tendido, empresa, bobina y metros reales;
+  nunca origen, destino, tipo ni longitud del listado. Una celda vacía no borra nada. Metros
+  reales: en el eléctrico, por tramo (total / número de secciones); en instrumentación, de la
+  hoja «Table» («PULLED [m]»), y de una tirada repetida vale la más nueva.
+- **Vista previa guardada** (Cambios, Nuevos, Discrepancias): se desmarcan filas, y las
+  desmarcadas vuelven con el siguiente Excel; se aplica por lotes, decidiendo cada fila otra
+  vez. Los cables nuevos llevan la etiqueta «Solo datos del Excel».
+- **Discrepancias**: una persona marcó en la web, antes de la fecha del Excel, algo que el Excel
+  contradice (el mismo día o después, gana la web). El cable conserva lo de la web hasta que
+  alguien decide en «Pendientes de revisar» («Mantener lo de la web» o «Aceptar lo del Excel»,
+  una a una o varias a la vez). Nunca se cierran solas. La tarjeta enseña el estado actual del
+  cable y avisa si alguien lo cambió después; «Seleccionar todas» no acepta esas.
+- **Avisos**: el inicio y «Pendientes de revisar» solo cuentan las discrepancias abiertas desde
+  que cada persona abrió esa pantalla; no van al botón del menú ni a «Gestión».
+- **Carga del proyecto**: la primera carga (solo administradores) se guarda con su origen y no
+  se ve en la actividad, el historial ni la última acción.
+- **Historial**: nunca se borra nada; lo del Excel sale con su fecha y quién lo subió, y cada
+  decisión con quién decidió y qué corrige.
 
-### Tareas
+- [x] Estados finales, lector de los dos Excel y datos nuevos del cable (empresa, bobina,
+      metros reales, fecha de tendido).
+- [x] Importación: vista previa, aplicar por lotes, carga del proyecto oculta.
+- [x] «Pendientes de revisar», avisos solo de lo nuevo y decisiones en bloque.
+- [x] Panel: fecha del último Excel y discrepancias nuevas.
+- [x] Repaso de estilos con el usuario: componentes comunes, sin textos de ayuda.
+- [x] Tests, E2E y manual de usuario.
 
-- [ ] Ocultar la carga del proyecto por su origen en todas las vistas.
-- [ ] Estados finales: migración de «En almacén» y «Enrollado» a «No tendido».
-- [ ] Lector de los dos Excel por nombre de columna, con sus tests (datos inventados).
-- [ ] Empresa, bobina y metros reales en el cable y su ficha.
-- [ ] Primera carga como carga del proyecto, sin que se vea.
-- [ ] «Subir Excel del día»: vista previa guardada, desmarcar filas, cables nuevos.
-- [ ] «Pendientes de revisar» con su historial.
-- [ ] Panel: avance de tendido y conexión, fecha del último Excel, pendientes de revisar.
-- [ ] Tests, E2E y manual de usuario.
+## Fase 15 — Listados: imprimir, copiar y ordenar (v1.5.0)
 
-## Fase 15 — Guardados y roles (v1.5.0)
+Añadida el 2026-11-19. Rama `feat/f15-lists`. Va antes que guardados y roles (decidido el
+2026-11-19). Toca todas las pantallas con listas o tablas (cables, equipos y su ficha,
+bandejas, ubicaciones…).
 
-Añadida el 2026-11-18. Rama `feat/f15-saved-roles`. Sin prisa.
+- [ ] Elegir filas: casillas en cada fila y «Seleccionar todas».
+- [ ] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
+- [ ] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
+- [ ] Repaso de la ordenación en todos los listados: «más cables primero» y «menos» en
+      bandejas, y lo mismo donde tenga sentido; siempre respetando los filtros activos.
+- [ ] Tests y E2E.
+
+## Fase 16 — Guardados y roles (v1.6.0)
+
+Añadida el 2026-11-18. Rama `feat/f16-saved-roles`. Sin prisa. Era la fase 15: pasó detrás
+de los listados el 2026-11-19.
 
 - [ ] Guardados: cada persona guarda cables, bandejas y equipos en carpetas suyas (crear,
       renombrar, mover, quitar, borrar).
