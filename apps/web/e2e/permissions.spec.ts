@@ -14,7 +14,7 @@ test.describe("consulta", () => {
     await expect(nav(page).getByRole("link", { name: "Usuarios" })).toHaveCount(0);
 
     await openCable(page, CABLES.search.code);
-    await expect(page.getByRole("link", { name: "Editar datos" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Editar", exact: true })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Acciones" })).toHaveCount(0);
   });
 

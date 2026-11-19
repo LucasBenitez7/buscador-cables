@@ -43,6 +43,9 @@ function renderActions(role: Role, state: CableState = laid, routeTrays: string[
       routeTrays={routeTrays}
     />,
   );
+  // Las acciones están en la barra de abajo, plegada: se despliega como haría el técnico.
+  const toggle = screen.queryByRole("button", { name: "Registrar acción" });
+  if (toggle) fireEvent.click(toggle);
 }
 
 const sentForm = () =>
@@ -58,6 +61,29 @@ describe("CableActions", () => {
     renderActions("VIEWER");
 
     expect(screen.queryByRole("heading", { name: "Acciones" })).toBeNull();
+  });
+
+  it("keeps the actions folded in the bottom bar until asked for", () => {
+    render(
+      <CableActions
+        cableId="c1"
+        code="SH-50"
+        version={3}
+        state={laid}
+        availability={cableActionAvailability(permissionsOfRole("TECHNICIAN"), laid)}
+        locations={locations}
+      />,
+    );
+    const toggle = screen.getByRole("button", { name: "Registrar acción" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Conectar" })).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Conectar" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Conectar" }), { key: "Escape" });
+    expect(screen.queryByRole("button", { name: "Conectar" })).toBeNull();
   });
 
   it("disables what makes no sense now and explains why", () => {
@@ -274,7 +300,7 @@ describe("CableActions: partial laying", () => {
 });
 
 describe("CableStatusBadges", () => {
-  it("colours connected green, half connected amber and retired red", () => {
+  it("colours laid blue, not laid violet, connected green, half done amber and retired red", () => {
     const { rerender } = render(
       <CableStatusBadges installationStatus="LAID" connectionStatus="CONNECTED" />,
     );
@@ -287,6 +313,12 @@ describe("CableStatusBadges", () => {
       <CableStatusBadges installationStatus="PARTIALLY_LAID" connectionStatus="ORIGIN_ONLY" />,
     );
     expect(screen.getByText("Tendido parcial")).toHaveClass("text-warning");
+
+    rerender(<CableStatusBadges installationStatus="LAID" connectionStatus="DISCONNECTED" />);
+    expect(screen.getByText("Tendido")).toHaveClass("text-laid");
+
+    rerender(<CableStatusBadges installationStatus="IN_STOCK" connectionStatus="DISCONNECTED" />);
+    expect(screen.getByText("En almacén")).toHaveClass("text-pending");
 
     rerender(<CableStatusBadges installationStatus="RETIRED" connectionStatus="DISCONNECTED" />);
     expect(screen.getByText("Retirado")).toHaveClass("text-destructive");

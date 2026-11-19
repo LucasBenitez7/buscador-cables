@@ -19,7 +19,9 @@ describe("CableViewTabs", () => {
     render(<CableViewTabs tabs={tabs} current="recorrido" />);
 
     expect(screen.getByRole("link", { name: "Recorrido" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: /^Conexionado/ })).toHaveClass("text-muted-foreground");
+    expect(screen.getByRole("link", { name: "Recorrido" })).toHaveClass("bg-primary");
+    expect(screen.getByRole("link", { name: /^Conexionado/ })).not.toHaveClass("bg-primary");
+    expect(screen.getByRole("link", { name: /^Conexionado/ })).toHaveTextContent("12");
   });
 
   it("marks the tab pressed at once while its view is on its way", () => {
@@ -38,7 +40,7 @@ describe("CableViewTabs", () => {
         <CableViewTabs tabs={tabs} current="recorrido" />
       </PendingListContext.Provider>,
     );
-    expect(screen.getByRole("link", { name: /^Conexionado/ })).toHaveClass("border-primary");
-    expect(screen.getByRole("link", { name: "Recorrido" })).not.toHaveClass("border-primary");
+    expect(screen.getByRole("link", { name: /^Conexionado/ })).toHaveClass("bg-primary");
+    expect(screen.getByRole("link", { name: "Recorrido" })).not.toHaveClass("bg-primary");
   });
 });

@@ -5,8 +5,9 @@ import { PendingLink, usePendingNavigation } from "@/components/pending-list";
 
 export type CableViewTab = { id: string; label: string; href: string; count?: number };
 
+// A todo el ancho y con color: se ve cuál está elegida sin que ocupen media pantalla.
 const TAB =
-  "-mb-px border-b-2 px-4 py-2 text-sm outline-none focus-visible:ring-ring/50 rounded-t-md focus-visible:ring-3";
+  "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1 text-sm outline-none transition-colors focus-visible:ring-ring/50 focus-visible:ring-3";
 
 /**
  * «Recorrido» and «Conexionado». Both are the same page with another `?vista=`, so Next.js shows
@@ -20,7 +21,10 @@ export function CableViewTabs({ tabs, current }: { tabs: CableViewTab[]; current
   const shown = pending && pressed ? pressed : current;
 
   return (
-    <nav aria-label="Vista del cable" className="flex gap-1 border-b">
+    <nav
+      aria-label="Vista del cable"
+      className="bg-muted/60 flex gap-1 rounded-lg border p-0.5 md:max-w-md"
+    >
       {tabs.map((tab) => {
         const active = tab.id === shown;
         return (
@@ -31,13 +35,15 @@ export function CableViewTabs({ tabs, current }: { tabs: CableViewTab[]; current
             onClick={() => setPressed(tab.id)}
             className={
               active
-                ? `${TAB} border-primary text-foreground font-semibold`
-                : `${TAB} text-muted-foreground hover:text-foreground border-transparent font-medium`
+                ? `${TAB} bg-primary text-primary-foreground font-semibold shadow-sm`
+                : `${TAB} text-foreground hover:bg-muted font-medium`
             }
           >
             {tab.label}
             {tab.count ? (
-              <span className="text-muted-foreground ml-1.5 text-xs">{tab.count}</span>
+              <span className="rounded-full bg-current/15 px-1.5 text-xs tabular-nums">
+                {tab.count}
+              </span>
             ) : null}
           </PendingLink>
         );

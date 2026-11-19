@@ -12,7 +12,7 @@ import {
   optionsOf,
   parseEquipmentSearch,
 } from "@cables/shared";
-import { Section } from "@/components/detail";
+import { RecordTitle, Section, SectionLink } from "@/components/detail";
 import { FilterForm } from "@/components/filter-form";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { Badge } from "@/components/ui/badge";
@@ -91,9 +91,14 @@ export default async function EquipmentPage({
           </Link>{" "}
           ›
         </p>
-        <h1 className="font-mono text-3xl font-semibold tracking-tight break-all">
-          {equipment.equipment}
-        </h1>
+        <RecordTitle
+          title={equipment.equipment}
+          actions={
+            <SectionLink href={equipmentCablesHref(equipment.equipment)}>
+              Ver sus cables en el buscador
+            </SectionLink>
+          }
+        />
         <p className="text-sm">
           <span className="font-medium">
             {totals.ends} {totals.ends === 1 ? "cable llega" : "cables llegan"}
@@ -103,11 +108,6 @@ export default async function EquipmentPage({
             {totals.ends - totals.connected} pendientes
           </span>{" "}
           · {totals.tested} timbrados
-        </p>
-        <p className="text-sm">
-          <Link href={equipmentCablesHref(equipment.equipment)} className={INLINE_LINK}>
-            Ver estos cables en el buscador
-          </Link>
         </p>
       </header>
 

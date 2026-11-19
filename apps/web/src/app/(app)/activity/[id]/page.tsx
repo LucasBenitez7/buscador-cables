@@ -9,7 +9,7 @@ import {
   type WiringChangeEntry,
 } from "@cables/shared";
 import { ChangeList } from "@/components/change-list";
-import { Section } from "@/components/detail";
+import { Section, SectionLink } from "@/components/detail";
 import { Badge } from "@/components/ui/badge";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { actionVariant } from "@/features/activity/components/activity-list";
@@ -88,9 +88,9 @@ export default async function ActivityEventPage({ params }: { params: Params }) 
         <Section
           title={`Bornas corregidas (${wiresTouched} ${wiresTouched === 1 ? "hilo" : "hilos"})`}
           action={
-            <Link href={`/cables/${event.cable.id}?vista=conexionado`} className={INLINE_LINK}>
+            <SectionLink href={`/cables/${event.cable.id}?vista=conexionado`}>
               Ver el conexionado actual
-            </Link>
+            </SectionLink>
           }
         >
           <div className="bg-card overflow-x-auto rounded-lg border">
