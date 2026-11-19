@@ -43,9 +43,9 @@ describe("buildRouteSheets", () => {
 
     // Primero donde está la punta; las filas de tabla no cuentan.
     expect(only!.marks).toEqual([
-      { ...flag(0.2), label: "2", tone: "warning" },
-      { ...flag(0.1), label: "1", tone: "success" },
-      { ...flag(0.3), label: "3", tone: "muted" },
+      { ...flag(0.2), label: "2", tone: "loose" },
+      { ...flag(0.1), label: "1", tone: "laid" },
+      { ...flag(0.3), label: "3", tone: "pending" },
     ]);
     expect(only).toMatchObject({ trays: 3, hasLooseEnd: true });
   });
@@ -57,7 +57,7 @@ describe("buildRouteSheets", () => {
       { installationStatus: "LAID", looseEnd: null, looseEndTray: null },
     );
 
-    expect(only!.marks).toEqual([{ ...flag(0.5), label: "1, 2", tone: "success" }]);
+    expect(only!.marks).toEqual([{ ...flag(0.5), label: "1, 2", tone: "laid" }]);
   });
 
   // Revisión F7.5, B6: "Aquí" se ordenaba con Number() y daba NaN, así que el orden dependía
@@ -73,7 +73,7 @@ describe("buildRouteSheets", () => {
       { installationStatus: "PARTIALLY_LAID", looseEnd: "ORIGIN", looseEndTray: "99UXB00L22001" },
     );
 
-    expect(only!.marks).toEqual([{ ...flag(0.5), label: "1, 3, Aquí", tone: "warning" }]);
+    expect(only!.marks).toEqual([{ ...flag(0.5), label: "1, 3, Aquí", tone: "loose" }]);
   });
 
   it("puts first the sheet where the loose end is, then the ones with more trays", () => {
@@ -90,7 +90,7 @@ describe("buildRouteSheets", () => {
     );
 
     expect(sheets.map((item) => item.key)).toEqual(["20", "10"]);
-    expect(sheets[0]!.marks[0]).toMatchObject({ label: "Aquí", tone: "warning" });
+    expect(sheets[0]!.marks[0]).toMatchObject({ label: "Aquí", tone: "loose" });
   });
 
   it("leaves out sheets where the route trays only appear in a table", () => {

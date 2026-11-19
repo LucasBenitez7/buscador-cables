@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { CABLES, storageStatePath } from "./support/data";
-import { openCable } from "./support/cables";
+import { openCable, openSection } from "./support/cables";
 
 const { code } = CABLES.wiring;
 
@@ -11,6 +11,8 @@ async function openWiring(page: Page) {
     .getByRole("navigation", { name: "Vista del cable" })
     .getByRole("link", { name: /Conexionado/ })
     .click();
+  // La tabla de bornas empieza plegada: se usa menos que el plano.
+  await openSection(page, /^Bornas/);
   await expect(page.getByRole("table", { name: /Hilos del cable/ })).toBeVisible();
 }
 
@@ -41,6 +43,7 @@ test.describe("técnico", () => {
     await expect(page.getByText("1 corregido en campo")).toBeVisible();
 
     // Una sola línea en el historial, con su página de detalle.
+    await openSection(page, /^Historial/);
     await expect(page.getByText("corrigió las bornas de 1 hilo en origen")).toBeVisible();
     await page.getByRole("link", { name: "Ver qué cambió" }).first().click();
     const detail = page.getByRole("table", { name: /Celdas cambiadas/ });

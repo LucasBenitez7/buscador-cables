@@ -12,13 +12,14 @@ import {
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CODE_LINK, TEXT_LINK_SM } from "@/components/ui/text-link";
 import {
   CONNECTION_VARIANT,
   INSTALLATION_VARIANT,
   TEST_VARIANT,
 } from "@/features/cables/components/cable-status-badges";
+import { TONE_FILL } from "@/features/cables/status-tones";
+import { QuickSearch } from "@/features/search/components/quick-search";
 import { HealthCard } from "@/features/system/components/health-card";
 import type { ActivityEntry } from "@/server/activity/service";
 import type { CableProgress, Dashboard as DashboardData } from "@/server/dashboard/service";
@@ -141,66 +142,6 @@ function Panel({
   );
 }
 
-/** Two plain GET forms: the search pages already read `?q=`. */
-function QuickSearch() {
-  return (
-    <section aria-label="Búsqueda rápida" className="grid gap-3 md:grid-cols-2">
-      <SearchBox
-        action="/cables"
-        id="home-cable"
-        label="Buscar un cable"
-        placeholder="Código, equipo o descripción"
-      />
-      <SearchBox
-        action="/trays"
-        id="home-tray"
-        label="Buscar una bandeja"
-        placeholder="99UXA00L22036…"
-        code
-      />
-    </section>
-  );
-}
-
-function SearchBox({
-  action,
-  id,
-  label,
-  placeholder,
-  code,
-}: {
-  action: string;
-  id: string;
-  label: string;
-  placeholder: string;
-  code?: boolean;
-}) {
-  return (
-    <form
-      action={action}
-      role="search"
-      aria-label={label}
-      className="bg-card space-y-2 rounded-lg border p-4"
-    >
-      <label htmlFor={id} className="text-sm font-semibold">
-        {label}
-      </label>
-      <div className="flex gap-2">
-        <Input
-          id={id}
-          name="q"
-          type="search"
-          placeholder={placeholder}
-          autoComplete="off"
-          spellCheck={false}
-          className={cn("min-w-0 flex-1", code && "font-mono uppercase")}
-        />
-        <Button type="submit">Buscar</Button>
-      </div>
-    </form>
-  );
-}
-
 function ProgressPanel({ progress }: { progress: CableProgress }) {
   const { total, laid, connected, installation } = progress;
   return (
@@ -209,8 +150,13 @@ function ProgressPanel({ progress }: { progress: CableProgress }) {
         <span className="text-foreground text-3xl font-semibold tabular-nums">{count(total)}</span>{" "}
         cables en el proyecto
       </p>
-      <Meter label="Tendidos" value={laid} total={total} barClassName="bg-primary" />
-      <Meter label="Conectados" value={connected} total={total} barClassName="bg-success" />
+      <Meter label="Tendidos" value={laid} total={total} barClassName={TONE_FILL.laid} />
+      <Meter
+        label="Conectados"
+        value={connected}
+        total={total}
+        barClassName={TONE_FILL.connected}
+      />
       <Meter
         label="Timbrados"
         value={progress.tested}

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { CABLES, storageStatePath } from "./support/data";
-import { openCable } from "./support/cables";
+import { openCable, openSection } from "./support/cables";
 
 test.use({ storageState: storageStatePath("viewer") });
 
@@ -10,6 +10,7 @@ test("la ficha muestra los extremos y hasta dónde llegó un cable tendido a med
   const { code, ends, looseTray } = CABLES.waiting;
   await openCable(page, code);
 
+  await openSection(page, "Extremos");
   await expect(page.getByRole("region", { name: "Origen" })).toContainText(ends[0]);
   const destination = page.getByRole("region", { name: "Destino" });
   await expect(destination).toContainText(ends[1]);
@@ -32,11 +33,11 @@ test("de la ficha a la bandeja, y de la bandeja al buscador", async ({ page }) =
   await expect(page.getByRole("heading", { level: 1, name: looseTray })).toBeVisible();
   // Bloque plegable con su ancla para «Ir a».
   const waiting = page.locator("#esperando");
-  await expect(waiting.getByRole("heading", { name: "Cables esperando aquí (1)" })).toBeVisible();
+  await expect(waiting.getByRole("heading", { name: "Esperando aquí (1)" })).toBeVisible();
   await expect(waiting.getByRole("link", { name: code })).toBeVisible();
   await expect(waiting.getByText("Punta de destino suelta aquí")).toBeVisible();
 
-  await page.getByRole("link", { name: "Ver y filtrar en el buscador" }).click();
+  await page.getByRole("link", { name: "Ver sus cables en el buscador" }).click();
   await expect(page).toHaveURL(new RegExp(`/cables\\?tray=${looseTray}`));
   await expect(page.getByLabel("Bandeja (código)")).toHaveValue(looseTray);
   await expect(

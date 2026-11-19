@@ -87,11 +87,22 @@ shadcn/ui). Los valores hex son aproximados, solo de referencia.
 | `--success` (nuevo)    | Conectado, activo, correcto       | `0.74 0.15 162`   | `#30c78d` |
 | `--warning` (nuevo)    | Estados intermedios               | `0.80 0.14 80`    | `#edb345` |
 | `--destructive`        | Errores, bajas, retirados         | `0.68 0.19 25`    | `#f75d59` |
+| `--laid` (fase 13)     | Tendido                           | `0.66 0.18 262`   | `#528dff` |
+| `--pending` (fase 13)  | Falta, no tendido o sin datos     | `0.70 0.20 325`   | `#da6ae1` |
 
 Contraste calculado (WCAG): texto principal sobre el fondo 15:1; texto secundario 7,4:1;
 azul sobre el fondo 7:1; texto sobre el botón azul 7,2:1; verde 8,5:1; ámbar 9,7:1; rojo
-5,9:1. Todo supera el mínimo AA (4,5:1). Los valores finales se ajustan al aplicarlos si alguna
+5,9:1; tendido 5,8:1; falta 6,3:1. Todo supera el mínimo AA (4,5:1). Los valores finales se ajustan al aplicarlos si alguna
 pantalla lo pide, sin bajar de AA.
+
+**Colores de estado (fase 13).** Cada estado tiene el mismo color en toda la web: etiquetas,
+recorrido, marcas del plano, leyendas, panel y actividad. Azul (`laid`) = tendido; violeta
+(`pending`) = falta, no tendido o sin datos; ámbar (`warning`) = a medias (tendido parcial,
+conectado en una punta, punta suelta); verde (`success`) = conectado o timbrado correcto; rojo
+(`destructive`) = retirado o timbrado con fallo. Azul y violeta se eligieron para destacar sobre
+los planos, que son blancos con bandejas verdes y cian; en el plano cada marca es solo un borde
+de su color, sin relleno, para que se siga leyendo lo que hay debajo. La correspondencia estado → color está en un solo
+sitio, `features/cables/status-tones.ts`, y todo lo demás la usa.
 
 Reglas:
 

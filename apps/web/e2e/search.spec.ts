@@ -55,3 +55,21 @@ test("limpiar quita todos los filtros", async ({ page }) => {
   await expect(page).toHaveURL(/\/cables$/);
   await expect(page.getByLabel("Código, equipo o descripción")).toHaveValue("");
 });
+
+test("un solo buscador en el inicio: sugiere mientras se escribe y abre el código exacto", async ({
+  page,
+}) => {
+  const { search } = CABLES;
+  await page.goto("/");
+  const box = page.getByRole("search", { name: "Buscar" }).getByRole("searchbox");
+
+  // Sugerencias agrupadas mientras se escribe, sin pulsar nada.
+  await box.fill(SEARCH_QUERY);
+  const cables = page.getByRole("region", { name: /^Cables/ });
+  await expect(cables.getByRole("link", { name: search.code, exact: true })).toBeVisible();
+
+  // Con el código entero, Intro lleva directo a su ficha.
+  await box.fill(search.code.toLowerCase());
+  await box.press("Enter");
+  await expect(page.getByRole("heading", { level: 1, name: search.code })).toBeVisible();
+});

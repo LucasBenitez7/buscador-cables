@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { CABLES, USERS, storageStatePath } from "./support/data";
-import { cableHeader, openCable, runAction } from "./support/cables";
+import { cableHeader, openActions, openCable, openSection, runAction } from "./support/cables";
 
 const STORE = "Planta E2E › Almacén";
 const YARD = "Planta E2E › Patio";
@@ -31,6 +31,7 @@ test.describe("técnico", () => {
       dialog.getByLabel("Dónde queda enrollado").selectOption({ label: YARD }),
     );
     await expect(badges).toContainText("Enrollado");
+    await openSection(page, "Extremos");
     await expect(page.getByText(`Ahora está en: ${YARD}`)).toBeVisible();
 
     await runAction(page, "Mover", async (dialog) => {
@@ -40,6 +41,7 @@ test.describe("técnico", () => {
     await expect(page.getByText(`Ahora está en: ${STORE}`)).toBeVisible();
 
     // Historial, del más reciente al más antiguo.
+    await openSection(page, /^Historial/);
     const mine = page.getByRole("listitem").filter({ hasText: USERS.technician.name });
     await expect(mine).toHaveCount(5);
     await expect(mine.nth(0)).toContainText("Movido");
@@ -64,10 +66,7 @@ test.describe("técnico", () => {
     await runAction(other, "Tender");
     await expect(cableHeader(other)).toContainText("Tendido");
 
-    await page
-      .getByRole("region", { name: "Acciones" })
-      .getByRole("button", { name: "Tender", exact: true })
-      .click();
+    await (await openActions(page)).getByRole("button", { name: "Tender", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: "Tender", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText(
@@ -83,8 +82,9 @@ test.describe("técnico", () => {
     const badges = cableHeader(page);
 
     // Una bandeja fuera del recorrido hay que confirmarla.
-    await page
-      .getByRole("region", { name: "Acciones" })
+    await (
+      await openActions(page)
+    )
       .getByRole("button", { name: "Tender a medias", exact: true })
       .click();
     const dialog = page.getByRole("dialog");
@@ -115,6 +115,7 @@ test.describe("técnico", () => {
     await expect(badges).toContainText("Tendido");
     await expect(badges).toContainText("Solo origen");
 
+    await openSection(page, /^Historial/);
     const mine = page.getByRole("listitem").filter({ hasText: USERS.technician.name });
     await expect(mine.nth(0)).toContainText("terminó de tender el cable");
     await expect(mine.nth(2)).toContainText(
@@ -137,7 +138,7 @@ test.describe("técnico", () => {
 
   test("un técnico no puede retirar ni corregir", async ({ page }) => {
     await openCable(page, CABLES.search.code);
-    const actions = page.getByRole("region", { name: "Acciones" });
+    const actions = await openActions(page);
 
     await expect(actions.getByRole("button", { name: "Desconectar" })).toBeEnabled();
     await expect(actions.getByRole("button", { name: "Retirar" })).toHaveCount(0);
@@ -169,6 +170,7 @@ test.describe("supervisor", () => {
     await expect(badges).toContainText("Tendido");
     await expect(badges).toContainText("Conectado");
 
+    await openSection(page, /^Historial/);
     const mine = page.getByRole("listitem").filter({ hasText: USERS.supervisor.name });
     await expect(mine).toHaveCount(2);
     await expect(mine.first()).toContainText("Corrección");

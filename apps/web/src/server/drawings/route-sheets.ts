@@ -12,7 +12,7 @@ import { hasDrawingImage } from "./store";
 /** A tray of the route on a sheet: its step number and how far the cable got there. */
 export type RouteSheetMark = DrawingMark & {
   label: string;
-  tone: "success" | "muted" | "warning";
+  tone: "laid" | "pending" | "loose";
 };
 
 /** A sheet of the drawings with the trays of a cable's route marked on it. */
@@ -51,7 +51,7 @@ export type SheetRow = {
   };
 };
 
-const TONE_RANK: Record<RouteSheetMark["tone"], number> = { warning: 0, success: 1, muted: 2 };
+const TONE_RANK: Record<RouteSheetMark["tone"], number> = { loose: 0, laid: 1, pending: 2 };
 
 /** Route numbers in order; "Aquí" (off the route) after them. */
 const byStepNumber = (a: string, b: string) => {
@@ -83,10 +83,10 @@ export function buildRouteSheets(
     const indexes = stepsOf.get(row.trayCode) ?? [];
     const isLoose = state.looseEndTray === row.trayCode;
     const tone: RouteSheetMark["tone"] = isLoose
-      ? "warning"
+      ? "loose"
       : indexes.some((index) => steps[index] === "laid")
-        ? "success"
-        : "muted";
+        ? "laid"
+        : "pending";
     const label =
       indexes.length > 0
         ? indexes.map((index) => String(index + 1)).join(", ")
@@ -115,7 +115,7 @@ export function buildRouteSheets(
   }
 
   const firstStep = (mark: RouteSheetMark) => Number(mark.label.split(", ")[0]) || 0;
-  const looseFirst = (mark: RouteSheetMark) => (mark.tone === "warning" ? 0 : 1);
+  const looseFirst = (mark: RouteSheetMark) => (mark.tone === "loose" ? 0 : 1);
   return [...sheets.values()]
     .map(({ points, ...sheet }) => ({
       ...sheet,

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { CABLES, storageStatePath } from "./support/data";
-import { openCable } from "./support/cables";
+import { openCable, openSection } from "./support/cables";
 
 test.use({ storageState: storageStatePath("admin") });
 
@@ -37,14 +37,17 @@ test("alta, edición y baja de un cable", async ({ page }) => {
 
   await page.getByRole("link", { name: "Ver ficha" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "NB-77" })).toBeVisible();
+  await openSection(page, "Datos del cable");
   await expect(page.getByText("85,5 m")).toBeVisible();
+  await openSection(page, "Extremos");
   await expect(page.getByRole("region", { name: "Origen" })).toContainText(ORIGIN);
+  await openSection(page, /^Historial/);
   const history = page.getByRole("listitem").filter({ hasText: "Ada Admin" });
   await expect(history).toHaveCount(2);
   await expect(history.first()).toContainText("Datos editados");
 
   // Baja: pide confirmación del navegador y un motivo.
-  await page.getByRole("link", { name: "Editar datos" }).click();
+  await page.getByRole("link", { name: "Editar", exact: true }).click();
   page.once("dialog", (dialog) => {
     expect(dialog.message()).toContain("¿Dar de baja el cable NB-77?");
     void dialog.accept();
@@ -61,7 +64,7 @@ test("alta, edición y baja de un cable", async ({ page }) => {
 
 test("avisa si otra persona ha editado el cable mientras tanto", async ({ page, context }) => {
   await openCable(page, CABLES.concurrency.code);
-  await page.getByRole("link", { name: "Editar datos" }).click();
+  await page.getByRole("link", { name: "Editar", exact: true }).click();
   // Esperar al formulario: `page.url()` justo tras el clic aún era la ficha, y la segunda
   // pestaña abría la ficha en lugar del formulario (fallo intermitente en el CI de main).
   await expect(page).toHaveURL(/\/cables\/[^/]+\/edit$/);

@@ -10,8 +10,7 @@ import {
   formatTraySize,
   normalizeTrayCode,
 } from "@cables/shared";
-import { DataList, Item, JumpLinks, Section } from "@/components/detail";
-import { Button } from "@/components/ui/button";
+import { DataList, Item, JumpLinks, RecordTitle, Section, SectionLink } from "@/components/detail";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { TrayDrawings } from "@/features/drawings/components/tray-drawings";
@@ -44,7 +43,7 @@ export default async function TrayPage({ params }: { params: Params }) {
   const size = formatTraySize(tray.size);
 
   return (
-    <article className="space-y-8">
+    <article className="space-y-6">
       <header className="space-y-2">
         <p className="text-muted-foreground text-sm">
           <Link
@@ -55,7 +54,16 @@ export default async function TrayPage({ params }: { params: Params }) {
           </Link>{" "}
           ›
         </p>
-        <h1 className="font-mono text-3xl font-semibold tracking-tight">{tray.code}</h1>
+        <RecordTitle
+          title={tray.code}
+          actions={
+            tray.routeCables.length > 0 ? (
+              <SectionLink href={`/cables?tray=${encodeURIComponent(tray.code)}`}>
+                Ver sus cables en el buscador
+              </SectionLink>
+            ) : null
+          }
+        />
         <p className="text-muted-foreground">
           {[
             TRAY_KIND_LABELS[tray.kind],
@@ -78,7 +86,6 @@ export default async function TrayPage({ params }: { params: Params }) {
 
       <Section
         title={`Plano${tray.drawings.length > 1 ? `s (${tray.drawings.length} hojas)` : ""}`}
-        collapsible
         id="planos"
       >
         {tray.drawings.length === 0 ? (
@@ -88,7 +95,23 @@ export default async function TrayPage({ params }: { params: Params }) {
         )}
       </Section>
 
-      <Section title="Datos" collapsible id="datos">
+      <Section title={`Esperando aquí (${tray.waitingCables.length})`} collapsible id="esperando">
+        {tray.waitingCables.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Ningún cable tiene aquí la punta suelta.</p>
+        ) : (
+          <CableList cables={tray.waitingCables} />
+        )}
+      </Section>
+
+      <Section title={`Pasan por aquí (${tray.routeCables.length})`} collapsible id="pasan">
+        {tray.routeCables.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Ningún recorrido cargado pasa por aquí.</p>
+        ) : (
+          <CableList cables={tray.routeCables} />
+        )}
+      </Section>
+
+      <Section title="Datos de la bandeja" collapsible defaultOpen={false} id="datos">
         <DataList>
           <Item label="Tamaño">{size}</Item>
           <Item label="Edificio">
@@ -103,39 +126,6 @@ export default async function TrayPage({ params }: { params: Params }) {
           <Item label="Cables que pasan">{tray.cables}</Item>
         </DataList>
         {tray.notes ? <p className="text-sm whitespace-pre-line">{tray.notes}</p> : null}
-      </Section>
-
-      <Section
-        title={`Cables esperando aquí (${tray.waitingCables.length})`}
-        collapsible
-        id="esperando"
-      >
-        {tray.waitingCables.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Ningún cable tiene aquí la punta suelta.</p>
-        ) : (
-          <CableList cables={tray.waitingCables} />
-        )}
-      </Section>
-
-      <Section
-        title={`Cables que pasan por aquí (${tray.routeCables.length})`}
-        collapsible
-        id="pasan"
-        action={
-          tray.routeCables.length > 0 ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/cables?tray=${encodeURIComponent(tray.code)}`}>
-                Ver y filtrar en el buscador
-              </Link>
-            </Button>
-          ) : null
-        }
-      >
-        {tray.routeCables.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Ningún recorrido cargado pasa por aquí.</p>
-        ) : (
-          <CableList cables={tray.routeCables} />
-        )}
       </Section>
     </article>
   );

@@ -11,6 +11,7 @@ import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { INLINE_LINK, locationHref } from "@/lib/links";
 import { EquipmentLink } from "./equipment-link";
+import { ROUTE_LEGEND, StatusLegend } from "./status-legend";
 import { CODE_LINK } from "@/components/ui/text-link";
 import type { CableDetail, CableEndDetail } from "@/server/cables/detail";
 
@@ -31,6 +32,10 @@ export function CableEnds({ ends, state }: Pick<CableDetail, "ends" | "state">) 
           side={side}
           end={side === "ORIGIN" ? ends.origin : ends.destination}
           looseTray={state.looseEnd === side ? state.looseEndTray : null}
+          connected={
+            state.connectionStatus === "CONNECTED" ||
+            state.connectionStatus === (side === "ORIGIN" ? "ORIGIN_ONLY" : "DESTINATION_ONLY")
+          }
         />
       ))}
     </div>
@@ -41,10 +46,13 @@ function EndCard({
   side,
   end,
   looseTray,
+  connected,
 }: {
   side: CableEndSide;
   end: CableEndDetail;
   looseTray: string | null;
+  /** This end is connected: what the people who connect look for first. */
+  connected: boolean;
 }) {
   // [label, value, is a code, link]: codes in monospace; the room opens its location page.
   const rows: [string, string | null, boolean, string | null][] = [
@@ -68,6 +76,9 @@ function EndCard({
         <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           {CABLE_END_SIDE_LABELS[side]}
         </h3>
+        <Badge dot variant={connected ? "success" : "outline"}>
+          {connected ? "Conectado aquí" : "Sin conectar aquí"}
+        </Badge>
         {looseTray ? (
           <Badge variant="warning">
             {/* A non-breaking space: the badge is a flex box, where a plain space is dropped. */}
@@ -180,10 +191,10 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
                 <span
                   aria-hidden
                   className={cn(
-                    "size-2.5 shrink-0 rounded-full border",
-                    progress === "laid" && "bg-success border-success",
-                    progress === "pending" && "border-muted-foreground border-dashed",
-                    progress === "unknown" && "bg-border border-border",
+                    "size-3 shrink-0 rounded-full border-2",
+                    progress === "laid" && "bg-laid border-laid",
+                    progress === "pending" && "border-pending border-dashed",
+                    progress === "unknown" && "border-pending/60",
                   )}
                 />
                 {step.trayCode ? (
@@ -204,6 +215,7 @@ export function CableRoute({ route, state }: Pick<CableDetail, "route" | "state"
           );
         })}
       />
+      <StatusLegend items={ROUTE_LEGEND} />
     </div>
   );
 }

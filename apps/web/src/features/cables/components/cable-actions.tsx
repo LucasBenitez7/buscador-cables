@@ -1,8 +1,10 @@
 "use client";
 
 import { cn } from "cn";
+import { ChevronUpIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
+  useId,
   useState,
   useTransition,
   type ComponentProps,
@@ -133,6 +135,9 @@ export function CableActions({
   const [result, setResult] = useState<CableFormResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // La barra de abajo: plegada, solo el botón; desplegada, todas las acciones.
+  const [expanded, setExpanded] = useState(false);
+  const panelId = useId();
 
   const offered = compact
     ? availability.filter((item) => item.action !== "CORRECTION")
@@ -140,12 +145,12 @@ export function CableActions({
   if (offered.length === 0) {
     return null;
   }
-  const blocked = offered.filter((item) => item.disabledReason !== null);
   const current = offered.find((item) => item.action === open);
 
   function openDialog(action: CableFieldAction) {
     setResult(null);
     setNotice(null);
+    setExpanded(false);
     setOpen(action);
   }
 
@@ -278,45 +283,66 @@ export function CableActions({
   }
 
   return (
-    <section aria-labelledby="cable-actions-title" className="space-y-3">
-      <h2 id="cable-actions-title" className="text-base font-medium">
-        Acciones
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {offered.map((item) => (
-          <Button
-            key={item.action}
-            type="button"
-            variant={item.action === "RETIRED" ? "destructive" : "outline"}
-            disabled={item.disabledReason !== null}
-            title={item.disabledReason ?? undefined}
-            onClick={() => openDialog(item.action)}
-          >
-            {item.label}
-          </Button>
-        ))}
-      </div>
-      {notice ? (
-        <p role="status" className="text-success text-sm">
-          {notice}
-        </p>
-      ) : null}
-      {blocked.length > 0 ? (
-        <details className="text-muted-foreground text-sm">
-          <summary className="hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-sm transition-colors outline-none select-none focus-visible:ring-3">
-            Por qué hay acciones desactivadas
-          </summary>
-          <ul className="mt-2 space-y-1 pl-4">
-            {blocked.map((item) => (
-              <li key={item.action}>
-                <span className="text-foreground">{item.label}:</span> {item.disabledReason}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+    <>
+      {/* Hueco al final de la página: la barra fija no tapa lo último de la ficha. */}
+      <div aria-hidden className="h-24" />
+      <section
+        aria-labelledby="cable-actions-title"
+        className="bg-background/95 supports-[backdrop-filter]:bg-background/85 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_var(--background)] backdrop-blur"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setExpanded(false);
+        }}
+      >
+        <div className="mx-auto max-w-6xl space-y-3 px-4 py-3 sm:px-6 md:py-2">
+          <h2 id="cable-actions-title" className="sr-only">
+            Acciones
+          </h2>
+          {notice ? (
+            <p role="status" className="text-success text-sm font-medium">
+              {notice}
+            </p>
+          ) : null}
+          <div id={panelId} hidden={!expanded} className="max-h-[55dvh] overflow-y-auto">
+            <p className="text-muted-foreground mb-2 text-sm">¿Qué has hecho con el cable?</p>
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {offered.map((item) => (
+                <li key={item.action}>
+                  <Button
+                    type="button"
+                    variant={item.action === "RETIRED" ? "destructive" : "outline"}
+                    className="h-12 w-full text-base md:h-11"
+                    disabled={item.disabledReason !== null}
+                    onClick={() => openDialog(item.action)}
+                  >
+                    {item.label}
+                  </Button>
+                  {item.disabledReason ? (
+                    <p className="text-muted-foreground mt-1 px-1 text-xs">{item.disabledReason}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* En el móvil, a todo el ancho; en el escritorio, un botón normal a la derecha. */}
+          <div className="flex md:justify-end">
+            <Button
+              type="button"
+              className="h-12 w-full text-base md:h-10 md:w-auto md:px-6"
+              aria-expanded={expanded}
+              aria-controls={panelId}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? "Cerrar" : "Registrar acción"}
+              <ChevronUpIcon
+                aria-hidden
+                className={cn("size-5 transition-transform", expanded && "rotate-180")}
+              />
+            </Button>
+          </div>
+        </div>
+      </section>
       {dialog}
-    </section>
+    </>
   );
 }
 

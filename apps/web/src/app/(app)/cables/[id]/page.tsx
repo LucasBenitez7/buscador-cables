@@ -21,8 +21,7 @@ import {
 import { FilterForm } from "@/components/filter-form";
 import { ChangeList } from "@/components/change-list";
 import { INLINE_LINK, levelCablesHref, locationHref } from "@/lib/links";
-import { DataList, Item, JumpLinks, Section } from "@/components/detail";
-import { Button } from "@/components/ui/button";
+import { DataList, Item, JumpLinks, RecordTitle, Section, SectionLink } from "@/components/detail";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableViewTabs } from "@/features/cables/components/cable-view-tabs";
 import { CableWiring } from "@/features/cables/components/cable-wiring";
@@ -104,43 +103,31 @@ export default async function CablePage({
     : [];
 
   return (
-    <article className="space-y-8">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-muted-foreground text-sm">
-            <Link
-              href="/cables"
-              className="hover:text-foreground focus-visible:ring-ring/50 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3"
-            >
-              Cables
-            </Link>{" "}
-            ›
-          </p>
-          <h1 className="font-mono text-3xl font-semibold tracking-tight">{cable.code}</h1>
-          {cable.level || cable.altCode ? (
-            <p className="text-muted-foreground text-sm">
-              {cable.level ? (
-                <Link href={levelCablesHref(cable.level)} className={INLINE_LINK}>
-                  {CABLE_LEVEL_LABELS[cable.level]}
-                </Link>
-              ) : null}
-              {cable.level && cable.altCode ? " · " : null}
-              {cable.altCode}
-            </p>
-          ) : null}
-          {cable.description ? <p className="text-muted-foreground">{cable.description}</p> : null}
-          <CableStatusBadges
-            installationStatus={cable.installationStatus}
-            connectionStatus={cable.connectionStatus}
-            testStatus={cable.testStatus}
-            showUntested
-          />
-        </div>
-        {canEdit ? (
-          <Button asChild variant="outline">
-            <Link href={`/cables/${cable.id}/edit`}>Editar datos</Link>
-          </Button>
-        ) : null}
+    <article className="space-y-6">
+      {/* Cabecera corta: el código y su estado. Lo demás está en «Datos del cable», para que el
+          plano quede lo más arriba posible. */}
+      <header className="space-y-2">
+        <p className="text-muted-foreground text-sm">
+          <Link
+            href="/cables"
+            className="hover:text-foreground focus-visible:ring-ring/50 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+          >
+            Cables
+          </Link>{" "}
+          ›
+        </p>
+        <RecordTitle
+          title={cable.code}
+          actions={
+            canEdit ? <SectionLink href={`/cables/${cable.id}/edit`}>Editar</SectionLink> : null
+          }
+        />
+        <CableStatusBadges
+          installationStatus={cable.installationStatus}
+          connectionStatus={cable.connectionStatus}
+          testStatus={cable.testStatus}
+          showUntested
+        />
       </header>
 
       {cable.deleted ? (
@@ -149,20 +136,6 @@ export default async function CablePage({
           {cable.deleted.reason ? `. Motivo: ${cable.deleted.reason}` : ""}.
         </p>
       ) : null}
-
-      <CableActions
-        cableId={cable.id}
-        code={cable.code}
-        version={cable.version}
-        state={cable.state}
-        availability={availability}
-        locations={locations}
-        events={correctableEvents}
-        // Un recorrido puede nombrar dos veces la misma bandeja: se sugiere una sola vez.
-        routeTrays={[
-          ...new Set(cable.route.flatMap((step) => (step.trayCode ? [step.trayCode] : []))),
-        ]}
-      />
 
       {/* Pestañas y todo lo de debajo: al cambiar de vista, «Cargando…» en su lugar. */}
       <PendingListProvider>
@@ -175,42 +148,33 @@ export default async function CablePage({
             count: item.id === "conexionado" ? cable.wiring.wires.length : undefined,
           }))}
         />
-        <PendingResults className="space-y-8">
+        <PendingResults className="space-y-4">
           <JumpLinks
             links={
               view === "recorrido"
                 ? [
+                    ...(routeSheets.length > 0 ? [{ id: "planos", label: "Plano" }] : []),
                     { id: "tramos", label: "Tramos" },
-                    ...(routeSheets.length > 0 ? [{ id: "planos", label: "Planos" }] : []),
+                    { id: "extremos", label: "Extremos" },
                     { id: "datos", label: "Datos" },
                     { id: "historial", label: "Historial" },
                   ]
                 : [
-                    { id: "hilos", label: "Tabla de hilos" },
                     { id: "hoja", label: "Hoja original" },
+                    { id: "extremos", label: "Extremos" },
+                    { id: "hilos", label: "Bornas" },
                     { id: "historial", label: "Historial" },
                   ]
             }
           />
-
-          <Section title="Extremos">
-            <CableEnds ends={cable.ends} state={cable.state} />
-            {cable.currentLocation ? (
-              <p className="text-sm">
-                <span className="text-muted-foreground">Ahora está en: </span>
-                {cable.currentLocationId ? (
-                  <Link href={locationHref(cable.currentLocationId)} className={INLINE_LINK}>
-                    {cable.currentLocation}
-                  </Link>
-                ) : (
-                  cable.currentLocation
-                )}
-              </p>
-            ) : null}
-          </Section>
-
           {view === "recorrido" ? (
             <>
+              {routeSheets.length > 0 ? (
+                <Section title="Recorrido en los planos" id="planos">
+                  <RouteDrawings sheets={routeSheets} />
+                </Section>
+              ) : null}
+
               <Section
                 title={`Recorrido por bandejas${cable.route.length > 0 ? ` (${cable.route.length} tramos)` : ""}`}
                 collapsible
@@ -219,14 +183,33 @@ export default async function CablePage({
                 <CableRoute route={cable.route} state={cable.state} />
               </Section>
 
-              {routeSheets.length > 0 ? (
-                <Section title="Recorrido en los planos" collapsible id="planos">
-                  <RouteDrawings sheets={routeSheets} />
-                </Section>
-              ) : null}
+              <Section title="Extremos" collapsible defaultOpen={false} id="extremos">
+                <CableEnds ends={cable.ends} state={cable.state} />
+                {cable.currentLocation ? (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Ahora está en: </span>
+                    {cable.currentLocationId ? (
+                      <Link href={locationHref(cable.currentLocationId)} className={INLINE_LINK}>
+                        {cable.currentLocation}
+                      </Link>
+                    ) : (
+                      cable.currentLocation
+                    )}
+                  </p>
+                ) : null}
+              </Section>
 
-              <Section title="Datos" collapsible id="datos">
+              <Section title="Datos del cable" collapsible defaultOpen={false} id="datos">
                 <DataList>
+                  <Item label="Servicio">{cable.description}</Item>
+                  <Item label="Nivel">
+                    {cable.level ? (
+                      <Link href={levelCablesHref(cable.level)} className={INLINE_LINK}>
+                        {CABLE_LEVEL_LABELS[cable.level]}
+                      </Link>
+                    ) : null}
+                  </Item>
+                  <Item label="Marcado alternativo">{cable.altCode}</Item>
                   <Item label="Tipo">
                     {cable.type && cable.typeId ? (
                       <Link
@@ -311,25 +294,7 @@ export default async function CablePage({
             </>
           ) : (
             <>
-              <Section
-                title={`Conexionado${cable.wiring.revision ? ` (revisión ${cable.wiring.revision})` : ""}`}
-                collapsible
-                id="hilos"
-              >
-                <CableWiring
-                  cableId={cable.id}
-                  version={cable.version}
-                  wires={cable.wiring.wires}
-                  jumpers={cable.wiring.jumpers}
-                  equipment={{
-                    origin: cable.ends.origin.equipment,
-                    destination: cable.ends.destination.equipment,
-                  }}
-                  canEdit={!cable.deleted && hasPermission(user, "cable:wiring")}
-                />
-              </Section>
-
-              <Section title="Hoja original del listado" collapsible id="hoja">
+              <Section title="Hoja original del listado" id="hoja">
                 {hasSheet ? (
                   <div className="space-y-2">
                     <p className="text-muted-foreground text-sm">
@@ -353,31 +318,45 @@ export default async function CablePage({
                   </p>
                 )}
               </Section>
+
+              <Section title="Extremos" collapsible id="extremos">
+                <CableEnds ends={cable.ends} state={cable.state} />
+                {cable.currentLocation ? (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Ahora está en: </span>
+                    {cable.currentLocationId ? (
+                      <Link href={locationHref(cable.currentLocationId)} className={INLINE_LINK}>
+                        {cable.currentLocation}
+                      </Link>
+                    ) : (
+                      cable.currentLocation
+                    )}
+                  </p>
+                ) : null}
+              </Section>
+
+              <Section
+                title={`Bornas · ${cable.wiring.wires.length} ${cable.wiring.wires.length === 1 ? "hilo" : "hilos"}${cable.wiring.revision ? ` (revisión ${cable.wiring.revision})` : ""}`}
+                collapsible
+                defaultOpen={false}
+                id="hilos"
+              >
+                <CableWiring
+                  cableId={cable.id}
+                  version={cable.version}
+                  wires={cable.wiring.wires}
+                  jumpers={cable.wiring.jumpers}
+                  equipment={{
+                    origin: cable.ends.origin.equipment,
+                    destination: cable.ends.destination.equipment,
+                  }}
+                  canEdit={!cable.deleted && hasPermission(user, "cable:wiring")}
+                />
+              </Section>
             </>
           )}
 
-          <Section title="Último movimiento">
-            {cable.lastAction ? (
-              <p className="text-sm">
-                {CABLE_ACTION_LABELS[cable.lastAction.action]} · {cable.lastAction.user} ·{" "}
-                {dateFormat.format(cable.lastAction.at)}
-              </p>
-            ) : (
-              <p className="text-muted-foreground text-sm">Sin movimientos registrados.</p>
-            )}
-          </Section>
-
-          <section id="historial" className="scroll-mt-28 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
-              <h2 className="text-base font-semibold">
-                Historial
-                <span className="text-muted-foreground text-sm font-normal">
-                  {" "}
-                  ·{" "}
-                  {historySearch.sort === "oldest" ? "más antiguo primero" : "más reciente primero"}
-                </span>
-              </h2>
-            </div>
+          <Section title="Historial" collapsible defaultOpen={false} id="historial">
             <PendingListProvider>
               <FilterForm
                 action={`/cables/${cable.id}`}
@@ -487,9 +466,24 @@ export default async function CablePage({
                 )}
               </PendingResults>
             </PendingListProvider>
-          </section>
+          </Section>
         </PendingResults>
       </PendingListProvider>
+
+      {/* Fija abajo, a mano con el pulgar: la ficha empieza por el plano, no por los botones. */}
+      <CableActions
+        cableId={cable.id}
+        code={cable.code}
+        version={cable.version}
+        state={cable.state}
+        availability={availability}
+        locations={locations}
+        events={correctableEvents}
+        // Un recorrido puede nombrar dos veces la misma bandeja: se sugiere una sola vez.
+        routeTrays={[
+          ...new Set(cable.route.flatMap((step) => (step.trayCode ? [step.trayCode] : []))),
+        ]}
+      />
     </article>
   );
 }

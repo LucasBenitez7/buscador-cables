@@ -1,12 +1,47 @@
 import { ChevronDownIcon } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Collapsible } from "./collapsible";
 
+/** The code at the top of a record (cable, tray, equipment, location): the same everywhere. */
+export const RECORD_TITLE = "font-mono text-xl font-semibold tracking-tight break-all";
+
 /**
- * A titled block of a record page (cable, tray). `action` (a button or link about the whole
- * block) sits at the right of the title, where it is seen before the list. `collapsible`
- * blocks (long tables, drawings) fold with a click on their title, to get further down the
- * page without scrolling past them; they start open unless `defaultOpen` is false. `id` is
+ * The code of a record and, right next to it, what can be done with it (`SectionLink`s:
+ * «Editar», «Ver en el buscador»). When they do not fit beside the code they go under it.
+ */
+export function RecordTitle({ title, actions }: { title: string; actions?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <h1 className={RECORD_TITLE}>{title}</h1>
+      {actions ? (
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">{actions}</div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * What can be done with a block or a record ("Ver en el buscador", "Editar"), next to its
+ * title: plain text with a line under it, no box, so it does not compete with the title.
+ */
+export function SectionLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="text-primary border-primary/50 hover:border-primary focus-visible:ring-ring/50 border-b text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2"
+    >
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * A titled block of a record page (cable, tray). `action` (a `SectionLink` about the whole
+ * block) sits right next to the title, and goes under it when it does not fit. `collapsible`
+ * blocks fold with a click anywhere on their bar, to get further down the page without
+ * scrolling past them; they start open unless `defaultOpen` is false. The drawings are never
+ * collapsible: they are what people come for. `id` is
  * the anchor of the quick links at the top of the page; jumping there opens the block.
  */
 export function Section({
@@ -31,18 +66,21 @@ export function Section({
         defaultOpen={defaultOpen}
         className="group/section scroll-mt-28 space-y-3"
       >
-        <summary className="hover:text-primary focus-visible:ring-ring/50 flex cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-sm border-b pb-2 outline-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
-          <h2 className="flex items-center gap-2 text-base font-semibold">
+        {/* Toda la barra se pulsa, y dice con palabras qué pasa al pulsarla: no hace falta
+            saber qué significa una flecha. */}
+        <summary className="bg-card hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-lg border px-3 py-1.5 transition-colors outline-none select-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
+          <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="text-[0.95rem] font-semibold">{title}</h2>
+            {action}
+          </span>
+          <span className="text-primary inline-flex shrink-0 items-center gap-1 text-sm font-medium">
+            <span className="group-open/section:hidden">Mostrar</span>
+            <span className="hidden group-open/section:inline">Ocultar</span>
             <ChevronDownIcon
               aria-hidden
-              className="text-muted-foreground size-4 -rotate-90 transition-transform group-open/section:rotate-0"
+              className="size-4 transition-transform group-open/section:rotate-180"
             />
-            {title}
-          </h2>
-          <span className="text-muted-foreground text-xs group-open/section:hidden">
-            Plegado · pulsa para verlo
           </span>
-          {action ? <span className="hidden group-open/section:inline">{action}</span> : null}
         </summary>
         <div className="space-y-3">{children}</div>
       </Collapsible>
@@ -50,7 +88,7 @@ export function Section({
   }
   return (
     <section id={id} className="scroll-mt-28 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b pb-2">
         <h2 className="text-base font-semibold">{title}</h2>
         {action}
       </div>
@@ -72,12 +110,12 @@ export function JumpLinks({ links }: { links: readonly { id: string; label: stri
       aria-label="Ir a"
       className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-30 -mx-4 flex [scrollbar-width:none] flex-nowrap items-center gap-1.5 overflow-x-auto border-b px-4 py-2 text-sm whitespace-nowrap backdrop-blur sm:-mx-6 sm:px-6"
     >
-      <span className="text-muted-foreground mr-1 shrink-0 text-xs">Ir a:</span>
+      <span className="text-foreground mr-1 shrink-0 text-xs font-medium">Ir a:</span>
       {links.map((link) => (
         <a
           key={link.id}
           href={`#${link.id}`}
-          className="bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-inset"
+          className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 focus-visible:ring-ring/50 shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-inset"
         >
           {link.label}
         </a>

@@ -14,6 +14,9 @@ const badgeVariants = cva(
         success: "border-transparent bg-success/15 text-success",
         warning: "border-transparent bg-warning/15 text-warning",
         destructive: "border-transparent bg-destructive/15 text-destructive",
+        // Estados del tendido (ver `features/cables/status-tones.ts`).
+        laid: "border-transparent bg-laid/15 text-laid",
+        pending: "border-transparent bg-pending/15 text-pending",
       },
     },
     defaultVariants: { variant: "default" },
