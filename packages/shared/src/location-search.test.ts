@@ -130,6 +130,7 @@ describe("sortLocationTree", () => {
     ];
 
     expect(names(sortLocationTree(flat, "cables"))).toEqual(["Beta", "Gamma", "Alfa"]);
+    expect(names(sortLocationTree(flat, "cables-asc"))).toEqual(["Alfa", "Beta", "Gamma"]);
   });
 
   it("does not change the tree it was given", () => {

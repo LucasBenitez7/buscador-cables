@@ -995,12 +995,26 @@ Añadida el 2026-11-19. Rama `feat/f15-lists`. Va antes que guardados y roles (d
 2026-11-19). Toca todas las pantallas con listas o tablas (cables, equipos y su ficha,
 bandejas, ubicaciones…).
 
-- [ ] Elegir filas: casillas en cada fila y «Seleccionar todas».
-- [ ] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
-- [ ] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
-- [ ] Repaso de la ordenación en todos los listados: «más cables primero» y «menos» en
+Decisiones (2026-11-19):
+
+- **Elegir**: un botón «Seleccionar» enseña las casillas y una barra fija abajo con cuántas
+  hay, «Copiar» e «Imprimir». Sin él, la lista se ve y se pulsa como siempre.
+- **Seleccionar todas**: una sola casilla, encima de la lista (y en la cabecera de la tabla).
+  En una lista con páginas elige todo lo que cumple los filtros, no solo la página (lo da el
+  servidor). Lo elegido se mantiene al cambiar de página y se vacía al cambiar los filtros.
+- **Imprimir**: el diálogo del navegador con una hoja limpia (título, fecha y los códigos);
+  desde ahí se imprime o se guarda como PDF. Sin dependencias nuevas.
+
+- [x] Elegir filas: casillas en cada fila y «Seleccionar todas».
+- [x] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
+- [x] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
+- [x] Repaso de la ordenación en todos los listados: «más cables primero» y «menos» en
       bandejas, y lo mismo donde tenga sentido; siempre respetando los filtros activos.
-- [ ] Tests y E2E.
+- [x] Tests y E2E.
+
+Hecho también: en las fichas con dos listas (bandeja) solo se elige en una a la vez; lo que
+se copia de una ubicación es su código y su nombre; el texto de la lista de equipos dice
+cuáles de los 60 enseña según el orden elegido.
 
 ## Fase 16 — Guardados y roles (v1.6.0)
 

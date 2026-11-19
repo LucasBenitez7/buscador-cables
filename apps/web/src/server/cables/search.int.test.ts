@@ -1,7 +1,7 @@
 import { prisma } from "@cables/db";
 import { parseCableSearch } from "@cables/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getSearchOptions, searchCables } from "./search";
+import { getSearchOptions, searchCableCodes, searchCables } from "./search";
 
 const ids = {
   plant: "plant",
@@ -215,6 +215,15 @@ describe("searchCables: sorting and paging", () => {
     expect(first.items.map((item) => item.code)).toEqual(["SH-5", "SH-10", "SH-50"]);
     expect(second.items.map((item) => item.code)).toEqual(["SH-500"]);
     expect(beyond).toMatchObject({ page: 2, pageCount: 2 });
+  });
+
+  it("gives every matching code for «Seleccionar todas», in the order of the list", async () => {
+    const all = await searchCableCodes(
+      parseCableSearch({ type: ids.control, sort: "length", dir: "desc", page: "2", size: "25" }),
+    );
+
+    expect(all?.map((cable) => cable.code)).toEqual(["SH-50", "SH-500", "SH-5", "SH-10"]);
+    expect(await searchCableCodes(parseCableSearch({ q: "zzzz-nada" }))).toEqual([]);
   });
 
   it("returns readable names for the table", async () => {

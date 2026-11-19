@@ -1,5 +1,6 @@
 import "server-only";
 import { Prisma, prisma } from "@cables/db";
+import { SELECT_ALL_MAX } from "@/server/select-all";
 import {
   SEARCH_PAGE_SIZE,
   VISIBLE_EVENT_SOURCES,
@@ -239,10 +240,13 @@ const locationLabel = (location: { name: string; parent: { name: string } | null
  * Searches active cables. Filtering, sorting and paging run in one SQL query
  * over ids; the page of cables is then loaded with its related names.
  */
-export async function searchCables(
+/**
+ * The WHERE of a search and how many cables match. When nothing contains the code typed,
+ * the codes most alike (`fuzzy`). Null when a filter can never match.
+ */
+async function findMatches(
   search: CableSearch,
-  pageSize = search.size ?? SEARCH_PAGE_SIZE,
-): Promise<CableSearchResult> {
+): Promise<{ where: Prisma.Sql; count: number; fuzzy: boolean } | null> {
   const countWhere = async (fuzzy: boolean) => {
     const conditions = await buildConditions(search, fuzzy);
     if (conditions === null) {
@@ -251,21 +255,43 @@ export async function searchCables(
     const where = Prisma.join(conditions, " AND ");
     const [{ total }] = await prisma.$queryRaw<[{ total: bigint }]>`
       SELECT count(*) AS total FROM "cable" c WHERE ${where}`;
-    return { where, count: Number(total) };
+    return { where, count: Number(total), fuzzy };
   };
 
   // Primero coincidencias exactas (subcadena); si no hay ninguna y se buscaba un
   // código, códigos parecidos. Así "sh50" no devuelve cientos de "SH-…" cortos.
-  let fuzzy = false;
-  let found = await countWhere(false);
+  const found = await countWhere(false);
   if (found?.count === 0 && search.q && normalizeCableCode(search.q)) {
-    fuzzy = true;
-    found = await countWhere(true);
+    return countWhere(true);
   }
+  return found;
+}
+
+/**
+ * Every code that matches the search, in the order of the list (for «Seleccionar las N que
+ * cumplen los filtros»). Null when there are more than `SELECT_ALL_MAX`.
+ */
+export async function searchCableCodes(
+  search: CableSearch,
+): Promise<{ id: string; code: string }[] | null> {
+  const found = await findMatches(search);
+  if (!found || found.count === 0) return [];
+  if (found.count > SELECT_ALL_MAX) return null;
+  return prisma.$queryRaw<{ id: string; code: string }[]>`
+    SELECT c."id", c."code" FROM "cable" c
+    WHERE ${found.where}
+    ORDER BY ${orderBy(search)}`;
+}
+
+export async function searchCables(
+  search: CableSearch,
+  pageSize = search.size ?? SEARCH_PAGE_SIZE,
+): Promise<CableSearchResult> {
+  const found = await findMatches(search);
   if (!found) {
     return { items: [], total: 0, page: 1, pageCount: 0 };
   }
-  const { where, count } = found;
+  const { where, count, fuzzy } = found;
   const pageCount = Math.ceil(count / pageSize);
   const page = Math.min(search.page ?? 1, Math.max(pageCount, 1));
   if (count === 0) {

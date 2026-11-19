@@ -140,11 +140,13 @@ export const TRAY_PAGE_SIZE = 60;
 export const TRAY_PAGE_SIZES = [TRAY_PAGE_SIZE, 120, 240] as const;
 
 /** Orders of the tray list. The default is by code, A-Z. */
-export const TRAY_SORTS = ["code", "code-desc", "waiting"] as const;
+export const TRAY_SORTS = ["code", "code-desc", "cables", "cables-asc", "waiting"] as const;
 export type TraySort = (typeof TRAY_SORTS)[number];
 export const TRAY_SORT_LABELS: Record<TraySort, string> = {
   code: "Código (A-Z)",
   "code-desc": "Código (Z-A)",
+  cables: "Más cables primero",
+  "cables-asc": "Menos cables primero",
   waiting: "Más cables esperando primero",
 };
 

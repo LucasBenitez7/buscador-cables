@@ -14,7 +14,14 @@ import {
 } from "@cables/shared";
 import { RecordTitle, Section, SectionLink } from "@/components/detail";
 import { FilterForm } from "@/components/filter-form";
+import { ListSummary } from "@/components/list-summary";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
+import {
+  SelectAllRow,
+  SelectCheckbox,
+  SelectionAside,
+  SelectionProvider,
+} from "@/components/selection";
 import { Badge } from "@/components/ui/badge";
 import { TEST_VARIANT } from "@/features/cables/components/cable-status-badges";
 import { EquipmentLink } from "@/features/cables/components/equipment-link";
@@ -81,6 +88,13 @@ export default async function EquipmentPage({
   const groups = filterEquipmentGroups(equipment.groups, search);
   const shown = groups.reduce((sum, group) => sum + group.ends.length, 0);
   const filtered = Boolean(search.q || search.state || search.test || search.block || search.sort);
+  // Un cable con las dos puntas en este equipo sale dos veces, pero se elige una sola.
+  const selectable = [
+    ...new Map(
+      groups.flatMap((group) => group.ends.map((end) => [end.cableId, end.code] as const)),
+    ),
+  ].map(([key, label]) => ({ key, label }));
+  const equipmentQuery = [search.q, search.state, search.test, search.block, search.sort].join("|");
 
   return (
     <article className="space-y-6">
@@ -157,72 +171,82 @@ export default async function EquipmentPage({
             },
           ]}
         />
-        <PendingResults className="space-y-6">
-          {filtered ? (
-            <p role="status" className="text-muted-foreground text-sm">
-              {shown} de {totals.ends} cumplen los filtros.
-            </p>
-          ) : null}
+        <SelectionProvider
+          title={`Equipo ${equipment.equipment}`}
+          items={selectable}
+          resetKey={equipmentQuery}
+        >
+          <PendingResults className="space-y-6">
+            <div className="space-y-3">
+              <ListSummary aside={selectable.length > 0 ? <SelectionAside /> : null}>
+                {filtered ? `${shown} de ${totals.ends} cumplen los filtros.` : null}
+              </ListSummary>
+              <SelectAllRow />
+            </div>
 
-          {groups.length === 0 ? (
-            <p
-              role="status"
-              className="text-muted-foreground rounded-lg border p-6 text-center text-sm"
-            >
-              Ningún cable de este equipo cumple los filtros.
-            </p>
-          ) : (
-            groups.map((group) => (
-              <Section
-                key={group.block ?? "—"}
-                id={stripId(group.block)}
-                collapsible
-                title={`${group.block ? `Regletero ${group.block}` : "Sin regletero en el listado"} · ${group.ends.length} ${group.ends.length === 1 ? "cable" : "cables"}`}
+            {groups.length === 0 ? (
+              <p
+                role="status"
+                className="text-muted-foreground rounded-lg border p-6 text-center text-sm"
               >
-                <ShowMore
-                  as="ul"
-                  className="bg-card divide-y rounded-lg border"
-                  noun="cables"
-                  items={group.ends.map((end) => (
-                    <li
-                      key={`${end.cableId}-${end.end}`}
-                      className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5 px-4 py-3 text-sm"
-                    >
-                      <div className="min-w-0 space-y-1">
-                        <Link
-                          href={`/cables/${end.cableId}?vista=conexionado`}
-                          className="text-primary font-mono text-base font-semibold hover:underline"
-                        >
-                          {end.code}
-                        </Link>
-                        <p className="text-muted-foreground">
-                          {WIRING_END_LABELS[end.end]} · bornas {pointsText(end.points)} ·{" "}
-                          {end.wires} {end.wires === 1 ? "hilo" : "hilos"} · al otro lado{" "}
-                          <EquipmentLink equipment={end.otherEquipment} />
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        <Badge dot variant={end.connected ? "success" : "outline"}>
-                          {end.connected ? "Conectado aquí" : "Sin conectar aquí"}
-                        </Badge>
-                        {end.testStatus !== "NOT_TESTED" ? (
-                          <Badge dot variant={TEST_VARIANT[end.testStatus]}>
-                            {TEST_STATUS_LABELS[end.testStatus]}
+                Ningún cable de este equipo cumple los filtros.
+              </p>
+            ) : (
+              groups.map((group) => (
+                <Section
+                  key={group.block ?? "—"}
+                  id={stripId(group.block)}
+                  collapsible
+                  title={`${group.block ? `Regletero ${group.block}` : "Sin regletero en el listado"} · ${group.ends.length} ${group.ends.length === 1 ? "cable" : "cables"}`}
+                >
+                  <ShowMore
+                    as="ul"
+                    className="bg-card divide-y rounded-lg border"
+                    noun="cables"
+                    items={group.ends.map((end) => (
+                      <li
+                        key={`${end.cableId}-${end.end}`}
+                        className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5 px-4 py-3 text-sm"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <SelectCheckbox item={{ key: end.cableId, label: end.code }} />
+                            <Link
+                              href={`/cables/${end.cableId}?vista=conexionado`}
+                              className="text-primary font-mono text-base font-semibold hover:underline"
+                            >
+                              {end.code}
+                            </Link>
+                          </div>
+                          <p className="text-muted-foreground">
+                            {WIRING_END_LABELS[end.end]} · bornas {pointsText(end.points)} ·{" "}
+                            {end.wires} {end.wires === 1 ? "hilo" : "hilos"} · al otro lado{" "}
+                            <EquipmentLink equipment={end.otherEquipment} />
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge dot variant={end.connected ? "success" : "outline"}>
+                            {end.connected ? "Conectado aquí" : "Sin conectar aquí"}
                           </Badge>
-                        ) : null}
-                        {end.editedInField ? (
-                          <Badge dot variant="warning">
-                            Bornas corregidas
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                />
-              </Section>
-            ))
-          )}
-        </PendingResults>
+                          {end.testStatus !== "NOT_TESTED" ? (
+                            <Badge dot variant={TEST_VARIANT[end.testStatus]}>
+                              {TEST_STATUS_LABELS[end.testStatus]}
+                            </Badge>
+                          ) : null}
+                          {end.editedInField ? (
+                            <Badge dot variant="warning">
+                              Bornas corregidas
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  />
+                </Section>
+              ))
+            )}
+          </PendingResults>
+        </SelectionProvider>
       </PendingListProvider>
     </article>
   );
