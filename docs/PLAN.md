@@ -1005,12 +1005,16 @@ Decisiones (2026-11-19):
 - **Imprimir**: el diálogo del navegador con una hoja limpia (título, fecha y los códigos);
   desde ahí se imprime o se guarda como PDF. Sin dependencias nuevas.
 
-- [ ] Elegir filas: casillas en cada fila y «Seleccionar todas».
-- [ ] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
-- [ ] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
-- [ ] Repaso de la ordenación en todos los listados: «más cables primero» y «menos» en
+- [x] Elegir filas: casillas en cada fila y «Seleccionar todas».
+- [x] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
+- [x] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
+- [x] Repaso de la ordenación en todos los listados: «más cables primero» y «menos» en
       bandejas, y lo mismo donde tenga sentido; siempre respetando los filtros activos.
-- [ ] Tests y E2E.
+- [x] Tests y E2E.
+
+Hecho también: en las fichas con dos listas (bandeja) solo se elige en una a la vez; lo que
+se copia de una ubicación es su código y su nombre; el texto de la lista de equipos dice
+cuáles de los 60 enseña según el orden elegido.
 
 ## Fase 16 — Guardados y roles (v1.6.0)
 

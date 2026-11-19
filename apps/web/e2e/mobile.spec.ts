@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { CABLES, storageStatePath } from "./support/data";
+import { CABLES, SEARCH_QUERY, storageStatePath } from "./support/data";
 import { openActions, openCable } from "./support/cables";
 
 // Proyecto "mobile" (Pixel 7): cómo se usa la app en planta, con el móvil.
@@ -73,4 +73,17 @@ test("la ficha empieza por lo que se usa en campo y las acciones están abajo", 
   await expect(actions.getByRole("button", { name: "Timbrar", exact: true })).toBeInViewport();
   await actions.getByRole("button", { name: "Cerrar" }).click();
   await expect(actions.getByRole("button", { name: "Timbrar", exact: true })).toBeHidden();
+});
+
+test("en las tarjetas se eligen cables y la barra de abajo los copia", async ({ page }) => {
+  await page.goto(`/cables?q=${SEARCH_QUERY}`);
+  await page.getByRole("button", { name: "Seleccionar" }).click();
+
+  // La casilla está sobre la tarjeta: marcarla no abre el cable.
+  await page.getByRole("checkbox", { name: `Elegir ${CABLES.search.code}` }).check();
+  await expect(page).toHaveURL(/\/cables\?q=/);
+  const bar = page.getByRole("region", { name: "Elegidos" });
+  await expect(bar.getByRole("status")).toHaveText("1 elegido");
+  await expect(bar.getByRole("button", { name: "Copiar" })).toBeInViewport();
+  await expect(bar.getByRole("button", { name: "Imprimir" })).toBeInViewport();
 });

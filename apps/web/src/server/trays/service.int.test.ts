@@ -2,7 +2,7 @@ import { prisma } from "@cables/db";
 import { parseCableSearch } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { searchCables } from "@/server/cables/search";
-import { getTrayDetail, searchTrays, trayLevels } from "./service";
+import { getTrayDetail, searchTrayCodes, searchTrays, trayLevels } from "./service";
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(
@@ -171,8 +171,43 @@ describe("searchTrays", () => {
     expect(await codes({ sort: "waiting", page: 2 }, 1)).toEqual(["99UXA00C20101"]);
   });
 
+  it("sorts by the cables going through, most or fewest first, and then by code", async () => {
+    // Bandeja principal y tubo: 2 cables activos cada una (el dado de baja no cuenta); la
+    // vertical, 1. Con el mismo número, por código.
+    expect(await codes({ sort: "cables" })).toEqual([
+      "99UXA00C20101",
+      "99UXA00L22036",
+      "99UXA00L22051",
+    ]);
+    expect(await codes({ sort: "cables-asc" })).toEqual([
+      "99UXA00L22051",
+      "99UXA00C20101",
+      "99UXA00L22036",
+    ]);
+    // Respetando los filtros: solo las de escalera.
+    expect(await codes({ kind: "LADDER", sort: "cables-asc" })).toEqual([
+      "99UXA00L22051",
+      "99UXA00L22036",
+    ]);
+  });
+
   it("lists the voltage levels the trays have", async () => {
     expect(await trayLevels()).toEqual([2]);
+  });
+});
+
+describe("searchTrayCodes", () => {
+  it("gives every matching code in the order of the list, without pages", async () => {
+    expect(await searchTrayCodes({ sort: "cables-asc", page: 2, size: 60 })).toEqual([
+      "99UXA00L22051",
+      "99UXA00C20101",
+      "99UXA00L22036",
+    ]);
+    expect(await searchTrayCodes({ q: "99UXA00L2", sort: "code-desc" })).toEqual([
+      "99UXA00L22051",
+      "99UXA00L22036",
+    ]);
+    expect(await searchTrayCodes({ waiting: true, sort: "waiting" })).toEqual(["99UXA00L22036"]);
   });
 });
 

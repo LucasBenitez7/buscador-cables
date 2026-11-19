@@ -130,8 +130,8 @@ campo.
 
 ## Equipos
 
-**Equipos** busca un cuadro, caja o armario (ordenados por más cables o por código, A-Z o
-Z-A) y abre su página: los cables que llegan a él,
+**Equipos** busca un cuadro, caja o armario (ordenados por más o menos cables, o por código,
+A-Z o Z-A) y abre su página: los cables que llegan a él,
 agrupados por regletero, con sus bornas, el equipo del otro lado y si **esa punta** está
 conectada. «Solo pendientes de conectar» deja los que faltan. Es la forma de trabajar armario
 a armario. El código de un equipo, en cualquier ficha, lleva a su página.
@@ -156,8 +156,8 @@ cambio: recarga la página y repite la acción.
 ## Bandejas y planos
 
 **Bandejas** lista las bandejas con sus cables. Se buscan por código y se filtran por tipo,
-por nivel (L1-L4) o «Solo con cables esperando»; se ordenan por código (A-Z o Z-A) o con las
-que más cables esperan primero. La ficha de una bandeja enseña el plano con la
+por nivel (L1-L4) o «Solo con cables esperando»; se ordenan por código (A-Z o Z-A), por los
+cables que pasan (más o menos primero) o con las que más cables esperan primero. La ficha de una bandeja enseña el plano con la
 bandeja marcada, qué cables pasan por ella y cuáles esperan con una punta suelta. Junto al
 código, **Ver sus cables en el buscador** (igual en la ficha de un equipo y de una ubicación).
 
@@ -191,7 +191,7 @@ La flecha abre o cierra una rama; «Expandir todo» y «Contraer todo», el árb
 - **Buscar**: nombre o código (no importan acentos ni mayúsculas). El árbol se abre solo
   hasta cada ubicación que coincide y la resalta.
 - **Filtrar** por tipo (planta, área, unidad, sitio) o «Solo con cables».
-- **Ordenar** por nombre, código o «Más cables primero».
+- **Ordenar** por nombre, código, «Más cables primero» o «Menos cables primero».
 - «N cables →» abre el buscador con los cables de esa ubicación y de todo lo que contiene.
 
 Quien gestiona ubicaciones añade, edita, mueve o elimina desde la fila: con ratón, los
@@ -201,6 +201,23 @@ Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
 
 **Ubicaciones, Bandejas y Equipos** tienen la misma barra: búsqueda, orden, filtros
 (cuando los hay), «Buscar» y «Limpiar» para volver a empezar.
+
+## Copiar o imprimir una lista
+
+En cualquier lista (cables, bandejas, equipos, ubicaciones y las listas de las fichas de una
+bandeja, un equipo o una ubicación), **Seleccionar**, junto al número de resultados, pone una
+casilla en cada fila y una barra abajo con cuántos hay elegidos.
+
+- Marca las filas una a una, o **Seleccionar todas**: en una lista con páginas elige todo lo
+  que cumple los filtros, no solo la página que se ve (hasta 5000). Lo elegido se mantiene al
+  cambiar de página y se vacía al cambiar los filtros.
+- **Copiar** copia los códigos, uno por línea, para pegarlos en un correo o un Excel; el botón
+  dice «✓ Copiado».
+- **Imprimir** abre la impresión con una hoja limpia: el título, la fecha y los códigos. Desde
+  ahí se imprime o se guarda como PDF.
+- **Cancelar** (o Esc) quita las casillas.
+
+De una ubicación se copia su código y su nombre; del resto, solo el código.
 
 ## Actividad
 

@@ -65,6 +65,13 @@ describe("searchEquipment", () => {
     expect(await codes("name")).toEqual(["99BMA10", "99CXJ11"]);
     expect(await codes("name-desc")).toEqual(["99CXJ11", "99BMA10"]);
   });
+
+  it("sorts the fewest cables first on request, then by code", async () => {
+    const shown = await searchEquipment("", "cables-asc");
+
+    expect(shown.map((match) => match.cables)).toEqual([1, 2, 2]);
+    expect(shown.slice(1).map((match) => match.equipment)).toEqual(["99BMA10", "99CXJ11"]);
+  });
 });
 
 describe("getEquipment", () => {
