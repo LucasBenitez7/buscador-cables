@@ -22,16 +22,17 @@ export function RecordTitle({ title, actions }: { title: string; actions?: React
   );
 }
 
+/** The look of `SectionLink`, also for a button that does the same kind of thing («Guardar»). */
+export const SECTION_LINK =
+  "text-primary border-primary/50 hover:border-primary focus-visible:ring-ring/50 border-b text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2";
+
 /**
  * What can be done with a block or a record ("Ver en el buscador", "Editar"), next to its
  * title: plain text with a line under it, no box, so it does not compete with the title.
  */
 export function SectionLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="text-primary border-primary/50 hover:border-primary focus-visible:ring-ring/50 border-b text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2"
-    >
+    <Link href={href} className={SECTION_LINK}>
       {children}
     </Link>
   );

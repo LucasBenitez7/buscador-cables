@@ -8,6 +8,7 @@ import {
   SelectionAside,
   SelectionProvider,
 } from "@/components/selection";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { selectAllCablesAction } from "@/features/search/actions";
 import { locationLabel } from "@/lib/location-label";
 import { notFound } from "next/navigation";
@@ -129,6 +130,7 @@ export default async function LocationPage({ params }: { params: Params }) {
             total={location.cables}
             selectAll={selectAllCablesAction.bind(null, { location: location.id })}
             scope="shown"
+            actions={<SaveChosenButton kind="CABLE" />}
           >
             <div className="space-y-3">
               <ListSummary aside={<SelectionAside />}>{null}</ListSummary>

@@ -66,8 +66,31 @@ type Props = {
    * location's cables («Seleccionar todas»).
    */
   scope?: "filters" | "shown";
+  /**
+   * More buttons for the bar, before «Copiar» («Guardar», «Mover a…»). They read what is
+   * chosen with `useChosen()`.
+   */
+  actions?: ReactNode;
   children: ReactNode;
 };
+
+/** What is chosen, for the extra buttons of the bar. */
+export type Chosen = {
+  items: SelectionItem[];
+  /** Leaves «Seleccionar» (after moving or removing what was chosen). */
+  finish: () => void;
+  /** Says in the bar how it went («25 cables en «Armario 80BBA»»). */
+  notify: (message: string) => void;
+};
+
+const ChosenContext = createContext<Chosen | null>(null);
+
+/** What is chosen in the list around, for a button of the bar. */
+export function useChosen(): Chosen {
+  const chosen = useContext(ChosenContext);
+  if (!chosen) throw new Error("useChosen va dentro de las acciones de un SelectionProvider");
+  return chosen;
+}
 
 /**
  * «Seleccionar» in a list (fase 15): ticks on each row and a bar fixed at the bottom with how
@@ -82,6 +105,7 @@ export function SelectionProvider({
   selectAll,
   resetKey = "",
   scope = "filters",
+  actions,
   children,
 }: Props) {
   const [selecting, setSelecting] = useState(false);
@@ -172,6 +196,7 @@ export function SelectionProvider({
         <SelectionBar
           title={title}
           selected={selected}
+          actions={actions}
           onClose={() => {
             setSelecting(false);
             setSelected(new Map());
@@ -306,13 +331,15 @@ export function SelectCell({ item }: { item: SelectionItem }) {
 type BarProps = {
   title: string;
   selected: Map<string, string>;
+  actions?: ReactNode;
   onClose: () => void;
 };
 
-function SelectionBar({ title, selected, onClose }: BarProps) {
+function SelectionBar({ title, selected, actions, onClose }: BarProps) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
 
@@ -321,6 +348,7 @@ function SelectionBar({ title, selected, onClose }: BarProps) {
 
   const copy = async () => {
     setError(null);
+    setNotice(null);
     try {
       await navigator.clipboard.writeText(labels.join("\n"));
       setCopied(true);
@@ -347,7 +375,7 @@ function SelectionBar({ title, selected, onClose }: BarProps) {
   return (
     <>
       {/* Hueco al final de la página: la barra fija no tapa las últimas filas. */}
-      <div aria-hidden className="h-32 md:h-20" />
+      <div aria-hidden className={cn("md:h-20", actions ? "h-48" : "h-32")} />
       <section
         aria-label="Elegidos"
         className="bg-card fixed inset-x-0 bottom-0 z-40 border-t-2 border-t-[color-mix(in_oklch,var(--primary)_45%,var(--card))] pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_var(--background)]"
@@ -362,13 +390,32 @@ function SelectionBar({ title, selected, onClose }: BarProps) {
                 ? "Ninguno elegido"
                 : `${count.toLocaleString("es-ES")} ${count === 1 ? "elegido" : "elegidos"}`}
             </p>
+            {notice ? (
+              <p aria-live="polite" className="text-success w-full text-xs">
+                {notice}
+              </p>
+            ) : null}
             {error ? (
               <p role="alert" className="text-destructive w-full text-xs">
                 {error}
               </p>
             ) : null}
           </div>
-          <div className="grid grid-cols-3 gap-2 md:flex">
+          <div className={cn("grid gap-2 md:flex", actions ? "grid-cols-2" : "grid-cols-3")}>
+            {actions ? (
+              <ChosenContext.Provider
+                value={{
+                  items: [...selected].map(([key, label]) => ({ key, label })),
+                  finish: onClose,
+                  notify: (message) => {
+                    setError(null);
+                    setNotice(message);
+                  },
+                }}
+              >
+                {actions}
+              </ChosenContext.Provider>
+            ) : null}
             <Button type="button" variant="outline" disabled={count === 0} onClick={copy}>
               {copied ? (
                 <CheckIcon aria-hidden className="text-success" />

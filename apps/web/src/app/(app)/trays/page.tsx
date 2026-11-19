@@ -20,6 +20,7 @@ import {
   SelectionProvider,
 } from "@/components/selection";
 import { trayHref } from "@/features/cables/components/cable-route";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { selectAllTraysAction } from "@/features/trays/actions";
 import { requireUser } from "@/server/session";
 import { searchTrays, trayLevels } from "@/server/trays/service";
@@ -59,6 +60,7 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
           total={result.total}
           selectAll={selectAllTraysAction.bind(null, trayQuery(search, { page: undefined }))}
           resetKey={trayQuery(search, { page: undefined, size: undefined })}
+          actions={<SaveChosenButton kind="TRAY" />}
         >
           <ListToolbar
             action="/trays"

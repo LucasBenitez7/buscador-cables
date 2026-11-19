@@ -11,6 +11,7 @@ import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { SelectionProvider } from "@/components/selection";
 import { Button } from "@/components/ui/button";
 import { SearchFilters } from "@/features/search/components/search-filters";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { selectAllCablesAction } from "@/features/search/actions";
 import { SearchResults } from "@/features/search/components/search-results";
 import { deletedCableCode } from "@/lib/route-params";
@@ -57,6 +58,7 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
           total={result.total}
           selectAll={selectAllCablesAction.bind(null, search)}
           resetKey={cableSearchQuery(search, { page: undefined, size: undefined })}
+          actions={<SaveChosenButton kind="CABLE" />}
         >
           <PendingResults>
             <SearchResults
