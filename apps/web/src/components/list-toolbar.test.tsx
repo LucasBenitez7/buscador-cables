@@ -145,4 +145,31 @@ describe("ListToolbar", () => {
     const button = screen.getByRole("button", { name: "Cargando…" });
     expect(button).toBeDisabled();
   });
+
+  it("folds the order and the filters on a phone and counts the ones that are set", () => {
+    renderToolbar({
+      filters: [
+        {
+          kind: "select",
+          name: "kind",
+          label: "Tipo",
+          value: "LADDER",
+          options: [{ value: "LADDER", label: "Bandeja de escalera" }],
+        },
+        { kind: "checkbox", name: "waiting", label: "Solo con cables esperando" },
+      ],
+    });
+    const more = screen.getByRole("button", { name: "Más filtros (1)" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    const panel = document.getElementById(more.getAttribute("aria-controls")!);
+    expect(panel).toContainElement(screen.getByLabelText("Tipo"));
+    expect(panel).toHaveClass("max-md:hidden");
+
+    fireEvent.click(more);
+    expect(screen.getByRole("button", { name: "Menos filtros (1)" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(panel).not.toHaveClass("max-md:hidden");
+  });
 });
