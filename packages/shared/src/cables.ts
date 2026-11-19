@@ -35,10 +35,14 @@ export const CABLE_ACTIONS = [
   "TESTED",
   "DELETED",
   "WIRING_EDITED",
+  "EXCEL_UPDATED",
 ] as const;
 
-/** Who wrote a history event. The Prisma enum `CableEventSource` must list the same members. */
-export const CABLE_EVENT_SOURCES = ["APP", "PROJECT_LOAD"] as const;
+/**
+ * Who wrote a history event: a person in the app, the load of the project (the lists and the
+ * first Excel) or the Excel of the day. The Prisma enum `CableEventSource` lists the same.
+ */
+export const CABLE_EVENT_SOURCES = ["APP", "PROJECT_LOAD", "EXCEL"] as const;
 export type CableEventSource = (typeof CABLE_EVENT_SOURCES)[number];
 
 export type InstallationStatus = (typeof INSTALLATION_STATUSES)[number];
@@ -96,6 +100,7 @@ export const CABLE_ACTION_LABELS: Record<CableAction, string> = {
   TESTED: "Timbrado",
   DELETED: "Baja",
   WIRING_EDITED: "Bornas corregidas",
+  EXCEL_UPDATED: "Excel del día",
 };
 
 /** Fields a technician edits in the cable form (statuses change through actions). */
@@ -178,6 +183,17 @@ export const PROJECT_FIELD_LABELS: Record<string, string> = {
   wiringRevision: "Revisión del conexionado",
   wiring: "Conexionado",
   jumpers: "Puentes",
+};
+
+/** Fields that only the Excel of the day writes (fase 14), for the history. */
+export const EXCEL_FIELD_LABELS: Record<string, string> = {
+  laidOn: "Fecha de tendido",
+  company: "Empresa",
+  reel: "Bobina",
+  reelStatus: "Estado de la bobina",
+  actualLengthM: "Longitud real (m)",
+  actualLengthTotalM: "Metros reales del circuito",
+  actualSections: "Tramos del circuito",
 };
 
 // ---------------------------------------------------------------------------

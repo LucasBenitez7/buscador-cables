@@ -139,5 +139,7 @@ export function describeCableEvent(event: CableEventForSentence): string {
       return "dio de baja el cable";
     case "WIRING_EDITED":
       return describeWiringEdit(event.changes);
+    case "EXCEL_UPDATED":
+      return "actualizó el cable según el Excel";
   }
 }

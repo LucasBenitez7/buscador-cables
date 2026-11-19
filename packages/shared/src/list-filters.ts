@@ -130,24 +130,30 @@ export const parseUserEventSearch = (params: RawSearchParams): UserEventSearch =
 
 /**
  * The load of the project (the lists, and the first Excel) writes one event per cable, and is
- * never shown: not in the activity, the history of a cable nor its last action (fase 14).
+ * never shown: not in the activity, the history of a cable nor its last action (fase 14). The
+ * Excel of the day is shown.
  */
-export const VISIBLE_EVENT_SOURCES = ["APP"] as const satisfies readonly CableEventSource[];
+export const VISIBLE_EVENT_SOURCES = [
+  "APP",
+  "EXCEL",
+] as const satisfies readonly CableEventSource[];
 
 export function isVisibleEventSource(source: CableEventSource): boolean {
   return (VISIBLE_EVENT_SOURCES as readonly CableEventSource[]).includes(source);
 }
 
-export const ACTIVITY_ORIGINS = ["people", "all"] as const;
+export const ACTIVITY_ORIGINS = ["people", "excel", "all"] as const;
 export type ActivityOrigin = (typeof ACTIVITY_ORIGINS)[number];
 export const ACTIVITY_ORIGIN_LABELS: Record<ActivityOrigin, string> = {
   people: "En campo",
+  excel: "Excel",
   all: "Todo",
 };
 
 /** The event sources an origin shows: never the load of the project. */
 export function originSources(origin: ActivityOrigin | undefined): CableEventSource[] {
-  return origin === "all" ? [...VISIBLE_EVENT_SOURCES] : ["APP"];
+  if (origin === "all") return [...VISIBLE_EVENT_SOURCES];
+  return origin === "excel" ? ["EXCEL"] : ["APP"];
 }
 
 // ---------------------------------------------------------------------------

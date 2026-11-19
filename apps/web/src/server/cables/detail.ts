@@ -7,6 +7,7 @@ import {
   CONNECTION_STATUS_LABELS,
   TEST_STATUS_LABELS,
   installationStatusLabel,
+  EXCEL_FIELD_LABELS,
   PROJECT_FIELD_LABELS,
   describeCableEvent,
   formatDecimal,
@@ -256,6 +257,7 @@ export function readableChanges(changes: unknown, lookups: Lookups): ReadableCha
         field:
           CABLE_FIELD_LABELS[field as keyof typeof CABLE_FIELD_LABELS] ??
           PROJECT_FIELD_LABELS[field] ??
+          EXCEL_FIELD_LABELS[field] ??
           field,
         from: readableValue(field, change?.from, lookups),
         to: readableValue(field, change?.to, lookups),

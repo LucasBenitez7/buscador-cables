@@ -1048,7 +1048,7 @@ se usa lo mismo (con un componente común), y no hay textos de ayuda en la inter
 - [x] Estados finales: «No tendido», migración, fuera «Enrollar» y «Mover».
 - [x] Lector de los dos Excel por nombre de columna, con sus tests (datos inventados).
 - [x] Empresa, bobina, metros reales y fecha real de tendido en el cable y su ficha.
-- [ ] Modelo y servicio de importación: cambios, cables nuevos, discrepancias, por lotes.
+- [x] Modelo y servicio de importación: cambios, cables nuevos, discrepancias, por lotes.
 - [ ] «Subir Excel del día»: vista previa guardada, desmarcar filas, aplicar o descartar.
 - [ ] Primera carga como carga del proyecto, sin que se vea.
 - [ ] «Pendientes de revisar» con su historial.

@@ -4,6 +4,7 @@ import {
   CableEventSource,
   CableLevel,
   ConnectionStatus,
+  ExcelKind,
   InstallationStatus,
   RouteSection,
   TrayKind,
@@ -14,6 +15,7 @@ import {
   CABLE_EVENT_SOURCES,
   CABLE_LEVELS,
   CONNECTION_STATUSES,
+  EXCEL_KINDS,
   INSTALLATION_STATUSES,
   ROUTE_SECTIONS,
   TRAY_KINDS,
@@ -31,6 +33,7 @@ describe("shared constants match the Prisma enums", () => {
     ["RouteSection", RouteSection, ROUTE_SECTIONS],
     ["CableEndSide", CableEndSide, CABLE_END_SIDES],
     ["CableEventSource", CableEventSource, CABLE_EVENT_SOURCES],
+    ["ExcelKind", ExcelKind, EXCEL_KINDS],
   ])("%s", (_name, prismaEnum, shared) => {
     expect([...shared].sort()).toEqual(Object.values(prismaEnum).sort());
   });
