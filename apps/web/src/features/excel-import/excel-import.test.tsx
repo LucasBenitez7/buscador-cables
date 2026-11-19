@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PreviewActions, RowCheckbox, SelectTabButtons } from "./components/preview-controls";
 import { DecisionButtons } from "./components/decision-buttons";
+import { DiscrepancyList } from "./components/discrepancy-list";
 import { UploadExcelForm } from "./components/upload-excel-form";
 
 const mocks = vi.hoisted(() => ({
@@ -12,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   discardExcelAction: vi.fn(),
   applyExcelBatchAction: vi.fn(),
   decideDiscrepancyAction: vi.fn(),
+  decideDiscrepanciesAction: vi.fn(),
+  markDiscrepanciesSeenAction: vi.fn(),
   readExcelFile: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
@@ -214,5 +217,77 @@ describe("DecisionButtons", () => {
       id: "d1",
       decision: "ACCEPT_EXCEL",
     });
+  });
+});
+
+describe("DiscrepancyList", () => {
+  const item = (id: string, code: string) => ({
+    id,
+    cable: { id: `c-${id}`, code },
+    web: "Tendido",
+    webBy: "Tomás",
+    webAt: "12/11/26, 10:30",
+    excel: "No tendido",
+    excelDay: "16/11/2026",
+    agreesOn: null,
+    decision: null,
+  });
+
+  it("decides every pending one batch by batch and keeps the result on the screen", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mocks.decideDiscrepanciesAction
+      .mockResolvedValueOnce({ ok: true, decided: 1, failed: [], remaining: 1 })
+      .mockResolvedValueOnce({
+        ok: true,
+        decided: 0,
+        failed: [{ id: "d9", code: "ZZ-9", message: "Ya decidida." }],
+        remaining: 0,
+      });
+    const { rerender } = render(
+      <DiscrepancyList items={[item("d1", "ZZ-1")]} pending total={2} empty="Nada." />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Seleccionar todas (2)"));
+    fireEvent.click(screen.getByRole("button", { name: "Mantener lo de la web (2)" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("1 decidida. ZZ-9: Ya decidida.");
+    expect(mocks.decideDiscrepanciesAction).toHaveBeenLastCalledWith({
+      all: true,
+      decision: "KEEP_WEB",
+      skip: [],
+    });
+    expect(mocks.refresh).toHaveBeenCalled();
+    // La lista vacía sigue en pantalla con su aviso.
+    rerender(<DiscrepancyList items={[]} pending total={0} empty="Nada." />);
+    expect(screen.getByText("Nada.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("decides only the ticked ones", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mocks.decideDiscrepanciesAction.mockResolvedValue({
+      ok: true,
+      decided: 1,
+      failed: [],
+      remaining: 0,
+    });
+    render(
+      <DiscrepancyList
+        items={[item("d1", "ZZ-1"), item("d2", "ZZ-2")]}
+        pending
+        total={2}
+        empty="Nada."
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Seleccionar ZZ-2"));
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar lo del Excel (1)" }));
+
+    await waitFor(() =>
+      expect(mocks.decideDiscrepanciesAction).toHaveBeenCalledWith({
+        ids: ["d2"],
+        decision: "ACCEPT_EXCEL",
+      }),
+    );
   });
 });

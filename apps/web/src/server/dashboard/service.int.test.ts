@@ -121,10 +121,36 @@ describe("getCableProgress", () => {
 });
 
 describe("getDashboard", () => {
+  it("gives the date of the last Excel applied of each kind, not of a preview", async () => {
+    const excel = (excelDate: string, status: "APPLIED" | "PREVIEW") =>
+      prisma.excelImport.create({
+        data: {
+          kind: "ELECTRICAL",
+          excelDate: new Date(`${excelDate}T00:00:00Z`),
+          fileName: "estado.xlsx",
+          status,
+          uploadedById: "sup",
+          rowCount: 0,
+          ignored: [],
+        },
+      });
+    await excel("2026-11-15", "APPLIED");
+    await excel("2026-11-16", "APPLIED");
+    await excel("2026-11-17", "PREVIEW");
+
+    const dashboard = await getDashboard({ id: "view", ...permissionsOfRole("VIEWER") });
+
+    expect(dashboard.lastExcel).toEqual([
+      { kind: "ELECTRICAL", label: "Eléctrico", excelDay: "16/11/2026" },
+    ]);
+  });
+
   it("shows a viewer only the progress of the works", async () => {
     const dashboard = await getDashboard({ id: "view", ...permissionsOfRole("VIEWER") });
 
     expect(dashboard.progress.total).toBe(4);
+    expect(dashboard.lastExcel).toEqual([]);
+    expect(dashboard.toReview).toBeNull();
     expect(dashboard.myActivity).toBeNull();
     expect(dashboard.team).toBeNull();
     expect(dashboard.admin).toBeNull();
@@ -141,6 +167,7 @@ describe("getDashboard", () => {
   it("adds the team summary for a supervisor, without the accounts", async () => {
     const dashboard = await getDashboard({ id: "sup", ...permissionsOfRole("SUPERVISOR") });
 
+    expect(dashboard.toReview).toBe(0);
     expect(dashboard.team?.trays).toBe(2);
     expect(dashboard.team?.recentActivity).toHaveLength(2);
     expect(dashboard.admin).toBeNull();

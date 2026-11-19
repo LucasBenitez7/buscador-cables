@@ -2,6 +2,8 @@ import "server-only";
 import { prisma, type Prisma } from "@cables/db";
 import {
   DISCREPANCIES_PAGE_SIZE,
+  DISCREPANCY_BATCH,
+  decideDiscrepanciesSchema,
   decideDiscrepancySchema,
   formatExcelDay,
   hasPermission,
@@ -26,9 +28,30 @@ const dateTime = new Intl.DateTimeFormat("es-ES", {
 
 const excelDay = (value: Date) => formatExcelDay(dayOf(value)!);
 
-/** How many discrepancies wait for a decision (the menu shows it). */
+/** How many discrepancies wait for a decision. */
 export function countOpenDiscrepancies(): Promise<number> {
   return prisma.cableDiscrepancy.count({ where: { status: "OPEN" } });
+}
+
+/**
+ * Pending discrepancies that are new for a person: opened or contradicted again since they
+ * last opened «Pendientes de revisar». The menu and the home page only warn about these; the
+ * page keeps every pending one until somebody decides.
+ */
+export async function countNewDiscrepancies(userId: string): Promise<number> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { discrepanciesSeenAt: true },
+  });
+  const seen = user?.discrepanciesSeenAt;
+  return prisma.cableDiscrepancy.count({
+    where: { status: "OPEN", ...(seen ? { updatedAt: { gt: seen } } : {}) },
+  });
+}
+
+/** The person has opened «Pendientes de revisar»: what is there is no longer new to them. */
+export async function markDiscrepanciesSeen(userId: string): Promise<void> {
+  await prisma.user.update({ where: { id: userId }, data: { discrepanciesSeenAt: new Date() } });
 }
 
 export type DiscrepancyItem = {
@@ -214,4 +237,55 @@ export async function decideDiscrepancy(actor: Actor, rawInput: unknown): Promis
       ? `${cable.code}: aceptado lo del Excel del ${day}.`
       : `${cable.code}: se mantiene lo de la web.`;
   });
+}
+
+export type DecideManyResult = {
+  decided: number;
+  /** Why some could not be decided (somebody else decided them, the cable changed…). */
+  failed: { id: string; code: string; message: string }[];
+  /** Pending ones left when deciding all of them: the screen asks again. */
+  remaining: number;
+};
+
+/**
+ * Decides several discrepancies with the same decision, each one as if it were decided by
+ * hand (its own event in the history). With `all`, every pending one, a batch per request.
+ */
+export async function decideDiscrepancies(
+  actor: Actor,
+  rawInput: unknown,
+): Promise<DecideManyResult> {
+  if (!hasPermission(actor, "cable:correct")) {
+    throw new ExcelImportError("No tienes permiso para revisar discrepancias.");
+  }
+  const parsed = decideDiscrepanciesSchema.safeParse(rawInput);
+  if (!parsed.success) throw new ExcelImportError("Elige qué discrepancias decidir.");
+  const { ids, all, decision, skip = [] } = parsed.data;
+
+  const targets = await prisma.cableDiscrepancy.findMany({
+    where: {
+      status: "OPEN",
+      ...(all ? { id: { notIn: [...skip] } } : { id: { in: ids } }),
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take: DISCREPANCY_BATCH,
+    select: { id: true, cable: { select: { code: true } } },
+  });
+  const result: DecideManyResult = { decided: 0, failed: [], remaining: 0 };
+  for (const target of targets) {
+    try {
+      await decideDiscrepancy(actor, { id: target.id, decision });
+      result.decided += 1;
+    } catch (error) {
+      if (!(error instanceof ExcelImportError)) throw error;
+      result.failed.push({ id: target.id, code: target.cable.code, message: error.message });
+    }
+  }
+  if (all) {
+    const failedIds = result.failed.map((failure) => failure.id);
+    result.remaining = await prisma.cableDiscrepancy.count({
+      where: { status: "OPEN", id: { notIn: [...skip, ...failedIds] } },
+    });
+  }
+  return result;
 }

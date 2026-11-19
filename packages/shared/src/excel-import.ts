@@ -251,7 +251,8 @@ export function stateChanges(
  * What one row of the Excel does to its cable:
  * - not in the web: it is created with what the Excel brings;
  * - the date, company, reel and real metres are always the Excel's (nobody marks them in the
- *   web); origin, destination, type and the planned length are never touched;
+ *   web), but an empty cell does not erase what the cable has; origin, destination, type and
+ *   the planned length are never touched;
  * - the state changes, unless a person marked it in the web: before the date of the Excel it
  *   is a discrepancy, on that day or later the web is newer and the Excel does not count;
  * - with a discrepancy still open the cable keeps the web's state: the Excel contradicts it
@@ -288,6 +289,8 @@ export function planExcelRow(input: {
   for (const field of fields) {
     const from = cable[field];
     const to = excelValue(row, field);
+    // Una celda vacía es «todavía sin dato»: no borra lo que ya tiene el cable.
+    if (to === null) continue;
     const same =
       field === "company" ? sameCompany(from as string | null, to as string | null) : from === to;
     if (!same) changes[field] = { from, to };
@@ -370,6 +373,23 @@ export const decideDiscrepancySchema = z.object({
   decision: z.enum(DISCREPANCY_DECISIONS, { error: "Decisión no válida" }),
 });
 export type DecideDiscrepancyInput = z.infer<typeof decideDiscrepancySchema>;
+
+/** Discrepancies decided in one go: at most this many per request, the screen goes on. */
+export const DISCREPANCY_BATCH = 100;
+
+/** Several at once: the ones ticked, or every pending one (`all`). */
+export const decideDiscrepanciesSchema = z
+  .object({
+    ids: z.array(z.string().min(1).max(100)).min(1).max(DISCREPANCY_BATCH).optional(),
+    all: z.boolean().optional(),
+    /** With `all`: the ones that could not be decided in an earlier batch. */
+    skip: z.array(z.string().min(1).max(100)).max(10_000).optional(),
+    decision: z.enum(DISCREPANCY_DECISIONS, { error: "Decisión no válida" }),
+  })
+  .refine((input) => Boolean(input.ids) !== Boolean(input.all), {
+    message: "Elige qué discrepancias decidir",
+  });
+export type DecideDiscrepanciesInput = z.infer<typeof decideDiscrepanciesSchema>;
 
 export const DISCREPANCY_VIEWS = ["open", "decided"] as const;
 export type DiscrepancyView = (typeof DISCREPANCY_VIEWS)[number];

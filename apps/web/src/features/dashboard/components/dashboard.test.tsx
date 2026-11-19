@@ -38,9 +38,39 @@ const entry: ActivityEntry = {
   detailHref: null,
 };
 
-const viewer: DashboardData = { progress, myActivity: null, team: null, admin: null };
+const viewer: DashboardData = {
+  progress,
+  lastExcel: [],
+  toReview: null,
+  myActivity: null,
+  team: null,
+  admin: null,
+};
 
 describe("Dashboard", () => {
+  it("says up to which Excel the progress goes, and what waits for a decision", () => {
+    render(
+      <Dashboard
+        data={{
+          ...viewer,
+          lastExcel: [{ kind: "ELECTRICAL", label: "Eléctrico", excelDay: "16/11/2026" }],
+          toReview: 3,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Excel del 16/11/2026")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("3 discrepancias nuevas pendientes");
+    expect(screen.getByRole("link", { name: "Revisar" })).toHaveAttribute("href", "/review");
+  });
+
+  it("shows no notice when nothing waits", () => {
+    render(<Dashboard data={{ ...viewer, toReview: 0 }} />);
+
+    expect(screen.queryByRole("link", { name: "Revisar" })).toBeNull();
+    expect(screen.queryByText(/Excel del/)).toBeNull();
+  });
+
   it("shows everybody the quick search and the progress of the works", () => {
     render(<Dashboard data={viewer} />);
 

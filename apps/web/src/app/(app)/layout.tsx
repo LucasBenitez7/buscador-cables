@@ -4,7 +4,7 @@ import { NavigationProgress } from "@/components/navigation-progress";
 import { AppHeader } from "@/features/navigation/app-header";
 import type { NavItem } from "@/features/navigation/nav-items";
 import { requireUser } from "@/server/session";
-import { countOpenDiscrepancies } from "@/server/excel-import/discrepancies";
+import { countNewDiscrepancies } from "@/server/excel-import/discrepancies";
 import { countPendingAccounts } from "@/server/users/service";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -14,7 +14,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // Lo que espera a esta persona, siempre a la vista en el menú. Solo se consulta si le toca.
   const pending = canManageUsers ? await countPendingAccounts() : 0;
   const canReview = hasPermission(user, "cable:correct");
-  const toReview = canReview ? await countOpenDiscrepancies() : 0;
+  // Solo lo nuevo desde que abrió «Pendientes de revisar», y sin sumarlo al botón del menú.
+  const toReview = canReview ? await countNewDiscrepancies(user.id) : 0;
 
   // Cada uno ve solo las secciones que su rol permite.
   const seesTeamActivity = hasPermission(user, "activity:view");
@@ -43,7 +44,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             place: "manage",
             badge: {
               count: toReview,
-              label: toReview === 1 ? "discrepancia por revisar" : "discrepancias por revisar",
+              label:
+                toReview === 1
+                  ? "discrepancia nueva por revisar"
+                  : "discrepancias nuevas por revisar",
+              alone: true,
             },
           } as const,
         ]

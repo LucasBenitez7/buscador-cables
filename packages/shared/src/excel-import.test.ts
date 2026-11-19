@@ -99,6 +99,15 @@ describe("planExcelRow", () => {
     expect(plan({ cable: synced() })).toEqual({ kind: "NONE", agreesWithDiscrepancyId: null });
   });
 
+  it("does not erase what the cable has with an empty cell of the Excel", () => {
+    const result = plan({
+      cable: synced(),
+      row: row({ reel: null, reelStatus: null, company: null, laidOn: null }),
+    });
+
+    expect(result).toEqual({ kind: "NONE", agreesWithDiscrepancyId: null });
+  });
+
   it("takes the same company whatever its case or spaces", () => {
     expect(plan({ cable: synced({ company: "  montajes   FICTICIOS" }) }).kind).toBe("NONE");
   });

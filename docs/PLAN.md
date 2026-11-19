@@ -34,9 +34,10 @@ hizo qué y cuándo.
 | 13   | Uso en campo                  | v1.3.0  | Ficha con el plano primero, colores, buscador único   |
 | 14   | Estado diario desde el Excel  | v1.4.0  | Excel del día, pendientes de revisar, panel           |
 | 15   | Guardados y roles             | v1.5.0  | Guardados con carpetas, roles uno al lado del otro    |
+| 16   | Listados: imprimir y ordenar  | v1.6.0  | Elegir filas, PDF y copiar nombres, ordenar por más   |
 
-**Total: 17 fases (0 a 15, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
-13 a la 15, el 2026-11-18).** El 2026-11-13 la fase 6 se
+**Total: 18 fases (0 a 16, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
+13 a la 15, el 2026-11-18; la 16, el 2026-11-19).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
@@ -995,8 +996,10 @@ capturas y visto bueno del usuario; después los E2E y el PR.
   esa punta; Conectado → Tendido y conectado. Metros reales por tramo = metros reales / número
   de secciones.
 - **Qué actualiza el Excel** en un cable que ya existe: estado, conexión, fecha de tendido,
-  empresa, bobina y metros reales; nunca origen, destino, tipo ni longitud del listado. Los
-  cables que no salen en el Excel no se tocan, y cada Excel solo afecta a su disciplina.
+  empresa, bobina y metros reales; nunca origen, destino, tipo ni longitud del listado. Una
+  celda de datos vacía no borra lo que ya tiene el cable: solo cuenta cuando trae un valor
+  (decidido el 2026-11-19). Los cables que no salen en el Excel no se tocan, y cada Excel solo
+  afecta a su disciplina.
 - **Discrepancia**: una persona marcó algo en la web antes de la fecha del Excel y el Excel lo
   contradice; si lo marcó después, no cuenta. Nunca se cierran solas: si un Excel posterior ya
   coincide, solo se avisa con su fecha. Decisiones: «Mantener lo de la web» o «Aceptar lo del
@@ -1052,7 +1055,12 @@ se usa lo mismo (con un componente común), y no hay textos de ayuda en la inter
 - [x] «Subir Excel del día»: vista previa guardada, desmarcar filas, aplicar o descartar.
 - [x] Primera carga como carga del proyecto, sin que se vea.
 - [x] «Pendientes de revisar» con su historial.
-- [ ] Panel: avance de tendido y conexión, fecha del último Excel, pendientes de revisar.
+- [x] Panel: avance de tendido y conexión, fecha del último Excel, pendientes de revisar.
+- [x] Avisos de discrepancias solo de lo nuevo: el inicio y el número de «Pendientes de revisar»
+      cuentan lo llegado desde que cada persona abrió esa pantalla, y no se suman al botón del
+      menú ni a «Gestión». Las pendientes siguen ahí hasta que alguien decide.
+- [x] Decidir varias discrepancias a la vez: casillas, «Seleccionar todas» (todas las
+      pendientes) y las dos decisiones para las marcadas; cada una con su evento.
 - [ ] Tests, E2E y manual de usuario.
 - [ ] Al cerrar la fase, resumir esta sección: dejar las tareas y las decisiones que sigan
       valiendo, y quitar los planes intermedios y el repaso de estilos.
@@ -1065,6 +1073,18 @@ Añadida el 2026-11-18. Rama `feat/f15-saved-roles`. Sin prisa.
       renombrar, mover, quitar, borrar).
 - [ ] Roles uno al lado del otro: en portátil, tabla con los permisos en filas y los roles en
       columnas; en móvil, dos roles frente a frente con las diferencias resaltadas.
+- [ ] Tests y E2E.
+
+## Fase 16 — Listados: imprimir, copiar y ordenar (v1.6.0)
+
+Añadida el 2026-11-19. Rama `feat/f16-lists`. Toca todas las pantallas con listas o tablas
+(cables, equipos y su ficha, bandejas, ubicaciones…).
+
+- [ ] Elegir filas: casillas en cada fila y «Seleccionar todas».
+- [ ] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
+- [ ] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
+- [ ] Repaso de la ordenación en todos los listados: «más cables primero» y «menos» en
+      bandejas, y lo mismo donde tenga sentido; siempre respetando los filtros activos.
 - [ ] Tests y E2E.
 
 ---

@@ -12,7 +12,12 @@ import {
   startExcelPreview,
   type ExcelBatchResult,
 } from "@/server/excel-import/service";
-import { decideDiscrepancy } from "@/server/excel-import/discrepancies";
+import {
+  decideDiscrepancies,
+  decideDiscrepancy,
+  markDiscrepanciesSeen,
+  type DecideManyResult,
+} from "@/server/excel-import/discrepancies";
 import { logError } from "@/server/log";
 import { authorize } from "@/server/session";
 
@@ -101,4 +106,25 @@ export async function decideDiscrepancyAction(input: unknown): Promise<ActionRes
   } catch (error) {
     return fail(error);
   }
+}
+
+/** Several at once, or all the pending ones a batch at a time (the screen asks again). */
+export async function decideDiscrepanciesAction(input: unknown) {
+  const auth = await authorize("cable:correct");
+  if (!auth.ok) return auth;
+  try {
+    const result: DecideManyResult = await decideDiscrepancies(auth.user, input);
+    revalidatePath("/", "layout");
+    return { ok: true as const, ...result };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** The person has opened «Pendientes de revisar»: the menu and the home page stop warning. */
+export async function markDiscrepanciesSeenAction(): Promise<void> {
+  const auth = await authorize("cable:correct");
+  if (!auth.ok) return;
+  await markDiscrepanciesSeen(auth.user.id);
+  revalidatePath("/", "layout");
 }

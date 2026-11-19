@@ -2,7 +2,14 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@cables/db";
 import { permissionsOfRole, type ExcelStatusRow, type Role } from "@cables/shared";
 import { beforeEach, describe, expect, it } from "vitest";
-import { countOpenDiscrepancies, decideDiscrepancy, listDiscrepancies } from "./discrepancies";
+import {
+  countNewDiscrepancies,
+  countOpenDiscrepancies,
+  decideDiscrepancies,
+  decideDiscrepancy,
+  listDiscrepancies,
+  markDiscrepanciesSeen,
+} from "./discrepancies";
 import { applyExcelBatch, createExcelPreview } from "./service";
 
 // Datos inventados.
@@ -192,5 +199,58 @@ describe("decideDiscrepancy", () => {
     await expect(
       decideDiscrepancy(supervisor, { id: discrepancy.id, decision: "ACCEPT_EXCEL" }),
     ).rejects.toThrow("dado de baja");
+  });
+});
+
+describe("new since the last visit", () => {
+  it("warns only about what came after opening «Pendientes de revisar»", async () => {
+    await contradicted("ZZ-1");
+    expect(await countNewDiscrepancies(supervisor.id)).toBe(1);
+
+    await markDiscrepanciesSeen(supervisor.id);
+    expect(await countNewDiscrepancies(supervisor.id)).toBe(0);
+    // Sigue pendiente para todos; y otra persona que no la ha visto aún la tiene como nueva.
+    expect(await countOpenDiscrepancies()).toBe(1);
+    expect(await countNewDiscrepancies(technician.id)).toBe(1);
+
+    await contradicted("ZZ-2");
+    expect(await countNewDiscrepancies(supervisor.id)).toBe(1);
+  });
+});
+
+describe("decideDiscrepancies", () => {
+  it("decides the ticked ones, each with its own event", async () => {
+    const one = await contradicted("ZZ-1");
+    const two = await contradicted("ZZ-2");
+    await contradicted("ZZ-3");
+
+    const result = await decideDiscrepancies(supervisor, {
+      ids: [one.discrepancy.id, two.discrepancy.id],
+      decision: "ACCEPT_EXCEL",
+    });
+
+    expect(result).toEqual({ decided: 2, failed: [], remaining: 0 });
+    expect(await countOpenDiscrepancies()).toBe(1);
+    expect(await prisma.cableEvent.count({ where: { action: "EXCEL_REVIEWED" } })).toBe(2);
+  });
+
+  it("decides every pending one, and reports the ones it could not", async () => {
+    await contradicted("ZZ-1");
+    const removed = await contradicted("ZZ-2");
+    await prisma.cable.update({ where: { id: removed.cable.id }, data: { deletedAt: new Date() } });
+
+    const result = await decideDiscrepancies(supervisor, { all: true, decision: "ACCEPT_EXCEL" });
+
+    expect(result.decided).toBe(1);
+    expect(result.failed).toEqual([
+      { id: removed.discrepancy.id, code: "ZZ-2", message: "El cable ZZ-2 está dado de baja." },
+    ]);
+    expect(result.remaining).toBe(0);
+    await expect(decideDiscrepancies(supervisor, { decision: "KEEP_WEB" })).rejects.toThrow(
+      "Elige qué discrepancias",
+    );
+    await expect(
+      decideDiscrepancies(technician, { all: true, decision: "KEEP_WEB" }),
+    ).rejects.toThrow("No tienes permiso");
   });
 });

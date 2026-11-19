@@ -66,6 +66,8 @@ model User {
   active               Boolean               @default(true)
   /// Cuándo aprobó un administrador la cuenta. Null: registrada y pendiente de aprobación.
   approvedAt           DateTime?
+  /// Última vez que abrió «Pendientes de revisar»: el menú y el inicio solo avisan de lo nuevo.
+  discrepanciesSeenAt  DateTime?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   sessions             Session[]
