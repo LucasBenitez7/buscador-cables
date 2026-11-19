@@ -379,6 +379,19 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   desde la discrepancia, lo que decía antes. Decidiendo todas a la vez (`blind`) no se acepta
   el Excel en esos cables. En un cable dado de baja no se escribe nada.
 
+### Listados y guardados (fases 15 y 16)
+
+- **Selección** (`components/selection.tsx`): un `SelectionProvider` por lista, fuera de su
+  `PendingResults` para que lo elegido sobreviva al cambio de página. «Seleccionar todas» en
+  una lista con páginas pide al servidor todos los códigos que cumplen los filtros
+  (`searchCableCodes`, `searchTrayCodes`; tope `SELECT_ALL_MAX`). Imprimir usa el diálogo del
+  navegador con una hoja que solo enseñan los estilos de impresión (`.printing-selection`).
+  La barra admite botones extra (`actions`), que leen lo elegido con `useChosen()`.
+- **Guardados**: tablas `SavedFolder` (de una persona, nombre único por persona) y `SavedItem`
+  (`kind` + `key`: id del cable, código de la bandeja o del equipo; una vez por carpeta).
+  Todo pasa por `server/saved/service.ts`, que filtra siempre por `userId`: no hay permiso
+  propio, basta la sesión.
+
 ## Marca, cargas y avisos
 
 - **Logo** (una lupa cuyo mango es un cable con su conector): `apps/web/public/brand/logo.svg`

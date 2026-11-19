@@ -67,6 +67,7 @@ test.describe("administrador", () => {
       "Bandejas",
       "Equipos",
       "Ubicaciones",
+      "Guardados",
       "Actividad",
     ]);
     // La administración va en "Gestión" (con el número de cuentas pendientes, si las hay) y
