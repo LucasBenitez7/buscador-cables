@@ -1007,6 +1007,40 @@ capturas y visto bueno del usuario; después los E2E y el PR.
   Discrepancias; las filas desmarcadas no se aplican y vuelven con el siguiente Excel; un Excel
   nuevo sustituye a la vista previa guardada; se aplica por lotes. «Carga del proyecto», solo
   para administradores, es la primera carga.
+- **Ficha del cable**: lo del Excel va en el grupo «Tendido» de «Datos del cable»: «Fecha»
+  («11/07/2026, según el Excel»), «Empresa», «Bobina» y «Longitud real». La longitud del
+  listado pasa a «Longitud prevista», en el grupo «Proyecto».
+- **Filtro «Origen»** de la actividad y del historial: hoy «En campo» y «Todo»; al añadir el
+  origen «Excel», sale también como opción. La carga del proyecto no sale nunca.
+
+### Repaso de estilos con el usuario (2026-11-19)
+
+Reglas que valen para toda la app: un cambio visual se aplica igual en todos los sitios donde
+se usa lo mismo (con un componente común), y no hay textos de ayuda en la interfaz.
+
+- [x] Botones de acciones (`ActionButtons`): los mismos en la barra «Registrar acción» de la
+      ficha y en el diálogo «Acción» del buscador. Fondo sólido, sin transparencias (tampoco
+      los desactivados); al pasar o pulsar, el azul de la app en tono suave; «Retirar» en rojo
+      suave. Solo botones: sin título ni motivos visibles (el motivo de uno apagado lo leen los
+      lectores de pantalla).
+- [x] Barra «Registrar acción» más baja; cerrada, borde fino gris; abierta, borde de 2 px en
+      azul apagado.
+- [x] La X de cerrar de todos los diálogos, en blanco.
+- [x] Datos de una ficha (`DataList`, cable, bandeja y ubicación): una fila por dato, el nombre a
+      la izquierda en blanco y el valor a la derecha en negrita; sin datos vacíos; grupos con el
+      título encima de la caja, en azul. En el cable: «Qué es», «Tendido» y «Proyecto».
+- [x] Filas de píldoras que se deslizan (`ChipRow`: «Ir a:», hojas de los planos, Catálogos):
+      al tocar una medio oculta, la fila se desplaza hasta verla entera; barra fina en el
+      portátil si no caben.
+- [x] Catálogos: pestañas en píldoras en una fila, en el orden Tipos de cable, Empresas,
+      Colores, Fabricantes; sin texto de ayuda.
+- [x] Buscador de cables: la tarjeta del móvil solo lleva código, estado, extremos, punta
+      suelta y «Acción» (fuera tipo, sección, longitud, último movimiento y «Conexionado»). La
+      tabla del portátil pierde «Último movimiento» y el enlace «Conexionado»; mantiene Tipo,
+      Sección y Longitud.
+- [x] Equipos: las filas de cable sin la línea del servicio. El servicio se queda en la ficha
+      del cable, en las sugerencias del buscador del inicio y en las bandejas (decidido así).
+- [x] Ubicaciones: fuera el texto «Los cables cuentan si empiezan, terminan…».
 
 ### Tareas
 
