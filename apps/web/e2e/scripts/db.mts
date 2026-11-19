@@ -18,6 +18,9 @@ const dbPackage = path.resolve(here, "../../../../packages/db");
 const prismaCli = path.join(dbPackage, "node_modules", "prisma", "build", "index.js");
 
 const TABLES = [
+  "cable_discrepancy",
+  "excel_import_row",
+  "excel_import",
   "cable_event",
   "cable",
   "tray",
@@ -25,6 +28,7 @@ const TABLES = [
   "cable_type",
   "color",
   "manufacturer",
+  "company",
   "session",
   "account",
   "verification",

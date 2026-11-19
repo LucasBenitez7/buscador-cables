@@ -98,6 +98,14 @@ export const CABLES = {
     looseEnd: "DESTINATION",
     looseTray: "99UXB00L22001",
   },
+  // Fase 14: el Excel del día de `e2e/__fixtures__` lo pasa a tendido y conectado en origen.
+  excel: {
+    code: "99XAE10W2001",
+    level: "L2",
+    status: "NOT_LAID",
+    connection: "DISCONNECTED",
+    ends: ["99BMD", "99XAE10AP001"],
+  },
   // Fase 11: tabla de conexionado (hilo, regletero y borna en origen y en destino).
   wiring: {
     code: "99XAD10W2001",

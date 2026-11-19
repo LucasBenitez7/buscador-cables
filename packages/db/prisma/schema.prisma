@@ -679,6 +679,7 @@ enum ExcelKind {
 }
 
 enum ExcelImportStatus {
+  UPLOADING // llegan las filas por partes: todavía no se puede aplicar
   PREVIEW // vista previa guardada: no se ha aplicado nada
   APPLYING // aplicándose por lotes
   APPLIED
@@ -710,8 +711,10 @@ model ExcelImport {
   status                 ExcelImportStatus  @default(PREVIEW)
   uploadedById           String
   uploadedBy             User               @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
-  /// Filas con cable que leyó el navegador, y las que no se usan con su motivo.
+  /// Filas con cable que leyó el navegador y cuántas han llegado (se envían por partes), y las
+  /// que no se usan con su motivo.
   rowCount               Int
+  receivedCount          Int                @default(0)
   /// [{ row, code, reason }]
   ignored                Json
   /// Discrepancias abiertas con las que este Excel ya coincide: se avisa al aplicarlo.

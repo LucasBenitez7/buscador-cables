@@ -11,6 +11,7 @@ import {
   type ExcelKind,
   type ExcelStatusRow,
 } from "./excel-status";
+import { firstParams, pageSchema, type RawSearchParams } from "./url-params";
 
 /** Most rows a file may bring: the real ones have a few thousand. */
 export const EXCEL_MAX_ROWS = 20_000;
@@ -24,7 +25,59 @@ const ignoredRowSchema = z.object({
   reason: z.string().min(1).max(200),
 });
 
-/** What the browser sends after reading the file: the server validates it all again. */
+/**
+ * Rows sent in one request: the browser sends the file in parts (about 250 KB each), far from
+ * the body limit of a Server Action whatever the size of the Excel.
+ */
+export const EXCEL_UPLOAD_CHUNK = 1000;
+
+/** First step of an upload: what the file is and how many rows will arrive. */
+export const excelPreviewStartSchema = z.object({
+  kind: z.enum(EXCEL_KINDS, { error: "Tipo de Excel no válido" }),
+  excelDate: z.iso.date({ error: "Indica la fecha del Excel" }),
+  fileName: z.string().trim().min(1, "Falta el nombre del archivo").max(300),
+  /** The first load of the project: admins only, never shown, no discrepancies. */
+  projectLoad: z.boolean().default(false),
+  rowCount: z.number().int().min(0).max(EXCEL_MAX_ROWS, "El Excel tiene demasiadas filas"),
+});
+export type ExcelPreviewStart = z.input<typeof excelPreviewStartSchema>;
+
+/** One part of the rows of an upload, with the ignored rows of that part. */
+export const excelPreviewPartSchema = z
+  .object({
+    importId: z.string().min(1).max(100),
+    rows: z.array(excelStatusRowSchema).max(EXCEL_UPLOAD_CHUNK),
+    ignored: z.array(ignoredRowSchema).max(EXCEL_UPLOAD_CHUNK),
+  })
+  .superRefine((part, ctx) => {
+    const seen = new Set<string>();
+    for (const row of part.rows) {
+      if (seen.has(row.code)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `El cable ${row.code} está repetido`,
+          path: ["rows"],
+        });
+        return;
+      }
+      seen.add(row.code);
+    }
+  });
+export type ExcelPreviewPart = z.input<typeof excelPreviewPartSchema>;
+
+/** Splits what the browser read into the parts it sends, in order. */
+export function excelPreviewParts<Row, Ignored>(
+  rows: readonly Row[],
+  ignored: readonly Ignored[],
+): { rows: Row[]; ignored: Ignored[] }[] {
+  const count = Math.max(1, Math.ceil(Math.max(rows.length, ignored.length) / EXCEL_UPLOAD_CHUNK));
+  return Array.from({ length: count }, (_, index) => ({
+    rows: rows.slice(index * EXCEL_UPLOAD_CHUNK, (index + 1) * EXCEL_UPLOAD_CHUNK),
+    ignored: ignored.slice(index * EXCEL_UPLOAD_CHUNK, (index + 1) * EXCEL_UPLOAD_CHUNK),
+  }));
+}
+
+/** A whole file at once (the tests, and the upload step by step underneath). */
 export const excelPreviewInputSchema = z
   .object({
     kind: z.enum(EXCEL_KINDS, { error: "Tipo de Excel no válido" }),
@@ -62,6 +115,8 @@ export type ExcelPreviewInput = z.input<typeof excelPreviewInputSchema>;
 export const excelRowSelectionSchema = z.object({
   importId: z.string().min(1).max(100),
   rowIds: z.array(z.string().min(1).max(100)).min(1).max(EXCEL_MAX_ROWS).optional(),
+  /** Only the rows of one tab (with no `rowIds`). */
+  kind: z.enum(["CHANGE", "NEW", "DISCREPANCY"]).optional(),
   selected: z.boolean(),
 });
 export type ExcelRowSelection = z.infer<typeof excelRowSelectionSchema>;
@@ -270,3 +325,25 @@ export function planExcelRow(input: {
 
 /** What a preview holds, for its summary. */
 export type ExcelPreviewCounts = { changes: number; created: number; discrepancies: number };
+
+// ---------------------------------------------------------------------------
+// The preview as it travels in the URL
+// ---------------------------------------------------------------------------
+
+export const EXCEL_PREVIEW_TABS = ["changes", "new", "discrepancies"] as const;
+export type ExcelPreviewTab = (typeof EXCEL_PREVIEW_TABS)[number];
+export const EXCEL_PREVIEW_TAB_LABELS: Record<ExcelPreviewTab, string> = {
+  changes: "Cambios",
+  new: "Nuevos",
+  discrepancies: "Discrepancias",
+};
+export const EXCEL_PREVIEW_PAGE_SIZE = 50;
+
+export const excelPreviewSearchSchema = z.object({
+  tab: z.enum(EXCEL_PREVIEW_TABS).optional().catch(undefined),
+  page: pageSchema,
+});
+export type ExcelPreviewSearch = z.infer<typeof excelPreviewSearchSchema>;
+
+export const parseExcelPreviewSearch = (params: RawSearchParams): ExcelPreviewSearch =>
+  excelPreviewSearchSchema.parse(firstParams(params));

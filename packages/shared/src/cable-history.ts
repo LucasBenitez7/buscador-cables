@@ -22,6 +22,14 @@ export const CHANGE_FIELD_ORDER = [
   "currentLocationId",
   "looseEnd",
   "looseEndTray",
+  // Lo que trae el Excel del día (fase 14), en el orden de la ficha.
+  "laidOn",
+  "company",
+  "reel",
+  "reelStatus",
+  "actualLengthM",
+  "actualLengthTotalM",
+  "actualSections",
   "deletedAt",
 ] as const;
 

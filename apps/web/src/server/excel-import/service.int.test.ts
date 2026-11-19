@@ -9,10 +9,13 @@ import {
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   ExcelImportError,
+  addExcelPreviewPart,
   applyExcelBatch,
   createExcelPreview,
   discardExcelPreview,
+  finishExcelPreview,
   setExcelRowsSelected,
+  startExcelPreview,
 } from "./service";
 
 // Datos inventados: ni códigos, ni empresas, ni bobinas del proyecto real.
@@ -184,6 +187,53 @@ describe("createExcelPreview", () => {
   });
 });
 
+describe("upload in parts", () => {
+  it("sends the rows in parts, and a half sent Excel cannot be applied", async () => {
+    await newCable("ZZ-1");
+    const importId = await startExcelPreview(supervisor, {
+      kind: "ELECTRICAL",
+      excelDate: "2026-11-16",
+      fileName: "estado.xlsx",
+      rowCount: 3,
+    });
+    await addExcelPreviewPart(supervisor, {
+      importId,
+      rows: [row("ZZ-1"), row("ZZ-2", { row: 3 })],
+      ignored: [{ row: 4, code: "ZZ-3", reason: "Estado «Check»: no se usa" }],
+    });
+
+    await expect(applyExcelBatch(supervisor, importId)).rejects.toThrow("no ha llegado entero");
+    await expect(finishExcelPreview(supervisor, importId)).rejects.toThrow("todas las filas");
+    await expect(
+      addExcelPreviewPart(admin, { importId, rows: [row("ZZ-4")], ignored: [] }),
+    ).rejects.toThrow("ya no existe");
+    await expect(
+      addExcelPreviewPart(supervisor, { importId, rows: [row("ZZ-2")], ignored: [] }),
+    ).rejects.toThrow("repetido");
+
+    await addExcelPreviewPart(supervisor, { importId, rows: [row("ZZ-5")], ignored: [] });
+    expect(await finishExcelPreview(supervisor, importId)).toEqual({
+      importId,
+      counts: { changes: 1, created: 2, discrepancies: 0 },
+      ignored: 1,
+    });
+  });
+
+  it("a new upload of the same kind replaces one left half sent", async () => {
+    const half = await startExcelPreview(supervisor, {
+      kind: "ELECTRICAL",
+      excelDate: "2026-11-16",
+      fileName: "estado.xlsx",
+      rowCount: 2,
+    });
+    await createExcelPreview(supervisor, input([row("ZZ-1")]));
+
+    await expect(
+      addExcelPreviewPart(supervisor, { importId: half, rows: [row("ZZ-2")], ignored: [] }),
+    ).rejects.toThrow("sustituido");
+  });
+});
+
 describe("applyExcelBatch", () => {
   it("applies the changes, creates the new cables and keeps the web in a discrepancy", async () => {
     const tray = await prisma.tray.create({ data: { code: "ZZT01", kind: "LADDER" } });
@@ -321,6 +371,27 @@ describe("applyExcelBatch", () => {
     const after = await cableOf("ZZ-1");
     expect(after.installationStatus).toBe("LAID");
     expect(await prisma.cableDiscrepancy.count()).toBe(0);
+  });
+
+  it("does not take registering a cable by hand as a person's mark", async () => {
+    // Regresión: el alta escribe su estado inicial y bloqueaba el estado del Excel.
+    const cable = await newCable("ZZ-1");
+    await prisma.cableEvent.create({
+      data: {
+        cableId: cable.id,
+        userId: technician.id,
+        action: "CREATED",
+        changes: { installationStatus: { from: null, to: "NOT_LAID" } },
+        createdAt: new Date("2026-11-18T09:00:00Z"),
+      },
+    });
+    const { importId } = await createExcelPreview(supervisor, input([row("ZZ-1")]));
+    await applyAll(supervisor, importId);
+
+    expect(await cableOf("ZZ-1")).toMatchObject({
+      installationStatus: "LAID",
+      connectionStatus: "CONNECTED",
+    });
   });
 
   it("never closes a discrepancy: a later Excel contradicts it again or only agrees", async () => {

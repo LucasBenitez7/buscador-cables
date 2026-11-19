@@ -28,6 +28,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           { href: "/activity/me", label: "Mi actividad", match: "prefix", place: "user" } as const,
         ]
       : [{ href: "/activity/me", label: "Mi actividad", match: "prefix" } as const]),
+    ...(hasPermission(user, "import:run")
+      ? [{ href: "/import", label: "Excel del día", match: "prefix", place: "manage" } as const]
+      : []),
     ...(hasPermission(user, "catalog:manage")
       ? [{ href: "/catalogs", label: "Catálogos", match: "prefix", place: "manage" } as const]
       : []),

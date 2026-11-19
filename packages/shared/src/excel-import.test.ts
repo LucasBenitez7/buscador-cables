@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  EXCEL_UPLOAD_CHUNK,
   excelPreviewInputSchema,
+  excelPreviewParts,
   madridDay,
   planExcelRow,
   type ExcelCableSnapshot,
@@ -240,5 +242,21 @@ describe("excelPreviewInputSchema", () => {
       excelPreviewInputSchema.safeParse({ ...input, kind: "INSTRUMENTATION", rows: [row()] })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("excelPreviewParts", () => {
+  it("splits the rows and the ignored ones into parts of the same size, in order", () => {
+    const rows = Array.from({ length: EXCEL_UPLOAD_CHUNK + 1 }, (_, index) => index);
+    const parts = excelPreviewParts(rows, ["a"]);
+
+    expect(parts.map((part) => [part.rows.length, part.ignored])).toEqual([
+      [EXCEL_UPLOAD_CHUNK, ["a"]],
+      [1, []],
+    ]);
+  });
+
+  it("sends one part even for an Excel without rows", () => {
+    expect(excelPreviewParts([], [])).toEqual([{ rows: [], ignored: [] }]);
   });
 });

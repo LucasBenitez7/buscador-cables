@@ -8,6 +8,7 @@ import {
   TEST_STATUS_LABELS,
   installationStatusLabel,
   EXCEL_FIELD_LABELS,
+  formatExcelDay,
   PROJECT_FIELD_LABELS,
   describeCableEvent,
   formatDecimal,
@@ -222,6 +223,8 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
       return TEST_STATUS_LABELS[text as TestStatus] ?? text;
     case "deletedAt":
       return dateFormat.format(new Date(text));
+    case "laidOn":
+      return /^\d{4}-\d{2}-\d{2}$/.test(text) ? formatExcelDay(text) : text;
     default:
       return typeof value === "number" ? formatDecimal(value) : text;
   }

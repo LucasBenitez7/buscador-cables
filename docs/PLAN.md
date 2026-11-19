@@ -1049,7 +1049,7 @@ se usa lo mismo (con un componente común), y no hay textos de ayuda en la inter
 - [x] Lector de los dos Excel por nombre de columna, con sus tests (datos inventados).
 - [x] Empresa, bobina, metros reales y fecha real de tendido en el cable y su ficha.
 - [x] Modelo y servicio de importación: cambios, cables nuevos, discrepancias, por lotes.
-- [ ] «Subir Excel del día»: vista previa guardada, desmarcar filas, aplicar o descartar.
+- [x] «Subir Excel del día»: vista previa guardada, desmarcar filas, aplicar o descartar.
 - [ ] Primera carga como carga del proyecto, sin que se vea.
 - [ ] «Pendientes de revisar» con su historial.
 - [ ] Panel: avance de tendido y conexión, fecha del último Excel, pendientes de revisar.

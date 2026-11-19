@@ -4,6 +4,9 @@ import {
   ADMIN_ROLE,
   EXCEL_APPLY_BATCH,
   excelPreviewInputSchema,
+  excelPreviewPartSchema,
+  excelPreviewParts,
+  excelPreviewStartSchema,
   excelRowSelectionSchema,
   excelStatusRowSchema,
   hasPermission,
@@ -18,6 +21,7 @@ import {
   type OpenDiscrepancy,
   type WebStateMark,
 } from "@cables/shared";
+import { isUniqueViolation } from "@/server/prisma-errors";
 
 export class ExcelImportError extends Error {}
 
@@ -112,7 +116,8 @@ async function cablesByCode(db: Db, codes: readonly string[]): Promise<Map<strin
 
 /**
  * The last change of state written by a person or an Excel, per cable: a person's one is the
- * mark an Excel may contradict. The load of the project does not count.
+ * mark an Excel may contradict. The load of the project does not count, nor does registering
+ * a cable: its first state is not something a person checked in the field.
  */
 async function webMarks(db: Db, cableIds: readonly string[]): Promise<Map<string, WebStateMark>> {
   const marks = new Map<string, WebStateMark>();
@@ -124,6 +129,7 @@ async function webMarks(db: Db, cableIds: readonly string[]): Promise<Map<string
       FROM "cable_event"
       WHERE "cableId" = ANY(${part})
         AND "source" IN ('APP', 'EXCEL')
+        AND "action" <> 'CREATED'
         AND jsonb_exists_any("changes", ARRAY['installationStatus', 'connectionStatus'])
       ORDER BY "cableId", "createdAt" DESC, "id" DESC`;
     for (const row of rows) {
@@ -204,19 +210,17 @@ export type ExcelPreviewSummary = {
   ignored: number;
 };
 
+function invalid(error: { issues: readonly { message: string }[] }): never {
+  throw new ExcelImportError(error.issues[0]?.message ?? "El Excel no es válido.");
+}
+
 /**
- * Saves the preview of an Excel: what changes, which cables are new and which discrepancies
- * there are. Nothing of the cables is touched until it is applied. A new Excel of the same
- * kind replaces the saved preview; while one is being applied, it waits.
+ * First step of an upload: saves what the file is. A new Excel of the same kind replaces the
+ * saved preview (or one left half sent); while one is being applied, it waits.
  */
-export async function createExcelPreview(
-  actor: Actor,
-  rawInput: unknown,
-): Promise<ExcelPreviewSummary> {
-  const parsed = excelPreviewInputSchema.safeParse(rawInput);
-  if (!parsed.success) {
-    throw new ExcelImportError(parsed.error.issues[0]?.message ?? "El Excel no es válido.");
-  }
+export async function startExcelPreview(actor: Actor, rawInput: unknown): Promise<string> {
+  const parsed = excelPreviewStartSchema.safeParse(rawInput);
+  if (!parsed.success) invalid(parsed.error);
   const input = parsed.data;
   requireImporter(actor, input.projectLoad);
 
@@ -240,10 +244,81 @@ export async function createExcelPreview(
         );
       }
     }
+    const now = new Date();
+    await tx.excelImport.updateMany({
+      where: { kind: input.kind, status: { in: ["UPLOADING", "PREVIEW"] } },
+      data: { status: "DISCARDED", discardedAt: now },
+    });
+    const saved = await tx.excelImport.create({
+      data: {
+        kind: input.kind,
+        excelDate: dateOf(input.excelDate)!,
+        fileName: input.fileName,
+        projectLoad: input.projectLoad,
+        status: "UPLOADING",
+        uploadedById: actor.id,
+        rowCount: input.rowCount,
+        ignored: [],
+        agreeingDiscrepancyIds: [],
+        createdAt: now,
+      },
+      select: { id: true },
+    });
+    return saved.id;
+  }, TRANSACTION);
+}
 
-    const planned = await planRows(tx, input, input.rows);
-    const ignored: ExcelIgnoredRow[] = [...input.ignored];
-    const counts: ExcelPreviewCounts = { changes: 0, created: 0, discrepancies: 0 };
+/** The upload of one's own that is still arriving: the parts go only to it. */
+async function uploadInProgress(tx: Db, actor: Actor, importId: string) {
+  const excel = await tx.excelImport.findUnique({
+    where: { id: importId },
+    select: { kind: true, projectLoad: true, uploadedById: true },
+  });
+  if (!excel || excel.uploadedById !== actor.id) throw new ExcelImportError(NOT_FOUND);
+  requireImporter(actor, excel.projectLoad);
+  await lockKind(tx, excel.kind);
+  const current = await tx.excelImport.findUniqueOrThrow({
+    where: { id: importId },
+    select: {
+      status: true,
+      kind: true,
+      excelDate: true,
+      projectLoad: true,
+      rowCount: true,
+      receivedCount: true,
+      ignored: true,
+    },
+  });
+  if (current.status !== "UPLOADING") {
+    throw new ExcelImportError("Otro Excel de este tipo ha sustituido a este: súbelo otra vez.");
+  }
+  return current;
+}
+
+/**
+ * Second step, once per part: decides its rows against the app as it is now and saves the
+ * ones that change something. Nothing of the cables is touched.
+ */
+export async function addExcelPreviewPart(actor: Actor, rawInput: unknown): Promise<void> {
+  const parsed = excelPreviewPartSchema.safeParse(rawInput);
+  if (!parsed.success) invalid(parsed.error);
+  const part = parsed.data;
+
+  await prisma.$transaction(async (tx) => {
+    const excel = await uploadInProgress(tx, actor, part.importId);
+    if (excel.receivedCount + part.rows.length > excel.rowCount) {
+      throw new ExcelImportError("Han llegado más filas de las que tiene el Excel.");
+    }
+    if (excel.kind === "INSTRUMENTATION" && part.rows.some((row) => row.sections !== null)) {
+      throw new ExcelImportError("El Excel de instrumentación no trae tramos");
+    }
+
+    const planned = await planRows(
+      tx,
+      { kind: excel.kind, excelDate: dayOf(excel.excelDate)!, projectLoad: excel.projectLoad },
+      part.rows,
+    );
+    const ignored: ExcelIgnoredRow[] = [...part.ignored];
     const agreeing: string[] = [];
     const rows: Prisma.ExcelImportRowCreateManyInput[] = [];
     for (const { row, cable, plan } of planned) {
@@ -255,11 +330,8 @@ export async function createExcelPreview(
         agreeing.push(plan.agreesWithDiscrepancyId);
       }
       if (plan.kind === "NONE") continue;
-      if (plan.kind === "NEW") counts.created += 1;
-      else if (plan.kind === "CHANGE") counts.changes += 1;
-      else counts.discrepancies += 1;
       rows.push({
-        importId: "",
+        importId: part.importId,
         code: row.code,
         cableId: cable?.id ?? null,
         kind: plan.kind,
@@ -271,33 +343,74 @@ export async function createExcelPreview(
             : Prisma.DbNull,
       });
     }
-
-    const now = new Date();
-    await tx.excelImport.updateMany({
-      where: { kind: input.kind, status: "PREVIEW" },
-      data: { status: "DISCARDED", discardedAt: now },
-    });
-    const saved = await tx.excelImport.create({
-      data: {
-        kind: input.kind,
-        excelDate: dateOf(input.excelDate)!,
-        fileName: input.fileName,
-        projectLoad: input.projectLoad,
-        uploadedById: actor.id,
-        rowCount: input.rows.length,
-        ignored: ignored as unknown as Prisma.InputJsonArray,
-        agreeingDiscrepancyIds: agreeing,
-        createdAt: now,
-      },
-      select: { id: true },
-    });
-    for (const part of chunks(rows)) {
-      await tx.excelImportRow.createMany({
-        data: part.map((row) => ({ ...row, importId: saved.id })),
-      });
+    try {
+      // Rows that change nothing are not saved, but they count as received.
+      await tx.excelImportRow.createMany({ data: rows });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ExcelImportError("Un cable está repetido en el Excel: súbelo otra vez.");
+      }
+      throw error;
     }
-    return { importId: saved.id, counts, ignored: ignored.length };
+    await tx.excelImport.update({
+      where: { id: part.importId },
+      data: {
+        receivedCount: { increment: part.rows.length },
+        ignored: [
+          ...(excel.ignored as ExcelIgnoredRow[]),
+          ...ignored,
+        ] as unknown as Prisma.InputJsonArray,
+        agreeingDiscrepancyIds: { push: agreeing },
+      },
+    });
   }, TRANSACTION);
+}
+
+/** Last step: with every row received, the preview is ready to review and apply. */
+export async function finishExcelPreview(
+  actor: Actor,
+  importId: string,
+): Promise<ExcelPreviewSummary> {
+  return prisma.$transaction(async (tx) => {
+    const excel = await uploadInProgress(tx, actor, importId);
+    if (excel.receivedCount !== excel.rowCount) {
+      throw new ExcelImportError("No han llegado todas las filas del Excel: súbelo otra vez.");
+    }
+    await tx.excelImport.update({ where: { id: importId }, data: { status: "PREVIEW" } });
+    return {
+      importId,
+      counts: await previewCounts(tx, importId),
+      ignored: (excel.ignored as unknown[]).length,
+    };
+  }, TRANSACTION);
+}
+
+export async function previewCounts(
+  db: Db | typeof prisma,
+  importId: string,
+): Promise<ExcelPreviewCounts> {
+  const groups = await db.excelImportRow.groupBy({
+    by: ["kind"],
+    where: { importId },
+    _count: { _all: true },
+  });
+  const count = (kind: string) => groups.find((group) => group.kind === kind)?._count._all ?? 0;
+  return { changes: count("CHANGE"), created: count("NEW"), discrepancies: count("DISCREPANCY") };
+}
+
+/** The three steps for a whole file at once, as the browser does them. */
+export async function createExcelPreview(
+  actor: Actor,
+  rawInput: unknown,
+): Promise<ExcelPreviewSummary> {
+  const parsed = excelPreviewInputSchema.safeParse(rawInput);
+  if (!parsed.success) invalid(parsed.error);
+  const { rows, ignored, ...file } = parsed.data;
+  const importId = await startExcelPreview(actor, { ...file, rowCount: rows.length });
+  for (const part of excelPreviewParts(rows, ignored)) {
+    await addExcelPreviewPart(actor, { importId, ...part });
+  }
+  return finishExcelPreview(actor, importId);
 }
 
 async function previewToEdit(tx: Db, actor: Actor, importId: string) {
@@ -326,11 +439,11 @@ async function previewToEdit(tx: Db, actor: Actor, importId: string) {
 export async function setExcelRowsSelected(actor: Actor, rawInput: unknown): Promise<number> {
   const parsed = excelRowSelectionSchema.safeParse(rawInput);
   if (!parsed.success) throw new ExcelImportError("Selección no válida.");
-  const { importId, rowIds, selected } = parsed.data;
+  const { importId, rowIds, kind, selected } = parsed.data;
   return prisma.$transaction(async (tx) => {
     await previewToEdit(tx, actor, importId);
     const { count } = await tx.excelImportRow.updateMany({
-      where: { importId, ...(rowIds ? { id: { in: rowIds } } : {}) },
+      where: { importId, ...(rowIds ? { id: { in: rowIds } } : {}), ...(kind ? { kind } : {}) },
       data: { selected },
     });
     return count;
@@ -536,6 +649,9 @@ export async function applyExcelBatch(actor: Actor, importId: string): Promise<E
       },
     });
     if (current.status === "APPLIED") throw new ExcelImportError("Este Excel ya está aplicado.");
+    if (current.status === "UPLOADING") {
+      throw new ExcelImportError("Este Excel todavía no ha llegado entero.");
+    }
     if (current.status === "DISCARDED") {
       throw new ExcelImportError("Esta vista previa se descartó: sube el Excel otra vez.");
     }
