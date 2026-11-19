@@ -14,6 +14,7 @@ import {
   SelectionAside,
   SelectionProvider,
 } from "@/components/selection";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { equipmentHref } from "@/lib/links";
 import { EQUIPMENT_LIMIT, EQUIPMENT_MAX, searchEquipment } from "@/server/equipment/service";
 import { requireUser } from "@/server/session";
@@ -68,6 +69,7 @@ export default async function EquipmentSearchPage({
           title="Equipos"
           items={matches.map((match) => ({ key: match.equipment, label: match.equipment }))}
           resetKey={`${query}|${sort}`}
+          actions={<SaveChosenButton kind="EQUIPMENT" />}
         >
           <ListToolbar
             action="/equipment"

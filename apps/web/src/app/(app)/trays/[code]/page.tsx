@@ -19,6 +19,8 @@ import {
   SelectionProvider,
 } from "@/components/selection";
 import { CODE_LINK } from "@/components/ui/text-link";
+import { SaveRecordButton } from "@/features/saved/components/save-dialog";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { TrayDrawings } from "@/features/drawings/components/tray-drawings";
 import { getTrayDetail, type TrayCable } from "@/server/trays/service";
@@ -64,11 +66,14 @@ export default async function TrayPage({ params }: { params: Params }) {
         <RecordTitle
           title={tray.code}
           actions={
-            tray.routeCables.length > 0 ? (
-              <SectionLink href={`/cables?tray=${encodeURIComponent(tray.code)}`}>
-                Ver sus cables en el buscador
-              </SectionLink>
-            ) : null
+            <>
+              {tray.routeCables.length > 0 ? (
+                <SectionLink href={`/cables?tray=${encodeURIComponent(tray.code)}`}>
+                  Ver sus cables en el buscador
+                </SectionLink>
+              ) : null}
+              <SaveRecordButton kind="TRAY" itemKey={tray.code} label={tray.code} />
+            </>
           }
         />
         <p className="text-muted-foreground">
@@ -144,6 +149,7 @@ function CableList({ title, cables }: { title: string; cables: TrayCable[] }) {
     <SelectionProvider
       title={title}
       items={cables.map((cable) => ({ key: cable.id, label: cable.code }))}
+      actions={<SaveChosenButton kind="CABLE" />}
     >
       <div className="space-y-3">
         <ListSummary aside={<SelectionAside />}>{null}</ListSummary>

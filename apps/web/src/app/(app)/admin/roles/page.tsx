@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { RolesCompare } from "@/features/roles/components/roles-compare";
 import { listRoles } from "@/server/roles/service";
 import { requirePermission } from "@/server/session";
 
@@ -49,6 +50,16 @@ export default async function RolesPage() {
           </li>
         ))}
       </ul>
+
+      {roles.length > 1 ? (
+        <RolesCompare
+          roles={roles.map((role) => ({
+            id: role.id,
+            name: role.name,
+            permissions: role.permissions,
+          }))}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1021,11 +1021,23 @@ cuáles de los 60 enseña según el orden elegido.
 Añadida el 2026-11-18. Rama `feat/f16-saved-roles`. Sin prisa. Era la fase 15: pasó detrás
 de los listados el 2026-11-19.
 
-- [ ] Guardados: cada persona guarda cables, bandejas y equipos en carpetas suyas (crear,
+Decisiones (2026-11-19):
+
+- **Carpetas de un solo nivel**, de cada persona (nadie más las ve), con cables, bandejas y
+  equipos.
+- **Guardar** desde la ficha (cable, bandeja, equipo) y, de golpe, desde la barra de lo
+  elegido en una lista (fase 15).
+- **Una cosa puede estar en varias carpetas**; «Mover» la pasa de una carpeta a otra.
+
+- [x] Guardados: cada persona guarda cables, bandejas y equipos en carpetas suyas (crear,
       renombrar, mover, quitar, borrar).
-- [ ] Roles uno al lado del otro: en portátil, tabla con los permisos en filas y los roles en
+- [x] Roles uno al lado del otro: en portátil, tabla con los permisos en filas y los roles en
       columnas; en móvil, dos roles frente a frente con las diferencias resaltadas.
-- [ ] Tests y E2E.
+- [x] Tests y E2E.
+
+Hecho también: «Solo diferencias» en la comparación de roles, que es una sola lista de
+permisos, sin títulos de sección (decidido con el usuario). Guardar no recarga la ficha, para
+que su aviso se vea.
 
 ---
 

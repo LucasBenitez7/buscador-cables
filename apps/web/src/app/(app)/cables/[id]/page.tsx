@@ -26,6 +26,7 @@ import { ChangeList } from "@/components/change-list";
 import { INLINE_LINK, levelCablesHref } from "@/lib/links";
 import { DataList, Item, JumpLinks, RecordTitle, Section, SectionLink } from "@/components/detail";
 import { CableActions } from "@/features/cables/components/cable-actions";
+import { SaveRecordButton } from "@/features/saved/components/save-dialog";
 import { CableViewTabs } from "@/features/cables/components/cable-view-tabs";
 import { CableWiring } from "@/features/cables/components/cable-wiring";
 import { HistoryFilterNote } from "@/features/cables/components/history-filter-note";
@@ -122,7 +123,10 @@ export default async function CablePage({
         <RecordTitle
           title={cable.code}
           actions={
-            canEdit ? <SectionLink href={`/cables/${cable.id}/edit`}>Editar</SectionLink> : null
+            <>
+              {canEdit ? <SectionLink href={`/cables/${cable.id}/edit`}>Editar</SectionLink> : null}
+              <SaveRecordButton kind="CABLE" itemKey={cable.id} label={cable.code} />
+            </>
           }
         />
         <CableStatusBadges

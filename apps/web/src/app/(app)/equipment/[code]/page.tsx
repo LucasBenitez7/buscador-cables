@@ -23,6 +23,8 @@ import {
   SelectionProvider,
 } from "@/components/selection";
 import { Badge } from "@/components/ui/badge";
+import { SaveRecordButton } from "@/features/saved/components/save-dialog";
+import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { TEST_VARIANT } from "@/features/cables/components/cable-status-badges";
 import { EquipmentLink } from "@/features/cables/components/equipment-link";
 import { INLINE_LINK, equipmentCablesHref } from "@/lib/links";
@@ -108,9 +110,16 @@ export default async function EquipmentPage({
         <RecordTitle
           title={equipment.equipment}
           actions={
-            <SectionLink href={equipmentCablesHref(equipment.equipment)}>
-              Ver sus cables en el buscador
-            </SectionLink>
+            <>
+              <SectionLink href={equipmentCablesHref(equipment.equipment)}>
+                Ver sus cables en el buscador
+              </SectionLink>
+              <SaveRecordButton
+                kind="EQUIPMENT"
+                itemKey={equipment.equipment}
+                label={equipment.equipment}
+              />
+            </>
           }
         />
         <p className="text-sm">
@@ -175,6 +184,7 @@ export default async function EquipmentPage({
           title={`Equipo ${equipment.equipment}`}
           items={selectable}
           resetKey={equipmentQuery}
+          actions={<SaveChosenButton kind="CABLE" />}
         >
           <PendingResults className="space-y-6">
             <div className="space-y-3">

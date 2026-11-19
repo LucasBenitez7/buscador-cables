@@ -43,6 +43,19 @@ test.describe("administrador", () => {
     await expect(page.getByRole("button", { name: "Guardar cambios" })).toHaveCount(0);
     await expect(page.getByLabel(/Gestionar cuentas/)).toBeDisabled();
   });
+
+  test("compara los roles uno al lado del otro y enseña solo las diferencias", async ({ page }) => {
+    await page.goto("/admin/roles");
+    const compare = page.getByRole("region", { name: "Comparar roles" });
+    const table = compare.getByRole("table");
+    await expect(table.getByRole("columnheader", { name: "Supervisor" })).toBeVisible();
+    await expect(table.getByRole("rowheader", { name: /Ver cables/ })).toBeVisible();
+
+    await compare.getByLabel("Solo diferencias").check();
+    // Todos los roles pueden consultar: no es una diferencia.
+    await expect(table.getByRole("rowheader", { name: /Ver cables/ })).toHaveCount(0);
+    await expect(table.getByRole("rowheader", { name: "Tender cables" })).toBeVisible();
+  });
 });
 
 for (const user of ["viewer", "technician"] as const) {

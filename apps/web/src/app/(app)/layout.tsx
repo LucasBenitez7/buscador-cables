@@ -25,6 +25,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     { href: "/trays", label: "Bandejas", match: "prefix" },
     { href: "/equipment", label: "Equipos", match: "prefix" },
     { href: "/locations", label: "Ubicaciones", match: "prefix" },
+    { href: "/saved", label: "Guardados", match: "prefix" },
     // Quien ve la de todos tiene la suya en su menú; el resto, en la fila principal.
     ...(seesTeamActivity
       ? [

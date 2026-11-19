@@ -219,6 +219,23 @@ casilla en cada fila y una barra abajo con cuántos hay elegidos.
 
 De una ubicación se copia su código y su nombre; del resto, solo el código.
 
+## Guardados
+
+**Guardados** (en el menú) son tus carpetas de cables, bandejas y equipos. Solo las ves tú,
+sea cual sea tu rol.
+
+- **Guardar**: junto al código de un cable, una bandeja o un equipo. Marca las carpetas donde
+  lo quieres (las que ya lo tienen salen marcadas; desmarcar lo quita) o escribe el nombre de
+  una carpeta nueva. Una misma cosa puede estar en varias carpetas.
+- **De golpe**: en una lista, «Seleccionar», elige lo que quieras y **Guardar** en la barra de
+  abajo.
+- En **Guardados**, «Nueva carpeta» crea una vacía. Cada carpeta enseña sus cables, bandejas y
+  equipos; junto al nombre, **Renombrar** y **Borrar carpeta** (lo guardado en ella no se
+  toca en ningún otro sitio).
+- Dentro de una carpeta, «Seleccionar» y en la barra **Mover a…** otra carpeta, **Quitar**,
+  Copiar o Imprimir.
+- Un cable dado de baja después de guardarlo se sigue viendo, tachado.
+
 ## Actividad
 
 - **Mi actividad**: todo lo que has registrado, por días.
@@ -327,6 +344,9 @@ En **Gestión → Roles y permisos**:
   hacer. Cada permiso está explicado. Un rol nuevo aparece al momento en Usuarios.
 - En la ficha de un rol se cambian sus permisos: **afecta al momento** a todas las personas que
   lo tienen. Un rol solo se borra si nadie lo tiene.
+- **Comparar roles**, debajo de la lista: en el ordenador, una tabla con los permisos en filas
+  y los roles en columnas; en el móvil, dos roles frente a frente, con lo que los diferencia
+  resaltado. «Solo diferencias» oculta lo que tienen todos igual.
 
 **Permisos extra de una persona**: en Usuarios, pulsa su nombre. Su ficha dice lo que puede
 hacer y si le viene de su rol o es un extra. Marca lo que necesite además de su rol y guarda.
