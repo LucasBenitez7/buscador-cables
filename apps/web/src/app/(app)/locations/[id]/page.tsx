@@ -137,6 +137,7 @@ export default async function LocationPage({ params }: { params: Params }) {
                 as="ul"
                 className="bg-card divide-y rounded-lg border"
                 noun="cables"
+                more={{ total: location.cables, href: locationCablesHref(location.id) }}
                 items={location.someCables.map((cable) => (
                   <li
                     key={cable.id}

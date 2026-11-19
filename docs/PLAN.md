@@ -1050,7 +1050,8 @@ y después) y se aplica cuando el usuario da el visto bueno.
       abierto y cerrado.
 - [x] Selección igual en todas las listas (cables, bandejas, equipos, ubicaciones, guardados).
 - [x] «Seleccionar todos» sin guion: vacía o marcada.
-- [ ] Ubicaciones: el recuento dice qué cuenta (las primeras ramas frente al total).
+- [x] Ficha de ubicación: con más cables de los que trae, «Ver los N cables en el buscador»
+      con el total real (decidido con el usuario: el listado de Ubicaciones se queda igual).
 - [ ] Una sola «Actividad» en el menú; quien ve la de todos filtra por persona.
 - [ ] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».
 - [ ] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
