@@ -1054,6 +1054,8 @@ se usa lo mismo (con un componente común), y no hay textos de ayuda en la inter
 - [ ] «Pendientes de revisar» con su historial.
 - [ ] Panel: avance de tendido y conexión, fecha del último Excel, pendientes de revisar.
 - [ ] Tests, E2E y manual de usuario.
+- [ ] Al cerrar la fase, resumir esta sección: dejar las tareas y las decisiones que sigan
+      valiendo, y quitar los planes intermedios y el repaso de estilos.
 
 ## Fase 15 — Guardados y roles (v1.5.0)
 
