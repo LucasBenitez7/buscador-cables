@@ -951,124 +951,43 @@ Repaso de estilos con el usuario (2026-11-19), igual en cable, bandeja, equipo y
 ## Fase 14 — Estado diario desde el Excel (v1.4.0)
 
 Añadida el 2026-11-18; sustituye a la fase 8. Rama `feat/f14-excel-status`. El estado del
-proyecto llega en dos Excel (eléctrico e instrumentación) que se actualizan cada día.
+proyecto llega en dos Excel (eléctrico e instrumentación) que se suben cada día desde la web.
 
-### Decisiones (2026-11-18)
+Decisiones que siguen valiendo:
 
-- **Subida desde la web**, sin automatizar: el navegador lee el Excel y manda solo las
-  columnas que hacen falta (los archivos pasan del límite de subida de Vercel); el servidor lo
-  vuelve a validar todo.
-- **Columnas por nombre**, no por posición, con nombres alternativos; si falta una, la vista
-  previa dice cuál y no aplica nada.
-- **Estados**: solo «Tendido» o «No tendido» (desaparecen «En almacén» y «Enrollado»); la
-  conexión, de origen, de destino o de las dos puntas (solo el eléctrico la trae). «Tendido a
-  medias» y la punta suelta se marcan en campo. Se ignoran «Check», «Error» y
-  «Correcto/Incorrecto».
-- **Vista previa guardada**: qué cambia, qué cables son nuevos y qué discrepancias hay; se
-  pueden desmarcar filas; nada se aplica hasta «Aplicar».
-- **Discrepancias**: una persona marcó en la web algo que el Excel contradice, y lo marcó antes
-  de la fecha del Excel. Quedan en «Pendientes de revisar» hasta que alguien decide; el cable
-  conserva lo de la web mientras tanto. Siempre con fechas, nunca «hoy» ni «ayer».
-- **Historial**: nunca se borra nada. Lo del Excel sale como «Según el Excel del dd/mm · subido
-  por …», y la decisión sobre una discrepancia, con quién decidió y qué corrige.
-- **La carga inicial no se ve**: se marca como carga del proyecto y se oculta por su origen en
-  la actividad, el historial y la última acción.
-- **Cables nuevos**: los que están en el Excel y no en la web se crean con lo que trae el
-  Excel; lo que solo traen los PDF (recorrido, conexionado) queda vacío.
-- **Datos nuevos**: empresa que tendió el cable (catálogo editable), bobina y su estado, y
-  metros reales (por tramo y en total en el eléctrico; en instrumentación, de la hoja «Table»).
-  Con metros reales, la ficha
-  muestra «Longitud prevista» y «Longitud real»; sin ellos, solo «Longitud».
+- **Lectura en el navegador** (`read-excel-file`): manda solo los datos que hacen falta, por
+  partes; el servidor lo vuelve a validar todo. Hojas y columnas por nombre, con alternativas;
+  si falta una, lo dice y no aplica nada. La fecha del Excel sale del nombre del archivo y se
+  puede cambiar. No se aplica un Excel más antiguo que el último aplicado de su tipo.
+- **Estados**: «Tendido» o «No tendido», y la conexión por puntas (solo el eléctrico la trae).
+  «Tendido a medias» y la punta suelta se marcan en campo. Se ignoran «Check», «Error» y
+  «Correcto/Incorrecto». Fuera «En almacén», «Enrollado», «Enrollar» y «Mover».
+- **Qué cambia el Excel**: estado, conexión, fecha de tendido, empresa, bobina y metros reales;
+  nunca origen, destino, tipo ni longitud del listado. Una celda vacía no borra nada. Metros
+  reales: en el eléctrico, por tramo (total / número de secciones); en instrumentación, de la
+  hoja «Table» («PULLED [m]»), y de una tirada repetida vale la más nueva.
+- **Vista previa guardada** (Cambios, Nuevos, Discrepancias): se desmarcan filas, y las
+  desmarcadas vuelven con el siguiente Excel; se aplica por lotes, decidiendo cada fila otra
+  vez. Los cables nuevos llevan la etiqueta «Solo datos del Excel».
+- **Discrepancias**: una persona marcó en la web, antes de la fecha del Excel, algo que el Excel
+  contradice (el mismo día o después, gana la web). El cable conserva lo de la web hasta que
+  alguien decide en «Pendientes de revisar» («Mantener lo de la web» o «Aceptar lo del Excel»,
+  una a una o varias a la vez). Nunca se cierran solas. La tarjeta enseña el estado actual del
+  cable y avisa si alguien lo cambió después; «Seleccionar todas» no acepta esas.
+- **Avisos**: el inicio y «Pendientes de revisar» solo cuentan las discrepancias abiertas desde
+  que cada persona abrió esa pantalla; no van al botón del menú ni a «Gestión».
+- **Carga del proyecto**: la primera carga (solo administradores) se guarda con su origen y no
+  se ve en la actividad, el historial ni la última acción.
+- **Historial**: nunca se borra nada; lo del Excel sale con su fecha y quién lo subió, y cada
+  decisión con quién decidió y qué corrige.
 
-### Plan final (2026-11-19)
-
-Cambios visuales (ficha, «Subir Excel del día», «Pendientes de revisar», panel): primero
-capturas y visto bueno del usuario; después los E2E y el PR.
-
-- **Carga del proyecto**: lo que tiene ese origen no se ve en la actividad, el historial de la
-  ficha ni la última acción de la tabla. `HISTORY_START` se mantiene como opción: valen las dos.
-- **Estados**: nuevo «No tendido»; «En almacén» y «Enrollado» pasan a él con una migración.
-  «Sin revisar» se queda para los cables que no salen en ningún Excel; el Excel los pasa a
-  Tendido o No tendido. Desaparecen «Enrollar» y «Mover» con sus permisos; la ubicación actual
-  queda sin uso y no se borra nada. Los eventos antiguos conservan su texto.
-- **Lector**: función pura en `packages/shared`. Columnas por nombre con alternativas, sin
-  importar mayúsculas, espacios ni tildes. Traducción del estado del Excel: No Tendido → No
-  tendido; Tendido → Tendido sin conectar; Conectado Origen / Destino → Tendido y conectado en
-  esa punta; Conectado → Tendido y conectado. Metros reales por tramo = metros reales / número
-  de secciones.
-- **Qué actualiza el Excel** en un cable que ya existe: estado, conexión, fecha de tendido,
-  empresa, bobina y metros reales; nunca origen, destino, tipo ni longitud del listado. Una
-  celda de datos vacía no borra lo que ya tiene el cable: solo cuenta cuando trae un valor
-  (decidido el 2026-11-19). Los cables que no salen en el Excel no se tocan, y cada Excel solo
-  afecta a su disciplina.
-- **Discrepancia**: una persona marcó algo en la web antes de la fecha del Excel y el Excel lo
-  contradice; si lo marcó después, no cuenta. Nunca se cierran solas: si un Excel posterior ya
-  coincide, solo se avisa con su fecha. Decisiones: «Mantener lo de la web» o «Aceptar lo del
-  Excel», en el historial con quién decidió y qué corrige.
-- **Cables nuevos**: se crean con lo del Excel y llevan la etiqueta «Solo datos del Excel».
-- **Subida**: `read-excel-file` en el navegador (medir antes con el Excel real); fecha del Excel
-  sacada del nombre del archivo y editable; permiso propio; vista previa con Cambios, Nuevos y
-  Discrepancias; las filas desmarcadas no se aplican y vuelven con el siguiente Excel; un Excel
-  nuevo sustituye a la vista previa guardada; se aplica por lotes. «Carga del proyecto», solo
-  para administradores, es la primera carga.
-- **Ficha del cable**: lo del Excel va en el grupo «Tendido» de «Datos del cable»: «Fecha»
-  («11/07/2026, según el Excel»), «Empresa», «Bobina» y «Longitud real». La longitud del
-  listado pasa a «Longitud prevista», en el grupo «Proyecto».
-- **Filtro «Origen»** de la actividad y del historial: hoy «En campo» y «Todo»; al añadir el
-  origen «Excel», sale también como opción. La carga del proyecto no sale nunca.
-
-### Repaso de estilos con el usuario (2026-11-19)
-
-Reglas que valen para toda la app: un cambio visual se aplica igual en todos los sitios donde
-se usa lo mismo (con un componente común), y no hay textos de ayuda en la interfaz.
-
-- [x] Botones de acciones (`ActionButtons`): los mismos en la barra «Registrar acción» de la
-      ficha y en el diálogo «Acción» del buscador. Fondo sólido, sin transparencias (tampoco
-      los desactivados); al pasar o pulsar, el azul de la app en tono suave; «Retirar» en rojo
-      suave. Solo botones: sin título ni motivos visibles (el motivo de uno apagado lo leen los
-      lectores de pantalla).
-- [x] Barra «Registrar acción» más baja; cerrada, borde fino gris; abierta, borde de 2 px en
-      azul apagado.
-- [x] La X de cerrar de todos los diálogos, en blanco.
-- [x] Datos de una ficha (`DataList`, cable, bandeja y ubicación): una fila por dato, el nombre a
-      la izquierda en blanco y el valor a la derecha en negrita; sin datos vacíos; grupos con el
-      título encima de la caja, en azul. En el cable: «Qué es», «Tendido» y «Proyecto».
-- [x] Filas de píldoras que se deslizan (`ChipRow`: «Ir a:», hojas de los planos, Catálogos):
-      al tocar una medio oculta, la fila se desplaza hasta verla entera; barra fina en el
-      portátil si no caben.
-- [x] Catálogos: pestañas en píldoras en una fila, en el orden Tipos de cable, Empresas,
-      Colores, Fabricantes; sin texto de ayuda.
-- [x] Buscador de cables: la tarjeta del móvil solo lleva código, estado, extremos, punta
-      suelta y «Acción» (fuera tipo, sección, longitud, último movimiento y «Conexionado»). La
-      tabla del portátil pierde «Último movimiento» y el enlace «Conexionado»; mantiene Tipo,
-      Sección y Longitud.
-- [x] Equipos: las filas de cable sin la línea del servicio. El servicio se queda en la ficha
-      del cable, en las sugerencias del buscador del inicio y en las bandejas (decidido así).
-- [x] Ubicaciones: fuera el texto «Los cables cuentan si empiezan, terminan…».
-
-### Tareas
-
-- [x] Ocultar la carga del proyecto por su origen en todas las vistas.
-- [x] Estados finales: «No tendido», migración, fuera «Enrollar» y «Mover».
-- [x] Lector de los dos Excel por nombre de columna, con sus tests (datos inventados).
-- [x] Empresa, bobina, metros reales y fecha real de tendido en el cable y su ficha.
-- [x] Modelo y servicio de importación: cambios, cables nuevos, discrepancias, por lotes.
-- [x] «Subir Excel del día»: vista previa guardada, desmarcar filas, aplicar o descartar.
-- [x] Primera carga como carga del proyecto, sin que se vea.
-- [x] «Pendientes de revisar» con su historial.
-- [x] Panel: avance de tendido y conexión, fecha del último Excel, pendientes de revisar.
-- [x] Avisos de discrepancias solo de lo nuevo: el inicio y el número de «Pendientes de revisar»
-      cuentan lo llegado desde que cada persona abrió esa pantalla, y no se suman al botón del
-      menú ni a «Gestión». Las pendientes siguen ahí hasta que alguien decide.
-- [x] Decidir varias discrepancias a la vez: casillas, «Seleccionar todas» (todas las
-      pendientes) y las dos decisiones para las marcadas; cada una con su evento.
+- [x] Estados finales, lector de los dos Excel y datos nuevos del cable (empresa, bobina,
+      metros reales, fecha de tendido).
+- [x] Importación: vista previa, aplicar por lotes, carga del proyecto oculta.
+- [x] «Pendientes de revisar», avisos solo de lo nuevo y decisiones en bloque.
+- [x] Panel: fecha del último Excel y discrepancias nuevas.
+- [x] Repaso de estilos con el usuario: componentes comunes, sin textos de ayuda.
 - [x] Tests, E2E y manual de usuario.
-- [x] Metros reales de instrumentación (decidido el 2026-11-19): salen de la hoja «Table»,
-      columna «PULLED [m]», una fila por tirada. Una tirada apuntada dos veces exactamente
-      igual cuenta una; si las filas difieren, vale la más nueva (fecha «DATE» más reciente, o
-      la fila más abajo si la fecha no lo dice) y la otra queda entre las ignoradas.
-- [ ] Al cerrar la fase, resumir esta sección: dejar las tareas y las decisiones que sigan
-      valiendo, y quitar los planes intermedios y el repaso de estilos.
 
 ## Fase 15 — Listados: imprimir, copiar y ordenar (v1.5.0)
 
