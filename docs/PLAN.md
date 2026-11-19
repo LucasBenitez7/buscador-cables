@@ -916,19 +916,36 @@ Añadida el 2026-11-18. Rama `feat/f13-field-ux`. La web se usa sobre todo en el
 para buscar y mirar planos: que lo importante esté arriba y se vea bien, también para quien
 no está acostumbrado a usarla.
 
-- [ ] Colores de estado únicos en toda la web (planos, etiquetas, bandejas, equipos, panel),
+- [x] Colores de estado únicos en toda la web (planos, etiquetas, bandejas, equipos, panel),
       con los estados finales de la fase 14 (No tendido, Tendido a medias, Tendido, Retirado).
       En el plano, marcas que destaquen sobre el dibujo: hoy «Falta» (gris) casi no se ve y
       «Tendido» (verde) se confunde con las bandejas.
-- [ ] Ficha del cable: pestañas Recorrido / Conexionado grandes y claras; en Recorrido, el
+- [x] Ficha del cable: pestañas Recorrido / Conexionado claras; en Recorrido, el
       plano primero; en Conexionado, el estado de cada punta y la tabla de bornas plegada.
-- [ ] Acciones en un botón fijo abajo que abre un panel, en vez de ocupar el principio de la
+- [x] Acciones en un botón fijo abajo que abre un panel, en vez de ocupar el principio de la
       ficha.
-- [ ] Bloques plegables más claros: toda la barra se pulsa, con «Mostrar» / «Ocultar».
-- [ ] Bandejas y equipos con el mismo criterio: el plano arriba, lo secundario plegado.
-- [ ] Buscador único en el inicio: cables, bandejas, equipos y ubicaciones con sugerencias
+- [x] Bloques plegables más claros: toda la barra se pulsa, con «Mostrar» / «Ocultar».
+- [x] Bandejas y equipos con el mismo criterio: el plano arriba, lo secundario plegado.
+- [x] Buscador único en el inicio: cables, bandejas, equipos y ubicaciones con sugerencias
       agrupadas mientras se escribe; un código exacto lleva directo a su ficha.
-- [ ] Tests y E2E.
+- [x] Tests y E2E.
+
+Hecho también: en el móvil, los formularios de filtros (listas de bandejas, equipos y
+ubicaciones; un equipo, el historial, usuarios) enseñan el primer campo y despliegan el resto
+con «Más filtros»; cada extremo del cable dice si esa punta está conectada.
+
+Repaso de estilos con el usuario (2026-11-19), igual en cable, bandeja, equipo y ubicación:
+
+- [x] Cabecera corta: el código (más pequeño) y su estado; servicio, nivel y marcado
+      alternativo pasan a «Datos del cable».
+- [x] «Editar» y «Ver sus cables en el buscador» al lado del código, como texto subrayado; si
+      no caben, bajo él. Las barras de los bloques solo pliegan y despliegan, y son más finas.
+- [x] Planos y hoja original siempre a la vista (sin plegar) y primero; en Conexionado, la
+      hoja original arriba del todo.
+- [x] Selector de hojas compacto: botones pequeños en una fila y una línea con lo que muestra.
+- [x] Marcas del plano: un solo borde de color, sin relleno.
+- [x] Pestañas más bajas y con color; «Ir a» en azul. En el escritorio, pestañas y
+      «Registrar acción» con un ancho limitado.
 
 ## Fase 14 — Estado diario desde el Excel (v1.4.0)
 

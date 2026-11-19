@@ -64,8 +64,11 @@ nuevo.
 
 ## Inicio
 
-Lo primero que ves: buscador rápido de cable y bandeja, y el avance de la obra (cables
-tendidos, conectados y timbrados). Según el rol, también tu actividad reciente, el desglose por
+Lo primero que ves: **un solo buscador para todo** y el avance de la obra (cables tendidos,
+conectados y timbrados). Escribe parte de un código, un equipo o el nombre de una ubicación y,
+mientras escribes, salen unos pocos cables, bandejas, equipos y ubicaciones que coinciden, cada
+uno con su enlace. Si escribes un código entero y pulsas **Buscar** (o Intro), te lleva
+directo a su ficha. Según el rol, también tu actividad reciente, el desglose por
 estado, la actividad del equipo o las cuentas pendientes de aprobar.
 
 ## Buscar cables
@@ -76,16 +79,25 @@ fabricante, sección, longitud, estado de instalación, conexión y timbrado, ni
 (exacto, en origen o destino) y bandeja. Los filtros quedan en la dirección de la página: se
 puede guardar o compartir una búsqueda copiando el enlace. En el móvil, el botón **Filtros ⌄**
 despliega todos los filtros; «Más filtros ⌄» abre los menos usados. La flecha gira cuando
-están abiertos.
+están abiertos. Igual en las demás listas con filtros (bandejas, equipos, ubicaciones, un
+equipo, el historial de un cable): en el móvil se ve el primer campo y **Más filtros**
+despliega el resto.
 
-Pulsa un código para abrir su **ficha**. Tiene dos pestañas, con las mismas acciones y el
-mismo historial arriba y abajo:
+Pulsa un código para abrir su **ficha**. Arriba, el código y su estado; al lado del código,
+**Editar** (si tu rol lo permite). El servicio, el nivel y el resto están en «Datos del
+cable». Debajo, dos pestañas:
 
-- **Recorrido** (quien tiende): datos, origen y destino, recorrido por bandejas y el plano con
-  el recorrido marcado.
-- **Conexionado** (quien conecta): la tabla de hilos con el regletero y la borna de cada uno
-  en origen y en destino, los puentes y la **hoja original del listado**, con zoom. En caso de
-  duda, manda la hoja original.
+- **Recorrido** (quien tiende): primero el **plano** con el recorrido marcado, siempre a la
+  vista; después las bandejas del recorrido y, plegados, los extremos y los datos del cable.
+- **Conexionado** (quien conecta): primero la **hoja original del listado**, con zoom (en caso
+  de duda, manda la hoja original); después los **extremos**, con si cada punta está
+  conectada, y, plegadas, las **bornas** (la tabla de hilos con el regletero y la borna de cada
+  uno en origen y en destino, y los puentes).
+
+Cada bloque se abre y se cierra pulsando su barra («Mostrar» / «Ocultar»); los planos no se
+pliegan. «Ir a» salta a cada bloque. El historial va al final, plegado, en las dos pestañas.
+Si un cable tiene varias hojas de plano, se elige con los botones «Hoja …» de encima del
+plano; debajo de ellos, una línea dice qué muestra la hoja elegida.
 
 En el buscador, cada cable tiene debajo de su código el enlace **Conexionado**, que abre la
 ficha directamente en esa pestaña. En la tabla de hilos, encima de «Origen» y «Destino» está
@@ -120,8 +132,10 @@ a armario. El código de un equipo, en cualquier ficha, lleva a su página.
 
 ## Registrar trabajo en un cable
 
-En la ficha (o en el buscador), el botón de acciones ofrece lo que tu rol permite y lo que tiene
-sentido en el estado actual del cable:
+En la ficha, el botón **Registrar acción** está siempre abajo, a mano con el pulgar. Al pulsarlo
+se despliegan las acciones en botones grandes (en el buscador, cada cable tiene su botón
+**Acción**). Ofrece lo que tu rol permite y lo que tiene sentido en el estado actual del cable;
+lo que no se puede hacer ahora sale apagado y dice por qué:
 
 - **Tender**: el cable queda tendido de punta a punta.
 - **Tender a medias**: queda una punta suelta. Indica en qué bandeja del recorrido se quedó
@@ -139,7 +153,16 @@ cambio: recarga la página y repite la acción.
 **Bandejas** lista las bandejas con sus cables. Se buscan por código y se filtran por tipo,
 por nivel (L1-L4) o «Solo con cables esperando»; se ordenan por código (A-Z o Z-A) o con las
 que más cables esperan primero. La ficha de una bandeja enseña el plano con la
-bandeja marcada, qué cables pasan por ella y cuáles esperan con una punta suelta.
+bandeja marcada, qué cables pasan por ella y cuáles esperan con una punta suelta. Junto al
+código, **Ver sus cables en el buscador** (igual en la ficha de un equipo y de una ubicación).
+
+Colores, iguales en toda la web (planos, recorrido, etiquetas y panel):
+
+- **Azul**: tendido.
+- **Violeta**: falta por tender o no hay datos.
+- **Ámbar**: a medias (tendido parcial, conectado en una sola punta) y la punta suelta; en el
+  plano de una bandeja, la bandeja que buscas, con la flecha.
+- **Verde**: conectado o timbrado correcto. **Rojo**: retirado o timbrado con fallo.
 
 En el plano:
 
