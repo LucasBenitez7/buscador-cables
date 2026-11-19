@@ -89,8 +89,9 @@ export async function getFolder(userId: string, id: string): Promise<SavedFolder
   if (!folder) return null;
   const keysOf = (kind: SavedKind) =>
     folder.items.filter((item) => item.kind === kind).map((item) => item.key);
-  const itemIdOf = (kind: SavedKind, key: string) =>
-    folder.items.find((item) => item.kind === kind && item.key === key)!.id;
+  // Un mapa, no un `find` por cosa: una carpeta puede tener miles.
+  const itemIds = new Map(folder.items.map((item) => [`${item.kind}:${item.key}`, item.id]));
+  const itemIdOf = (kind: SavedKind, key: string) => itemIds.get(`${kind}:${key}`)!;
 
   const [cables, trays, equipment] = await Promise.all([
     prisma.cable.findMany({
@@ -171,7 +172,7 @@ export async function foldersFor(
     select: {
       id: true,
       name: true,
-      _count: { select: { items: { where: refsWhere(refs) } } },
+      _count: { select: { items: { where: refsWhere(normalize(refs)) } } },
     },
   });
   return folders
@@ -221,7 +222,8 @@ export async function saveItems(
   userId: string,
   input: z.output<typeof saveItemsSchema>,
 ): Promise<{ saved: number; folders: string[] }> {
-  const refs = await existingRefs(dedupe(input.refs));
+  const asked = normalize(input.refs);
+  const refs = await existingRefs(asked);
   if (refs.length === 0 && input.remove.length === 0) {
     throw new SavedServiceError("Lo elegido ya no existe.");
   }
@@ -233,19 +235,30 @@ export async function saveItems(
     throw new SavedServiceError("Esa carpeta ya no existe.");
   }
   const targets = owned.filter((folder) => input.add.includes(folder.id));
-  if (input.newFolder) {
-    const created = await createFolder(userId, input.newFolder);
-    targets.push({ id: created.id, name: input.newFolder });
-  }
 
+  // Todo en una transacción: si algo falla (el límite), tampoco queda la carpeta nueva.
   await prisma.$transaction(async (tx) => {
-    for (const folder of targets) {
-      const held = await tx.savedItem.count({ where: { folderId: folder.id } });
-      if (held + refs.length > SAVED_ITEMS_MAX) {
-        throw new SavedServiceError(
-          `«${folder.name}» no puede tener más de ${SAVED_ITEMS_MAX} cosas guardadas.`,
-        );
+    if (input.newFolder) {
+      // Una «nueva» con el nombre de una que ya tiene: se guarda en esa.
+      const same = await tx.savedFolder.findFirst({
+        where: { userId, name: { equals: input.newFolder, mode: "insensitive" } },
+        select: { id: true, name: true },
+      });
+      if (same) {
+        if (!targets.some((folder) => folder.id === same.id)) targets.push(same);
+      } else {
+        if ((await tx.savedFolder.count({ where: { userId } })) >= SAVED_FOLDERS_MAX) {
+          throw new SavedServiceError(`No puedes tener más de ${SAVED_FOLDERS_MAX} carpetas.`);
+        }
+        const created = await tx.savedFolder.create({
+          data: { userId, name: input.newFolder },
+          select: { id: true, name: true },
+        });
+        targets.push(created);
       }
+    }
+    for (const folder of targets) {
+      await checkRoom(tx, folder, refs);
       await tx.savedItem.createMany({
         data: refs.map((ref) => ({ folderId: folder.id, ...ref })),
         skipDuplicates: true,
@@ -253,14 +266,27 @@ export async function saveItems(
     }
     if (input.remove.length > 0) {
       await tx.savedItem.deleteMany({
-        where: {
-          folderId: { in: input.remove },
-          ...refsWhere(input.refs),
-        },
+        where: { folderId: { in: input.remove }, ...refsWhere(asked) },
       });
     }
   });
   return { saved: refs.length, folders: targets.map((folder) => folder.name) };
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/** Whether `refs` fit in the folder: what it already holds of them does not count twice. */
+async function checkRoom(tx: Tx, folder: { id: string; name: string }, refs: SavedRef[]) {
+  if (refs.length === 0) return;
+  const [held, already] = await Promise.all([
+    tx.savedItem.count({ where: { folderId: folder.id } }),
+    tx.savedItem.count({ where: { folderId: folder.id, ...refsWhere(refs) } }),
+  ]);
+  if (held + refs.length - already > SAVED_ITEMS_MAX) {
+    throw new SavedServiceError(
+      `«${folder.name}» no puede tener más de ${SAVED_ITEMS_MAX} cosas guardadas.`,
+    );
+  }
 }
 
 /** Takes items out of a folder of this person or moves them to another of their folders. */
@@ -279,6 +305,11 @@ export async function moveItems(
   });
   await prisma.$transaction(async (tx) => {
     if (target) {
+      await checkRoom(
+        tx,
+        target,
+        items.map((item) => ({ kind: item.kind, key: item.key })),
+      );
       await tx.savedItem.createMany({
         data: items.map((item) => ({ folderId: target.id, kind: item.kind, key: item.key })),
         skipDuplicates: true,
@@ -309,8 +340,15 @@ function refsWhere(refs: SavedRef[]) {
   };
 }
 
-function dedupe(refs: SavedRef[]): SavedRef[] {
-  return [...new Map(refs.map((ref) => [`${ref.kind}:${ref.key}`, ref])).values()];
+/**
+ * Without repeats, and each equipment in capitals: the listings write the tags in capitals
+ * and its page finds it either way, so «99bma» and «99BMA» are the same thing.
+ */
+function normalize(refs: SavedRef[]): SavedRef[] {
+  const tidy = refs.map((ref) =>
+    ref.kind === "EQUIPMENT" ? { ...ref, key: ref.key.toUpperCase() } : ref,
+  );
+  return [...new Map(tidy.map((ref) => [`${ref.kind}:${ref.key}`, ref])).values()];
 }
 
 /** Only what exists: active cables (by id), trays (by code) and equipment with cables. */
@@ -329,9 +367,5 @@ async function existingRefs(refs: SavedRef[]): Promise<SavedRef[]> {
     ...trays.map((tray) => `TRAY:${tray.code}`),
     ...[...equipment.keys()].map((tag) => `EQUIPMENT:${tag}`),
   ]);
-  return refs.filter((ref) =>
-    found.has(
-      ref.kind === "EQUIPMENT" ? `EQUIPMENT:${ref.key.toUpperCase()}` : `${ref.kind}:${ref.key}`,
-    ),
-  );
+  return refs.filter((ref) => found.has(`${ref.kind}:${ref.key}`));
 }
