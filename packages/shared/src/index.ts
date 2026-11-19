@@ -20,3 +20,4 @@ export * from "./drawings-storage";
 export * from "./wiring";
 export * from "./list-filters";
 export * from "./location-search";
+export * from "./excel-status";
