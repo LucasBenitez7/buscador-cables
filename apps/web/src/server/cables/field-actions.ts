@@ -110,6 +110,7 @@ export async function runCableAction(
         lastAction: request.action,
         lastActionById: actor.id,
         lastActionAt: now,
+        lastActionSource: "APP",
         ...(request.action === "LAID" || request.action === "PARTIALLY_LAID"
           ? { installedById: actor.id, installedAt: now }
           : {}),

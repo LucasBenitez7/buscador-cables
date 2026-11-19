@@ -388,3 +388,49 @@ describe("searchCables: history start", () => {
     expect((await getSearchOptions()).users).toEqual([{ id: "juan", label: "Juan" }]);
   });
 });
+
+// La carga del proyecto (fase 14) no se ve aunque sea posterior al corte.
+describe("searchCables: load of the project", () => {
+  beforeEach(async () => {
+    await prisma.user.create({
+      data: { id: "carga", name: "Carga", email: "carga@cables.test", role: "ADMIN" },
+    });
+    const sh50 = await prisma.cable.findUniqueOrThrow({ where: { code: "SH-50" } });
+    await prisma.cableEvent.create({
+      data: {
+        cableId: sh50.id,
+        userId: "carga",
+        action: "LAID",
+        source: "PROJECT_LOAD",
+        changes: {},
+        createdAt: new Date("2026-11-20T10:00:00Z"),
+      },
+    });
+    await prisma.cable.update({
+      where: { id: sh50.id },
+      data: {
+        lastAction: "LAID",
+        lastActionById: "carga",
+        lastActionAt: new Date("2026-11-20T10:00:00Z"),
+        lastActionSource: "PROJECT_LOAD",
+      },
+    });
+  });
+
+  it("does not match the activity filters with its events", async () => {
+    expect(await codes({ actor: "carga" })).toEqual([]);
+    expect(await codes({ action: "LAID", from: "2026-11-20" })).toEqual([]);
+  });
+
+  it("hides its last action and sorts it with the cables without one", async () => {
+    const result = await search({ q: "SH-50" });
+    const sh50 = result.items.find((item) => item.code === "SH-50");
+
+    expect(sh50).toMatchObject({ lastAction: null, lastActionAt: null, lastActionBy: null });
+    expect((await codes({ sort: "activity" }))[0]).not.toBe("SH-50");
+  });
+
+  it("does not offer who only appears in the load", async () => {
+    expect((await getSearchOptions()).users).not.toContainEqual({ id: "carga", label: "Carga" });
+  });
+});

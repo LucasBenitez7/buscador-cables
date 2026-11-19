@@ -1010,7 +1010,7 @@ capturas y visto bueno del usuario; después los E2E y el PR.
 
 ### Tareas
 
-- [ ] Ocultar la carga del proyecto por su origen en todas las vistas.
+- [x] Ocultar la carga del proyecto por su origen en todas las vistas.
 - [ ] Estados finales: «No tendido», migración, fuera «Enrollar» y «Mover».
 - [ ] Lector de los dos Excel por nombre de columna, con sus tests (datos inventados).
 - [ ] Empresa, bobina, metros reales y fecha real de tendido en el cable y su ficha.

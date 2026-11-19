@@ -247,15 +247,17 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - `CableType.code`: código del tipo en el listado eléctrico (`C0802`). Los nombres de los tres
   catálogos son únicos sin distinguir mayúsculas (índice único sobre `lower(name)`).
 - `CableEvent.source` (`APP` / `PROJECT_LOAD`): quién escribió el evento, una persona en la
-  app o la carga de los listados. La carga lo usa para no pisar lo que alguien corrigió a mano.
-  En la interfaz, el filtro «Origen» los llama «En campo» (`people`) y «Cargas de listados»
-  (`loads`).
+  app o la carga del proyecto. La carga lo usa para no pisar lo que alguien corrigió a mano.
+  **La carga del proyecto nunca se ve** (fase 14): `VISIBLE_EVENT_SOURCES` (`packages/shared`)
+  dice qué orígenes se muestran, y `Cable.lastActionSource` guarda el de la última acción para
+  ocultarla también en la tabla y la ficha. En la interfaz, el filtro «Origen» ofrece «En
+  campo» (`people`) y «Todo» (`all`).
 - **Inicio del historial** (`HISTORY_START` en `packages/shared`, 17/11/2026 00:00 Madrid):
   lo anterior es la carga inicial (el alta de todos los cables) y se guarda pero no se
-  muestra. `historyStart()` y `visibleLastAction()` (`server/activity/history-start.ts`) lo
-  aplican en Actividad y el panel, el detalle de un movimiento (404), el historial, el filtro
-  «Quién» y la «Última acción» de la ficha, y los filtros, la columna y el orden de actividad
-  del buscador. No toca «Cambios en las cuentas» ni la búsqueda del motivo de borrado. La
+  muestra. `historyStart()`, `visibleEventsWhere()` y `visibleLastAction()`
+  (`server/activity/history-start.ts`) lo aplican, junto con el origen, en Actividad y el
+  panel, el detalle de un movimiento (404), el historial, el filtro «Quién» y la «Última
+  acción» de la ficha, y los filtros, la columna y el orden de actividad del buscador. No toca «Cambios en las cuentas» ni la búsqueda del motivo de borrado. La
   variable de entorno `HISTORY_START` lo cambia (los tests de integración la ponen en 1970).
 - Los límites de longitud de los textos de un cable (`CABLE_TEXT_LIMITS` en `packages/shared`)
   son los mismos en el formulario y en la carga.

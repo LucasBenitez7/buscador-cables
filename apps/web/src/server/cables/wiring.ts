@@ -94,6 +94,7 @@ export async function editWiring(actor: Actor, edit: WiringEdit): Promise<Wiring
         lastAction: "WIRING_EDITED",
         lastActionById: actor.id,
         lastActionAt: now,
+        lastActionSource: "APP",
       },
     });
     if (count === 0) throw new CableServiceError(CONFLICT);

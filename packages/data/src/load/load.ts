@@ -726,6 +726,7 @@ async function loadCables(
           lastAction: "CREATED" as const,
           lastActionById: context.userId,
           lastActionAt: context.now,
+          lastActionSource: "PROJECT_LOAD" as const,
         })),
         select: { id: true, code: true },
       });

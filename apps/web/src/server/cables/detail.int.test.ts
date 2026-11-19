@@ -348,8 +348,8 @@ describe("getCableDetail: history filters", () => {
   });
 });
 
-describe("getCableDetail: loads of the lists in the history", () => {
-  it("hides the entries written by a load unless asked for, and still counts them", async () => {
+describe("getCableDetail: load of the project in the history", () => {
+  it("never shows nor counts the entries written by the load of the project", async () => {
     const { id } = await newCable();
     await prisma.cableEvent.create({
       data: {
@@ -363,12 +363,25 @@ describe("getCableDetail: loads of the lists in the history", () => {
     });
 
     const people = await getCableDetail(id);
-    expect(people).toMatchObject({ historyTotal: 1, historyAll: 2 });
+    expect(people).toMatchObject({ historyTotal: 1, historyAll: 1 });
     expect(people?.history.map((entry) => entry.action)).toEqual(["CREATED"]);
 
     const everything = await getCableDetail(id, { origin: "all" });
-    expect(everything?.history.map((entry) => entry.action)).toEqual(["UPDATED", "CREATED"]);
-    expect((await getCableDetail(id, { origin: "loads" }))?.historyTotal).toBe(1);
+    expect(everything?.history.map((entry) => entry.action)).toEqual(["CREATED"]);
+  });
+
+  it("hides the last action written by the load of the project", async () => {
+    const { id } = await newCable();
+    await prisma.cable.update({
+      where: { id },
+      data: {
+        lastAction: "LAID",
+        lastActionAt: new Date("2026-11-20T10:00:00Z"),
+        lastActionSource: "PROJECT_LOAD",
+      },
+    });
+
+    expect((await getCableDetail(id))?.lastAction).toBeNull();
   });
 });
 

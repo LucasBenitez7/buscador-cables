@@ -382,16 +382,18 @@ model Cable {
 
   // Columnas resumen (desnormalizadas) para la tabla del buscador. Se actualizan
   // en la misma transacción que crea el CableEvent.
-  lastAction     CableAction?
-  lastActionById String?
-  lastActionBy   User?        @relation("CableLastActionBy", fields: [lastActionById], references: [id], onDelete: Restrict)
-  lastActionAt   DateTime?
-  installedById  String?
-  installedBy    User?        @relation("CableInstalledBy", fields: [installedById], references: [id], onDelete: Restrict)
-  installedAt    DateTime?
-  connectedById  String?
-  connectedBy    User?        @relation("CableConnectedBy", fields: [connectedById], references: [id], onDelete: Restrict)
-  connectedAt    DateTime?
+  lastAction       CableAction?
+  lastActionById   String?
+  lastActionBy     User?            @relation("CableLastActionBy", fields: [lastActionById], references: [id], onDelete: Restrict)
+  lastActionAt     DateTime?
+  /// Quién escribió la última acción: la de la carga del proyecto no se muestra (fase 14).
+  lastActionSource CableEventSource @default(APP)
+  installedById    String?
+  installedBy      User?            @relation("CableInstalledBy", fields: [installedById], references: [id], onDelete: Restrict)
+  installedAt      DateTime?
+  connectedById    String?
+  connectedBy      User?            @relation("CableConnectedBy", fields: [connectedById], references: [id], onDelete: Restrict)
+  connectedAt      DateTime?
 
   notes     String?
   /// Control de concurrencia y sincronización offline.

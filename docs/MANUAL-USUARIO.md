@@ -205,9 +205,8 @@ Cada ubicación tiene su página con lo que contiene, sus cables y sus bandejas.
   sitio: ni en Actividad, ni en el historial o el «Último movimiento» de un cable, ni en los
   filtros de actividad del buscador.
 - **Origen**: por defecto se ve lo que se hace **en campo** (tender, conectar, dar de alta un
-  cable a mano…). Las **cargas de listados** (una revisión nueva de un listado) escriben una
-  entrada por cable y no se ven por defecto: se eligen con «Cargas de listados» o «Todo», en
-  Actividad y en el historial de cada cable.
+  cable a mano…). Las **cargas del proyecto** (los listados y la primera carga del Excel) no se
+  ven en ningún sitio, ni siquiera con «Todo».
 - Al pulsar cualquier enlace, una **barra azul** arriba indica que la página está en camino.
 - Al cambiar un filtro, el orden o la página, la lista muestra **«Cargando…»** hasta que llega
   el resultado: no hace falta pulsar otra vez.

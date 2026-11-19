@@ -175,6 +175,7 @@ export async function createCable(
           lastAction: "CREATED",
           lastActionById: actor.id,
           lastActionAt: now,
+          lastActionSource: "APP",
         },
         select: { id: true, code: true },
       });
@@ -259,6 +260,7 @@ export async function updateCable(
           lastAction: "UPDATED",
           lastActionById: actor.id,
           lastActionAt: now,
+          lastActionSource: "APP",
         },
       });
       if (count === 0) {
@@ -289,6 +291,7 @@ export async function deleteCable(actor: Actor, input: DeleteCableInput): Promis
         lastAction: "DELETED",
         lastActionById: actor.id,
         lastActionAt: now,
+        lastActionSource: "APP",
       },
     });
     if (count === 0) {
