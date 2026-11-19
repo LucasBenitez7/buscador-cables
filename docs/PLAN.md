@@ -33,8 +33,8 @@ hizo qué y cuándo.
 | 12   | Roles y permisos              | v1.2.0  | Roles editables y permisos extra desde la web         |
 | 13   | Uso en campo                  | v1.3.0  | Ficha con el plano primero, colores, buscador único   |
 | 14   | Estado diario desde el Excel  | v1.4.0  | Excel del día, pendientes de revisar, panel           |
-| 15   | Guardados y roles             | v1.5.0  | Guardados con carpetas, roles uno al lado del otro    |
-| 16   | Listados: imprimir y ordenar  | v1.6.0  | Elegir filas, PDF y copiar nombres, ordenar por más   |
+| 15   | Listados: imprimir y ordenar  | v1.5.0  | Elegir filas, PDF y copiar nombres, ordenar por más   |
+| 16   | Guardados y roles             | v1.6.0  | Guardados con carpetas, roles uno al lado del otro    |
 
 **Total: 18 fases (0 a 16, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
 13 a la 15, el 2026-11-18; la 16, el 2026-11-19).** El 2026-11-13 la fase 6 se
@@ -1070,26 +1070,28 @@ se usa lo mismo (con un componente común), y no hay textos de ayuda en la inter
 - [ ] Al cerrar la fase, resumir esta sección: dejar las tareas y las decisiones que sigan
       valiendo, y quitar los planes intermedios y el repaso de estilos.
 
-## Fase 15 — Guardados y roles (v1.5.0)
+## Fase 15 — Listados: imprimir, copiar y ordenar (v1.5.0)
 
-Añadida el 2026-11-18. Rama `feat/f15-saved-roles`. Sin prisa.
-
-- [ ] Guardados: cada persona guarda cables, bandejas y equipos en carpetas suyas (crear,
-      renombrar, mover, quitar, borrar).
-- [ ] Roles uno al lado del otro: en portátil, tabla con los permisos en filas y los roles en
-      columnas; en móvil, dos roles frente a frente con las diferencias resaltadas.
-- [ ] Tests y E2E.
-
-## Fase 16 — Listados: imprimir, copiar y ordenar (v1.6.0)
-
-Añadida el 2026-11-19. Rama `feat/f16-lists`. Toca todas las pantallas con listas o tablas
-(cables, equipos y su ficha, bandejas, ubicaciones…).
+Añadida el 2026-11-19. Rama `feat/f15-lists`. Va antes que guardados y roles (decidido el
+2026-11-19). Toca todas las pantallas con listas o tablas (cables, equipos y su ficha,
+bandejas, ubicaciones…).
 
 - [ ] Elegir filas: casillas en cada fila y «Seleccionar todas».
 - [ ] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
 - [ ] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
 - [ ] Repaso de la ordenación en todos los listados: «más cables primero» y «menos» en
       bandejas, y lo mismo donde tenga sentido; siempre respetando los filtros activos.
+- [ ] Tests y E2E.
+
+## Fase 16 — Guardados y roles (v1.6.0)
+
+Añadida el 2026-11-18. Rama `feat/f16-saved-roles`. Sin prisa. Era la fase 15: pasó detrás
+de los listados el 2026-11-19.
+
+- [ ] Guardados: cada persona guarda cables, bandejas y equipos en carpetas suyas (crear,
+      renombrar, mover, quitar, borrar).
+- [ ] Roles uno al lado del otro: en portátil, tabla con los permisos en filas y los roles en
+      columnas; en móvil, dos roles frente a frente con las diferencias resaltadas.
 - [ ] Tests y E2E.
 
 ---
