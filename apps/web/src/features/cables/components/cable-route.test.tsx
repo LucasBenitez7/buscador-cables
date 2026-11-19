@@ -8,7 +8,6 @@ const state: CableState = {
   installationStatus: "PARTIALLY_LAID",
   connectionStatus: "ORIGIN_ONLY",
   testStatus: "NOT_TESTED",
-  currentLocationId: null,
   looseEnd: "DESTINATION",
   looseEndTray: "99UXA00L22051",
   originId: "99BMA",

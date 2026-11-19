@@ -17,7 +17,6 @@ export const dynamic = "force-dynamic";
 const ROLE_TEXT = {
   origin: "sale de aquí",
   destination: "llega aquí",
-  here: "guardado aquí",
 } as const;
 
 type Params = Promise<{ id: string }>;

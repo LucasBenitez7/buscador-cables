@@ -12,8 +12,7 @@ const progress: CableProgress = {
   connected: 20,
   installation: {
     UNVERIFIED: 100,
-    IN_STOCK: 10,
-    COILED: 30,
+    NOT_LAID: 40,
     PARTIALLY_LAID: 10,
     LAID: 50,
     RETIRED: 0,

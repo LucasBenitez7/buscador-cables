@@ -141,7 +141,6 @@ describe("generateSeedData", () => {
       if (status !== "LAID" && status !== "PARTIALLY_LAID") {
         expect(connection).toBe("DISCONNECTED");
       }
-      expect(cable.currentLocationId !== null).toBe(status === "IN_STOCK" || status === "COILED");
       expect(cable.looseEnd !== null).toBe(status === "PARTIALLY_LAID");
       if (status === "PARTIALLY_LAID") {
         const routeTrays = stepsByCable.get(cable.id)!.map((step) => step.trayId);
@@ -155,7 +154,7 @@ describe("generateSeedData", () => {
     }
     const statuses = new Set(data.cables.map((cable) => cable.installationStatus));
     expect(statuses).toEqual(
-      new Set(["UNVERIFIED", "IN_STOCK", "COILED", "PARTIALLY_LAID", "LAID", "RETIRED"]),
+      new Set(["UNVERIFIED", "NOT_LAID", "PARTIALLY_LAID", "LAID", "RETIRED"]),
     );
   });
 

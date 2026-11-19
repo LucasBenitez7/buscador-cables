@@ -10,14 +10,14 @@ import {
   diffFields,
   formatDecimal,
   updateCableSchema,
+  installationStatusLabel,
   validateInitialStatus,
 } from "./cables";
 
 const base = {
   code: "sh50",
-  installationStatus: "IN_STOCK",
+  installationStatus: "NOT_LAID",
   connectionStatus: "DISCONNECTED",
-  currentLocationId: "store",
 };
 
 function issues(result: { success: boolean; error?: { issues: { message: string }[] } }) {
@@ -82,12 +82,8 @@ describe("createCableSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("registers a cable as not yet checked, without a location", () => {
-    const result = createCableSchema.safeParse({
-      ...base,
-      installationStatus: "UNVERIFIED",
-      currentLocationId: "",
-    });
+  it("registers a cable as not yet checked", () => {
+    const result = createCableSchema.safeParse({ ...base, installationStatus: "UNVERIFIED" });
 
     expect(result.success).toBe(true);
   });
@@ -140,7 +136,7 @@ describe("createCableSchema", () => {
 });
 
 describe("validateInitialStatus", () => {
-  const ends = { originId: "o", destinationId: "d", currentLocationId: null };
+  const ends = { originId: "o", destinationId: "d" };
 
   it("accepts a laid and connected cable with both ends", () => {
     expect(
@@ -159,14 +155,15 @@ describe("validateInitialStatus", () => {
     ).toMatch(/origen y destino/);
   });
 
-  it("requires a current location for stored or coiled cables", () => {
+  it("accepts a cable not laid yet, without both ends", () => {
     expect(
       validateInitialStatus({
         ...ends,
-        installationStatus: "COILED",
+        destinationId: null,
+        installationStatus: "NOT_LAID",
         connectionStatus: "DISCONNECTED",
       }),
-    ).toMatch(/dónde está/);
+    ).toBeNull();
   });
 
   it("does not register retired cables", () => {
@@ -222,5 +219,16 @@ describe("labels", () => {
   it("formats decimals with a comma", () => {
     expect(formatDecimal(2.5)).toBe("2,5");
     expect(formatDecimal(null)).toBe("");
+  });
+});
+
+// Fase 14: «En almacén» y «Enrollado» ya no existen, pero el historial antiguo los muestra.
+describe("installationStatusLabel", () => {
+  it("names the current states and the old ones of the history", () => {
+    expect(installationStatusLabel("NOT_LAID")).toBe("No tendido");
+    expect(installationStatusLabel("UNVERIFIED")).toBe("Sin revisar");
+    expect(installationStatusLabel("IN_STOCK")).toBe("En almacén");
+    expect(installationStatusLabel("COILED")).toBe("Enrollado");
+    expect(installationStatusLabel("OTRO")).toBe("OTRO");
   });
 });

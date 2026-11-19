@@ -9,8 +9,7 @@
  */
 
 export type LocationType = "PLANT" | "AREA" | "UNIT" | "SITE";
-export type InstallationStatus =
-  "UNVERIFIED" | "IN_STOCK" | "COILED" | "PARTIALLY_LAID" | "LAID" | "RETIRED";
+export type InstallationStatus = "UNVERIFIED" | "NOT_LAID" | "PARTIALLY_LAID" | "LAID" | "RETIRED";
 export type ConnectionStatus = "DISCONNECTED" | "ORIGIN_ONLY" | "DESTINATION_ONLY" | "CONNECTED";
 export type CableLevel = "L1" | "L2" | "L3" | "L4";
 export type TrayKind = "LADDER" | "GRID" | "SPECIAL" | "CONDUIT" | "DUCT" | "OTHER";
@@ -86,7 +85,6 @@ export type SeedCable = {
   destinationRoom: string | null;
   originId: string;
   destinationId: string;
-  currentLocationId: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
   looseEnd: CableEndSide | null;
@@ -567,7 +565,7 @@ const OBSERVATIONS = [
 export function generateSeedData(options: { cables?: number; seed?: number } = {}): SeedData {
   const total = options.cables ?? 4500;
   const random = createRandom(options.seed ?? 20261113);
-  const { locations, buildings, store } = buildLocations();
+  const { locations, buildings } = buildLocations();
   const { trays, drawings, byBuilding, ducts } = buildTrays(buildings, random);
 
   const allTypes = [...INSTRUMENT_TYPES, ...Object.values(POWER_TYPES).flat()];
@@ -760,7 +758,6 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
     | "lengthM"
     | "lengthPending"
     | "sourcePage"
-    | "currentLocationId"
     | "installationStatus"
     | "connectionStatus"
     | "looseEnd"
@@ -786,13 +783,12 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
     });
 
     const routeTrays = route.flatMap((step) => (step.tray ? [step.tray] : []));
-    // Like the real load: many cables nobody has checked yet, the rest as found in the field.
+    // Like the project after the daily Excel: a few cables with no data, the rest as found.
     const status = random.weighted<InstallationStatus>({
-      UNVERIFIED: 30,
-      LAID: 35,
+      UNVERIFIED: 8,
+      LAID: 45,
       PARTIALLY_LAID: routeTrays.length > 0 ? 10 : 0,
-      COILED: 7,
-      IN_STOCK: 15,
+      NOT_LAID: 34,
       RETIRED: 3,
     });
     let connectionStatus: ConnectionStatus = "DISCONNECTED";
@@ -814,13 +810,6 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
         connectionStatus = looseEnd === "DESTINATION" ? "ORIGIN_ONLY" : "DESTINATION_ONLY";
       }
     }
-    const currentLocationId =
-      status === "IN_STOCK"
-        ? store.id
-        : status === "COILED"
-          ? random.pick([base.originId, base.destinationId, store.id])
-          : null;
-
     const lengthM =
       localLength > 0
         ? localLength
@@ -836,7 +825,6 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
       lengthM,
       lengthPending: base.level !== "L1" && random.chance(0.015),
       sourcePage: nextPage(base.sourceDocument),
-      currentLocationId,
       installationStatus: status,
       connectionStatus,
       looseEnd,

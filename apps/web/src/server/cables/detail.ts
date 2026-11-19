@@ -6,7 +6,7 @@ import {
   CABLE_FIELD_LABELS,
   CONNECTION_STATUS_LABELS,
   TEST_STATUS_LABELS,
-  INSTALLATION_STATUS_LABELS,
+  installationStatusLabel,
   PROJECT_FIELD_LABELS,
   describeCableEvent,
   formatDecimal,
@@ -123,8 +123,6 @@ export type CableDetail = {
   notes: string | null;
   origin: string | null;
   destination: string | null;
-  currentLocation: string | null;
-  currentLocationId: string | null;
   installationStatus: InstallationStatus;
   connectionStatus: ConnectionStatus;
   testStatus: TestStatus;
@@ -202,7 +200,7 @@ function readableValue(field: string, value: unknown, lookups: Lookups): string 
     case "manufacturerId":
       return lookups.manufacturers.get(text) ?? "(fabricante eliminado)";
     case "installationStatus":
-      return INSTALLATION_STATUS_LABELS[text as InstallationStatus] ?? text;
+      return installationStatusLabel(text);
     case "looseEnd":
       return CABLE_END_SIDE_LABELS[text as CableEndSide] ?? text;
     case "connectionStatus":
@@ -344,7 +342,6 @@ export async function getCableDetail(
       installationStatus: cable.installationStatus,
       connectionStatus: cable.connectionStatus,
       testStatus: cable.testStatus,
-      currentLocationId: cable.currentLocationId,
       looseEnd: cable.looseEnd,
       looseEndTray: cable.looseEndTray?.code ?? null,
       // Cables from the project lists may know the equipment but not the room.
@@ -408,8 +405,6 @@ export async function getCableDetail(
     notes: cable.notes,
     origin: location(cable.originId),
     destination: location(cable.destinationId),
-    currentLocation: location(cable.currentLocationId),
-    currentLocationId: cable.currentLocationId,
     installationStatus: cable.installationStatus,
     connectionStatus: cable.connectionStatus,
     testStatus: cable.testStatus,

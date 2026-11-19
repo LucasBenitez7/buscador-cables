@@ -124,7 +124,6 @@ const item = {
     installationStatus: "LAID",
     connectionStatus: "CONNECTED",
     testStatus: "NOT_TESTED",
-    currentLocationId: null,
     looseEnd: null,
     looseEndTray: null,
     originId: "o",
@@ -296,11 +295,7 @@ describe("SearchResults", () => {
     expect(screen.queryByRole("button", { name: "Acción" })).toBeNull();
 
     rerender(
-      <SearchResults
-        search={{}}
-        result={result}
-        actions={{ ...permissionsOfRole("TECHNICIAN"), locations: [] }}
-      />,
+      <SearchResults search={{}} result={result} actions={permissionsOfRole("TECHNICIAN")} />,
     );
     fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Acción" }));
 

@@ -43,7 +43,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { SearchableSelect, toOptions } from "@/components/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { runCableActionAction, type CableFormResult } from "@/features/cables/actions";
 
@@ -56,7 +55,6 @@ type Props = {
   state: CableState;
   /** Computed on the server with `cableActionAvailability` for the current user. */
   availability: CableActionAvailability[];
-  locations: ActionOption[];
   /** History entries a supervisor can correct, newest first. */
   events?: ActionOption[];
   /** Codes of the trays on the cable's planned route, suggested for the loose end. */
@@ -72,12 +70,10 @@ const DESCRIPTIONS: Record<CableFieldAction, string> = {
   LAID: "El cable queda tendido entre su origen y su destino, todavía sin conectar.",
   PARTIALLY_LAID:
     "El cable no llegó a su destino: una punta llega a su equipo y la otra está en una bandeja del camino. Elige la bandeja donde lo has encontrado.",
-  COILED: "El cable queda enrollado y desconectado en el sitio que indiques.",
   CONNECTED: "Indica qué extremo has conectado.",
   DISCONNECTED: "Indica qué extremo has desconectado.",
   TESTED:
     "Resultado de timbrar el cable (continuidad e identificación de los conductores). Si falla, explica qué en la nota.",
-  MOVED: "Indica a dónde has llevado el cable.",
   RETIRED: "El cable queda fuera de servicio y desconectado. Solo un supervisor puede deshacerlo.",
   CORRECTION:
     "Corrige un movimiento registrado por error. Indica cuál, cómo debe quedar el cable y por qué.",
@@ -124,7 +120,6 @@ export function CableActions({
   version,
   state,
   availability,
-  locations,
   events = [],
   routeTrays = [],
   compact = false,
@@ -193,7 +188,6 @@ export function CableActions({
             <ActionFields
               action={open}
               state={state}
-              locations={locations}
               events={events}
               routeTrays={routeTrays}
               errors={fieldErrors}
@@ -349,14 +343,12 @@ export function CableActions({
 function ActionFields({
   action,
   state,
-  locations,
   events,
   routeTrays,
   errors,
 }: {
   action: CableFieldAction;
   state: CableState;
-  locations: ActionOption[];
   events: ActionOption[];
   routeTrays: string[];
   errors: Record<string, string>;
@@ -375,22 +367,6 @@ function ActionFields({
             confirmOffRoute
           />
         </>
-      );
-    case "COILED":
-      return (
-        <Field id="action-location" label="Dónde queda enrollado" error={errors.locationId}>
-          <LocationSelect name="locationId" locations={locations} defaultValue="" />
-        </Field>
-      );
-    case "MOVED":
-      return (
-        <Field id="action-location" label="Nuevo sitio" error={errors.locationId}>
-          <LocationSelect
-            name="locationId"
-            locations={locations.filter((location) => location.id !== state.currentLocationId)}
-            defaultValue=""
-          />
-        </Field>
       );
     case "TESTED":
       return (
@@ -494,18 +470,6 @@ function ActionFields({
                 </option>
               ))}
             </Select>
-          </Field>
-          <Field
-            id="action-location"
-            label="Dónde está (si no está tendido)"
-            error={errors.currentLocationId}
-          >
-            <LocationSelect
-              name="currentLocationId"
-              locations={locations}
-              defaultValue={state.currentLocationId ?? ""}
-              emptyLabel="Sin ubicación física"
-            />
           </Field>
           <Field
             id="action-loose-end"
@@ -691,27 +655,4 @@ function ErrorText({ children }: { children: ReactNode }) {
 
 function Select(props: ComponentProps<"select">) {
   return <NativeSelect {...props} />;
-}
-
-function LocationSelect({
-  name,
-  locations,
-  defaultValue,
-  emptyLabel,
-}: {
-  name: string;
-  locations: ActionOption[];
-  defaultValue: string;
-  emptyLabel?: string;
-}) {
-  return (
-    <SearchableSelect
-      id="action-location"
-      name={name}
-      defaultValue={defaultValue}
-      options={toOptions(locations)}
-      emptyLabel={emptyLabel}
-      placeholder="Elige una ubicación"
-    />
-  );
 }

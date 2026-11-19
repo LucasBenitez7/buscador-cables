@@ -33,7 +33,7 @@ test("los filtros se despliegan y los resultados son tarjetas", async ({ page })
     has: page.getByRole("link", { name: CABLES.mobile.code, exact: true }),
   });
   await expect(card).toBeVisible();
-  await expect(card).toContainText("Enrollado");
+  await expect(card).toContainText("No tendido");
 });
 
 test("registra una acción desde la tarjeta sin abrir la ficha", async ({ page }) => {
@@ -46,12 +46,11 @@ test("registra una acción desde la tarjeta sin abrir la ficha", async ({ page }
   await card.getByRole("button", { name: "Acción" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText(`Registrar acción · ${code}`);
-  await dialog.getByRole("button", { name: "Mover" }).click();
-  await dialog.getByLabel("Nuevo sitio").selectOption({ label: "Planta E2E › Almacén" });
-  await dialog.getByRole("button", { name: "Mover" }).click();
+  await dialog.getByRole("button", { name: "Tender", exact: true }).click();
+  await dialog.getByRole("button", { name: "Tender", exact: true }).click();
 
   await expect(dialog).toBeHidden();
-  await expect(card.getByRole("status")).toHaveText(`Movimiento registrado en ${code}: movido.`);
+  await expect(card.getByRole("status")).toHaveText(`Movimiento registrado en ${code}: tendido.`);
 });
 
 test("la ficha empieza por lo que se usa en campo y las acciones están abajo", async ({ page }) => {

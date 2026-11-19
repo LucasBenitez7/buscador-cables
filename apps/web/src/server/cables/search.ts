@@ -134,7 +134,6 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
     conditions.push(Prisma.sql`(
       c."originId" IN (${list})
       OR c."destinationId" IN (${list})
-      OR c."currentLocationId" IN (${list})
     )`);
   }
 

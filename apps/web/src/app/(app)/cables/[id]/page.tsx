@@ -20,7 +20,7 @@ import {
 } from "@cables/shared";
 import { FilterForm } from "@/components/filter-form";
 import { ChangeList } from "@/components/change-list";
-import { INLINE_LINK, levelCablesHref, locationHref } from "@/lib/links";
+import { INLINE_LINK, levelCablesHref } from "@/lib/links";
 import { DataList, Item, JumpLinks, RecordTitle, Section, SectionLink } from "@/components/detail";
 import { CableActions } from "@/features/cables/components/cable-actions";
 import { CableViewTabs } from "@/features/cables/components/cable-view-tabs";
@@ -34,7 +34,6 @@ import { RouteDrawings } from "@/features/drawings/components/route-drawings";
 import { getRouteSheets } from "@/server/drawings/route-sheets";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { getCableDetail } from "@/server/cables/detail";
-import { listLocationOptions } from "@/server/cables/service";
 import { requireUser, whenSignedIn } from "@/server/session";
 
 export const dynamic = "force-dynamic";
@@ -90,8 +89,7 @@ export default async function CablePage({
   const canEdit = !cable.deleted && hasPermission(user, "cable:update");
   // Dados de baja: sin acciones. El resto ve solo lo que su rol permite.
   const availability = cable.deleted ? [] : cableActionAvailability(user, cable.state);
-  const [locations, routeSheets, hasSheet] = await Promise.all([
-    availability.length > 0 ? listLocationOptions() : Promise.resolve([]),
+  const [routeSheets, hasSheet] = await Promise.all([
     view === "recorrido" ? getRouteSheets(cable.route, cable.state) : Promise.resolve([]),
     view === "conexionado" ? hasDrawingImage(sheetKey) : Promise.resolve(false),
   ]);
@@ -185,18 +183,6 @@ export default async function CablePage({
 
               <Section title="Extremos" collapsible defaultOpen={false} id="extremos">
                 <CableEnds ends={cable.ends} state={cable.state} />
-                {cable.currentLocation ? (
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Ahora está en: </span>
-                    {cable.currentLocationId ? (
-                      <Link href={locationHref(cable.currentLocationId)} className={INLINE_LINK}>
-                        {cable.currentLocation}
-                      </Link>
-                    ) : (
-                      cable.currentLocation
-                    )}
-                  </p>
-                ) : null}
               </Section>
 
               <Section title="Datos del cable" collapsible defaultOpen={false} id="datos">
@@ -321,18 +307,6 @@ export default async function CablePage({
 
               <Section title="Extremos" collapsible id="extremos">
                 <CableEnds ends={cable.ends} state={cable.state} />
-                {cable.currentLocation ? (
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Ahora está en: </span>
-                    {cable.currentLocationId ? (
-                      <Link href={locationHref(cable.currentLocationId)} className={INLINE_LINK}>
-                        {cable.currentLocation}
-                      </Link>
-                    ) : (
-                      cable.currentLocation
-                    )}
-                  </p>
-                ) : null}
               </Section>
 
               <Section
@@ -477,7 +451,6 @@ export default async function CablePage({
         version={cable.version}
         state={cable.state}
         availability={availability}
-        locations={locations}
         events={correctableEvents}
         // Un recorrido puede nombrar dos veces la misma bandeja: se sugiere una sola vez.
         routeTrays={[

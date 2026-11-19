@@ -140,7 +140,6 @@ lo que no se puede hacer ahora sale apagado y dice por qué:
 - **Tender**: el cable queda tendido de punta a punta.
 - **Tender a medias**: queda una punta suelta. Indica en qué bandeja del recorrido se quedó
   (botones numerados); si está en una que no es del recorrido, se acepta confirmándolo.
-- **Enrollar**, **Mover**.
 - **Conectar** y **Desconectar**: por extremo (origen, destino o ambos).
 - **Timbrar**: resultado correcto o con fallo. Un fallo pide una nota que diga qué falla.
 - **Retirar** y **Corregir** (supervisor): siempre con el motivo.
@@ -159,7 +158,7 @@ código, **Ver sus cables en el buscador** (igual en la ficha de un equipo y de 
 Colores, iguales en toda la web (planos, recorrido, etiquetas y panel):
 
 - **Azul**: tendido.
-- **Violeta**: falta por tender o no hay datos.
+- **Violeta**: no tendido, o sin revisar (sin datos de ningún Excel).
 - **Ámbar**: a medias (tendido parcial, conectado en una sola punta) y la punta suelta; en el
   plano de una bandeja, la bandeja que buscas, con la flecha.
 - **Verde**: conectado o timbrado correcto. **Rojo**: retirado o timbrado con fallo.

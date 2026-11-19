@@ -37,7 +37,7 @@ const DECIMAL_FIELDS = new Set(["crossSectionMm2", "outerDiameterMm", "lengthM"]
 
 function initialValues(props: Props): Values {
   if (props.mode === "create") {
-    return { installationStatus: "IN_STOCK", connectionStatus: "DISCONNECTED" };
+    return { installationStatus: "NOT_LAID", connectionStatus: "DISCONNECTED" };
   }
   const values: Values = {};
   for (const [key, value] of Object.entries(props.cable)) {
@@ -235,25 +235,12 @@ export function CableForm(props: Props) {
               ))}
             </NativeSelect>
           </Field>
-          {/* Only a cable in stock or coiled has a place apart from its route. */}
-          {value("installationStatus") === "IN_STOCK" ||
-          value("installationStatus") === "COILED" ? (
-            <SelectField
-              name="currentLocationId"
-              label="Dónde está ahora"
-              options={options.locations}
-              field={field}
-              set={set}
-              error={errors.currentLocationId}
-              wide
-            />
-          ) : null}
         </Section>
       ) : (
         <p className="text-muted-foreground text-sm">
           Estado: {INSTALLATION_STATUS_LABELS[props.cable.installationStatus]} ·{" "}
           {CONNECTION_STATUS_LABELS[props.cable.connectionStatus]}. Los cambios de estado se
-          registran con las acciones del cable (tender, conectar, mover…).
+          registran con las acciones del cable (tender, conectar, corregir…).
         </p>
       )}
 

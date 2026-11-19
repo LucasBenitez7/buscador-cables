@@ -38,9 +38,8 @@ const technician = {
 };
 const newCable = {
   code: "sh50",
-  installationStatus: "IN_STOCK",
+  installationStatus: "NOT_LAID",
   connectionStatus: "DISCONNECTED",
-  currentLocationId: "store",
   lengthM: "120,5",
 };
 

@@ -140,8 +140,6 @@ async function prepare() {
         destinationId: destination.id,
         installationStatus: cable.status,
         connectionStatus: cable.connection,
-        currentLocationId:
-          cable.status === "IN_STOCK" ? store.id : cable.status === "COILED" ? yard.id : null,
         lastAction: "CREATED",
         lastActionById: userIds.admin!,
         lastActionAt: now,

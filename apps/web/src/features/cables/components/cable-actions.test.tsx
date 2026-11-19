@@ -14,15 +14,10 @@ const mocks = vi.hoisted(() => ({ runCableActionAction: vi.fn(), refresh: vi.fn(
 vi.mock("@/features/cables/actions", () => ({ runCableActionAction: mocks.runCableActionAction }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 
-const locations = [
-  { id: "store", label: "Norte › Almacén" },
-  { id: "yard", label: "Norte › Patio" },
-];
 const laid: CableState = {
   installationStatus: "LAID",
   connectionStatus: "DISCONNECTED",
   testStatus: "NOT_TESTED",
-  currentLocationId: null,
   looseEnd: null,
   looseEndTray: null,
   originId: "o",
@@ -38,7 +33,6 @@ function renderActions(role: Role, state: CableState = laid, routeTrays: string[
       version={3}
       state={state}
       availability={cableActionAvailability(permissionsOfRole(role), state)}
-      locations={locations}
       events={[{ id: "e1", label: "Tendido · Tomás · 11/11/26" }]}
       routeTrays={routeTrays}
     />,
@@ -71,7 +65,6 @@ describe("CableActions", () => {
         version={3}
         state={laid}
         availability={cableActionAvailability(permissionsOfRole("TECHNICIAN"), laid)}
-        locations={locations}
       />,
     );
     const toggle = screen.getByRole("button", { name: "Registrar acción" });
@@ -90,11 +83,12 @@ describe("CableActions", () => {
     renderActions("TECHNICIAN");
 
     expect(screen.getByRole("button", { name: "Conectar" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Enrollar" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Tender" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Mover" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Retirar" })).toBeNull();
-    expect(screen.getByText(/primero enróllalo/)).toBeInTheDocument();
+    expect(screen.getByText(/ya está tendido/)).toBeInTheDocument();
+    // Fase 14: ya no se enrolla ni se mueve un cable.
+    expect(screen.queryByRole("button", { name: "Enrollar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mover" })).toBeNull();
   });
 
   it("connects the missing end and refreshes the record", async () => {
@@ -132,30 +126,13 @@ describe("CableActions", () => {
     });
     renderActions("TECHNICIAN");
 
-    fireEvent.click(screen.getByRole("button", { name: "Enrollar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Conectar" }));
     const dialog = await screen.findByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Dónde queda enrollado"), {
-      target: { value: "yard" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Enrollar" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Conectar" }));
 
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(/Otra persona/);
-    expect(sentForm()).toMatchObject({ action: "COILED", locationId: "yard" });
+    expect(sentForm()).toMatchObject({ action: "CONNECTED" });
     expect(mocks.refresh).not.toHaveBeenCalled();
-  });
-
-  it("does not offer the current location when moving", async () => {
-    renderActions("TECHNICIAN", {
-      ...laid,
-      installationStatus: "COILED",
-      currentLocationId: "store",
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Mover" }));
-    const select = within(await screen.findByRole("dialog")).getByLabelText("Nuevo sitio");
-
-    expect(within(select).queryByRole("option", { name: "Norte › Almacén" })).toBeNull();
-    expect(within(select).getByRole("option", { name: "Norte › Patio" })).toBeInTheDocument();
   });
 
   it("asks a supervisor for a reason to retire and shows field errors", async () => {
@@ -182,7 +159,8 @@ describe("CableActions", () => {
 
     expect(within(dialog).getByLabelText("Movimiento que corriges")).toHaveValue("");
     expect(within(dialog).getByLabelText("Estado de instalación correcto")).toHaveValue("LAID");
-    expect(within(dialog).getByLabelText("Dónde está (si no está tendido)")).toHaveValue("");
+    expect(within(dialog).queryByLabelText("Dónde está (si no está tendido)")).toBeNull();
+    expect(within(dialog).getByRole("option", { name: "No tendido" })).toBeInTheDocument();
     expect(within(dialog).getByRole("option", { name: /Tendido · Tomás/ })).toBeInTheDocument();
   });
 });
@@ -257,11 +235,7 @@ describe("CableActions: partial laying", () => {
   });
 
   it("works without a route: the tray is typed", async () => {
-    renderActions("TECHNICIAN", {
-      ...laid,
-      installationStatus: "COILED",
-      currentLocationId: "store",
-    });
+    renderActions("TECHNICIAN", { ...laid, installationStatus: "NOT_LAID" });
 
     fireEvent.click(screen.getByRole("button", { name: "Tender a medias" }));
     const dialog = await screen.findByRole("dialog");
@@ -317,8 +291,8 @@ describe("CableStatusBadges", () => {
     rerender(<CableStatusBadges installationStatus="LAID" connectionStatus="DISCONNECTED" />);
     expect(screen.getByText("Tendido")).toHaveClass("text-laid");
 
-    rerender(<CableStatusBadges installationStatus="IN_STOCK" connectionStatus="DISCONNECTED" />);
-    expect(screen.getByText("En almacén")).toHaveClass("text-pending");
+    rerender(<CableStatusBadges installationStatus="NOT_LAID" connectionStatus="DISCONNECTED" />);
+    expect(screen.getByText("No tendido")).toHaveClass("text-pending");
 
     rerender(<CableStatusBadges installationStatus="RETIRED" connectionStatus="DISCONNECTED" />);
     expect(screen.getByText("Retirado")).toHaveClass("text-destructive");

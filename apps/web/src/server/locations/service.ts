@@ -48,7 +48,6 @@ export async function listLocationTree(): Promise<LocationNode<LocationWithCount
       touches AS (
         SELECT "id" AS cable_id, "originId" AS location_id FROM "cable" WHERE "deletedAt" IS NULL
         UNION ALL SELECT "id", "destinationId" FROM "cable" WHERE "deletedAt" IS NULL
-        UNION ALL SELECT "id", "currentLocationId" FROM "cable" WHERE "deletedAt" IS NULL
       ),
       pairs AS (
         SELECT DISTINCT tree.ancestor_id, touches.cable_id
@@ -280,7 +279,7 @@ export type LocationDetail = {
     id: string;
     code: string;
     /** Whether it starts, ends or is stored here (or in something it contains). */
-    roles: ("origin" | "destination" | "here")[];
+    roles: ("origin" | "destination")[];
     otherEnd: string | null;
   }[];
 };
@@ -303,11 +302,7 @@ export async function getLocationDetail(id: string): Promise<LocationDetail | nu
   const select = { id: true, name: true, code: true, type: true } as const;
   const inSubtree = {
     deletedAt: null,
-    OR: [
-      { originId: { in: subtree } },
-      { destinationId: { in: subtree } },
-      { currentLocationId: { in: subtree } },
-    ],
+    OR: [{ originId: { in: subtree } }, { destinationId: { in: subtree } }],
   };
   const [ancestors, children, cables, trays, firstCables] = await Promise.all([
     prisma.location.findMany({
@@ -326,7 +321,6 @@ export async function getLocationDetail(id: string): Promise<LocationDetail | nu
         code: true,
         originId: true,
         destinationId: true,
-        currentLocationId: true,
         originEquipment: true,
         destinationEquipment: true,
       },
@@ -349,7 +343,6 @@ export async function getLocationDetail(id: string): Promise<LocationDetail | nu
       const roles: LocationDetail["someCables"][number]["roles"] = [];
       if (cable.originId && inside.has(cable.originId)) roles.push("origin");
       if (cable.destinationId && inside.has(cable.destinationId)) roles.push("destination");
-      if (cable.currentLocationId && inside.has(cable.currentLocationId)) roles.push("here");
       // The other end: where it goes if it starts here, where it comes from if it ends here.
       const otherEnd =
         roles[0] === "origin"

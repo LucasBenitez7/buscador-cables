@@ -6,7 +6,6 @@ test.use({ storageState: storageStatePath("admin") });
 
 const ORIGIN = "Planta E2E › Calderas › Armario A";
 const DESTINATION = "Planta E2E › Calderas › Bandeja B";
-const STORE = "Planta E2E › Almacén";
 
 test("alta, edición y baja de un cable", async ({ page }) => {
   await page.goto("/cables");
@@ -22,8 +21,7 @@ test("alta, edición y baja de un cable", async ({ page }) => {
   await page.getByLabel("Nº de conductores").fill("4");
   await page.getByLabel("Origen").selectOption({ label: ORIGIN });
   await page.getByLabel("Destino").selectOption({ label: DESTINATION });
-  await page.getByLabel("Instalación").selectOption({ label: "En almacén" });
-  await page.getByLabel("Dónde está ahora").selectOption({ label: STORE });
+  await page.getByLabel("Instalación").selectOption({ label: "No tendido" });
   await page.getByRole("button", { name: "Dar de alta" }).click();
 
   await expect(page).toHaveURL(/\/cables\/[^/]+\/edit\?created=1/);

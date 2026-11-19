@@ -252,9 +252,8 @@ model Manufacturer {
 // ---------------------------------------------------------------------------
 
 enum InstallationStatus {
-  UNVERIFIED // sin revisar: viene de los listados y nadie ha comprobado aún cómo está
-  IN_STOCK // en almacén
-  COILED // enrollado
+  UNVERIFIED // sin revisar: no sale en ningún Excel y nadie ha comprobado aún cómo está
+  NOT_LAID // no tendido (fase 14: sustituye a «en almacén» y «enrollado»)
   PARTIALLY_LAID // tendido a medias: una punta espera en una bandeja
   LAID // tendido
   RETIRED // retirado
@@ -279,10 +278,10 @@ enum CableAction {
   UPDATED
   LAID
   PARTIALLY_LAID
-  COILED
+  COILED // ya no se registra (fase 14); queda en eventos antiguos
   CONNECTED
   DISCONNECTED
-  MOVED
+  MOVED // ya no se registra (fase 14); queda en eventos antiguos
   RETIRED
   CORRECTION
   TESTED // timbrado
@@ -373,10 +372,11 @@ model Cable {
   looseEndTrayId String?
   looseEndTray   Tray?            @relation("CableLooseEndTray", fields: [looseEndTrayId], references: [id], onDelete: Restrict)
 
-  /// Dónde está físicamente (si está enrollado o en almacén).
+  /// Dónde estaba físicamente un cable enrollado o en almacén. Sin uso desde la fase 14: se
+  /// conserva el dato, pero nada lo escribe ni lo muestra.
   currentLocationId  String?
   currentLocation    Location?          @relation("CableCurrent", fields: [currentLocationId], references: [id], onDelete: Restrict)
-  installationStatus InstallationStatus @default(IN_STOCK)
+  installationStatus InstallationStatus @default(NOT_LAID)
   connectionStatus   ConnectionStatus   @default(DISCONNECTED)
   testStatus         TestStatus         @default(NOT_TESTED)
 

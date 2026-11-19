@@ -14,7 +14,7 @@ import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
 import { PendingLink } from "@/components/pending-list";
 import { CODE_LINK } from "@/components/ui/text-link";
-import { CableActions, type ActionOption } from "@/features/cables/components/cable-actions";
+import { CableActions } from "@/features/cables/components/cable-actions";
 import { trayHref } from "@/features/cables/components/cable-route";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { EquipmentLink } from "@/features/cables/components/equipment-link";
@@ -31,7 +31,7 @@ type Props = {
   search: CableSearch;
   result: CableSearchResult;
   /** When set, each row gets an "Acción" button for what this person can do. */
-  actions?: { permissions: readonly string[]; locations: ActionOption[] };
+  actions?: { permissions: readonly string[] };
 };
 
 /** Tabla de resultados. Ordenación y paginación son enlaces: todo vive en la URL. */
@@ -150,7 +150,6 @@ export function SearchResults({ search, result, actions }: Props) {
                   version={cable.version}
                   state={cable.state}
                   availability={cableActionAvailability(actions, cable.state)}
-                  locations={actions.locations}
                 />
               ) : null}
             </div>
@@ -245,7 +244,6 @@ export function SearchResults({ search, result, actions }: Props) {
                       version={cable.version}
                       state={cable.state}
                       availability={cableActionAvailability(actions, cable.state)}
-                      locations={actions.locations}
                     />
                   </td>
                 ) : null}

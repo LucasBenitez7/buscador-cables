@@ -121,7 +121,7 @@ Reglas:
 ```prisma
 enum Role { ADMIN SUPERVISOR TECHNICIAN VIEWER }
 
-enum InstallationStatus { IN_STOCK COILED LAID RETIRED }        // almacén, enrollado, tendido, retirado
+enum InstallationStatus { UNVERIFIED NOT_LAID PARTIALLY_LAID LAID RETIRED } // fase 14
 enum ConnectionStatus  { DISCONNECTED ORIGIN_ONLY DESTINATION_ONLY CONNECTED }
 enum LocationType      { PLANT AREA UNIT SITE }                // central, área, reactor/unidad, sitio
 
@@ -169,8 +169,8 @@ model Cable {
   voltageRating      String?                      // "0,6/1 kV"
   originId           String?                      // de dónde sale
   destinationId      String?                      // a dónde llega
-  currentLocationId  String?                      // dónde está físicamente (si está enrollado/almacén)
-  installationStatus InstallationStatus @default(IN_STOCK)
+  currentLocationId  String?                      // sin uso desde la fase 14 (se conserva el dato)
+  installationStatus InstallationStatus @default(NOT_LAID)
   connectionStatus   ConnectionStatus   @default(DISCONNECTED)
   // Columnas resumen (desnormalizadas) para mostrar/filtrar en la tabla sin joins pesados.
   // Se actualizan en la misma transacción que crea el CableEvent.
@@ -195,6 +195,7 @@ model Cable {
 
 enum CableAction {
   CREATED UPDATED LAID COILED CONNECTED DISCONNECTED MOVED RETIRED CORRECTION DELETED
+  // COILED y MOVED ya no se registran (fase 14): solo quedan en eventos antiguos
 }
 
 // Registro INMUTABLE de lo que hace cada usuario sobre un cable (nunca se edita ni se borra).
@@ -235,9 +236,15 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - `CableRouteStep`: recorrido **ordenado** de cada cable (`position` ≥ 1). Cada paso guarda el
   texto del listado y, si es una bandeja conocida, la bandeja; en instrumentación, además, el
   tramo (`FIELD` campo / `ROOM` sala).
-- Estado `UNVERIFIED` (sin revisar): el estado con que entran los cables de los listados, que
-  nadie ha comprobado en campo. Sin ubicación física; no se mueve ni se conecta hasta que alguien
-  registra cómo está (tendido, tendido a medias, enrollado o retirado).
+- **Estados finales (fase 14)**: `NOT_LAID` (no tendido), `PARTIALLY_LAID`, `LAID` y `RETIRED`.
+  La migración `final_installation_statuses` pasó «En almacén» y «Enrollado» a `NOT_LAID` y
+  quitó los permisos `cable:coil` y `cable:move` de los roles. «Enrollar» y «Mover» ya no
+  existen; sus eventos antiguos se siguen leyendo (`installationStatusLabel()` da el texto de
+  los estados que ya no existen). `currentLocationId` se conserva, pero nada lo escribe ni lo
+  muestra, y no cuenta en los filtros por ubicación.
+- Estado `UNVERIFIED` (sin revisar): cables sin datos, que no salen en ningún Excel ni nadie ha
+  comprobado en campo. No se conecta hasta que alguien registra cómo está (tendido, tendido a
+  medias o retirado); el Excel lo pasa a tendido o no tendido.
 - Si un cable de los listados no tiene sala, el equipo de cada extremo cuenta como extremo
   conocido para poder tenderlo (`originId ?? originEquipment` al construir el estado).
 - Estado `PARTIALLY_LAID` (tendido parcial) y acción del mismo nombre. `Cable.looseEnd`

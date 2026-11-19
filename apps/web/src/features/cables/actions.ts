@@ -50,12 +50,7 @@ export async function createCableAction(formData: FormData): Promise<CableFormRe
   }
 
   const parsed = createCableSchema.safeParse(
-    read(formData, [
-      ...CABLE_EDITABLE_FIELDS,
-      "installationStatus",
-      "connectionStatus",
-      "currentLocationId",
-    ]),
+    read(formData, [...CABLE_EDITABLE_FIELDS, "installationStatus", "connectionStatus"]),
   );
   if (!parsed.success) {
     return invalid(parsed.error);
@@ -123,12 +118,10 @@ const ACTION_FIELDS = [
   "version",
   "action",
   "notes",
-  "locationId",
   "end",
   "correctsEventId",
   "installationStatus",
   "connectionStatus",
-  "currentLocationId",
   "looseEnd",
   "trayCode",
   "looseEndTray",

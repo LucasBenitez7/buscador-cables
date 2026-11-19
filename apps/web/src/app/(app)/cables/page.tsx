@@ -12,7 +12,6 @@ import { SearchFilters } from "@/features/search/components/search-filters";
 import { SearchResults } from "@/features/search/components/search-results";
 import { deletedCableCode } from "@/lib/route-params";
 import { getSearchOptions, searchCables } from "@/server/cables/search";
-import { listLocationOptions } from "@/server/cables/service";
 import { requireUser } from "@/server/session";
 
 export const metadata: Metadata = { title: "Cables" };
@@ -28,11 +27,7 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
   const deleted = deletedCableCode(params.deleted);
   // Solo quien puede registrar alguna acción ve la columna "Acción" (los VIEWER, no).
   const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user, action));
-  const [result, options, locations] = await Promise.all([
-    searchCables(search),
-    getSearchOptions(),
-    canAct ? listLocationOptions() : Promise.resolve([]),
-  ]);
+  const [result, options] = await Promise.all([searchCables(search), getSearchOptions()]);
 
   return (
     <div className="space-y-6">
@@ -57,7 +52,7 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
           <SearchResults
             search={search}
             result={result}
-            actions={canAct ? { permissions: user.permissions, locations } : undefined}
+            actions={canAct ? { permissions: user.permissions } : undefined}
           />
         </PendingResults>
       </PendingListProvider>

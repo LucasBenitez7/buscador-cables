@@ -59,7 +59,6 @@ describe("getCableDetail", () => {
       lengthM: 120,
       origin: "Norte › Calderas › Caldera 1",
       destination: "Norte › Calderas › Caldera 2",
-      currentLocation: null,
       installationStatus: "LAID",
       connectionStatus: "CONNECTED",
       lastAction: { action: "CREATED", user: "Tomás Gil" },
@@ -147,35 +146,46 @@ describe("getCableDetail", () => {
         cableActionSchema.parse({ cableId: id, version: String(version), ...fields }),
       );
     };
-    await run({ action: "DISCONNECTED", end: "ORIGIN" });
-    await run({ action: "COILED", locationId: "c1" });
-    const coiled = await prisma.cableEvent.findFirstOrThrow({
-      where: { cableId: id, action: "COILED" },
+    await run({ action: "DISCONNECTED", end: "BOTH" });
+    // Un «Enrollado» de antes de la fase 14: ya no se registra, pero el historial lo cuenta.
+    // Los cambios se guardan desordenados a propósito (jsonb también los desordenaba).
+    const coiled = await prisma.cableEvent.create({
+      data: {
+        cableId: id,
+        userId: actor.id,
+        action: "COILED",
+        toLocationId: "c1",
+        changes: {
+          currentLocationId: { from: null, to: "c1" },
+          installationStatus: { from: "LAID", to: "COILED" },
+        },
+      },
     });
     await run({
       action: "CORRECTION",
       correctsEventId: coiled.id,
-      installationStatus: "COILED",
+      installationStatus: "NOT_LAID",
       connectionStatus: "DISCONNECTED",
-      currentLocationId: "c2",
-      notes: "Era la caldera 2",
+      notes: "No llegó a tenderse",
     });
 
     const [correction, coil, disconnection] = (await getCableDetail(id))?.history ?? [];
 
-    expect(disconnection?.summary).toBe("desconectó el extremo de origen");
+    expect(disconnection?.summary).toBe("desconectó los dos extremos");
     expect(coil?.summary).toBe("enrolló el cable en Norte › Calderas › Caldera 1");
     // Regresión: jsonb desordenaba los cambios; ahora siguen el orden del formulario.
-    expect(coil?.changes.map((change) => change.field)).toEqual([
-      "Estado de instalación",
-      "Estado de conexión",
-      "Ubicación actual",
+    expect(coil?.changes).toEqual([
+      { field: "Estado de instalación", from: "Tendido", to: "Enrollado" },
+      expect.objectContaining({ field: "Ubicación actual", to: "Norte › Calderas › Caldera 1" }),
     ]);
     expect(correction).toMatchObject({
       summary: "corrigió un movimiento anterior",
       corrects: expect.stringMatching(/^Enrollado · /),
-      notes: "Era la caldera 2",
+      notes: "No llegó a tenderse",
     });
+    expect(correction?.changes).toContainEqual(
+      expect.objectContaining({ field: "Estado de instalación", to: "No tendido" }),
+    );
   });
 
   it("keeps retired cables reachable with who, when and why", async () => {
@@ -201,9 +211,8 @@ describe("getCableDetail: route and loose end", () => {
         code: "99XAT10W2005",
         originId: "c1",
         destinationId: "c2",
-        installationStatus: "IN_STOCK",
+        installationStatus: "NOT_LAID",
         connectionStatus: "DISCONNECTED",
-        currentLocationId: "cal",
       }),
     );
     const tray = await prisma.tray.create({ data: { code: "99UXA00L22036", kind: "LADDER" } });

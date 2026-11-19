@@ -93,7 +93,7 @@ beforeEach(async () => {
         lengthM: 120,
         crossSectionMm2: 95,
         currentLocationId: ids.siteA1,
-        installationStatus: "COILED",
+        installationStatus: "NOT_LAID",
         description: "Alimentación bomba de agua",
       },
       { code: "SH-51", typeId: ids.control, deletedAt: new Date() },
@@ -147,9 +147,10 @@ describe("searchCables: text", () => {
 });
 
 describe("searchCables: filters", () => {
-  it("includes cables anywhere in the location subtree, by origin, destination or current place", async () => {
-    expect(await codes({ location: ids.areaA })).toEqual(["PW-50", "SH-5", "SH-50"]);
-    expect(await codes({ location: ids.plant })).toHaveLength(5);
+  it("includes cables anywhere in the location subtree, by origin or destination", async () => {
+    // PW-50 conserva su antigua ubicación actual, que ya no cuenta (fase 14).
+    expect(await codes({ location: ids.areaA })).toEqual(["SH-5", "SH-50"]);
+    expect(await codes({ location: ids.plant })).toHaveLength(4);
     expect(await codes({ location: "missing" })).toEqual([]);
   });
 
