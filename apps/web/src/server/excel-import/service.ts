@@ -58,7 +58,7 @@ function chunks<T>(items: readonly T[], size = CHUNK): T[][] {
   return result;
 }
 
-const dayOf = (value: Date | null) => (value ? value.toISOString().slice(0, 10) : null);
+export const dayOf = (value: Date | null) => (value ? value.toISOString().slice(0, 10) : null);
 const dateOf = (day: string | null) => (day ? new Date(`${day}T00:00:00Z`) : null);
 const toNumber = (value: { toNumber(): number } | null) => value?.toNumber() ?? null;
 
@@ -117,23 +117,41 @@ async function cablesByCode(db: Db, codes: readonly string[]): Promise<Map<strin
 /**
  * The last change of state written by a person or an Excel, per cable: a person's one is the
  * mark an Excel may contradict. The load of the project does not count, nor does registering
- * a cable: its first state is not something a person checked in the field.
+ * a cable: its first state is not something a person checked in the field. A decision on a
+ * discrepancy counts: keeping the web is a person's mark of that day; accepting the Excel
+ * leaves the state to the Excel.
  */
 async function webMarks(db: Db, cableIds: readonly string[]): Promise<Map<string, WebStateMark>> {
   const marks = new Map<string, WebStateMark>();
   for (const part of chunks(cableIds)) {
     const rows = await db.$queryRaw<
-      { cableId: string; id: string; source: CableEventSource; createdAt: Date }[]
+      {
+        cableId: string;
+        id: string;
+        source: CableEventSource;
+        action: string;
+        changesState: boolean;
+        createdAt: Date;
+      }[]
     >`
-      SELECT DISTINCT ON ("cableId") "cableId", "id", "source", "createdAt"
+      SELECT DISTINCT ON ("cableId") "cableId", "id", "source", "action"::text AS "action",
+        jsonb_exists_any("changes", ARRAY['installationStatus', 'connectionStatus'])
+          AS "changesState",
+        "createdAt"
       FROM "cable_event"
       WHERE "cableId" = ANY(${part})
         AND "source" IN ('APP', 'EXCEL')
         AND "action" <> 'CREATED'
-        AND jsonb_exists_any("changes", ARRAY['installationStatus', 'connectionStatus'])
+        AND (
+          jsonb_exists_any("changes", ARRAY['installationStatus', 'connectionStatus'])
+          OR "action" = 'EXCEL_REVIEWED'
+        )
       ORDER BY "cableId", "createdAt" DESC, "id" DESC`;
     for (const row of rows) {
-      if (row.source === "APP") marks.set(row.cableId, { eventId: row.id, at: row.createdAt });
+      const acceptedExcel = row.action === "EXCEL_REVIEWED" && row.changesState;
+      if (row.source === "APP" && !acceptedExcel) {
+        marks.set(row.cableId, { eventId: row.id, at: row.createdAt });
+      }
     }
   }
   return marks;

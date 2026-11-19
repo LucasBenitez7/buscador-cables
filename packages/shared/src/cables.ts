@@ -36,6 +36,7 @@ export const CABLE_ACTIONS = [
   "DELETED",
   "WIRING_EDITED",
   "EXCEL_UPDATED",
+  "EXCEL_REVIEWED",
 ] as const;
 
 /**
@@ -101,6 +102,7 @@ export const CABLE_ACTION_LABELS: Record<CableAction, string> = {
   DELETED: "Baja",
   WIRING_EDITED: "Bornas corregidas",
   EXCEL_UPDATED: "Excel del día",
+  EXCEL_REVIEWED: "Discrepancia revisada",
 };
 
 /** Fields a technician edits in the cable form (statuses change through actions). */

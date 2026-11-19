@@ -12,6 +12,7 @@ import {
   startExcelPreview,
   type ExcelBatchResult,
 } from "@/server/excel-import/service";
+import { decideDiscrepancy } from "@/server/excel-import/discrepancies";
 import { logError } from "@/server/log";
 import { authorize } from "@/server/session";
 
@@ -87,4 +88,17 @@ export async function applyExcelBatchAction(importId: unknown) {
     if (result.done) revalidatePath("/", "layout");
     return result;
   });
+}
+
+/** «Mantener lo de la web» o «Aceptar lo del Excel» in «Pendientes de revisar». */
+export async function decideDiscrepancyAction(input: unknown): Promise<ActionResult> {
+  const auth = await authorize("cable:correct");
+  if (!auth.ok) return auth;
+  try {
+    const message = await decideDiscrepancy(auth.user, input);
+    revalidatePath("/", "layout");
+    return { ok: true, message };
+  } catch (error) {
+    return fail(error);
+  }
 }

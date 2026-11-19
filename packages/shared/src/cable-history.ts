@@ -149,5 +149,10 @@ export function describeCableEvent(event: CableEventForSentence): string {
       return describeWiringEdit(event.changes);
     case "EXCEL_UPDATED":
       return "actualizó el cable según el Excel";
+    case "EXCEL_REVIEWED":
+      return changedTo(event.changes, "installationStatus") ||
+        changedTo(event.changes, "connectionStatus")
+        ? "aceptó lo del Excel en una discrepancia"
+        : "mantuvo lo de la web en una discrepancia con el Excel";
   }
 }

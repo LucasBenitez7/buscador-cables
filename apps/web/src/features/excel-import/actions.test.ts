@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   setExcelRowsSelected: vi.fn(),
   discardExcelPreview: vi.fn(),
   applyExcelBatch: vi.fn(),
+  decideDiscrepancy: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -22,6 +23,10 @@ vi.mock("@/server/excel-import/service", () => ({
   setExcelRowsSelected: mocks.setExcelRowsSelected,
   discardExcelPreview: mocks.discardExcelPreview,
   applyExcelBatch: mocks.applyExcelBatch,
+}));
+
+vi.mock("@/server/excel-import/discrepancies", () => ({
+  decideDiscrepancy: mocks.decideDiscrepancy,
 }));
 
 const actions = await import("./actions");
@@ -94,5 +99,23 @@ describe("Excel import actions", () => {
       message: "Vista previa descartada.",
     });
     expect(mocks.discardExcelPreview).toHaveBeenCalledWith(user, "i1");
+  });
+
+  it("decide a discrepancy only with the permission to correct movements", async () => {
+    mocks.decideDiscrepancy.mockResolvedValue("ZZ-1: se mantiene lo de la web.");
+
+    expect(await actions.decideDiscrepancyAction({ id: "d1", decision: "KEEP_WEB" })).toEqual({
+      ok: true,
+      message: "ZZ-1: se mantiene lo de la web.",
+    });
+    expect(mocks.authorize).toHaveBeenCalledWith("cable:correct");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+
+    mocks.authorize.mockResolvedValue({ ok: false, message: "No tienes permiso." });
+    expect(await actions.decideDiscrepancyAction({})).toEqual({
+      ok: false,
+      message: "No tienes permiso.",
+    });
+    expect(mocks.decideDiscrepancy).toHaveBeenCalledTimes(1);
   });
 });

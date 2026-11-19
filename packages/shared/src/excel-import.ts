@@ -226,7 +226,13 @@ const sameState = (a: ExcelCableState, b: ExcelCableState) =>
   a.installationStatus === b.installationStatus && a.connectionStatus === b.connectionStatus;
 
 /** Changes that move the cable to a state, ending a partial laying if it leaves it. */
-function stateChanges(cable: ExcelCableSnapshot, to: ExcelCableState): Record<string, FieldChange> {
+export function stateChanges(
+  cable: Pick<
+    ExcelCableSnapshot,
+    "installationStatus" | "connectionStatus" | "looseEnd" | "looseEndTray"
+  >,
+  to: ExcelCableState,
+): Record<string, FieldChange> {
   const changes: Record<string, FieldChange> = {};
   if (cable.installationStatus !== to.installationStatus) {
     changes.installationStatus = { from: cable.installationStatus, to: to.installationStatus };
@@ -347,3 +353,37 @@ export type ExcelPreviewSearch = z.infer<typeof excelPreviewSearchSchema>;
 
 export const parseExcelPreviewSearch = (params: RawSearchParams): ExcelPreviewSearch =>
   excelPreviewSearchSchema.parse(firstParams(params));
+
+// ---------------------------------------------------------------------------
+// «Pendientes de revisar»
+// ---------------------------------------------------------------------------
+
+export const DISCREPANCY_DECISIONS = ["KEEP_WEB", "ACCEPT_EXCEL"] as const;
+export type DiscrepancyDecision = (typeof DISCREPANCY_DECISIONS)[number];
+export const DISCREPANCY_DECISION_LABELS: Record<DiscrepancyDecision, string> = {
+  KEEP_WEB: "Mantener lo de la web",
+  ACCEPT_EXCEL: "Aceptar lo del Excel",
+};
+
+export const decideDiscrepancySchema = z.object({
+  id: z.string().min(1).max(100),
+  decision: z.enum(DISCREPANCY_DECISIONS, { error: "Decisión no válida" }),
+});
+export type DecideDiscrepancyInput = z.infer<typeof decideDiscrepancySchema>;
+
+export const DISCREPANCY_VIEWS = ["open", "decided"] as const;
+export type DiscrepancyView = (typeof DISCREPANCY_VIEWS)[number];
+export const DISCREPANCY_VIEW_LABELS: Record<DiscrepancyView, string> = {
+  open: "Pendientes",
+  decided: "Revisadas",
+};
+export const DISCREPANCIES_PAGE_SIZE = 25;
+
+export const discrepancySearchSchema = z.object({
+  view: z.enum(DISCREPANCY_VIEWS).optional().catch(undefined),
+  page: pageSchema,
+});
+export type DiscrepancySearch = z.infer<typeof discrepancySearchSchema>;
+
+export const parseDiscrepancySearch = (params: RawSearchParams): DiscrepancySearch =>
+  discrepancySearchSchema.parse(firstParams(params));

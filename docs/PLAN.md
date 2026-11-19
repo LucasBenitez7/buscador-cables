@@ -1051,7 +1051,7 @@ se usa lo mismo (con un componente común), y no hay textos de ayuda en la inter
 - [x] Modelo y servicio de importación: cambios, cables nuevos, discrepancias, por lotes.
 - [x] «Subir Excel del día»: vista previa guardada, desmarcar filas, aplicar o descartar.
 - [x] Primera carga como carga del proyecto, sin que se vea.
-- [ ] «Pendientes de revisar» con su historial.
+- [x] «Pendientes de revisar» con su historial.
 - [ ] Panel: avance de tendido y conexión, fecha del último Excel, pendientes de revisar.
 - [ ] Tests, E2E y manual de usuario.
 - [ ] Al cerrar la fase, resumir esta sección: dejar las tareas y las decisiones que sigan

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PreviewActions, RowCheckbox, SelectTabButtons } from "./components/preview-controls";
+import { DecisionButtons } from "./components/decision-buttons";
 import { UploadExcelForm } from "./components/upload-excel-form";
 
 const mocks = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   setExcelRowsAction: vi.fn(),
   discardExcelAction: vi.fn(),
   applyExcelBatchAction: vi.fn(),
+  decideDiscrepancyAction: vi.fn(),
   readExcelFile: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
@@ -193,6 +195,24 @@ describe("row selection", () => {
       importId: "i1",
       kind: "NEW",
       selected: false,
+    });
+  });
+});
+
+describe("DecisionButtons", () => {
+  it("sends the decision and shows why it was refused", async () => {
+    mocks.decideDiscrepancyAction.mockResolvedValue({
+      ok: false,
+      message: "Otra persona ya ha decidido esta discrepancia.",
+    });
+    render(<DecisionButtons id="d1" code="ZZ-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar lo del Excel: ZZ-1" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("ya ha decidido");
+    expect(mocks.decideDiscrepancyAction).toHaveBeenCalledWith({
+      id: "d1",
+      decision: "ACCEPT_EXCEL",
     });
   });
 });

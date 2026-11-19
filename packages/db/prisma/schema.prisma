@@ -302,6 +302,7 @@ enum CableAction {
   DELETED // baja lógica (deletedAt)
   WIRING_EDITED // bornas corregidas en campo (modo editar del conexionado)
   EXCEL_UPDATED // lo cambió el Excel del día (fase 14)
+  EXCEL_REVIEWED // una persona decidió una discrepancia con el Excel (fase 14)
 }
 
 /// Nivel del cable en los listados del proyecto (ver docs/DATOS-PROYECTO.md).

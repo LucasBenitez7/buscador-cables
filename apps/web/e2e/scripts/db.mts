@@ -169,12 +169,25 @@ async function prepare() {
           })),
         },
         events: {
-          create: {
-            userId: userIds.admin!,
-            action: "CREATED",
-            changes: { installationStatus: { from: null, to: cable.status } },
-            createdAt: now,
-          },
+          create: [
+            {
+              userId: userIds.admin!,
+              action: "CREATED",
+              changes: { installationStatus: { from: null, to: cable.status } },
+              createdAt: now,
+            },
+            // Lo tendió el técnico en la web antes de la fecha del Excel de prueba.
+            ...("laidInWebOn" in cable
+              ? [
+                  {
+                    userId: userIds.technician!,
+                    action: "LAID" as const,
+                    changes: { installationStatus: { from: "NOT_LAID", to: "LAID" } },
+                    createdAt: new Date(cable.laidInWebOn),
+                  },
+                ]
+              : []),
+          ],
         },
       },
     });

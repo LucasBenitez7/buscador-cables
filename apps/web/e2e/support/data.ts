@@ -106,6 +106,15 @@ export const CABLES = {
     connection: "DISCONNECTED",
     ends: ["99BMD", "99XAE10AP001"],
   },
+  // Fase 14: tendido en la web el 12/11; el Excel del 16/11 dice que no: discrepancia.
+  review: {
+    code: "99XAE10W2002",
+    level: "L2",
+    status: "LAID",
+    connection: "DISCONNECTED",
+    ends: ["99BMD", "99XAE10AP002"],
+    laidInWebOn: "2026-11-12T09:00:00Z",
+  },
   // Fase 11: tabla de conexionado (hilo, regletero y borna en origen y en destino).
   wiring: {
     code: "99XAD10W2001",
