@@ -30,16 +30,17 @@ const dayFormat = new Intl.DateTimeFormat("es-ES", {
 const dayKey = (date: Date) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(date);
 
-type BadgeVariant = "default" | "outline" | "info" | "success" | "warning" | "destructive";
+type BadgeVariant =
+  "default" | "outline" | "laid" | "pending" | "success" | "warning" | "destructive";
 
 /** The colour of an action, the same family as the cable states it leads to. */
 export function actionVariant(entry: Pick<ActivityEntry, "action" | "changes">): BadgeVariant {
   const variants: Record<CableAction, BadgeVariant> = {
     CREATED: "outline",
     UPDATED: "outline",
-    LAID: "info",
+    LAID: "laid",
     PARTIALLY_LAID: "warning",
-    COILED: "default",
+    COILED: "pending",
     CONNECTED: "success",
     DISCONNECTED: "outline",
     MOVED: "default",

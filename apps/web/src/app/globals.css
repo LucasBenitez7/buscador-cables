@@ -46,6 +46,17 @@
   --destructive: oklch(0.68 0.19 25);
   --destructive-foreground: oklch(0.17 0.02 255);
 
+  /*
+   * Estados del tendido, iguales en toda la web (etiquetas, planos, recorrido, panel):
+   * azul = tendido, violeta = falta / no tendido, ámbar (warning) = a medias o punta suelta,
+   * verde (success) = conectado, rojo (destructive) = retirado. Azul y violeta se eligieron
+   * para destacar sobre los planos, que son blancos con bandejas verdes y cian.
+   */
+  --laid: oklch(0.66 0.18 262);
+  --laid-foreground: oklch(0.17 0.02 255);
+  --pending: oklch(0.7 0.2 325);
+  --pending-foreground: oklch(0.17 0.02 255);
+
   --chart-1: oklch(0.7 0.14 245);
   --chart-2: oklch(0.74 0.15 162);
   --chart-3: oklch(0.8 0.14 80);
@@ -89,6 +100,10 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-laid: var(--laid);
+  --color-laid-foreground: var(--laid-foreground);
+  --color-pending: var(--pending);
+  --color-pending-foreground: var(--pending-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
