@@ -110,10 +110,6 @@ export default async function LocationPage({ params }: { params: Params }) {
             </Item>
           ) : null}
         </DataList>
-        <p className="text-muted-foreground text-xs">
-          Los cables cuentan si empiezan, terminan o están guardados aquí o en cualquier sitio que
-          contiene.
-        </p>
       </Section>
 
       {location.someCables.length > 0 ? (

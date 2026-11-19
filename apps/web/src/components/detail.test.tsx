@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Item, JumpLinks, Section } from "./detail";
+import { DataList, Item, JumpLinks, Section } from "./detail";
 
 describe("Section", () => {
   it("puts its action next to the title, before the content", () => {
@@ -23,18 +23,20 @@ describe("Section", () => {
 });
 
 describe("Item", () => {
-  it("shows the value, or a dash when there is none", () => {
+  it("shows the name and the value, and leaves out the empty ones", () => {
     render(
-      <dl>
+      <DataList title="Qué es">
         <Item label="Longitud">113 m</Item>
         <Item label="Color">{null}</Item>
         <Item label="Conductores">{0}</Item>
-      </dl>,
+      </DataList>,
     );
 
-    expect(screen.getByText("113 m")).toBeInTheDocument();
-    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Qué es" })).toBeInTheDocument();
+    expect(screen.getByText("Longitud").nextSibling).toHaveTextContent("113 m");
     expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.queryByText("Color")).toBeNull();
+    expect(screen.queryByText("—")).toBeNull();
   });
 });
 

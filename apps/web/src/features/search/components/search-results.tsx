@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  CABLE_ACTION_LABELS,
   cableActionAvailability,
   cableSearchQuery,
   effectiveSort,
@@ -20,12 +19,6 @@ import { CableStatusBadges } from "@/features/cables/components/cable-status-bad
 import { EquipmentLink } from "@/features/cables/components/equipment-link";
 import { INLINE_LINK, locationHref } from "@/lib/links";
 import type { CableSearchItem, CableSearchResult } from "@/server/cables/search";
-
-const dateFormat = new Intl.DateTimeFormat("es-ES", {
-  dateStyle: "short",
-  timeStyle: "short",
-  timeZone: "Europe/Madrid",
-});
 
 type Props = {
   search: CableSearch;
@@ -111,38 +104,8 @@ export function SearchResults({ search, result, actions }: Props) {
             </div>
             <Ends cable={cable} />
             <LooseEnd cable={cable} />
-            <WiringLink cableId={cable.id} code={cable.code} />
-            <p className="text-muted-foreground inline-flex items-center gap-1.5">
-              {cable.color ? (
-                <span
-                  aria-hidden
-                  className="border-foreground/40 size-3 shrink-0 rounded-full border"
-                  style={{ backgroundColor: cable.color.hex ?? "transparent" }}
-                />
-              ) : null}
-              {[
-                cable.type,
-                cable.crossSectionMm2 === null
-                  ? null
-                  : `${cable.conductors ? `${cable.conductors}×` : ""}${formatDecimal(cable.crossSectionMm2)} mm²`,
-                cable.lengthM === null ? null : `${formatDecimal(cable.lengthM)} m`,
-              ]
-                .filter(Boolean)
-                .join(" · ") || "Sin datos técnicos"}
-            </p>
-            <div className="flex items-end justify-between gap-3 border-t pt-2">
-              <p className="text-muted-foreground text-xs">
-                {cable.lastAction ? (
-                  <>
-                    <span className="text-foreground">{CABLE_ACTION_LABELS[cable.lastAction]}</span>
-                    {cable.lastActionBy ? ` · ${cable.lastActionBy}` : ""}
-                    {cable.lastActionAt ? ` · ${dateFormat.format(cable.lastActionAt)}` : ""}
-                  </>
-                ) : (
-                  "Sin movimientos"
-                )}
-              </p>
-              {actions ? (
+            {actions ? (
+              <div className="flex justify-end border-t pt-2">
                 <CableActions
                   compact
                   cableId={cable.id}
@@ -151,8 +114,8 @@ export function SearchResults({ search, result, actions }: Props) {
                   state={cable.state}
                   availability={cableActionAvailability(actions, cable.state)}
                 />
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -173,7 +136,6 @@ export function SearchResults({ search, result, actions }: Props) {
               <th scope="col" className="px-3 py-2 font-medium">
                 Estado
               </th>
-              {header("Último movimiento", "activity", "hidden md:table-cell")}
               {actions ? (
                 <th scope="col" className="px-3 py-2 font-medium">
                   <span className="sr-only">Acción</span>
@@ -188,7 +150,6 @@ export function SearchResults({ search, result, actions }: Props) {
                   <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
                     {cable.code}
                   </Link>
-                  <WiringLink cableId={cable.id} code={cable.code} />
                 </td>
                 <td className="hidden px-3 py-2 md:table-cell">
                   <span className="inline-flex items-center gap-1.5">
@@ -221,19 +182,6 @@ export function SearchResults({ search, result, actions }: Props) {
                     testStatus={cable.testStatus}
                   />
                   <LooseEnd cable={cable} />
-                </td>
-                <td className="hidden px-3 py-2 md:table-cell">
-                  {cable.lastAction ? (
-                    <>
-                      {CABLE_ACTION_LABELS[cable.lastAction]}
-                      <span className="text-muted-foreground block text-xs">
-                        {cable.lastActionBy ?? "—"}
-                        {cable.lastActionAt ? ` · ${dateFormat.format(cable.lastActionAt)}` : ""}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
                 </td>
                 {actions ? (
                   <td className="px-3 py-2">
@@ -317,14 +265,3 @@ function LooseEnd({ cable }: { cable: CableSearchItem }) {
  * Straight to the wiring tab of the cable (wires, terminals and the original sheet): who
  * connects does not have to open the record and change tab.
  */
-function WiringLink({ cableId, code }: { cableId: string; code: string }) {
-  return (
-    <Link
-      href={`/cables/${cableId}?vista=conexionado`}
-      aria-label={`Conexionado del cable ${code}`}
-      className="text-muted-foreground hover:text-primary focus-visible:ring-ring/50 block w-fit rounded-sm font-sans text-xs font-normal underline-offset-4 outline-none hover:underline focus-visible:ring-3"
-    >
-      Conexionado
-    </Link>
-  );
-}

@@ -200,9 +200,6 @@ export default async function EquipmentPage({
                           {end.wires} {end.wires === 1 ? "hilo" : "hilos"} · al otro lado{" "}
                           <EquipmentLink equipment={end.otherEquipment} />
                         </p>
-                        {end.description ? (
-                          <p className="text-muted-foreground text-xs">{end.description}</p>
-                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         <Badge dot variant={end.connected ? "success" : "outline"}>

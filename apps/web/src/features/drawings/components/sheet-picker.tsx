@@ -2,6 +2,7 @@
 
 import { cn } from "cn";
 import { FileTextIcon } from "lucide-react";
+import { ChipRow } from "@/components/chip-row";
 
 export type SheetOption = {
   key: string;
@@ -43,10 +44,10 @@ export function SheetPicker({
   return (
     <div className="space-y-1.5">
       {/* Botones pequeños en una sola fila (de lado si no caben): el plano queda justo debajo. */}
-      <div
+      <ChipRow
         role="group"
         aria-label={label}
-        className="-mx-4 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0"
+        className="-mx-4 gap-1.5 px-4 sm:mx-0 sm:flex-wrap sm:px-0"
       >
         {sheets.map((item, index) => {
           const active = index === selected;
@@ -72,7 +73,7 @@ export function SheetPicker({
             </button>
           );
         })}
-      </div>
+      </ChipRow>
       <SheetLine sheet={current} />
     </div>
   );
