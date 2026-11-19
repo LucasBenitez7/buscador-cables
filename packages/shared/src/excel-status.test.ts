@@ -7,6 +7,7 @@ import {
   findExcelSheet,
   formatExcelDay,
   normalizeHeader,
+  readExcelLengths,
   readExcelStatus,
   reelText,
   type ExcelCell,
@@ -275,7 +276,7 @@ describe("readExcelStatus: instrumentation", () => {
     extra[3] ?? null,
   ];
 
-  it("lays without saying anything about the connection, and never has real metres", () => {
+  it("lays without saying anything about the connection, and has no metres without pullings", () => {
     const result = readExcelStatus("INSTRUMENTATION", [
       INSTRUMENTATION_HEADER,
       row("90XX10W1", "Tendido", [301, new Date(Date.UTC(2026, 9, 1)), "En obra", "Montajes Sur"]),
@@ -376,5 +377,112 @@ describe("cable record texts", () => {
     expect(reelText("B-101", "En obra")).toBe("B-101 · En obra");
     expect(reelText(null, "En obra")).toBe("En obra");
     expect(reelText(null, null)).toBeNull();
+  });
+});
+
+describe("readExcelLengths", () => {
+  // The sheet of the pullings: other tables follow with the same headers, to be skipped.
+  const header = [
+    "",
+    "DATE",
+    "CABLE TAG",
+    "START [m]",
+    "END [m]",
+    "PULLED [m]",
+    "DATE",
+    "PULLED [m]",
+  ];
+  const pulling = (code: ExcelCell, date: ExcelCell, start: number, end: number) => [
+    null,
+    date,
+    code,
+    start,
+    end,
+    start - end,
+    null,
+    9,
+  ];
+  const read = (...rows: ExcelCell[][]) => {
+    const result = readExcelLengths("INSTRUMENTATION", [header, ...rows]);
+    if (!result.ok) throw new Error("columns");
+    return result.lengths;
+  };
+
+  it("takes the metres of each cable from the first table of the sheet", () => {
+    const lengths = read(
+      pulling("90XX10W1", new Date(Date.UTC(2026, 9, 1)), 500, 395),
+      pulling("90XX10W2", null, 300, 280),
+      [null, null, "90XX10W3", null, null, null],
+      [null, null, null, 10, 5, 5],
+    );
+
+    expect([...lengths.metres]).toEqual([
+      ["90XX10W1", 105],
+      ["90XX10W2", 20],
+    ]);
+    expect(lengths.ignored).toEqual([]);
+  });
+
+  it("counts once a pulling written down twice exactly the same", () => {
+    const lengths = read(pulling("90XX10W1", null, 500, 395), pulling("90XX10W1", null, 500, 395));
+
+    expect(lengths.metres.get("90XX10W1")).toBe(105);
+    expect(lengths.ignored).toEqual([]);
+  });
+
+  it("uses the newest pulling of a cable written down twice and says which one it left", () => {
+    const lengths = read(
+      pulling("90XX10W1", new Date(Date.UTC(2026, 10, 14)), 200, 119),
+      pulling("90XX10W1", new Date(Date.UTC(2026, 9, 20)), 500, 475),
+      pulling("90XX10W2", null, 300, 280),
+      pulling("90XX10W2", null, 700, 650),
+    );
+
+    expect(lengths.metres.get("90XX10W1")).toBe(81);
+    // Without dates, the lower row is the last one written down.
+    expect(lengths.metres.get("90XX10W2")).toBe(50);
+    expect(lengths.ignored).toEqual([
+      {
+        row: 3,
+        code: "90XX10W1",
+        reason: "Tendido repetido en la hoja «Table»: se usa la fila 2",
+      },
+      {
+        row: 4,
+        code: "90XX10W2",
+        reason: "Tendido repetido en la hoja «Table»: se usa la fila 5",
+      },
+    ]);
+  });
+
+  it("says which columns are missing", () => {
+    expect(readExcelLengths("INSTRUMENTATION", [["CABLE TAG", "Fecha"]])).toEqual({
+      ok: false,
+      missingColumns: ["PULLED [m]"],
+    });
+  });
+
+  it("gives the metres to the laid cables of the instrumentation sheet", () => {
+    const lengths = read(pulling("90XX10W1", null, 500, 395), pulling("90XX10W2", null, 300, 280));
+    const result = readExcelStatus(
+      "INSTRUMENTATION",
+      [
+        INSTRUMENTATION_HEADER,
+        [1, "90XX10W1", null, null, null, "Tendido", null, null, null],
+        [2, "90XX10W2", null, null, null, "No Tendido", null, null, null],
+      ],
+      { metres: lengths.metres, ignored: [{ row: 9, code: "90XX10W9", reason: "x" }] },
+    );
+
+    expect(result.ok && result.rows).toEqual([
+      expect.objectContaining({
+        code: "90XX10W1",
+        actualLengthM: 105,
+        actualLengthTotalM: 105,
+        sections: null,
+      }),
+      expect.objectContaining({ code: "90XX10W2", actualLengthM: null, actualLengthTotalM: null }),
+    ]);
+    expect(result.ok && result.ignored).toEqual([{ row: 9, code: "90XX10W9", reason: "x" }]);
   });
 });

@@ -15,6 +15,15 @@ const electricalHeader = [
   "Numero de secciones",
 ];
 
+const instrumentationHeader = [
+  "TAG",
+  "ESTADO",
+  "Fecha de tendido",
+  "Company Real",
+  "Bobina Real en campo",
+  "Estado Bobina",
+];
+
 /** A reader that only knows the sheets it is given. */
 const sheets =
   (tables: Record<string, unknown[][]>): SheetReader =>
@@ -58,10 +67,31 @@ describe("readExcelFile", () => {
           ],
           ["ZZ-3", "Tendido"],
         ],
+        Table: [
+          ["DATE", "CABLE TAG", "PULLED [m]"],
+          [null, "ZZ-3", 47],
+        ],
       }),
     );
 
-    expect(result).toMatchObject({ ok: true, kind: "INSTRUMENTATION", excelDate: null });
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "INSTRUMENTATION",
+      excelDate: null,
+      rows: [{ code: "ZZ-3", actualLengthM: 47 }],
+    });
+  });
+
+  it("asks for the sheet of the pullings in the instrumentation Excel", async () => {
+    const main = { "Tabl IC Maestra": [instrumentationHeader, ["ZZ-3", "Tendido"]] };
+
+    expect(await readExcelFile(file("ic.xlsx"), sheets(main))).toEqual({
+      ok: false,
+      message: "El Excel no tiene la hoja «Table» con los metros tendidos.",
+    });
+    expect(
+      await readExcelFile(file("ic.xlsx"), sheets({ ...main, Table: [["CABLE TAG", "DATE"]] })),
+    ).toEqual({ ok: false, message: "Faltan columnas en la hoja «Table»: PULLED [m]." });
   });
 
   it("says which columns are missing, and that the sheet is not there", async () => {

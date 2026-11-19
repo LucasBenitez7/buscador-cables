@@ -112,7 +112,29 @@ describe("planExcelRow", () => {
     expect(plan({ cable: synced({ company: "  montajes   FICTICIOS" }) }).kind).toBe("NONE");
   });
 
-  it("never touches the real metres from the instrumentation Excel", () => {
+  it("takes the real metres of the instrumentation Excel, without sections", () => {
+    const result = plan({
+      kind: "INSTRUMENTATION",
+      row: row({
+        connectionStatus: null,
+        actualLengthM: 105,
+        actualLengthTotalM: 105,
+        sections: null,
+      }),
+      cable: synced({ actualLengthM: null, actualLengthTotalM: null, actualSections: null }),
+    });
+
+    expect(result).toEqual({
+      kind: "CHANGE",
+      agreesWithDiscrepancyId: null,
+      changes: {
+        actualLengthM: { from: null, to: 105 },
+        actualLengthTotalM: { from: null, to: 105 },
+      },
+    });
+  });
+
+  it("keeps the real metres of an instrumentation cable without a pulling in the Excel", () => {
     const result = plan({
       kind: "INSTRUMENTATION",
       row: row({

@@ -241,7 +241,9 @@ día. Se suben desde **Gestión → Excel del día** (supervisor y administrador
 
 **Qué cambia el Excel en un cable:** el estado (tendido o no tendido) y la conexión, la fecha de
 tendido, la empresa, la bobina y los metros reales. Nunca el origen, el destino, el tipo ni la
-longitud del listado. Una **celda vacía no borra** lo que ya tiene el cable. Las filas con
+longitud del listado. En instrumentación, los metros reales salen de la hoja «Table» (los
+metros tendidos de cada tirada); si un cable aparece dos veces, vale la tirada más nueva. Una
+**celda vacía no borra** lo que ya tiene el cable. Las filas con
 estados que no se usan («Check», «Error»…) se ignoran. Los cables que no salen en el Excel no se
 tocan. En el historial, lo del Excel sale con su fecha y quién lo subió.
 

@@ -172,7 +172,7 @@ export type ExcelRowPlan =
     }
   | { kind: "DISCREPANCY"; changes: Record<string, FieldChange>; conflict: ExcelConflict };
 
-/** The data fields each Excel brings; the instrumentation one has no real metres. */
+/** The data fields each Excel brings; the instrumentation one has no sections. */
 const DATA_FIELDS: Record<ExcelKind, readonly ExcelDataField[]> = {
   ELECTRICAL: [
     "laidOn",
@@ -183,7 +183,14 @@ const DATA_FIELDS: Record<ExcelKind, readonly ExcelDataField[]> = {
     "actualLengthTotalM",
     "actualSections",
   ],
-  INSTRUMENTATION: ["laidOn", "company", "reel", "reelStatus"],
+  INSTRUMENTATION: [
+    "laidOn",
+    "company",
+    "reel",
+    "reelStatus",
+    "actualLengthM",
+    "actualLengthTotalM",
+  ],
 };
 
 type ExcelDataField =

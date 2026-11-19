@@ -73,6 +73,28 @@ export const EXCEL_SHEETS: Record<ExcelKind, SheetSpec> = {
   },
 };
 
+/**
+ * The sheet with the real metres of each cable, when the file keeps them apart: the
+ * instrumentation one writes down each pulling in «Table», with the metres in «PULLED [m]».
+ * That sheet holds several tables side by side with repeated headers: the first column with
+ * each name is the one of the pullings.
+ */
+type LengthSheetSpec = {
+  sheetNames: readonly string[];
+  code: readonly string[];
+  metres: readonly string[];
+  date: readonly string[];
+};
+
+export const EXCEL_LENGTH_SHEETS: Partial<Record<ExcelKind, LengthSheetSpec>> = {
+  INSTRUMENTATION: {
+    sheetNames: ["Table"],
+    code: ["CABLE TAG", "TAG"],
+    metres: ["PULLED [m]", "Metros tendidos"],
+    date: ["DATE", "Fecha"],
+  },
+};
+
 /** "  Fecha  de Tendído " → "fecha de tendido": how two headers are compared. */
 export function normalizeHeader(text: string): string {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -152,7 +174,7 @@ export const excelStatusRowSchema = z.object({
   company: z.string().trim().min(1).max(TEXT_LIMIT).nullable(),
   reel: z.string().trim().min(1).max(TEXT_LIMIT).nullable(),
   reelStatus: z.string().trim().min(1).max(TEXT_LIMIT).nullable(),
-  /** Real metres of the whole circuit (electrical only). */
+  /** Real metres of the whole circuit (one section in instrumentation). */
   actualLengthTotalM: z.number().positive().max(10_000_000).nullable(),
   /** Number of sections of the circuit: the cable of each one has total / sections metres. */
   sections: z.number().int().min(1).max(1000).nullable(),
@@ -167,12 +189,105 @@ export type ExcelReadResult =
   | { ok: true; kind: ExcelKind; rows: ExcelStatusRow[]; ignored: ExcelIgnoredRow[] }
   | { ok: false; kind: ExcelKind; missingColumns: string[] };
 
+/** The real metres of each cable, read from the sheet of the pullings. */
+export type ExcelLengths = {
+  metres: ReadonlyMap<string, number>;
+  /** Pullings of a cable written down again, and the one used instead. */
+  ignored: ExcelIgnoredRow[];
+};
+
+export type ExcelLengthsResult =
+  { ok: true; lengths: ExcelLengths } | { ok: false; missingColumns: string[] };
+
+/** Position of the first header with any of the names, or -1. */
+function columnOf(headers: readonly string[], names: readonly string[]): number {
+  return names.map((name) => headers.indexOf(normalizeHeader(name))).find((at) => at >= 0) ?? -1;
+}
+
+/**
+ * Reads the sheet of the pullings of a kind. A cable written down twice with exactly the same
+ * row counts once; with different rows, the newest pulling is used (the latest date, or the
+ * lower row when the dates do not tell) and the other one goes to `ignored`. Rows without a
+ * valid code or without metres are skipped.
+ */
+export function readExcelLengths(
+  kind: ExcelKind,
+  table: readonly ExcelCell[][],
+): ExcelLengthsResult {
+  const spec = EXCEL_LENGTH_SHEETS[kind];
+  const [header = [], ...body] = table;
+  const headers = header.map((cell) => (typeof cell === "string" ? normalizeHeader(cell) : ""));
+  const code = spec ? columnOf(headers, spec.code) : -1;
+  const metres = spec ? columnOf(headers, spec.metres) : -1;
+  const date = spec ? columnOf(headers, spec.date) : -1;
+  const missingColumns = spec
+    ? [
+        [code, spec.code],
+        [metres, spec.metres],
+        [date, spec.date],
+      ]
+        .filter(([at]) => at === -1)
+        .map(([, names]) => (names as readonly string[])[0]!)
+    : [];
+  if (!spec || missingColumns.length > 0) return { ok: false, missingColumns };
+
+  type Pulling = { row: number; day: string | null; metres: number; content: string };
+  const used = new Map<string, Pulling>();
+  const ignored: ExcelIgnoredRow[] = [];
+  const sheet = spec.sheetNames[0];
+
+  body.forEach((values, offset) => {
+    const row = offset + 2;
+    const parsed = cableCodeSchema.safeParse(text(values[code]));
+    const pulled = positive(values[metres]);
+    if (!parsed.success || pulled === null) return;
+    const pulling: Pulling = {
+      row,
+      day: day(values[date]),
+      metres: pulled,
+      content: JSON.stringify(values.map((cell) => cell ?? null)),
+    };
+    const before = used.get(parsed.data);
+    if (before === undefined) {
+      used.set(parsed.data, pulling);
+      return;
+    }
+    // Exactly the same row twice: it is one pulling.
+    if (before.content === pulling.content) return;
+    const newer =
+      before.day !== null && pulling.day !== null && before.day !== pulling.day
+        ? pulling.day > before.day
+        : true;
+    const [kept, dropped] = newer ? [pulling, before] : [before, pulling];
+    used.set(parsed.data, kept);
+    ignored.push({
+      row: dropped.row,
+      code: parsed.data,
+      reason: `Tendido repetido en la hoja «${sheet}»: se usa la fila ${kept.row}`,
+    });
+  });
+
+  return {
+    ok: true,
+    lengths: {
+      metres: new Map([...used].map(([cable, pulling]) => [cable, pulling.metres])),
+      ignored,
+    },
+  };
+}
+
 /**
  * Reads the sheet of a kind, given as rows of cells with the header first. Rows without a
  * code are skipped silently (blank lines); rows with an ignored status («Check», «Error»), no
  * status, an invalid code or a code already read are returned in `ignored` with the reason.
+ * The real metres come from the sheet itself (electrical) or from `lengths`, read apart from
+ * the sheet of the pullings (instrumentation).
  */
-export function readExcelStatus(kind: ExcelKind, table: readonly ExcelCell[][]): ExcelReadResult {
+export function readExcelStatus(
+  kind: ExcelKind,
+  table: readonly ExcelCell[][],
+  lengths?: ExcelLengths,
+): ExcelReadResult {
   const [header = [], ...body] = table;
   const headers = header.map((cell) => (typeof cell === "string" ? normalizeHeader(cell) : ""));
   const index = new Map<ExcelField, number>();
@@ -222,7 +337,11 @@ export function readExcelStatus(kind: ExcelKind, table: readonly ExcelCell[][]):
     seen.set(code, row);
 
     const laid = meaning.installationStatus === "LAID";
-    const total = laid ? positive(cell(values, "actualLength")) : null;
+    const total = !laid
+      ? null
+      : lengths
+        ? (lengths.metres.get(code) ?? null)
+        : positive(cell(values, "actualLength"));
     const sections = wholeNumber(cell(values, "sections"));
     rows.push({
       row,
@@ -238,7 +357,7 @@ export function readExcelStatus(kind: ExcelKind, table: readonly ExcelCell[][]):
     });
   });
 
-  return { ok: true, kind, rows, ignored };
+  return { ok: true, kind, rows, ignored: [...ignored, ...(lengths?.ignored ?? [])] };
 }
 
 // ---------------------------------------------------------------------------

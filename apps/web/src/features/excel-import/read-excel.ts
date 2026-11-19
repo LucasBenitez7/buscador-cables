@@ -1,11 +1,14 @@
 import {
   EXCEL_KINDS,
+  EXCEL_LENGTH_SHEETS,
   EXCEL_SHEETS,
   excelDateFromFileName,
+  readExcelLengths,
   readExcelStatus,
   type ExcelCell,
   type ExcelIgnoredRow,
   type ExcelKind,
+  type ExcelLengths,
   type ExcelStatusRow,
 } from "@cables/shared";
 
@@ -34,9 +37,35 @@ const readWithLibrary: SheetReader = async (file, sheet) => {
   }
 };
 
+/** The real metres of a kind that keeps them in another sheet; a message when they cannot be read. */
+async function readLengths(
+  file: File,
+  kind: ExcelKind,
+  readSheet: SheetReader,
+): Promise<{ ok: true; lengths?: ExcelLengths } | { ok: false; message: string }> {
+  const spec = EXCEL_LENGTH_SHEETS[kind];
+  if (!spec) return { ok: true };
+  for (const sheet of spec.sheetNames) {
+    const table = await readSheet(file, sheet);
+    if (!table) continue;
+    const result = readExcelLengths(kind, table);
+    if (!result.ok) {
+      return {
+        ok: false,
+        message: `Faltan columnas en la hoja «${sheet}»: ${result.missingColumns.join(", ")}.`,
+      };
+    }
+    return { ok: true, lengths: result.lengths };
+  }
+  return {
+    ok: false,
+    message: `El Excel no tiene la hoja «${spec.sheetNames[0]}» con los metros tendidos.`,
+  };
+}
+
 /**
  * Reads an Excel of the day in the browser: finds which of the two it is by its sheet, and
- * reads only that sheet (the files have many). The server validates it all again.
+ * reads only the sheets it needs (the files have many). The server validates it all again.
  */
 export async function readExcelFile(
   file: File,
@@ -47,7 +76,9 @@ export async function readExcelFile(
       for (const sheet of EXCEL_SHEETS[kind].sheetNames) {
         const table = await readSheet(file, sheet);
         if (!table) continue;
-        const result = readExcelStatus(kind, table);
+        const lengths = await readLengths(file, kind, readSheet);
+        if (!lengths.ok) return lengths;
+        const result = readExcelStatus(kind, table, lengths.lengths);
         if (!result.ok) {
           return {
             ok: false,

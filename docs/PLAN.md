@@ -976,7 +976,8 @@ proyecto llega en dos Excel (eléctrico e instrumentación) que se actualizan ca
 - **Cables nuevos**: los que están en el Excel y no en la web se crean con lo que trae el
   Excel; lo que solo traen los PDF (recorrido, conexionado) queda vacío.
 - **Datos nuevos**: empresa que tendió el cable (catálogo editable), bobina y su estado, y
-  metros reales (solo el Excel eléctrico; por tramo y en total). Con metros reales, la ficha
+  metros reales (por tramo y en total en el eléctrico; en instrumentación, de la hoja «Table»).
+  Con metros reales, la ficha
   muestra «Longitud prevista» y «Longitud real»; sin ellos, solo «Longitud».
 
 ### Plan final (2026-11-19)
@@ -1062,6 +1063,10 @@ se usa lo mismo (con un componente común), y no hay textos de ayuda en la inter
 - [x] Decidir varias discrepancias a la vez: casillas, «Seleccionar todas» (todas las
       pendientes) y las dos decisiones para las marcadas; cada una con su evento.
 - [x] Tests, E2E y manual de usuario.
+- [x] Metros reales de instrumentación (decidido el 2026-11-19): salen de la hoja «Table»,
+      columna «PULLED [m]», una fila por tirada. Una tirada apuntada dos veces exactamente
+      igual cuenta una; si las filas difieren, vale la más nueva (fecha «DATE» más reciente, o
+      la fila más abajo si la fecha no lo dice) y la otra queda entre las ignoradas.
 - [ ] Al cerrar la fase, resumir esta sección: dejar las tareas y las decisiones que sigan
       valiendo, y quitar los planes intermedios y el repaso de estilos.
 
