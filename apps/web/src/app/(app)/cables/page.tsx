@@ -4,11 +4,14 @@ import {
   CABLE_FIELD_ACTIONS,
   canRunCableAction,
   hasPermission,
+  cableSearchQuery,
   parseCableSearch,
 } from "@cables/shared";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
+import { SelectionProvider } from "@/components/selection";
 import { Button } from "@/components/ui/button";
 import { SearchFilters } from "@/features/search/components/search-filters";
+import { selectAllCablesAction } from "@/features/search/actions";
 import { SearchResults } from "@/features/search/components/search-results";
 import { deletedCableCode } from "@/lib/route-params";
 import { getSearchOptions, searchCables } from "@/server/cables/search";
@@ -48,13 +51,21 @@ export default async function CablesPage({ searchParams }: { searchParams: Searc
 
       <PendingListProvider>
         <SearchFilters search={search} options={options} />
-        <PendingResults>
-          <SearchResults
-            search={search}
-            result={result}
-            actions={canAct ? { permissions: user.permissions } : undefined}
-          />
-        </PendingResults>
+        <SelectionProvider
+          title="Cables"
+          items={result.items.map((cable) => ({ key: cable.id, label: cable.code }))}
+          total={result.total}
+          selectAll={selectAllCablesAction.bind(null, search)}
+          resetKey={cableSearchQuery(search, { page: undefined, size: undefined })}
+        >
+          <PendingResults>
+            <SearchResults
+              search={search}
+              result={result}
+              actions={canAct ? { permissions: user.permissions } : undefined}
+            />
+          </PendingResults>
+        </SelectionProvider>
       </PendingListProvider>
     </div>
   );

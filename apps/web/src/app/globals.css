@@ -156,3 +156,49 @@
     cursor: not-allowed;
   }
 }
+
+/*
+ * «Imprimir» en las listas (fase 15): solo la hoja con los códigos elegidos, en negro sobre
+ * blanco. Es lo único que no sigue el tema oscuro, porque va al papel o a un PDF.
+ */
+[data-print-sheet] {
+  display: none;
+}
+
+@media print {
+  html.printing-selection {
+    color-scheme: light;
+  }
+  html.printing-selection body {
+    background: #fff;
+  }
+  html.printing-selection body > :not([data-print-sheet]) {
+    display: none !important;
+  }
+  html.printing-selection [data-print-sheet] {
+    display: block;
+    color: #000;
+    font-family: var(--font-geist-sans), sans-serif;
+  }
+  [data-print-sheet] h1 {
+    font-size: 16pt;
+    font-weight: 600;
+  }
+  [data-print-sheet] p {
+    margin: 2pt 0 12pt;
+    font-size: 10pt;
+    color: #444;
+  }
+  [data-print-sheet] ol {
+    columns: 3;
+    column-gap: 16pt;
+    list-style: none;
+    padding: 0;
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 10pt;
+    line-height: 1.6;
+  }
+  [data-print-sheet] li {
+    break-inside: avoid;
+  }
+}

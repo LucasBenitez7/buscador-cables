@@ -11,6 +11,13 @@ import {
 import { ListSummary } from "@/components/list-summary";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
+import {
+  SelectAllRow,
+  SelectCell,
+  SelectCheckbox,
+  SelectHeaderCell,
+  SelectionToggle,
+} from "@/components/selection";
 import { PendingLink } from "@/components/pending-list";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableActions } from "@/features/cables/components/cable-actions";
@@ -70,14 +77,17 @@ export function SearchResults({ search, result, actions }: Props) {
       ) : null}
       <ListSummary
         aside={
-          result.total > SEARCH_PAGE_SIZES[0] ? (
-            <PageSizePicker
-              sizes={SEARCH_PAGE_SIZES}
-              size={search.size}
-              page={result.page}
-              href={(size, page) => `/cables${cableSearchQuery(search, { size, page })}`}
-            />
-          ) : null
+          <div className="flex flex-wrap items-center gap-3">
+            <SelectionToggle />
+            {result.total > SEARCH_PAGE_SIZES[0] ? (
+              <PageSizePicker
+                sizes={SEARCH_PAGE_SIZES}
+                size={search.size}
+                page={result.page}
+                href={(size, page) => `/cables${cableSearchQuery(search, { size, page })}`}
+              />
+            ) : null}
+          </div>
         }
       >
         <span className="text-foreground font-medium">{result.total.toLocaleString("es-ES")}</span>{" "}
@@ -86,16 +96,20 @@ export function SearchResults({ search, result, actions }: Props) {
       </ListSummary>
 
       {/* Móvil: tarjetas, más fáciles de leer y de pulsar que una tabla estrecha. */}
+      <SelectAllRow />
       <ul className="space-y-3 md:hidden">
         {result.items.map((cable) => (
           <li key={cable.id} className="bg-card space-y-2 rounded-lg border p-3 text-sm">
-            <div className="flex items-start justify-between gap-3">
-              <Link
-                href={`/cables/${cable.id}`}
-                className={`${CODE_LINK} -m-1 rounded-md p-1 text-base font-semibold`}
-              >
-                {cable.code}
-              </Link>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <SelectCheckbox item={{ key: cable.id, label: cable.code }} />
+                <Link
+                  href={`/cables/${cable.id}`}
+                  className={`${CODE_LINK} -m-1 rounded-md p-1 text-base font-semibold`}
+                >
+                  {cable.code}
+                </Link>
+              </div>
               <CableStatusBadges
                 installationStatus={cable.installationStatus}
                 connectionStatus={cable.connectionStatus}
@@ -124,6 +138,7 @@ export function SearchResults({ search, result, actions }: Props) {
         <table className="w-full text-left text-sm">
           <thead className="bg-muted/50 text-muted-foreground text-xs tracking-wide uppercase">
             <tr>
+              <SelectHeaderCell />
               {header("Código", "code")}
               <th scope="col" className="hidden px-3 py-2 font-medium md:table-cell">
                 Tipo
@@ -146,6 +161,7 @@ export function SearchResults({ search, result, actions }: Props) {
           <tbody>
             {result.items.map((cable) => (
               <tr key={cable.id} className="hover:bg-muted/40 border-t align-top transition-colors">
+                <SelectCell item={{ key: cable.id, label: cable.code }} />
                 <td className="px-3 py-2 font-mono font-medium whitespace-nowrap">
                   <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
                     {cable.code}

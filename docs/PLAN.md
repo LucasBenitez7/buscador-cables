@@ -995,6 +995,16 @@ Añadida el 2026-11-19. Rama `feat/f15-lists`. Va antes que guardados y roles (d
 2026-11-19). Toca todas las pantallas con listas o tablas (cables, equipos y su ficha,
 bandejas, ubicaciones…).
 
+Decisiones (2026-11-19):
+
+- **Elegir**: un botón «Seleccionar» enseña las casillas y una barra fija abajo con cuántas
+  hay, «Copiar» e «Imprimir». Sin él, la lista se ve y se pulsa como siempre.
+- **Seleccionar todas**: marca la página; si hay más, ofrece «Seleccionar las N que cumplen los
+  filtros» (las da el servidor). Lo elegido se mantiene al cambiar de página y se vacía al
+  cambiar los filtros.
+- **Imprimir**: el diálogo del navegador con una hoja limpia (título, fecha y los códigos);
+  desde ahí se imprime o se guarda como PDF. Sin dependencias nuevas.
+
 - [ ] Elegir filas: casillas en cada fila y «Seleccionar todas».
 - [ ] «Imprimir»: PDF solo con los nombres o códigos principales de lo elegido (sin más datos).
 - [ ] «Copiar»: copia esos mismos nombres y avisa con «✓ Copiado».
