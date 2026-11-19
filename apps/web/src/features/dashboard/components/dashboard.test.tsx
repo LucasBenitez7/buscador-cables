@@ -1,8 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ActivityEntry } from "@/server/activity/service";
 import type { CableProgress, Dashboard as DashboardData } from "@/server/dashboard/service";
 import { Dashboard } from "./dashboard";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const progress: CableProgress = {
   total: 200,
@@ -43,14 +45,8 @@ describe("Dashboard", () => {
   it("shows everybody the quick search and the progress of the works", () => {
     render(<Dashboard data={viewer} />);
 
-    expect(screen.getByRole("search", { name: "Buscar un cable" })).toHaveAttribute(
-      "action",
-      "/cables",
-    );
-    expect(screen.getByRole("search", { name: "Buscar una bandeja" })).toHaveAttribute(
-      "action",
-      "/trays",
-    );
+    // Un solo buscador para todo; sin JavaScript, va a la búsqueda de cables.
+    expect(screen.getByRole("search", { name: "Buscar" })).toHaveAttribute("action", "/cables");
     expect(screen.getByRole("progressbar", { name: "Tendidos" })).toHaveAttribute(
       "aria-valuenow",
       "25",
