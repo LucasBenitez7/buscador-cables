@@ -1041,6 +1041,26 @@ que su aviso se vea.
 
 ---
 
+## Fase 17 — Repaso de la interfaz (v1.7.0)
+
+Añadida el 2026-11-19. Rama `feat/f17-ui-polish`. Cada punto se enseña antes en capturas (antes
+y después) y se aplica cuando el usuario da el visto bueno.
+
+- [x] Cajas de las fichas (equipo, ubicación, cable, bandeja): título y contenido unidos, claro
+      abierto y cerrado.
+- [ ] Selección igual en todas las listas (cables, bandejas, equipos, ubicaciones, guardados).
+- [ ] «Seleccionar todos» sin guion: vacía o marcada.
+- [ ] Ubicaciones: el recuento dice qué cuenta (las primeras ramas frente al total).
+- [ ] Una sola «Actividad» en el menú; quien ve la de todos filtra por persona.
+- [ ] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».
+- [ ] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
+- [ ] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.
+- [ ] Guardar en carpeta desde la ficha, sin confundirlo con guardar el cable.
+- [ ] Inicio: «Estado de los cables» con títulos claros y bloques mejor separados.
+- [ ] Tests y E2E.
+
+---
+
 ## Entornos
 
 | Entorno    | Web            | Base de datos        | Email   | Rama     |
