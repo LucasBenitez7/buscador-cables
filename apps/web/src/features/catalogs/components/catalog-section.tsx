@@ -220,7 +220,7 @@ function ItemForm({ kind, initial, submitLabel, pending, onSubmit, onCancel }: F
         {submitLabel}
       </Button>
       {onCancel ? (
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancelar
         </Button>
       ) : null}

@@ -1048,8 +1048,8 @@ y después) y se aplica cuando el usuario da el visto bueno.
 
 - [x] Cajas de las fichas (equipo, ubicación, cable, bandeja): título y contenido unidos, claro
       abierto y cerrado.
-- [ ] Selección igual en todas las listas (cables, bandejas, equipos, ubicaciones, guardados).
-- [ ] «Seleccionar todos» sin guion: vacía o marcada.
+- [x] Selección igual en todas las listas (cables, bandejas, equipos, ubicaciones, guardados).
+- [x] «Seleccionar todos» sin guion: vacía o marcada.
 - [ ] Ubicaciones: el recuento dice qué cuenta (las primeras ramas frente al total).
 - [ ] Una sola «Actividad» en el menú; quien ve la de todos filtra por persona.
 - [ ] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».

@@ -189,7 +189,10 @@ export default async function EquipmentPage({
           <PendingResults className="space-y-6">
             <div className="space-y-3">
               <ListSummary aside={selectable.length > 0 ? <SelectionAside /> : null}>
-                {filtered ? `${shown} de ${totals.ends} cumplen los filtros.` : null}
+                {/* Siempre dice algo: «Seleccionar» va a su derecha, nunca suelto. */}
+                {filtered
+                  ? `${shown} de ${totals.ends} cumplen los filtros.`
+                  : `${totals.ends} ${totals.ends === 1 ? "cable" : "cables"} en ${groups.length} ${groups.length === 1 ? "regletero" : "regleteros"}.`}
               </ListSummary>
               <SelectAllRow />
             </div>

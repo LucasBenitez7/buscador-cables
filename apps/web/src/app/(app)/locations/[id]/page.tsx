@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
-import { ListSummary } from "@/components/list-summary";
 import {
   SelectAllRow,
   SelectCheckbox,
-  SelectionAside,
   SelectionProvider,
+  SelectionToggle,
 } from "@/components/selection";
 import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { selectAllCablesAction } from "@/features/search/actions";
@@ -123,17 +122,16 @@ export default async function LocationPage({ params }: { params: Params }) {
       </Section>
 
       {location.someCables.length > 0 ? (
-        <Section title={`Cables (${location.cables})`} collapsible>
-          <SelectionProvider
-            title={`${location.name} · cables`}
-            items={location.someCables.map((cable) => ({ key: cable.id, label: cable.code }))}
-            total={location.cables}
-            selectAll={selectAllCablesAction.bind(null, { location: location.id })}
-            scope="shown"
-            actions={<SaveChosenButton kind="CABLE" />}
-          >
+        <SelectionProvider
+          title={`${location.name} · cables`}
+          items={location.someCables.map((cable) => ({ key: cable.id, label: cable.code }))}
+          total={location.cables}
+          selectAll={selectAllCablesAction.bind(null, { location: location.id })}
+          scope="shown"
+          actions={<SaveChosenButton kind="CABLE" />}
+        >
+          <Section title={`Cables (${location.cables})`} collapsible tools={<SelectionToggle />}>
             <div className="space-y-3">
-              <ListSummary aside={<SelectionAside />}>{null}</ListSummary>
               <SelectAllRow />
               <ShowMore
                 as="ul"
@@ -164,21 +162,24 @@ export default async function LocationPage({ params }: { params: Params }) {
                 ))}
               />
             </div>
-          </SelectionProvider>
-        </Section>
+          </Section>
+        </SelectionProvider>
       ) : null}
 
       {location.children.length > 0 ? (
-        <Section title={`Contiene (${location.children.length})`} collapsible>
-          <SelectionProvider
-            title={`${location.name} · contiene`}
-            items={location.children.map((child) => ({
-              key: child.id,
-              label: locationLabel(child),
-            }))}
+        <SelectionProvider
+          title={`${location.name} · contiene`}
+          items={location.children.map((child) => ({
+            key: child.id,
+            label: locationLabel(child),
+          }))}
+        >
+          <Section
+            title={`Contiene (${location.children.length})`}
+            collapsible
+            tools={<SelectionToggle />}
           >
             <div className="space-y-3">
-              <ListSummary aside={<SelectionAside />}>{null}</ListSummary>
               <SelectAllRow />
               <ul className="bg-card divide-y rounded-lg border">
                 {location.children.map((child) => (
@@ -199,8 +200,8 @@ export default async function LocationPage({ params }: { params: Params }) {
                 ))}
               </ul>
             </div>
-          </SelectionProvider>
-        </Section>
+          </Section>
+        </SelectionProvider>
       ) : null}
     </article>
   );

@@ -63,7 +63,7 @@ export function LocationMoveForm({ location, targets, onDone }: Props) {
         <Button type="submit" size="sm" disabled={pending || !parentId}>
           {pending ? "Moviendo…" : "Mover"}
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+        <Button type="button" size="sm" variant="secondary" onClick={onDone}>
           Cancelar
         </Button>
       </div>

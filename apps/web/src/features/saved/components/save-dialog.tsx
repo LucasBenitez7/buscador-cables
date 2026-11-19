@@ -143,7 +143,7 @@ export function SaveDialog({ refs, what, trigger, onSaved }: Props) {
               </p>
             ) : null}
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={!canSave || saving || loading}>

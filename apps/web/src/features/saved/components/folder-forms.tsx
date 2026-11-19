@@ -107,7 +107,7 @@ export function FolderActions({ id, name }: { id: string; name: string }) {
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando…" : "Guardar"}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => setRenaming(false)}>
+          <Button type="button" variant="secondary" onClick={() => setRenaming(false)}>
             Cancelar
           </Button>
         </div>

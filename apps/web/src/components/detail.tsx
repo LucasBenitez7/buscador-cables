@@ -49,6 +49,7 @@ export function SectionLink({ href, children }: { href: string; children: ReactN
 export function Section({
   title,
   action,
+  tools,
   children,
   collapsible = false,
   defaultOpen = true,
@@ -56,6 +57,9 @@ export function Section({
 }: {
   title: string;
   action?: ReactNode;
+  /** On the right of the bar of a collapsible block, before «Ocultar», only while it is open
+   *  («Seleccionar»). */
+  tools?: ReactNode;
   children: ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
@@ -78,6 +82,9 @@ export function Section({
             <h2 className="text-base font-semibold">{title}</h2>
             {action}
           </span>
+          {tools ? (
+            <span className="hidden shrink-0 group-open/section:inline-flex">{tools}</span>
+          ) : null}
           <span className="text-primary inline-flex shrink-0 items-center gap-1 text-sm font-medium">
             <span className="group-open/section:hidden">Mostrar</span>
             <span className="hidden group-open/section:inline">Ocultar</span>
