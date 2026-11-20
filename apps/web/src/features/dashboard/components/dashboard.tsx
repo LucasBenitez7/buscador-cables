@@ -268,7 +268,7 @@ function Meter({
 function StatusPanel({ progress, trays }: { progress: CableProgress; trays: number }) {
   return (
     <Panel title="Estado de los cables">
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <StatusList
           title="Instalación"
           rows={INSTALLATION_STATUSES.map((status) => ({
@@ -313,6 +313,17 @@ function StatusPanel({ progress, trays }: { progress: CableProgress; trays: numb
   );
 }
 
+/** The bar of a state, in the colour of its badge: the grey ones stay grey. */
+const BAR_COLOR: Record<(typeof INSTALLATION_VARIANT)[keyof typeof INSTALLATION_VARIANT], string> =
+  {
+    outline: "bg-muted-foreground/60",
+    success: "bg-success",
+    warning: "bg-warning",
+    destructive: "bg-destructive",
+    laid: "bg-laid",
+    pending: "bg-pending",
+  };
+
 function StatusList({
   title,
   rows,
@@ -329,8 +340,9 @@ function StatusList({
   total: number;
 }) {
   return (
-    <div className="space-y-2">
-      <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{title}</h3>
+    // Cada estado en su propia caja, con su título claro: se ve qué filas van con cuál.
+    <div className="bg-background space-y-2 rounded-lg border p-3">
+      <h3 className="border-b pb-2 text-sm font-semibold">{title}</h3>
       <ul className="space-y-1">
         {rows.map((row) => (
           <li key={row.key}>
@@ -343,7 +355,7 @@ function StatusList({
               </Badge>
               <span className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full" aria-hidden>
                 <span
-                  className="bg-muted-foreground/60 block h-full rounded-full"
+                  className={cn("block h-full rounded-full", BAR_COLOR[row.variant])}
                   style={{ width: `${percent(row.value, total)}%` }}
                 />
               </span>

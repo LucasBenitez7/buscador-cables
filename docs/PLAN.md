@@ -1057,7 +1057,7 @@ y después) y se aplica cuando el usuario da el visto bueno.
 - [x] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
 - [x] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.
 - [ ] Guardar en carpeta desde la ficha, sin confundirlo con guardar el cable.
-- [ ] Inicio: «Estado de los cables» con títulos claros y bloques mejor separados.
+- [x] Inicio: «Estado de los cables» con títulos claros y bloques mejor separados.
 - [ ] Tests y E2E.
 
 ---
