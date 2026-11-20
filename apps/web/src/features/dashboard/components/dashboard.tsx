@@ -8,6 +8,7 @@ import {
   INSTALLATION_STATUS_LABELS,
   TEST_STATUSES,
   TEST_STATUS_LABELS,
+  distanceText,
 } from "@cables/shared";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +40,7 @@ const percent = (value: number, total: number) =>
  * `getDashboard`): what a role may not see never reaches the browser.
  */
 export function Dashboard({ data }: { data: DashboardData }) {
-  const { progress, lastExcel, toReview, myActivity, team, admin } = data;
+  const { progress, meters, lastExcel, toReview, myActivity, team, admin } = data;
 
   // Columna lateral: lo más útil para cada rol junto al avance de la obra.
   const side = admin ? (
@@ -100,7 +101,7 @@ export function Dashboard({ data }: { data: DashboardData }) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <ProgressPanel progress={progress} lastExcel={lastExcel} />
+          <ProgressPanel progress={progress} meters={meters} lastExcel={lastExcel} />
         </div>
         {side}
       </div>
@@ -162,9 +163,11 @@ function Panel({
 
 function ProgressPanel({
   progress,
+  meters,
   lastExcel,
 }: {
   progress: CableProgress;
+  meters: DashboardData["meters"];
   lastExcel: DashboardData["lastExcel"];
 }) {
   const { total, laid, connected, installation } = progress;
@@ -190,6 +193,17 @@ function ProgressPanel({
         ) : null}
       </div>
       <Meter label="Tendidos" value={laid} total={total} barClassName={TONE_FILL.laid} />
+      {/* En metros (fase 17): el detalle por nivel, la desviación y las bobinas, en «Metros». */}
+      {meters.planned > 0 ? (
+        <Meter
+          label="Metros tendidos"
+          value={meters.laid}
+          total={meters.planned}
+          text={`${distanceText(meters.laid)} de ${distanceText(meters.planned)}`}
+          href="/meters"
+          barClassName={TONE_FILL.laid}
+        />
+      ) : null}
       <Meter
         label="Conectados"
         value={connected}
@@ -233,21 +247,33 @@ function Meter({
   label,
   value,
   total,
+  text,
+  href,
   barClassName,
 }: {
   label: string;
   value: number;
   total: number;
+  /** What follows the percent; by default «12 de 4524». */
+  text?: string;
+  /** Where the label leads, when there is more to see. */
+  href?: string;
   barClassName: string;
 }) {
   const pct = percent(value, total);
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-3 text-sm">
-        <span className="font-medium">{label}</span>
+        {href ? (
+          <Link href={href} className={cn(TEXT_LINK_SM, "font-medium")}>
+            {label}
+          </Link>
+        ) : (
+          <span className="font-medium">{label}</span>
+        )}
         <span className="text-muted-foreground">
           <span className="text-foreground font-semibold tabular-nums">{pct} %</span> ·{" "}
-          {count(value)} de {count(total)}
+          {text ?? `${count(value)} de ${count(total)}`}
         </span>
       </div>
       <div

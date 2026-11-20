@@ -40,6 +40,7 @@ const entry: ActivityEntry = {
 
 const viewer: DashboardData = {
   progress,
+  meters: { planned: 0, laid: 0 },
   lastExcel: [],
   toReview: null,
   myActivity: null,
@@ -62,6 +63,26 @@ describe("Dashboard", () => {
     expect(screen.getByText("Excel del 16/11/2026")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("3 discrepancias nuevas pendientes");
     expect(screen.getByRole("link", { name: "Revisar" })).toHaveAttribute("href", "/review");
+  });
+
+  it("shows the metres laid of the planned ones, leading to «Metros»", () => {
+    render(<Dashboard data={{ ...viewer, meters: { planned: 403_900, laid: 169_200 } }} />);
+
+    expect(screen.getByRole("link", { name: "Metros tendidos" })).toHaveAttribute(
+      "href",
+      "/meters",
+    );
+    expect(screen.getByText(/169,2 km de 403,9 km/)).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Metros tendidos" })).toHaveAttribute(
+      "aria-valuenow",
+      "42",
+    );
+  });
+
+  it("leaves the metres out while the lists bring none", () => {
+    render(<Dashboard data={viewer} />);
+
+    expect(screen.queryByText("Metros tendidos")).toBeNull();
   });
 
   it("shows no notice when nothing waits", () => {

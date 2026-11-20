@@ -16,6 +16,7 @@ import {
   type TestStatus,
 } from "@cables/shared";
 import { listActivity, type ActivityEntry } from "@/server/activity/service";
+import { getMetersProgress } from "@/server/meters/service";
 import { hasDrawingImage } from "@/server/drawings/store";
 import { countNewDiscrepancies } from "@/server/excel-import/discrepancies";
 import { getHealth, type HealthStatus } from "@/server/health";
@@ -42,6 +43,8 @@ export type CableProgress = {
  */
 export type Dashboard = {
   progress: CableProgress;
+  /** Metres laid of the planned ones (fase 17): the details are in «Metros». */
+  meters: { planned: number; laid: number };
   /** The date of the last Excel applied of each kind: how recent the progress is. */
   lastExcel: { kind: string; label: string; excelDay: string }[];
   /** Pending discrepancies new since they last opened «Pendientes de revisar». */
@@ -152,13 +155,22 @@ export async function getDashboard(user: {
   permissions: readonly string[];
 }): Promise<Dashboard> {
   const canAct = CABLE_FIELD_ACTIONS.some((action) => canRunCableAction(user, action));
-  const [progress, lastExcel, toReview, mine, team, admin] = await Promise.all([
+  const [progress, meters, lastExcel, toReview, mine, team, admin] = await Promise.all([
     getCableProgress(),
+    getMetersProgress(),
     getLastExcel(),
     hasPermission(user, "cable:correct") ? countNewDiscrepancies(user.id) : null,
     canAct ? listActivity({ actor: user.id }, RECENT) : null,
     hasPermission(user, "activity:view") ? getTeamSummary() : null,
     hasPermission(user, "user:manage") ? getAdminSummary() : null,
   ]);
-  return { progress, lastExcel, toReview, myActivity: mine?.entries ?? null, team, admin };
+  return {
+    progress,
+    meters: { planned: meters.planned, laid: meters.laid },
+    lastExcel,
+    toReview,
+    myActivity: mine?.entries ?? null,
+    team,
+    admin,
+  };
 }

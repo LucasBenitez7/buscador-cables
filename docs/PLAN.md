@@ -1058,6 +1058,13 @@ y después) y se aplica cuando el usuario da el visto bueno.
 - [x] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.
 - [ ] Guardar en carpeta desde la ficha, sin confundirlo con guardar el cable.
 - [x] Inicio: «Estado de los cables» con títulos claros y bloques mejor separados.
+- [x] Metros reales frente a previstos: cuánto se desvía cada cable del listado y el total por
+      área y por nivel, para detectar errores de medida o de recorrido.
+- [x] Avance en metros, no solo en cables: «llevamos 180 km tendidos de 400 previstos».
+- [x] Bobinas: qué cables salieron de cada una y cuántos metros se han gastado, para saber qué
+      revisar si una sale defectuosa.
+- [x] Menú: en la fila, lo de cada día (con «Excel del día»); en «Gestión», primero «Metros» y
+      «Actividad». En el móvil, una sola lista en ese orden.
 - [ ] Tests y E2E.
 
 ---

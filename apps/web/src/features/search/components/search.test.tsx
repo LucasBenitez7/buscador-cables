@@ -39,9 +39,11 @@ describe("SearchFilters", () => {
     expect(arrow()).toHaveClass("rotate-180");
   });
 
-  it("gives the «Equipo, color, medidas y movimientos» summary an arrow that turns when it opens", () => {
+  it("gives the «Equipo, bobina, color, medidas y movimientos» summary an arrow that turns when it opens", () => {
     render(<SearchFilters search={{}} options={options} />);
-    const summary = screen.getByText("Equipo, color, medidas y movimientos").closest("summary");
+    const summary = screen
+      .getByText("Equipo, bobina, color, medidas y movimientos")
+      .closest("summary");
 
     expect(summary?.querySelector("svg")).toHaveClass("group-open:rotate-180");
   });
@@ -85,7 +87,7 @@ describe("SearchFilters", () => {
     expect(screen.getByLabelText("Código, equipo o descripción")).toHaveValue("SH");
     expect(screen.getByLabelText("Sección (mm²): desde")).toHaveValue("2,5");
     expect(
-      screen.getByText("Equipo, color, medidas y movimientos").closest("details"),
+      screen.getByText("Equipo, bobina, color, medidas y movimientos").closest("details"),
     ).toHaveAttribute("open");
   });
 
@@ -104,9 +106,20 @@ describe("SearchFilters", () => {
     render(<SearchFilters search={{ action: "MOVED" }} options={options} />);
 
     expect(
-      screen.getByText("Equipo, color, medidas y movimientos").closest("details"),
+      screen.getByText("Equipo, bobina, color, medidas y movimientos").closest("details"),
     ).toHaveAttribute("open");
     expect(screen.getByLabelText("Qué hizo")).toHaveValue("MOVED");
+  });
+
+  it("filters by the reel the cables came out of, with the extra block open", () => {
+    render(<SearchFilters search={{ reel: "B-101" }} options={options} />);
+
+    expect(screen.getByLabelText("Bobina")).toHaveValue("B-101");
+    expect(
+      screen.getByText("Equipo, bobina, color, medidas y movimientos").closest("details"),
+    ).toHaveAttribute("open");
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    expect(push).toHaveBeenCalledWith("/cables?reel=B-101");
   });
 
   it("filters by level, by tray and by the loose ends waiting in it", () => {

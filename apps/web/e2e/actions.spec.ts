@@ -165,10 +165,10 @@ test.describe("supervisor", () => {
     await expect(mine.first()).toContainText("Corrección");
     await expect(mine.first()).toContainText("“Se retiró el cable equivocado”");
 
-    await page
-      .getByRole("navigation", { name: "Principal" })
-      .getByRole("link", { name: "Actividad", exact: true })
-      .click();
+    // La supervisora tiene «Actividad» en «Gestión» (fase 17).
+    const nav = page.getByRole("navigation", { name: "Principal" });
+    await nav.getByRole("button", { name: /^Gestión/ }).click();
+    await page.getByRole("menuitem", { name: "Actividad" }).click();
     await expect(page.getByRole("heading", { name: "Actividad" })).toBeVisible();
     const entries = page.getByRole("listitem").filter({ hasText: USERS.supervisor.name });
     await expect(entries.filter({ hasText: code })).toHaveCount(2);

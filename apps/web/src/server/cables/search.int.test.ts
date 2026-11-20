@@ -181,6 +181,14 @@ describe("searchCables: filters", () => {
     expect(await codes({ equipment: "+99BMA01" })).toEqual(["PW-50", "SH-5"]);
   });
 
+  it("finds the cables that came out of a reel, exactly", async () => {
+    await prisma.cable.update({ where: { code: "SH-5" }, data: { reel: "B-101" } });
+    await prisma.cable.update({ where: { code: "PW-50" }, data: { reel: "B-101" } });
+    await prisma.cable.update({ where: { code: "SH-10" }, data: { reel: "B-1010" } });
+
+    expect(await codes({ reel: "B-101" })).toEqual(["PW-50", "SH-5"]);
+  });
+
   it("never returns retired (soft-deleted) cables", async () => {
     expect(await codes({ q: "SH-51" })).not.toContain("SH-51");
   });

@@ -17,19 +17,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // Solo lo nuevo desde que abrió «Pendientes de revisar», y sin sumarlo al botón del menú.
   const toReview = canReview ? await countNewDiscrepancies(user.id) : 0;
 
-  // Cada uno ve solo las secciones que su rol permite.
-  const items: NavItem[] = [
-    { href: "/", label: "Inicio", match: "exact" },
-    { href: "/cables", label: "Cables", match: "prefix" },
-    { href: "/trays", label: "Bandejas", match: "prefix" },
-    { href: "/equipment", label: "Equipos", match: "prefix" },
-    { href: "/locations", label: "Ubicaciones", match: "prefix" },
-    { href: "/saved", label: "Guardados", match: "prefix" },
-    // Una sola «Actividad» para todos: quien ve la de todos elige la persona con sus filtros.
-    { href: "/activity", label: "Actividad", match: "prefix" },
-    ...(hasPermission(user, "import:run")
-      ? [{ href: "/import", label: "Excel del día", match: "prefix", place: "manage" } as const]
-      : []),
+  // Cada uno ve solo las secciones que su rol permite. Fase 17: en la fila, lo de cada día
+  // (con «Excel del día» para quien lo sube); en «Gestión», lo que se mira de vez en cuando.
+  const management: NavItem[] = [
     ...(canReview
       ? [
           {
@@ -76,6 +66,27 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           } as const,
         ]
       : []),
+  ];
+  // Quien tiene «Gestión» encuentra ahí, primero, «Metros» y «Actividad». Quien no la tiene
+  // (técnico, consulta) ve «Actividad» en la fila y llega a «Metros» desde el inicio y la ficha.
+  const withManagement = management.length > 0;
+  const items: NavItem[] = [
+    { href: "/", label: "Inicio", match: "exact" },
+    { href: "/cables", label: "Cables", match: "prefix" },
+    { href: "/trays", label: "Bandejas", match: "prefix" },
+    { href: "/equipment", label: "Equipos", match: "prefix" },
+    { href: "/locations", label: "Ubicaciones", match: "prefix" },
+    { href: "/saved", label: "Guardados", match: "prefix" },
+    ...(hasPermission(user, "import:run")
+      ? [{ href: "/import", label: "Excel del día", match: "prefix" } as const]
+      : []),
+    ...(withManagement
+      ? [
+          { href: "/meters", label: "Metros", match: "prefix", place: "manage" } as const,
+          { href: "/activity", label: "Actividad", match: "prefix", place: "manage" } as const,
+          ...management,
+        ]
+      : [{ href: "/activity", label: "Actividad", match: "prefix" } as const]),
   ];
 
   return (

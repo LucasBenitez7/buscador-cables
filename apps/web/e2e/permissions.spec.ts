@@ -91,16 +91,22 @@ test.describe("administrador", () => {
       "Equipos",
       "Ubicaciones",
       "Guardados",
-      "Actividad",
+      "Excel del día",
     ]);
-    // La administración va en "Gestión" (con el número de cuentas pendientes, si las hay): la
-    // fila cabe siempre. Ya no hay «Mi actividad» aparte (fase 17).
+    // Fase 17: en la fila, lo de cada día; en «Gestión», primero «Metros» y «Actividad», y
+    // después la administración (con el número de cuentas pendientes, si las hay).
     await nav(page)
       .getByRole("button", { name: /^Gestión/ })
       .click();
     const manage = page.getByRole("menu");
-    await expect(manage.getByRole("menuitem", { name: "Catálogos" })).toBeVisible();
-    await expect(manage.getByRole("menuitem", { name: /^Usuarios/ })).toBeVisible();
+    await expect(manage.getByRole("menuitem")).toHaveText([
+      "Metros",
+      "Actividad",
+      /^Pendientes de revisar/,
+      "Catálogos",
+      /^Usuarios/,
+      "Roles y permisos",
+    ]);
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: `Menú de ${USERS.admin.name}` }).click();
     await expect(page.getByRole("menuitem", { name: "Mi actividad" })).toHaveCount(0);

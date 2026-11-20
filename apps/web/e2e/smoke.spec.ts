@@ -26,7 +26,7 @@ test.describe("con sesión", () => {
 
       await expect(page.getByRole("heading", { name: "Inicio" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Avance de la obra" })).toBeVisible();
-      await expect(page.getByRole("progressbar", { name: "Tendidos" })).toBeVisible();
+      await expect(page.getByRole("progressbar", { name: "Tendidos", exact: true })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Tu actividad reciente" })).toBeVisible();
       await expect(page.getByTestId("health-database")).toHaveCount(0);
       await expect(page.getByRole("heading", { name: "Usuarios activos" })).toHaveCount(0);

@@ -4,6 +4,7 @@ export * from "./permissions";
 export * from "./roles";
 export * from "./users";
 export * from "./locations";
+export * from "./meters";
 export * from "./catalogs";
 export * from "./cables";
 export * from "./cable-actions";

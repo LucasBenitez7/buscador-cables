@@ -47,6 +47,7 @@ export function SearchFilters({ search, options }: Props) {
   const advancedActive = Boolean(
     search.manufacturer ||
     search.equipment ||
+    search.reel ||
     search.color ||
     hasActivityFilters(search) ||
     RANGES.some(
@@ -213,7 +214,7 @@ export function SearchFilters({ search, options }: Props) {
 
         <details open={advancedActive} className="group">
           <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-sm transition-colors outline-none select-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
-            Equipo, color, medidas y movimientos
+            Equipo, bobina, color, medidas y movimientos
             {/* Gira al abrir: en escritorio también se ve que el bloque se despliega. */}
             <ChevronDownIcon
               aria-hidden
@@ -230,6 +231,16 @@ export function SearchFilters({ search, options }: Props) {
                 autoComplete="off"
                 spellCheck={false}
                 className="font-mono uppercase"
+              />
+            </Filter>
+            <Filter label="Bobina" htmlFor="reel">
+              <Input
+                id="reel"
+                name="reel"
+                defaultValue={search.reel ?? ""}
+                placeholder="Como en el Excel"
+                autoComplete="off"
+                spellCheck={false}
               />
             </Filter>
             <Filter label="Color" htmlFor="color">
