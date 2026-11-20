@@ -21,6 +21,16 @@ export const RECOVERY_USER = {
   role: "VIEWER",
 } as const;
 
+/**
+ * Usuario solo para «Mi cuenta»: cambia su nombre y su contraseña, y cambiarla cierra sus
+ * otras sesiones, así que tampoco puede ser uno de los que guardan sesión.
+ */
+export const ACCOUNT_USER = {
+  name: "Marta Cuenta",
+  email: "cuenta@e2e.test",
+  role: "TECHNICIAN",
+} as const;
+
 export const storageStatePath = (user: UserKey) => `e2e/.auth/${user}.json`;
 
 export const LOCATIONS = {

@@ -86,6 +86,7 @@ export const USER_EVENT_ACTIONS = [
   "ROLE_CREATED",
   "ROLE_UPDATED",
   "ROLE_DELETED",
+  "NAME_CHANGED",
 ] as const;
 export type UserEventActionName = (typeof USER_EVENT_ACTIONS)[number];
 
@@ -99,6 +100,7 @@ export const USER_EVENT_ACTION_LABELS: Record<UserEventActionName, string> = {
   ROLE_CREATED: "Rol creado",
   ROLE_UPDATED: "Rol editado",
   ROLE_DELETED: "Rol borrado",
+  NAME_CHANGED: "Cambio de nombre",
 };
 
 export const DATE_SORTS = ["newest", "oldest"] as const;

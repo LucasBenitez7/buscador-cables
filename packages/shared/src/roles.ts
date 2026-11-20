@@ -4,6 +4,7 @@
  * never the protected ones, "cable:read" always in.
  */
 import { z } from "zod";
+import { isCleanLine, isCleanText } from "./text";
 import {
   PERMISSIONS,
   REQUIRED_PERMISSIONS,
@@ -33,12 +34,14 @@ export const roleFormSchema = z.object({
     .trim()
     .min(2, "El nombre debe tener al menos 2 caracteres")
     .max(40, "El nombre no puede superar 40 caracteres")
-    .regex(/^[^<>\p{Cc}]+$/u, "El nombre tiene caracteres no permitidos"),
+    .regex(/^[^<>\p{Cc}]+$/u, "El nombre tiene caracteres no permitidos")
+    .refine(isCleanLine, "El nombre tiene caracteres no permitidos"),
   description: z
     .string()
     .trim()
     .max(300, "La descripción no puede superar 300 caracteres")
     .regex(/^[^<>\p{Cc}]*$/u, "La descripción tiene caracteres no permitidos")
+    .refine(isCleanText, "La descripción tiene caracteres no permitidos")
     .nullish()
     .transform((value) => value || null),
   // "cable:read" va siempre: sin él la app no enseña nada.

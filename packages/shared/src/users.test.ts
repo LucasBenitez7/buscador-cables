@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  changeOwnNameSchema,
+  changePasswordSchema,
   changeRoleSchema,
   createUserSchema,
   setUserActiveSchema,
@@ -88,8 +90,96 @@ describe("signUpSchema", () => {
 });
 
 describe("signUpProfileSchema", () => {
+  const ZERO_WIDTH_SPACE = String.fromCodePoint(0x200b);
+  const RIGHT_TO_LEFT_OVERRIDE = String.fromCodePoint(0x202e);
+  const COMBINING_ACUTE = String.fromCodePoint(0x301);
+  const nameOf = (name: string) => signUpProfileSchema.safeParse({ name, email: "a@b.example" });
+  const errorOf = (name: string) => nameOf(name).error?.issues[0]?.message;
+
   it("rejects a one-letter name", () => {
-    expect(signUpProfileSchema.safeParse({ name: "A", email: "a@b.example" }).success).toBe(false);
+    expect(nameOf("A").success).toBe(false);
+  });
+
+  // Alguien se registró con su correo como nombre, y el historial lo enseñaba a todos.
+  it("rejects an email as the name, with a message that says so", () => {
+    expect(errorOf("luis@planta.example")).toBe("Escribe tu nombre y apellidos, no tu correo");
+    expect(errorOf("Luis Gómez <luis@planta.example>")).toBe(
+      "Escribe tu nombre y apellidos, no tu correo",
+    );
+  });
+
+  it.each([
+    "Luis 600 123 456",
+    "https://planta.example",
+    "<b>Luis</b>",
+    `Lu${ZERO_WIDTH_SPACE}is Gómez`,
+    `${RIGHT_TO_LEFT_OVERRIDE}zemóG siuL`,
+    "Luis_Gómez",
+  ])("rejects %j as a name", (name) => {
+    expect(nameOf(name).success).toBe(false);
+  });
+
+  it("rejects a name without two letters", () => {
+    expect(errorOf("A.")).toBe("El nombre debe tener al menos 2 letras");
+    expect(errorOf("--")).toBe("El nombre debe tener al menos 2 letras");
+  });
+
+  it.each([
+    "José María Núñez",
+    "Ana O'Neill-García",
+    "Mª Ángeles",
+    "François Müller",
+    "J. R. Pérez",
+  ])("accepts the real name %j", (name) => {
+    expect(nameOf(name).data?.name).toBe(name);
+  });
+
+  it("collapses spaces and line breaks, and joins accents written apart", () => {
+    expect(nameOf("  Ana   Pérez ").data?.name).toBe("Ana Pérez");
+    expect(nameOf("Luis\nGómez").data?.name).toBe("Luis Gómez");
+    expect(nameOf(`Jose${COMBINING_ACUTE}`).data?.name).toBe("José");
+  });
+
+  it("applies the same rules to the accounts an administrator creates", () => {
+    const result = createUserSchema.safeParse({ ...validUser, name: "ana@planta.example" });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+// «Mi cuenta»: las mismas reglas que el registro.
+describe("changeOwnNameSchema", () => {
+  it("normalizes a real name and rejects an email", () => {
+    expect(changeOwnNameSchema.parse({ name: "  Ana   Pérez " }).name).toBe("Ana Pérez");
+    expect(changeOwnNameSchema.safeParse({ name: "ana@planta.example" }).success).toBe(false);
+  });
+});
+
+describe("changePasswordSchema", () => {
+  const valid = {
+    currentPassword: "clave-actual-1",
+    newPassword: "clave-nueva-12",
+    confirmPassword: "clave-nueva-12",
+  };
+  const errorOf = (change: Partial<typeof valid>) =>
+    changePasswordSchema.safeParse({ ...valid, ...change }).error?.issues[0];
+
+  it("accepts a new password that is confirmed", () => {
+    expect(changePasswordSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("asks for the current password", () => {
+    expect(errorOf({ currentPassword: "" })?.message).toBe("Escribe tu contraseña actual");
+  });
+
+  it("rejects a short, unconfirmed or unchanged new password", () => {
+    expect(errorOf({ newPassword: "corta", confirmPassword: "corta" })?.path).toEqual([
+      "newPassword",
+    ]);
+    expect(errorOf({ confirmPassword: "otra-clave-12" })?.path).toEqual(["confirmPassword"]);
+    expect(
+      errorOf({ newPassword: "clave-actual-1", confirmPassword: "clave-actual-1" })?.message,
+    ).toBe("La contraseña nueva tiene que ser distinta de la actual");
   });
 });
 

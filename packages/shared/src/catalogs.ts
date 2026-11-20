@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HIDDEN_CHARACTERS_MESSAGE, isCleanLine } from "./text";
 
 /**
  * Administrable catalogs: cable types ("Potencia", "Control"…), colors (with an optional hex
@@ -22,7 +23,8 @@ const catalogNameSchema = z
     z
       .string()
       .min(1, "El nombre es obligatorio")
-      .max(80, "El nombre no puede superar 80 caracteres"),
+      .max(80, "El nombre no puede superar 80 caracteres")
+      .refine(isCleanLine, HIDDEN_CHARACTERS_MESSAGE),
   );
 
 /** "#a1b2c3" → "#A1B2C3"; empty → null. Only meaningful for colors. */

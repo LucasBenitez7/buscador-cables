@@ -50,6 +50,14 @@ describe("RegisterForm", () => {
     expect(signUpEmail).not.toHaveBeenCalled();
   });
 
+  // Alguien se registró con su correo como nombre, y el historial lo enseñaba a todos.
+  it("does not let an email be the name", async () => {
+    fill({ name: "luis@planta.example" });
+
+    await screen.findByText("Escribe tu nombre y apellidos, no tu correo");
+    expect(signUpEmail).not.toHaveBeenCalled();
+  });
+
   it("shows a rate limit message", async () => {
     signUpEmail.mockResolvedValue({ data: null, error: { status: 429 } });
 

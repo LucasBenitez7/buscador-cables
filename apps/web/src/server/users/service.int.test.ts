@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { CurrentUser } from "@/server/session";
 import {
   UserServiceError,
+  changeOwnName,
   changeUserRole,
+  getUserProfile,
   createUser,
   listUserEvents,
   listUsers,
@@ -527,5 +529,60 @@ describe("searchUserEvents", () => {
     ]);
     // The person filter also finds who made the change.
     expect((await searchUserEvents({ person: admin.id })).total).toBe(3);
+  });
+});
+
+// «Mi cuenta»: cada uno cambia su propio nombre, y el cambio queda en los cambios de cuentas.
+describe("changeOwnName", () => {
+  it("changes the name and records it, from and to", async () => {
+    const user = await insertUser("TECHNICIAN");
+
+    expect(await changeOwnName(user, { name: "Ana Pérez" })).toBe(true);
+
+    const stored = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(stored.name).toBe("Ana Pérez");
+    const [event] = await listUserEvents();
+    expect(event).toMatchObject({
+      action: "NAME_CHANGED",
+      actor: "Ana Pérez",
+      target: "Ana Pérez",
+      details: { from: user.name, to: "Ana Pérez" },
+    });
+  });
+
+  it("does nothing when the name is the same", async () => {
+    const user = await insertUser("VIEWER");
+
+    expect(await changeOwnName(user, { name: user.name })).toBe(false);
+    expect(await listUserEvents()).toHaveLength(0);
+  });
+
+  it("refuses an account that no longer exists", async () => {
+    await expect(changeOwnName({ id: randomUUID() }, { name: "Ana Pérez" })).rejects.toThrow(
+      UserServiceError,
+    );
+  });
+});
+
+describe("getUserProfile", () => {
+  it("tells the state, the date and the latest account changes of a person", async () => {
+    const user = await insertUser("TECHNICIAN");
+    await changeOwnName(user, { name: "Ana Pérez" });
+
+    const profile = await getUserProfile(user.id);
+
+    expect(profile).toMatchObject({
+      active: true,
+      pending: false,
+      activity: { total: 0, lastAt: null },
+    });
+    expect(profile?.events.map((event) => event.action)).toEqual(["NAME_CHANGED"]);
+  });
+
+  it("marks an account nobody approved yet, and is null for one that does not exist", async () => {
+    const applicant = await insertUser("VIEWER", { active: false, approved: false });
+
+    expect((await getUserProfile(applicant.id))?.pending).toBe(true);
+    expect(await getUserProfile(randomUUID())).toBeNull();
   });
 });

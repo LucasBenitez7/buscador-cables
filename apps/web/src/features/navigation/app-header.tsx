@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BrandLogo } from "@/components/brand-logo";
+import { Button } from "@/components/ui/button";
 import { SignOutButton, useSignOut } from "@/features/auth/components/sign-out-button";
 import { isActive, type NavItem } from "./nav-items";
 import { useHoverMenu } from "./use-hover-menu";
@@ -94,7 +95,7 @@ export function AppHeader({ items, user }: Props) {
             <SheetDescription className="sr-only">Secciones de la aplicación</SheetDescription>
             {/* Una sola lista, en el orden del portátil: la fila y después «Gestión». */}
             <ScrollHintNav>
-              {[...main, ...manage, ...own].map((item) => (
+              {[...main, ...manage].map((item) => (
                 <NavLink
                   key={item.href}
                   item={item}
@@ -106,7 +107,26 @@ export function AppHeader({ items, user }: Props) {
             </ScrollHintNav>
             <div className="mt-auto space-y-3 border-t pt-4">
               <UserBadge user={user} />
-              <SignOutButton />
+              <div className="flex flex-col gap-2">
+                {own.map((item) => (
+                  <Button
+                    key={item.href}
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="aria-[current=page]:text-primary justify-start"
+                  >
+                    <Link
+                      href={item.href}
+                      aria-current={isActive(item, pathname) ? "page" : undefined}
+                      onClick={() => setOpen(false)}
+                    >
+                      {item.label}
+                    </Link>
+                  </Button>
+                ))}
+                <SignOutButton />
+              </div>
             </div>
           </SheetContent>
         </Sheet>

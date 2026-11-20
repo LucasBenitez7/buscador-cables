@@ -24,3 +24,4 @@ export * from "./location-search";
 export * from "./excel-status";
 export * from "./excel-import";
 export * from "./saved";
+export * from "./text";

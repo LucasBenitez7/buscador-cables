@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HIDDEN_CHARACTERS_MESSAGE, isCleanText } from "./text";
 import { cableCodeSchema } from "./cable-code";
 
 /** The Prisma enums must list exactly the same members. */
@@ -228,7 +229,12 @@ function optionalText(max: number, label: string) {
     .string()
     .optional()
     .transform((value) => value?.trim() ?? "")
-    .pipe(z.string().max(max, `${label}: máximo ${max} caracteres`))
+    .pipe(
+      z
+        .string()
+        .max(max, `${label}: máximo ${max} caracteres`)
+        .refine(isCleanText, `${label}: ${HIDDEN_CHARACTERS_MESSAGE.toLowerCase()}`),
+    )
     .transform((value) => (value === "" ? null : value));
 }
 
@@ -365,7 +371,8 @@ export const deleteCableSchema = z.object({
     .string({ error: "Indica el motivo de la baja" })
     .trim()
     .min(3, "Indica el motivo de la baja")
-    .max(500, "El motivo no puede superar 500 caracteres"),
+    .max(500, "El motivo no puede superar 500 caracteres")
+    .refine(isCleanText, HIDDEN_CHARACTERS_MESSAGE),
 });
 
 export type CreateCableInput = z.infer<typeof createCableSchema>;
