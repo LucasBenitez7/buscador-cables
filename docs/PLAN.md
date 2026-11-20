@@ -35,9 +35,10 @@ hizo qué y cuándo.
 | 14   | Estado diario desde el Excel  | v1.4.0  | Excel del día, pendientes de revisar, panel           |
 | 15   | Listados: imprimir y ordenar  | v1.5.0  | Elegir filas, PDF y copiar nombres, ordenar por más   |
 | 16   | Guardados y roles             | v1.6.0  | Guardados con carpetas, roles uno al lado del otro    |
+| 17   | Repaso de la interfaz, metros | v1.7.0  | Metros y bobinas, una Actividad, fichas y menú        |
 
-**Total: 18 fases (0 a 16, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
-13 a la 15, el 2026-11-18; la 16, el 2026-11-19).** El 2026-11-13 la fase 6 se
+**Total: 19 fases (0 a 17, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
+13 a la 15, el 2026-11-18; la 16 y la 17, el 2026-11-19).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
