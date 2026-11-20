@@ -1041,31 +1041,27 @@ que su aviso se vea.
 
 ---
 
-## Fase 17 — Repaso de la interfaz (v1.7.0)
+## Fase 17 — Repaso de la interfaz y metros (v1.7.0)
 
-Añadida el 2026-11-19. Rama `feat/f17-ui-polish`. Cada punto se enseña antes en capturas (antes
-y después) y se aplica cuando el usuario da el visto bueno.
+Añadida el 2026-11-19. Rama `feat/f17-ui-polish`. Cada cambio visual se enseñó antes en capturas.
 
-- [x] Cajas de las fichas (equipo, ubicación, cable, bandeja): título y contenido unidos, claro
-      abierto y cerrado.
-- [x] Selección igual en todas las listas (cables, bandejas, equipos, ubicaciones, guardados).
-- [x] «Seleccionar todos» sin guion: vacía o marcada.
-- [x] Ficha de ubicación: con más cables de los que trae, «Ver los N cables en el buscador»
-      con el total real (decidido con el usuario: el listado de Ubicaciones se queda igual).
-- [x] Una sola «Actividad» en el menú; quien ve la de todos filtra por persona.
-- [x] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».
-- [x] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
-- [x] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.
-- [x] «Añadir a carpetas» en vez de «Guardar», e iconos en las acciones de las fichas y las filas.
-- [x] Inicio: «Estado de los cables» con títulos claros y bloques mejor separados.
-- [x] Metros reales frente a previstos: cuánto se desvía cada cable del listado y el total por
-      área y por nivel, para detectar errores de medida o de recorrido.
-- [x] Avance en metros, no solo en cables: «llevamos 180 km tendidos de 400 previstos».
-- [x] Bobinas: qué cables salieron de cada una y cuántos metros se han gastado, para saber qué
-      revisar si una sale defectuosa.
-- [x] Menú: en la fila, lo de cada día (con «Excel del día»); en «Gestión», primero «Metros» y
-      «Actividad». En el móvil, una sola lista en ese orden.
-- [ ] Tests y E2E.
+Decisiones que siguen valiendo:
+
+- **Menú**: en la fila, lo de cada día (Inicio, Cables, Bandejas, Equipos, Ubicaciones,
+  Guardados, Excel del día); en «Gestión», primero «Metros» y «Actividad». Quien no tiene
+  «Gestión» ve «Actividad» en la fila. En el móvil, una sola lista en ese orden, sin grupos.
+- **Actividad**: una sola página; quien ve la de todos elige persona («Yo» primero).
+- **Metros**: avance (cables tendidos con su longitud prevista: reales si los hay, si no los del
+  listado), desviación (bien hasta ±10 %, revisar desde ±25 %; por nivel y por área donde empieza
+  el cable: su origen o su primera bandeja) y bobinas (metros gastados; no se sabe lo que
+  traían). Los metros reales vienen de los dos Excel del día.
+- **Fichas**: una caja por bloque; las acciones con icono; «Añadir a carpetas» en vez de
+  «Guardar». «Seleccionar» a la derecha de la línea que encabeza cada lista.
+- **«Carga del proyecto»**: ya no se ofrece al subir un Excel.
+
+- [x] Fichas, selección, actividad, Excel del día, filtros, inicio y menú.
+- [x] «Metros»: avance, desviación y bobinas, con enlaces desde el inicio, la ficha y el buscador.
+- [x] Tests y E2E.
 
 ---
 
