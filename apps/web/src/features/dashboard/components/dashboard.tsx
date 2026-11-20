@@ -49,7 +49,7 @@ export function Dashboard({ data }: { data: DashboardData }) {
     <ActivityPanel
       title="Tu actividad reciente"
       entries={myActivity}
-      href="/activity/me"
+      href={data.myActivityHref}
       empty="Todavía no has registrado ningún movimiento."
       showUser={false}
     />
@@ -120,7 +120,7 @@ export function Dashboard({ data }: { data: DashboardData }) {
             <ActivityPanel
               title="Tu actividad reciente"
               entries={myActivity}
-              href="/activity/me"
+              href={data.myActivityHref}
               empty="Todavía no has registrado ningún movimiento."
               showUser={false}
             />

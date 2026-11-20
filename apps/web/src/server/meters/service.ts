@@ -11,9 +11,11 @@ const ACTIVE = Prisma.sql`c."deletedAt" IS NULL AND c."installationStatus" <> 'R
 
 /**
  * Metres laid of a cable laid end to end: the real ones when the Excel brings them, the planned
- * ones otherwise. A cable laid only in part counts nothing: how far it got is not known.
+ * ones otherwise. A cable laid only in part counts nothing: how far it got is not known. Nor
+ * does one without a planned length: the planned total leaves it out, so the laid metres must
+ * too, or «X de Y» would compare two different sets of cables.
  */
-const LAID_METRES = Prisma.sql`CASE WHEN c."installationStatus" = 'LAID'
+const LAID_METRES = Prisma.sql`CASE WHEN c."installationStatus" = 'LAID' AND c."lengthM" IS NOT NULL
   THEN COALESCE(c."actualLengthM", c."lengthM") ELSE 0 END`;
 
 const toNumber = (value: Prisma.Decimal | number | bigint | null): number =>
@@ -244,7 +246,8 @@ export async function listReels(q?: string): Promise<ReelRow[]> {
     FROM cable c
     WHERE c."deletedAt" IS NULL AND c."reel" IS NOT NULL ${filter}
     GROUP BY c."reel"
-    ORDER BY c."reel"`;
+    -- Orden natural: «99, 100, 1000» y «B-2, B-10», no el del texto («100, 1000, 99»).
+    ORDER BY substring(c."reel" from '^[^0-9]*'), length(c."reel"), c."reel"`;
   return rows.map((row) => ({
     reel: row.reel,
     status: row.status,

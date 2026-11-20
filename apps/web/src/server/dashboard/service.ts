@@ -50,6 +50,8 @@ export type Dashboard = {
   /** Pending discrepancies new since they last opened «Pendientes de revisar». */
   toReview: number | null;
   myActivity: ActivityEntry[] | null;
+  /** Where «Tu actividad reciente» leads: «Actividad» filtered by «Yo» for who sees everyone's. */
+  myActivityHref: string;
   team: {
     trays: number;
     recentActivity: ActivityEntry[];
@@ -170,6 +172,9 @@ export async function getDashboard(user: {
     lastExcel,
     toReview,
     myActivity: mine?.entries ?? null,
+    myActivityHref: hasPermission(user, "activity:view")
+      ? `/activity?actor=${encodeURIComponent(user.id)}`
+      : "/activity",
     team,
     admin,
   };

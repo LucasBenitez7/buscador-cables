@@ -73,7 +73,7 @@ function KindCard({ item }: { item: ExcelKindOverview }) {
       <div className="space-y-1.5 border-t pt-3 text-sm">
         <h3 className="text-muted-foreground font-medium">Último aplicado</h3>
         {lastApplied ? (
-          <div className="bg-background space-y-1 rounded-md border px-3 py-2">
+          <div className="bg-background space-y-2 rounded-md border px-3 py-2.5">
             <Link
               href={`/import/${lastApplied.id}`}
               className={`${INLINE_LINK} font-medium break-all`}

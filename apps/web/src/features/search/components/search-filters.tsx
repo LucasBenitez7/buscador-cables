@@ -126,7 +126,7 @@ export function SearchFilters({ search, options }: Props) {
           />
         </Button>
         {/* Los estados: a la vista en el portátil; en el móvil, al desplegar "Filtros". */}
-        <div className={cn("grid gap-3 sm:grid-cols-2 md:contents", expanded ? "" : "hidden")}>
+        <div className={cn("gap-3 sm:grid-cols-2 md:contents", expanded ? "grid" : "hidden")}>
           <Filter label="Instalación" htmlFor="installation">
             <Select id="installation" name="installation" defaultValue={search.installation}>
               {INSTALLATION_STATUSES.map((status) => (

@@ -67,6 +67,9 @@ beforeEach(async () => {
       { code: "ZZ-4", level: "L2", installationStatus: "NOT_LAID", lengthM: 300 },
       // Sin longitud en el listado.
       { code: "ZZ-5", installationStatus: "UNVERIFIED" },
+      // Tendido con metros reales pero sin longitud en el listado: no suma a lo tendido, porque
+      // tampoco suma a lo previsto.
+      { code: "ZZ-9", installationStatus: "LAID", actualLengthM: 40 },
       // Retirado y dado de baja: fuera de todo.
       { code: "ZZ-6", level: "L1", installationStatus: "RETIRED", lengthM: 999 },
       {
@@ -91,7 +94,7 @@ describe("getMetersProgress", () => {
   it("adds the planned metres and the laid ones (real, or planned without them), by level", async () => {
     const progress = await getMetersProgress();
 
-    expect(progress).toMatchObject({ planned: 660, laid: 230, cables: 6, withoutLength: 1 });
+    expect(progress).toMatchObject({ planned: 660, laid: 230, cables: 7, withoutLength: 2 });
     expect(progress.byLevel).toEqual([
       {
         key: "L1",
@@ -109,7 +112,7 @@ describe("getMetersProgress", () => {
         planned: 510,
         laid: 70,
       },
-      { key: "none", label: "Sin nivel", href: "/cables", cables: 1, planned: 0, laid: 0 },
+      { key: "none", label: "Sin nivel", href: "/cables", cables: 2, planned: 0, laid: 0 },
     ]);
   });
 });
@@ -164,6 +167,21 @@ describe("listReels", () => {
       { reel: "B-2", status: null, cables: 1, metres: 60, withoutMetres: 0, lastLaidOn: null },
     ]);
     expect((await listReels("b-2")).map((row) => row.reel)).toEqual(["B-2"]);
+  });
+
+  it("sorts the reels by their number, not as text", async () => {
+    await prisma.cable.createMany({
+      data: ["1000", "99", "100", "B-10"].map((reel, index) => ({ code: `ZZ-R${index}`, reel })),
+    });
+
+    expect((await listReels()).map((row) => row.reel)).toEqual([
+      "99",
+      "100",
+      "1000",
+      "B-1",
+      "B-2",
+      "B-10",
+    ]);
   });
 
   it("says the state of one reel, or nothing when the Excel brings none", async () => {

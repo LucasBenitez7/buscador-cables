@@ -3,6 +3,7 @@ import {
   deviationLevel,
   distanceText,
   lengthDeviation,
+  parseMetersSearch,
   percentText,
   signedMetresText,
 } from "./meters";
@@ -44,5 +45,16 @@ describe("texts", () => {
     expect(distanceText(403_912)).toBe("403,9 km");
     expect(distanceText(1000)).toBe("1 km");
     expect(distanceText(850)).toBe("850 m");
+  });
+});
+
+describe("parseMetersSearch", () => {
+  it("reads the tab and the search, and falls back to «Avance» on anything else", () => {
+    expect(parseMetersSearch({ tab: "bobinas", q: " B-1 " })).toEqual({ tab: "bobinas", q: "B-1" });
+    expect(parseMetersSearch({ tab: "otra" })).toEqual({ tab: "avance" });
+    expect(parseMetersSearch({ tab: ["desviacion", "bobinas"], q: "" })).toEqual({
+      tab: "desviacion",
+    });
+    expect(parseMetersSearch({ q: "x".repeat(101) }).q).toBeUndefined();
   });
 });

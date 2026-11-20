@@ -76,8 +76,10 @@ test.describe("administrador", () => {
     await page.goto("/activity");
     await expect(page.getByLabel("Quién")).toBeVisible();
 
-    await page.goto("/activity/me");
-    await expect(page).toHaveURL(/\/activity\?actor=/);
+    // Con los filtros que traía el enlace antiguo.
+    await page.goto("/activity/me?action=LAID");
+    await expect(page).toHaveURL(/\/activity\?.*actor=/);
+    await expect(page).toHaveURL(/action=LAID/);
     await expect(page.getByRole("heading", { name: "Actividad" })).toBeVisible();
   });
 

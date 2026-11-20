@@ -3,14 +3,17 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   CABLE_LEVEL_LABELS,
+  METERS_TABS,
+  parseMetersSearch,
+  type MetersTab,
   DEVIATION_OK_PERCENT,
   DEVIATION_REVIEW_PERCENT,
   distanceText,
   formatExcelDay,
 } from "@cables/shared";
-import { ChipRow } from "@/components/chip-row";
 import { ListToolbar } from "@/components/list-toolbar";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
+import { TabLinks } from "@/components/tab-links";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { DeviationBadge } from "@/features/meters/components/deviation-badge";
 import { INLINE_LINK } from "@/lib/links";
@@ -28,12 +31,11 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-const TABS = [
-  { key: "avance", label: "Avance" },
-  { key: "desviacion", label: "Desviación" },
-  { key: "bobinas", label: "Bobinas" },
-] as const;
-type Tab = (typeof TABS)[number]["key"];
+const TAB_LABELS: Record<MetersTab, string> = {
+  avance: "Avance",
+  desviacion: "Desviación",
+  bobinas: "Bobinas",
+};
 
 const number = new Intl.NumberFormat("es-ES", { useGrouping: "always" });
 const percentOf = (part: number, total: number) => (total > 0 ? (part / total) * 100 : 0);
@@ -45,9 +47,7 @@ const percentOf = (part: number, total: number) => (total > 0 ? (part / total) *
  */
 export default async function MetersPage({ searchParams }: { searchParams: SearchParams }) {
   await requireUser();
-  const params = await searchParams;
-  const tab: Tab = TABS.some((item) => item.key === params.tab) ? (params.tab as Tab) : "avance";
-  const q = typeof params.q === "string" ? params.q.trim().slice(0, 50) : "";
+  const { tab, q = "" } = parseMetersSearch(await searchParams);
 
   return (
     <div className="space-y-6">
@@ -58,25 +58,15 @@ export default async function MetersPage({ searchParams }: { searchParams: Searc
         </p>
       </div>
 
-      <ChipRow aria-label="Qué ver" className="-mx-4 gap-2 px-4 pb-1 sm:mx-0 sm:px-0">
-        {TABS.map((item) => {
-          const selected = item.key === tab;
-          return (
-            <Link
-              key={item.key}
-              href={item.key === "avance" ? "/meters" : `/meters?tab=${item.key}`}
-              aria-current={selected ? "page" : undefined}
-              className={
-                selected
-                  ? "bg-primary text-primary-foreground border-primary focus-visible:ring-ring/50 shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap outline-none focus-visible:ring-3"
-                  : "bg-secondary text-foreground hover:bg-muted focus-visible:ring-ring/50 shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3"
-              }
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </ChipRow>
+      <TabLinks
+        label="Qué ver"
+        tabs={METERS_TABS.map((item) => ({
+          key: item,
+          label: TAB_LABELS[item],
+          href: item === "avance" ? "/meters" : `/meters?tab=${item}`,
+          selected: item === tab,
+        }))}
+      />
 
       {tab === "avance" ? <ProgressTab /> : null}
       {tab === "desviacion" ? <DeviationTab /> : null}
@@ -167,13 +157,13 @@ async function DeviationTab() {
         </p>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <DeviationTable title="Por nivel" rows={deviation.byLevel} />
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <DeviationTable title="Por nivel" column="Nivel" rows={deviation.byLevel} />
         {/* Donde empieza el cable: su origen o, si no lo trae, su primera bandeja. */}
-        <DeviationTable title="Por área" rows={deviation.byArea} />
+        <DeviationTable title="Por área" column="Área" rows={deviation.byArea} />
       </div>
 
-      <Card title={`Los ${TOP_DEVIATIONS} cables que más se desvían`}>
+      <Card title={`Los ${TOP_DEVIATIONS} cables que más se desvían`} flush>
         <TableWrap>
           <thead>
             <tr>
@@ -186,7 +176,7 @@ async function DeviationTab() {
           </thead>
           <tbody>
             {deviation.top.map((cable) => (
-              <tr key={cable.id} className="border-t">
+              <tr key={cable.id} className="hover:bg-muted/40 border-t transition-colors">
                 <Td>
                   <Link href={`/cables/${cable.id}`} className={CODE_LINK}>
                     {cable.code}
@@ -207,13 +197,22 @@ async function DeviationTab() {
   );
 }
 
-function DeviationTable({ title, rows }: { title: string; rows: DeviationRow[] }) {
+function DeviationTable({
+  title,
+  column,
+  rows,
+}: {
+  title: string;
+  /** Name of the first column: what each row is. */
+  column: string;
+  rows: DeviationRow[];
+}) {
   return (
-    <Card title={title}>
+    <Card title={title} flush>
       <TableWrap>
         <thead>
           <tr>
-            <Th>{title === "Por nivel" ? "Nivel" : "Área"}</Th>
+            <Th>{column}</Th>
             <Th align="right">Cables</Th>
             <Th align="right">Previstos</Th>
             <Th align="right">Reales</Th>
@@ -222,7 +221,7 @@ function DeviationTable({ title, rows }: { title: string; rows: DeviationRow[] }
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.key} className="border-t">
+            <tr key={row.key} className="hover:bg-muted/40 border-t transition-colors">
               <Td>
                 {row.href ? (
                   <Link href={row.href} className={INLINE_LINK}>
@@ -258,7 +257,7 @@ async function ReelsTab({ q }: { q: string }) {
           label: "Bobina",
           value: q,
           placeholder: "Como en el Excel",
-          maxLength: 50,
+          maxLength: 100,
         }}
         keep={{ tab: "bobinas" }}
         active={q !== ""}
@@ -278,7 +277,7 @@ async function ReelsTab({ q }: { q: string }) {
             {q ? "Ninguna bobina coincide con la búsqueda." : "El Excel todavía no trae bobinas."}
           </p>
         ) : (
-          <Card>
+          <Card flush>
             <TableWrap>
               <thead>
                 <tr>
@@ -291,7 +290,7 @@ async function ReelsTab({ q }: { q: string }) {
               </thead>
               <tbody>
                 {reels.map((reel) => (
-                  <tr key={reel.reel} className="border-t">
+                  <tr key={reel.reel} className="hover:bg-muted/40 border-t transition-colors">
                     <Td>
                       {/* Sus cables, en el buscador: con seleccionar, copiar e imprimir. */}
                       <Link
@@ -327,7 +326,24 @@ async function ReelsTab({ q }: { q: string }) {
   );
 }
 
-function Card({ title, children }: { title?: string; children: ReactNode }) {
+function Card({
+  title,
+  flush = false,
+  children,
+}: {
+  title?: string;
+  /** For a table: no padding, so the table goes edge to edge under the title. */
+  flush?: boolean;
+  children: ReactNode;
+}) {
+  if (flush) {
+    return (
+      <section className="bg-card rounded-lg border">
+        {title ? <h2 className="border-b px-4 py-3 text-base font-semibold">{title}</h2> : null}
+        {children}
+      </section>
+    );
+  }
   return (
     <section className="bg-card space-y-3 rounded-lg border p-4">
       {title ? <h2 className="border-b pb-2 text-base font-semibold">{title}</h2> : null}
@@ -350,10 +366,17 @@ function Bar({ percent, label }: { percent: number; label: string }) {
   );
 }
 
+/**
+ * The tables of «Metros»: the header stays under the menu while scrolling down a long table, so
+ * each figure keeps its column name in sight. On a phone the table scrolls sideways instead (a
+ * sideways scroll and a header fixed to the page cannot go together).
+ */
 function TableWrap({ children }: { children: ReactNode }) {
   return (
-    <div className="-mx-4 overflow-x-auto px-4">
-      <table className="w-full min-w-[28rem] text-sm">{children}</table>
+    <div className="max-md:overflow-x-auto">
+      <table className="w-full min-w-[28rem] text-sm [&_td:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:first-child]:pl-4 [&_th:last-child]:pr-4">
+        {children}
+      </table>
     </div>
   );
 }
@@ -362,7 +385,7 @@ function Th({ children, align }: { children: ReactNode; align?: "right" }) {
   return (
     <th
       scope="col"
-      className={`text-muted-foreground pb-2 text-xs font-medium ${align === "right" ? "text-right" : "text-left"}`}
+      className={`bg-muted text-muted-foreground border-b px-3 py-2.5 text-xs font-semibold tracking-wide whitespace-nowrap uppercase md:sticky md:top-14 md:z-10 ${align === "right" ? "text-right" : "text-left"}`}
     >
       {children}
     </th>
@@ -371,7 +394,9 @@ function Th({ children, align }: { children: ReactNode; align?: "right" }) {
 
 function Td({ children, align }: { children: ReactNode; align?: "right" }) {
   return (
-    <td className={`py-2 align-middle tabular-nums ${align === "right" ? "text-right" : ""}`}>
+    <td
+      className={`px-3 py-2.5 align-middle tabular-nums ${align === "right" ? "text-right whitespace-nowrap" : ""}`}
+    >
       {children}
     </td>
   );

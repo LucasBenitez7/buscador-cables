@@ -41,6 +41,7 @@ const entry: ActivityEntry = {
 const viewer: DashboardData = {
   progress,
   meters: { planned: 0, laid: 0 },
+  myActivityHref: "/activity",
   lastExcel: [],
   toReview: null,
   myActivity: null,
@@ -76,6 +77,20 @@ describe("Dashboard", () => {
     expect(screen.getByRole("progressbar", { name: "Metros tendidos" })).toHaveAttribute(
       "aria-valuenow",
       "42",
+    );
+  });
+
+  it("leads «Tu actividad reciente» straight to the person's activity", () => {
+    render(
+      <Dashboard data={{ ...viewer, myActivity: [entry], myActivityHref: "/activity?actor=u1" }} />,
+    );
+
+    const panel = screen
+      .getByRole("heading", { name: "Tu actividad reciente" })
+      .closest("section")!;
+    expect(within(panel).getByRole("link", { name: "Ver todo" })).toHaveAttribute(
+      "href",
+      "/activity?actor=u1",
     );
   });
 

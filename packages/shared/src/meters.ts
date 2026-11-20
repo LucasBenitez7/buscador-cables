@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { firstParams, type RawSearchParams } from "./url-params";
+
 /**
  * Real metres against the planned ones (fase 17): how far a cable, an area or a level is from
  * what the list said. A big gap points to a measuring mistake or a different route.
@@ -58,4 +61,27 @@ export function signedMetresText(metres: number): string {
 export function distanceText(metres: number): string {
   if (Math.abs(metres) >= 1000) return `${decimals(1).format(metres / 1000)} km`;
   return `${decimals(0).format(metres)} m`;
+}
+
+/** The tabs of «Metros» (fase 17). */
+export const METERS_TABS = ["avance", "desviacion", "bobinas"] as const;
+export type MetersTab = (typeof METERS_TABS)[number];
+
+const metersSearchSchema = z.object({
+  tab: z.enum(METERS_TABS).catch("avance"),
+  /** Part of a reel, in «Bobinas». */
+  q: z
+    .string()
+    .trim()
+    .max(100)
+    .transform((value) => (value === "" ? undefined : value))
+    .optional()
+    .catch(undefined),
+});
+
+export type MetersSearch = z.infer<typeof metersSearchSchema>;
+
+/** Reads the URL of «Metros»: an unknown tab is «Avance», a bad search is no search. */
+export function parseMetersSearch(params: RawSearchParams): MetersSearch {
+  return metersSearchSchema.parse(firstParams(params));
 }
