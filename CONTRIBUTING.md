@@ -138,6 +138,7 @@ gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes "..."
 | `v1.2.3` | #59         | Copia de seguridad diaria de la base y reglas de trabajo ordenadas |
 | `v1.6.0` | #66         | Fases 13 a 16: uso en campo, Excel del día, listados y guardados   |
 | `v1.7.0` | #68         | Fase 17: repaso de la interfaz y metros                            |
+| `v1.7.1` | #71         | Sesión semanal, listas sin saltos y repaso tras la fase 17         |
 
 Los PR #38, #43 y #51 llevaron mejoras a producción sin tag propio; quedan incluidas en la
 versión siguiente.
