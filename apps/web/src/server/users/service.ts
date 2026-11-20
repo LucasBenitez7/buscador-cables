@@ -5,16 +5,19 @@ import { hashPassword } from "better-auth/crypto";
 import {
   USERS_PAGE_SIZE,
   USER_EVENTS_PAGE_SIZE,
+  parseActivitySearch,
+  parseUserEventSearch,
   validateActiveChange,
   validateCreateUser,
   validateRoleChange,
+  type ChangeOwnNameInput,
   type ChangeRoleInput,
   type CreateUserInput,
   type SetUserActiveInput,
   type UserEventSearch,
   type UserListSearch,
 } from "@cables/shared";
-import { madridDayStart, nextDay } from "@/server/activity/service";
+import { listActivity, madridDayStart, nextDay } from "@/server/activity/service";
 import type { AccountChange } from "@/server/account-notifications";
 import { isUniqueViolation } from "@/server/prisma-errors";
 import type { CurrentUser } from "@/server/session";
@@ -258,6 +261,34 @@ export async function setUserActive(
   });
 }
 
+/**
+ * «Mi cuenta»: a person changes their own name, and nobody else's (an administrator cannot
+ * rename anybody). The history shows today's name of whoever did each thing, so every change
+ * stays in the account changes, from and to, for the administrators to see. Returns false
+ * when the name did not change.
+ */
+export async function changeOwnName(
+  user: Pick<CurrentUser, "id">,
+  input: ChangeOwnNameInput,
+): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.user.findUnique({ where: { id: user.id }, select: { name: true } });
+    if (!current) throw new UserServiceError("Tu cuenta ya no existe.");
+    if (current.name === input.name) return false;
+
+    await tx.user.update({ where: { id: user.id }, data: { name: input.name } });
+    await tx.userEvent.create({
+      data: {
+        action: "NAME_CHANGED",
+        actorId: user.id,
+        targetId: user.id,
+        details: { from: current.name, to: input.name },
+      },
+    });
+    return true;
+  });
+}
+
 export type UserEventRow = {
   id: string;
   action: UserEventAction;
@@ -268,7 +299,14 @@ export type UserEventRow = {
   fromRole: string | null;
   toRole: string | null;
   /** For `ROLE_*` and `PERMISSIONS_CHANGED`: the role and the permissions added and removed. */
-  details: { role?: string; added?: string[]; removed?: string[] } | null;
+  /** `NAME_CHANGED`: the name before and after. */
+  details: {
+    role?: string;
+    added?: string[];
+    removed?: string[];
+    from?: string;
+    to?: string;
+  } | null;
   createdAt: Date;
 };
 
@@ -303,6 +341,8 @@ function readDetails(value: unknown): UserEventRow["details"] {
       : undefined;
   return {
     ...(typeof details.role === "string" ? { role: details.role } : {}),
+    ...(typeof details.from === "string" ? { from: details.from } : {}),
+    ...(typeof details.to === "string" ? { to: details.to } : {}),
     ...(list("added") ? { added: list("added") } : {}),
     ...(list("removed") ? { removed: list("removed") } : {}),
   };
@@ -438,4 +478,37 @@ export async function listUserOptions(): Promise<{ id: string; label: string }[]
     orderBy: [{ name: "asc" }, { id: "asc" }],
   });
   return users.map((user) => ({ id: user.id, label: `${user.name} (${user.email})` }));
+}
+
+export type UserProfile = {
+  active: boolean;
+  /** Self-registered and waiting for an administrator. */
+  pending: boolean;
+  createdAt: Date;
+  /** Their field actions, counted like «Actividad» counts them, and the latest one. */
+  activity: { total: number; lastAt: Date | null };
+  /** The latest account changes they made or that were made to them. */
+  events: UserEventRow[];
+};
+
+export const PROFILE_EVENTS = 5;
+
+/** What an administrator sees about one person besides their permissions (their page). */
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { active: true, approvedAt: true, createdAt: true },
+  });
+  if (!user) return null;
+  const [activity, events] = await Promise.all([
+    listActivity(parseActivitySearch({ actor: userId }), 1),
+    searchUserEvents(parseUserEventSearch({ person: userId })),
+  ]);
+  return {
+    active: user.active,
+    pending: !user.active && user.approvedAt === null,
+    createdAt: user.createdAt,
+    activity: { total: activity.total, lastAt: activity.entries[0]?.at ?? null },
+    events: events.rows.slice(0, PROFILE_EVENTS),
+  };
 }

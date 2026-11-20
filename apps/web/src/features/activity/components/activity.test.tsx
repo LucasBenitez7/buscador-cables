@@ -117,6 +117,24 @@ describe("ActivityList", () => {
     );
   });
 
+  // Quien gestiona cuentas abre la ficha de la persona (con su correo); el nombre se ve igual.
+  it("links the person to their page for who manages accounts", () => {
+    render(
+      <ActivityList
+        basePath="/activity"
+        search={{}}
+        activity={activity}
+        today={today}
+        profileLinks
+      />,
+    );
+
+    const person = screen.getAllByRole("link", { name: "Juan Pérez" })[0];
+    expect(person).toHaveAttribute("href", "/admin/users/u-juan");
+    expect(person).not.toHaveClass("underline");
+    expect(screen.queryByText(/@/)).toBeNull();
+  });
+
   it("offers today and the last seven days, keeping the other filters", () => {
     render(
       <ActivityList

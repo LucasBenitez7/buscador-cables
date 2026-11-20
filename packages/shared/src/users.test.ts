@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  changeOwnNameSchema,
+  changePasswordSchema,
   changeRoleSchema,
   createUserSchema,
   setUserActiveSchema,
@@ -142,6 +144,42 @@ describe("signUpProfileSchema", () => {
     const result = createUserSchema.safeParse({ ...validUser, name: "ana@planta.example" });
 
     expect(result.success).toBe(false);
+  });
+});
+
+// «Mi cuenta»: las mismas reglas que el registro.
+describe("changeOwnNameSchema", () => {
+  it("normalizes a real name and rejects an email", () => {
+    expect(changeOwnNameSchema.parse({ name: "  Ana   Pérez " }).name).toBe("Ana Pérez");
+    expect(changeOwnNameSchema.safeParse({ name: "ana@planta.example" }).success).toBe(false);
+  });
+});
+
+describe("changePasswordSchema", () => {
+  const valid = {
+    currentPassword: "clave-actual-1",
+    newPassword: "clave-nueva-12",
+    confirmPassword: "clave-nueva-12",
+  };
+  const errorOf = (change: Partial<typeof valid>) =>
+    changePasswordSchema.safeParse({ ...valid, ...change }).error?.issues[0];
+
+  it("accepts a new password that is confirmed", () => {
+    expect(changePasswordSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("asks for the current password", () => {
+    expect(errorOf({ currentPassword: "" })?.message).toBe("Escribe tu contraseña actual");
+  });
+
+  it("rejects a short, unconfirmed or unchanged new password", () => {
+    expect(errorOf({ newPassword: "corta", confirmPassword: "corta" })?.path).toEqual([
+      "newPassword",
+    ]);
+    expect(errorOf({ confirmPassword: "otra-clave-12" })?.path).toEqual(["confirmPassword"]);
+    expect(
+      errorOf({ newPassword: "clave-actual-1", confirmPassword: "clave-actual-1" })?.message,
+    ).toBe("La contraseña nueva tiene que ser distinta de la actual");
   });
 });
 

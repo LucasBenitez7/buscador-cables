@@ -71,6 +71,28 @@ export const signUpSchema = signUpProfileSchema
     path: ["confirmPassword"],
   });
 
+/** «Mi cuenta»: the name only its owner changes (an administrator does not). */
+export const changeOwnNameSchema = z.object({ name: nameField });
+
+/** «Mi cuenta»: a new password, with the current one to prove it is its owner. */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z
+      .string({ error: "Escribe tu contraseña actual" })
+      .min(1, "Escribe tu contraseña actual")
+      .max(PASSWORD_MAX_LENGTH, "La contraseña es demasiado larga"),
+    newPassword: passwordField,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: "La contraseña nueva tiene que ser distinta de la actual",
+    path: ["newPassword"],
+  });
+
 export const changeRoleSchema = z.object({
   userId: z.string().min(1),
   role: roleIdSchema,
@@ -85,6 +107,8 @@ export const setUserActiveSchema = z.object({
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
+export type ChangeOwnNameInput = z.infer<typeof changeOwnNameSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ChangeRoleInput = z.infer<typeof changeRoleSchema>;
 export type SetUserActiveInput = z.infer<typeof setUserActiveSchema>;
 

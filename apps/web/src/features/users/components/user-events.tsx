@@ -48,6 +48,8 @@ export function describeUserEvent(event: UserEventRow): string {
       return `${event.actor} editó el rol ${event.details?.role ?? ""}${changeText(event.details)}`;
     case "ROLE_DELETED":
       return `${event.actor} borró el rol ${event.details?.role ?? ""}`;
+    case "NAME_CHANGED":
+      return `${target} cambió su nombre de «${event.details?.from ?? ""}» a «${event.details?.to ?? ""}»`;
   }
 }
 

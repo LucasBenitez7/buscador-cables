@@ -50,6 +50,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
             search={search}
             activity={activity}
             showUser={seesEveryone && search.actor !== user.id}
+            profileLinks={hasPermission(user, "user:manage")}
           />
         </PendingResults>
       </PendingListProvider>

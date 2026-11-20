@@ -87,6 +87,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           ...management,
         ]
       : [{ href: "/activity", label: "Actividad", match: "prefix" } as const]),
+    // Lo de cada uno, en el menú con su nombre (en el móvil, junto a su nombre).
+    { href: "/account", label: "Mi cuenta", match: "prefix", place: "user" },
   ];
 
   return (
