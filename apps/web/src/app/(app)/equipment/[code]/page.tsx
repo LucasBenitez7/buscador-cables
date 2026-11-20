@@ -17,12 +17,7 @@ import { RecordTitle, Section, SectionLink } from "@/components/detail";
 import { FilterForm } from "@/components/filter-form";
 import { ListSummary } from "@/components/list-summary";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
-import {
-  SelectAllRow,
-  SelectCheckbox,
-  SelectionAside,
-  SelectionProvider,
-} from "@/components/selection";
+import { SelectCheckbox, SelectionControl, SelectionProvider } from "@/components/selection";
 import { Badge } from "@/components/ui/badge";
 import { SaveRecordButton } from "@/features/saved/components/save-dialog";
 import { SaveChosenButton } from "@/features/saved/components/save-dialog";
@@ -192,13 +187,13 @@ export default async function EquipmentPage({
         >
           <PendingResults className="space-y-6">
             <div className="space-y-3">
-              <ListSummary aside={selectable.length > 0 ? <SelectionAside /> : null}>
+              <ListSummary>
                 {/* Siempre dice algo: «Seleccionar» va a su derecha, nunca suelto. */}
                 {filtered
                   ? `${shown} de ${totals.ends} cumplen los filtros.`
                   : `${totals.ends} ${totals.ends === 1 ? "cable" : "cables"} en ${groups.length} ${groups.length === 1 ? "regletero" : "regleteros"}.`}
               </ListSummary>
-              <SelectAllRow />
+              <SelectionControl />
             </div>
 
             {groups.length === 0 ? (

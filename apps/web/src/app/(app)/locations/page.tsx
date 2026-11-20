@@ -10,7 +10,7 @@ import {
 } from "@cables/shared";
 import { ListToolbar } from "@/components/list-toolbar";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
-import { SelectAllRow, SelectionAside, SelectionProvider } from "@/components/selection";
+import { SelectionControl, SelectionProvider } from "@/components/selection";
 import { LocationTree } from "@/features/locations/components/location-tree";
 import { locationLabel } from "@/lib/location-label";
 import { listLocationTree } from "@/server/locations/service";
@@ -96,11 +96,10 @@ export default async function LocationsPage({ searchParams }: { searchParams: Se
                 {count === 1 ? "ubicación" : "ubicaciones"}
               </>
             }
-            countAside={selectable.length > 0 ? <SelectionAside /> : null}
           />
 
           <PendingResults className="space-y-3">
-            <SelectAllRow />
+            <SelectionControl />
             <LocationTree
               key={treeKey}
               tree={shown}

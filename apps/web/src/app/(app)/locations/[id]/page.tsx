@@ -2,12 +2,7 @@ import { SearchIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
-import {
-  SelectAllRow,
-  SelectCheckbox,
-  SelectionProvider,
-  SelectionToggle,
-} from "@/components/selection";
+import { SelectCheckbox, SelectionControl, SelectionProvider } from "@/components/selection";
 import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { selectAllCablesAction } from "@/features/search/actions";
 import { locationLabel } from "@/lib/location-label";
@@ -131,9 +126,9 @@ export default async function LocationPage({ params }: { params: Params }) {
           scope="shown"
           actions={<SaveChosenButton kind="CABLE" />}
         >
-          <Section title={`Cables (${location.cables})`} collapsible tools={<SelectionToggle />}>
+          <Section title={`Cables (${location.cables})`} collapsible>
+            <SelectionControl />
             <div className="space-y-3">
-              <SelectAllRow />
               <ShowMore
                 as="ul"
                 className="bg-card divide-y rounded-lg border"
@@ -176,13 +171,9 @@ export default async function LocationPage({ params }: { params: Params }) {
             label: locationLabel(child),
           }))}
         >
-          <Section
-            title={`Contiene (${location.children.length})`}
-            collapsible
-            tools={<SelectionToggle />}
-          >
+          <Section title={`Contiene (${location.children.length})`} collapsible>
+            <SelectionControl />
             <div className="space-y-3">
-              <SelectAllRow />
               <ul className="bg-card divide-y rounded-lg border">
                 {location.children.map((child) => (
                   <li

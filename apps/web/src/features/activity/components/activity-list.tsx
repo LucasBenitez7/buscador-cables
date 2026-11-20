@@ -122,7 +122,6 @@ export function ActivityList({
           {activity.total.toLocaleString("es-ES")}
         </span>{" "}
         {activity.total === 1 ? "movimiento" : "movimientos"}
-        {activity.pageCount > 1 ? ` · página ${activity.page} de ${activity.pageCount}` : ""}
       </ListSummary>
       {ranges}
 

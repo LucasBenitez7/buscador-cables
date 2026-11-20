@@ -34,9 +34,10 @@ export const CABLE_SORT_LABELS: Record<CableSort, string> = {
   section: "Sección",
 };
 
-export const SEARCH_PAGE_SIZE = 25;
+export const SEARCH_PAGE_SIZE = 50;
 /** Page sizes the cable search offers; the first one is the default. */
-export const SEARCH_PAGE_SIZES = [SEARCH_PAGE_SIZE, 50, 100] as const;
+/** Two sizes at most (fase 17): it is seldom changed, and so it fits next to the count. */
+export const SEARCH_PAGE_SIZES = [SEARCH_PAGE_SIZE, 100] as const;
 
 const text = (max: number) =>
   z

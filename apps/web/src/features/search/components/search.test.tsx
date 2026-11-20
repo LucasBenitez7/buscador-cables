@@ -314,7 +314,9 @@ describe("SearchResults", () => {
       "href",
       "/cables?type=t1&page=3",
     );
-    expect(screen.getByRole("status")).toHaveTextContent("60 cables · página 2 de 3");
+    // El número de página va abajo, junto a los botones; arriba, solo el recuento (fase 17).
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent(/^60 cables$/);
+    expect(screen.getByText(/Página/).closest("nav, div")).toHaveTextContent("Página 2 de 3");
   });
 
   it("shows the status as coloured badges", () => {

@@ -2,11 +2,9 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Section } from "./detail";
 import {
-  SelectAllRow,
   SelectCheckbox,
-  SelectionAside,
   SelectionProvider,
-  SelectionToggle,
+  SelectionControl,
   type SelectAllResult,
   type SelectionItem,
 } from "./selection";
@@ -38,8 +36,7 @@ function List({
       selectAll={selectAll}
       resetKey={resetKey}
     >
-      <SelectionAside />
-      <SelectAllRow />
+      <SelectionControl />
       <ul>
         {shown.map((item) => (
           <li key={item.key}>
@@ -80,11 +77,11 @@ describe("SelectionProvider", () => {
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
-  it("starts from the bar of a box without closing it, with the bar and its gap out of the box", () => {
+  it("starts from the top of a box, under its title, with the bar and its gap out of the box", () => {
     const { container } = render(
       <SelectionProvider title="Bandeja" items={items}>
-        <Section title="Pasan por aquí (3)" collapsible tools={<SelectionToggle />}>
-          <SelectAllRow />
+        <Section title="Pasan por aquí (3)" collapsible>
+          <SelectionControl />
           <ul>
             {items.map((item) => (
               <li key={item.key}>
@@ -98,7 +95,9 @@ describe("SelectionProvider", () => {
     );
     const box = container.querySelector("details")!;
     const button = screen.getByRole("button", { name: "Seleccionar" });
-    expect(box.querySelector("summary")!.contains(button)).toBe(true);
+    // Dentro de la caja, bajo el título (fase 17): en la barra no cabía en el móvil.
+    expect(box.querySelector("summary")!.contains(button)).toBe(false);
+    expect(box.contains(button)).toBe(true);
 
     start();
     expect(box.open).toBe(true);
@@ -110,6 +109,18 @@ describe("SelectionProvider", () => {
     expect(box.contains(bar)).toBe(false);
     expect(bar.parentElement).toBe(document.body);
     expect(bar.previousElementSibling?.matches("div[aria-hidden]:empty")).toBe(true);
+  });
+
+  // Fase 17: «Seleccionar» se convierte en «Seleccionar todas» en el mismo sitio: nada aparece
+  // ni desaparece a su alrededor, y la lista no salta.
+  it("turns «Seleccionar» into «Seleccionar todas» in the same place", () => {
+    const { container } = render(<List />);
+    const slot = screen.getByRole("button", { name: "Seleccionar" }).parentElement!;
+
+    start();
+    expect(screen.queryByRole("button", { name: "Seleccionar" })).toBeNull();
+    expect(container.contains(slot)).toBe(true);
+    expect(slot).toContainElement(screen.getByRole("checkbox", { name: "Seleccionar todas" }));
   });
 
   it("offers nothing to choose in an empty list", () => {
@@ -147,9 +158,7 @@ describe("SelectionProvider", () => {
 
     // Una sola casilla: no hay «las de esta página».
     expect(screen.queryByText(/de esta página/)).toBeNull();
-    fireEvent.click(
-      screen.getByRole("checkbox", { name: "Seleccionar todas las que cumplen los filtros" }),
-    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar todas" }));
 
     await waitFor(() => expect(status()).toBe("4 elegidos"));
     expect(selectAll).toHaveBeenCalledOnce();
@@ -161,7 +170,7 @@ describe("SelectionProvider", () => {
       .mockResolvedValue({ ok: false, message: "Son más de 5000: afina los filtros." });
     render(<List shown={items.slice(0, 1)} total={6000} selectAll={selectAll} />);
     start();
-    fireEvent.click(screen.getByRole("checkbox", { name: /que cumplen los filtros/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar todas" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Son más de 5000: afina los filtros.",

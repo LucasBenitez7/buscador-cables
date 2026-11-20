@@ -217,7 +217,7 @@ export function ListToolbar({
         {/* 3. Al final, a la izquierda, como en el buscador de cables. */}
         <FormActions submitLabel="Buscar" pending={pending} clearHref={clear} active={active} />
       </form>
-      <ListSummary aside={countAside}>{count}</ListSummary>
+      {count || countAside ? <ListSummary aside={countAside}>{count}</ListSummary> : null}
     </div>
   );
 }

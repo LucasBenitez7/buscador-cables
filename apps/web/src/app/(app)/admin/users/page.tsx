@@ -64,12 +64,6 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
             <section className="space-y-3">
               <h2 className="text-base font-medium">
                 Cuentas ({users.total.toLocaleString("es-ES")})
-                {users.pageCount > 1 ? (
-                  <span className="text-muted-foreground text-sm font-normal">
-                    {" "}
-                    · página {users.page} de {users.pageCount}
-                  </span>
-                ) : null}
               </h2>
               <FilterForm
                 action="/admin/users"
