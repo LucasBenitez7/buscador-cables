@@ -338,7 +338,9 @@ function Card({
 }) {
   if (flush) {
     return (
-      <section className="bg-card min-w-0 rounded-lg border">
+      // `overflow-clip` recorta la cabecera de la tabla a las esquinas redondeadas sin crear una
+      // caja con desplazamiento: así, en el ordenador, la cabecera sigue fija bajo el menú.
+      <section className="bg-card min-w-0 overflow-clip rounded-lg border">
         {title ? <h2 className="border-b px-4 py-3 text-base font-semibold">{title}</h2> : null}
         {children}
       </section>

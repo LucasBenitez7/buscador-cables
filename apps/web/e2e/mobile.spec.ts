@@ -112,9 +112,21 @@ test("«Metros» cabe en la pantalla y la cabecera de cada tabla se queda a la v
       const layout = await table.evaluate((element) => {
         const box = getComputedStyle(element.parentElement!);
         const header = getComputedStyle(element.querySelector("th")!);
-        return { overflowY: box.overflowY, position: header.position, top: header.top };
+        // La tarjeta recorta la cabecera (con fondo) a sus esquinas redondeadas.
+        const card = getComputedStyle(element.closest("section")!);
+        return {
+          overflowY: box.overflowY,
+          position: header.position,
+          top: header.top,
+          cardOverflow: card.overflow,
+        };
       });
-      expect(layout).toEqual({ overflowY: "auto", position: "sticky", top: "0px" });
+      expect(layout).toEqual({
+        overflowY: "auto",
+        position: "sticky",
+        top: "0px",
+        cardOverflow: "clip",
+      });
     }
   }
 
