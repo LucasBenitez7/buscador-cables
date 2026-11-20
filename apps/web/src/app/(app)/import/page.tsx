@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ADMIN_ROLE } from "@cables/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { INLINE_LINK } from "@/lib/links";
 import { UploadExcelForm } from "@/features/excel-import/components/upload-excel-form";
 import { getExcelOverview, type ExcelKindOverview } from "@/server/excel-import/queries";
 import { requirePermission } from "@/server/session";
@@ -13,17 +13,13 @@ export const dynamic = "force-dynamic";
 const number = new Intl.NumberFormat("es-ES");
 
 export default async function ImportPage() {
-  const user = await requirePermission("import:run");
+  await requirePermission("import:run");
   const overview = await getExcelOverview();
-  const projectLoadKinds =
-    user.role === ADMIN_ROLE
-      ? overview.filter((item) => item.projectLoadAvailable).map((item) => item.kind)
-      : [];
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Excel del día</h1>
-      <UploadExcelForm projectLoadKinds={projectLoadKinds} />
+      <UploadExcelForm />
       <div className="grid gap-4 md:grid-cols-2">
         {overview.map((item) => (
           <KindCard key={item.kind} item={item} />
@@ -73,17 +69,26 @@ function KindCard({ item }: { item: ExcelKindOverview }) {
         <p className="text-muted-foreground text-sm">Sin vista previa pendiente.</p>
       )}
 
-      <p className="border-t pt-3 text-sm">
-        <span className="text-muted-foreground">Último aplicado: </span>
+      {/* El último aplicado, con su archivo a la vista: lo que hay ahora en la web. */}
+      <div className="space-y-1.5 border-t pt-3 text-sm">
+        <h3 className="text-muted-foreground font-medium">Último aplicado</h3>
         {lastApplied ? (
-          <>
-            <span className="font-medium">Excel del {lastApplied.excelDay}</span>
-            <span className="text-muted-foreground"> · subido por {lastApplied.uploadedBy}</span>
-          </>
+          <div className="bg-background space-y-1 rounded-md border px-3 py-2">
+            <Link
+              href={`/import/${lastApplied.id}`}
+              className={`${INLINE_LINK} font-medium break-all`}
+            >
+              {lastApplied.fileName}
+            </Link>
+            <p className="text-muted-foreground">
+              Excel del <span className="text-foreground font-medium">{lastApplied.excelDay}</span>{" "}
+              · aplicado el {lastApplied.appliedAt} · subido por {lastApplied.uploadedBy}
+            </p>
+          </div>
         ) : (
-          <span className="font-medium">ninguno</span>
+          <p>Ninguno todavía.</p>
         )}
-      </p>
+      </div>
     </section>
   );
 }

@@ -12,6 +12,7 @@ import { ChangeList } from "@/components/change-list";
 import { ChipRow } from "@/components/chip-row";
 import { Pagination } from "@/components/pagination";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CODE_LINK } from "@/components/ui/text-link";
 import {
   PreviewActions,
@@ -98,7 +99,30 @@ export default async function ExcelPreviewPage({
           pending={excel.selected - excel.applied}
           applying={excel.status === "APPLYING"}
         />
-      ) : null}
+      ) : (
+        // Terminado: qué pasó y, a un clic, el siguiente Excel.
+        <div
+          role="status"
+          className={`bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 ${excel.status === "APPLIED" ? "border-success/50" : ""}`}
+        >
+          <p className="text-sm">
+            {excel.status === "APPLIED" ? (
+              <>
+                <span className="text-success font-medium">Aplicado</span>
+                {excel.appliedAt ? ` el ${excel.appliedAt}` : ""} · {number.format(excel.applied)}{" "}
+                {excel.applied === 1 ? "cable" : "cables"} actualizados
+              </>
+            ) : (
+              <span className="text-muted-foreground font-medium">
+                Vista previa descartada: no se aplicó nada.
+              </span>
+            )}
+          </p>
+          <Button asChild>
+            <Link href="/import">Subir otro Excel</Link>
+          </Button>
+        </div>
+      )}
 
       <ChipRow aria-label="Qué trae el Excel" className="-mx-4 gap-2 px-4 pb-1 sm:mx-0 sm:px-0">
         {EXCEL_PREVIEW_TABS.map((item) => {

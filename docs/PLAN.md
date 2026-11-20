@@ -1053,8 +1053,8 @@ y después) y se aplica cuando el usuario da el visto bueno.
 - [x] Ficha de ubicación: con más cables de los que trae, «Ver los N cables en el buscador»
       con el total real (decidido con el usuario: el listado de Ubicaciones se queda igual).
 - [x] Una sola «Actividad» en el menú; quien ve la de todos filtra por persona.
-- [ ] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».
-- [ ] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
+- [x] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».
+- [x] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
 - [ ] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.
 - [ ] Guardar en carpeta desde la ficha, sin confundirlo con guardar el cable.
 - [ ] Inicio: «Estado de los cables» con títulos claros y bloques mejor separados.

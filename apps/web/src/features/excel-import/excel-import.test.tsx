@@ -63,7 +63,7 @@ describe("UploadExcelForm", () => {
     mocks.startExcelUploadAction.mockResolvedValue({ ok: true, importId: "i1" });
     mocks.addExcelPartAction.mockResolvedValue({ ok: true });
     mocks.finishExcelUploadAction.mockResolvedValue({ ok: true, importId: "i1" });
-    render(<UploadExcelForm projectLoadKinds={[]} />);
+    render(<UploadExcelForm />);
 
     pickFile();
     expect(await screen.findByText("Eléctrico")).toBeInTheDocument();
@@ -83,9 +83,9 @@ describe("UploadExcelForm", () => {
     expect(mocks.addExcelPartAction).toHaveBeenCalledTimes(2);
   });
 
-  it("offers the project load only for its kinds, and shows why a file is refused", async () => {
+  it("never offers the project load any more, and shows why a file is refused", async () => {
     mocks.readExcelFile.mockResolvedValueOnce({ ok: false, message: "Faltan columnas: TAG." });
-    render(<UploadExcelForm projectLoadKinds={["INSTRUMENTATION"]} />);
+    render(<UploadExcelForm />);
 
     pickFile("otro.xlsx");
     expect(await screen.findByRole("alert")).toHaveTextContent("Faltan columnas: TAG.");
@@ -99,7 +99,9 @@ describe("UploadExcelForm", () => {
       excelDate: null,
     });
     pickFile("instrumentacion.xlsx");
-    expect(await screen.findByLabelText("Carga del proyecto")).toBeInTheDocument();
+    // La carga del proyecto ya se hizo (fase 17): la casilla no vuelve a salir.
+    expect(await screen.findByLabelText("Fecha del Excel")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Carga del proyecto")).toBeNull();
     expect(screen.getByRole("button", { name: "Preparar vista previa" })).toBeDisabled();
   });
 
@@ -113,7 +115,7 @@ describe("UploadExcelForm", () => {
     });
     mocks.startExcelUploadAction.mockResolvedValue({ ok: true, importId: "i1" });
     mocks.addExcelPartAction.mockResolvedValue({ ok: false, message: "Está repetido." });
-    render(<UploadExcelForm projectLoadKinds={[]} />);
+    render(<UploadExcelForm />);
 
     pickFile();
     fireEvent.click(await screen.findByRole("button", { name: "Preparar vista previa" }));
