@@ -19,7 +19,7 @@ test.describe("supervisora", () => {
     await page.getByLabel("Archivo").setInputFiles(EXCEL);
     await expect(page.getByText("3 cables")).toBeVisible();
     await expect(page.getByLabel("Fecha del Excel")).toHaveValue("2026-11-16");
-    // La carga del proyecto es solo para administradores.
+    // La carga del proyecto ya se hizo (fase 17): la casilla no sale a nadie.
     await expect(page.getByLabel("Carga del proyecto")).toHaveCount(0);
     await page.getByRole("button", { name: "Preparar vista previa" }).click();
 
@@ -38,12 +38,19 @@ test.describe("supervisora", () => {
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: /Aplicar/ }).click();
     await expect(page.getByText("Aplicado", { exact: true }).first()).toBeVisible();
+    // Terminado: el siguiente Excel, a un clic.
+    await expect(page.getByRole("link", { name: "Subir otro Excel" })).toHaveAttribute(
+      "href",
+      "/import",
+    );
 
     await openCable(page, CABLES.excel.code);
     await expect(cableHeader(page)).toContainText("Tendido");
     await expect(cableHeader(page)).toContainText("Solo origen");
 
     await page.goto("/import");
+    // El último aplicado, con el nombre de su archivo.
+    await expect(page.getByRole("link", { name: "estado-electrico_16.11.26.xlsx" })).toBeVisible();
     await expect(page.getByText("Excel del 16/11/2026")).toBeVisible();
     await expect(page.getByText("Sin vista previa pendiente.").first()).toBeVisible();
 

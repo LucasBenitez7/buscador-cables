@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SELF_EXPLAINED_CHANGE_LABELS } from "@cables/shared";
 
 type Change = { field: string; from: string; to: string; fromHref?: string; toHref?: string };
 
@@ -17,7 +18,8 @@ function Value({ href, children }: { href?: string; children: ReactNode }) {
 }
 
 /**
- * What an event changed, one row per field: "Estado de instalación  Sin revisar → Tendido".
+ * What an event changed, one row per field: "Longitud (m)  120 → 125". The states go without
+ * their field name: "Sin timbrar → Timbrado" already says it.
  * Trays and locations are links to their page.
  */
 export function ChangeList({ changes }: { changes: readonly Change[] }) {
@@ -26,8 +28,21 @@ export function ChangeList({ changes }: { changes: readonly Change[] }) {
     <dl className="bg-muted/40 grid grid-cols-1 gap-x-4 gap-y-1 rounded-md px-3 py-2 text-xs sm:grid-cols-[auto_1fr]">
       {changes.map((change) => (
         <div key={change.field} className="contents">
-          <dt className="text-muted-foreground">{change.field}</dt>
-          <dd className="break-words">
+          {/* Los estados se explican solos: sin su nombre a la vista (sí para los lectores). */}
+          <dt
+            className={
+              SELF_EXPLAINED_CHANGE_LABELS.has(change.field) ? "sr-only" : "text-muted-foreground"
+            }
+          >
+            {change.field}
+          </dt>
+          <dd
+            className={
+              SELF_EXPLAINED_CHANGE_LABELS.has(change.field)
+                ? "break-words sm:col-span-2"
+                : "break-words"
+            }
+          >
             <span className="text-muted-foreground">
               <Value href={change.fromHref}>{change.from}</Value>
             </span>{" "}

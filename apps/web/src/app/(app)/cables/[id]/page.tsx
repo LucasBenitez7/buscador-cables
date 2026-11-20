@@ -1,3 +1,4 @@
+import { PencilIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
@@ -8,6 +9,7 @@ import {
   CABLE_LEVEL_LABELS,
   cableLengthItems,
   formatExcelDay,
+  lengthDeviation,
   reelText,
   cableActionAvailability,
   cableSheetKey,
@@ -38,6 +40,7 @@ import { RouteDrawings } from "@/features/drawings/components/route-drawings";
 import { getRouteSheets } from "@/server/drawings/route-sheets";
 import { Badge } from "@/components/ui/badge";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
+import { DeviationBadge } from "@/features/meters/components/deviation-badge";
 import { getCableDetail } from "@/server/cables/detail";
 import { requireUser, whenSignedIn } from "@/server/session";
 
@@ -124,7 +127,11 @@ export default async function CablePage({
           title={cable.code}
           actions={
             <>
-              {canEdit ? <SectionLink href={`/cables/${cable.id}/edit`}>Editar</SectionLink> : null}
+              {canEdit ? (
+                <SectionLink href={`/cables/${cable.id}/edit`} icon={<PencilIcon aria-hidden />}>
+                  Editar
+                </SectionLink>
+              ) : null}
               <SaveRecordButton kind="CABLE" itemKey={cable.id} label={cable.code} />
             </>
           }
@@ -266,7 +273,22 @@ export default async function CablePage({
                       : null}
                   </Item>
                   <Item label="Empresa">{cable.excel.company}</Item>
-                  <Item label="Bobina">{reelText(cable.excel.reel, cable.excel.reelStatus)}</Item>
+                  {/* La bobina lleva a sus cables: si sale defectuosa, qué revisar (fase 17). */}
+                  <Item label="Bobina">
+                    {cable.excel.reel ? (
+                      <>
+                        <Link
+                          href={`/cables?reel=${encodeURIComponent(cable.excel.reel)}`}
+                          className={INLINE_LINK}
+                        >
+                          {cable.excel.reel}
+                        </Link>
+                        {cable.excel.reelStatus ? ` · ${cable.excel.reelStatus}` : ""}
+                      </>
+                    ) : (
+                      reelText(null, cable.excel.reelStatus)
+                    )}
+                  </Item>
                   {lengths
                     .filter((item) => item.label === "Longitud real")
                     .map((item) => (
@@ -274,6 +296,16 @@ export default async function CablePage({
                         {item.value}
                       </Item>
                     ))}
+                  {/* Solo con las dos longitudes: si no, la fila no sale. */}
+                  <Item label="Frente al listado">
+                    {lengthDeviation(cable.lengthM, cable.excel.actualLengthM) ? (
+                      <DeviationBadge
+                        planned={cable.lengthM}
+                        actual={cable.excel.actualLengthM}
+                        withMetres
+                      />
+                    ) : null}
+                  </Item>
                 </DataList>
                 <DataList title="Proyecto">
                   {lengths

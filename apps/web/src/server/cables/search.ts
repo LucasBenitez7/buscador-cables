@@ -139,6 +139,7 @@ async function buildConditions(search: CableSearch, fuzzy: boolean): Promise<Pri
   }
 
   if (search.type) conditions.push(Prisma.sql`c."typeId" = ${search.type}`);
+  if (search.reel) conditions.push(Prisma.sql`c."reel" = ${search.reel}`);
   if (search.color) conditions.push(Prisma.sql`c."colorId" = ${search.color}`);
   if (search.manufacturer) conditions.push(Prisma.sql`c."manufacturerId" = ${search.manufacturer}`);
   if (search.installation) {

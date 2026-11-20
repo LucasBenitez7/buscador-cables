@@ -76,7 +76,7 @@ export function LocationForm(props: Props) {
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Guardando…" : props.mode === "create" ? "Crear" : "Guardar"}
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+        <Button type="button" size="sm" variant="secondary" onClick={onDone}>
           Cancelar
         </Button>
       </div>

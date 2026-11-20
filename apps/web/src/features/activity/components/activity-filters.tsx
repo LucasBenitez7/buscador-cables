@@ -22,7 +22,7 @@ import { usePendingNavigation } from "@/components/pending-list";
 type Props = {
   basePath: string;
   search: ActivitySearch;
-  /** Only "Actividad reciente" filters by person; "Mi actividad" is always the current user. */
+  /** Only who sees everyone's activity filters by person («Yo» first); the rest see their own. */
   users?: { id: string; label: string }[];
 };
 

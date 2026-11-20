@@ -489,7 +489,7 @@ export function CableWiring({ cableId, version, wires, jumpers, equipment, canEd
                     : `Guardar ${touched.size === 1 ? "1 hilo" : `${touched.size} hilos`}`}
               </Button>
             )}
-            <Button type="button" variant="outline" disabled={pending} onClick={stopEditing}>
+            <Button type="button" variant="secondary" disabled={pending} onClick={stopEditing}>
               Cancelar
             </Button>
           </div>

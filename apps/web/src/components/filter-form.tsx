@@ -2,7 +2,7 @@
 
 import { cn } from "cn";
 import { ChevronDownIcon, SlidersHorizontalIcon } from "lucide-react";
-import { useId, useState, type FormEvent } from "react";
+import { Fragment, useId, useState, type FormEvent } from "react";
 import { FormActions } from "@/components/form-actions";
 import { usePendingNavigation } from "@/components/pending-list";
 import { Button } from "@/components/ui/button";
@@ -84,65 +84,68 @@ export function FilterForm({ action, label, fields, keep = {}, active = false, a
         {fields.map((field, index) => {
           const id = `filter-${action.replace(/\W+/g, "-")}-${field.name}`;
           return (
-            <div
-              key={field.name}
-              id={index === 1 ? moreId : undefined}
-              className={cn("min-w-0 space-y-1.5", index > 0 && !expanded && "max-md:hidden")}
-            >
-              <Label htmlFor={id}>{field.label}</Label>
-              {field.kind === "select" ? (
-                <NativeSelect
-                  id={id}
-                  name={field.name}
-                  defaultValue={
-                    field.value ?? (field.emptyLabel === null ? field.options[0]?.value : "")
-                  }
+            <Fragment key={field.name}>
+              <div
+                id={index === 1 ? moreId : undefined}
+                className={cn("min-w-0 space-y-1.5", index > 0 && !expanded && "max-md:hidden")}
+              >
+                <Label htmlFor={id}>{field.label}</Label>
+                {field.kind === "select" ? (
+                  <NativeSelect
+                    id={id}
+                    name={field.name}
+                    defaultValue={
+                      field.value ?? (field.emptyLabel === null ? field.options[0]?.value : "")
+                    }
+                  >
+                    {field.emptyLabel === null ? null : (
+                      <option value="">{field.emptyLabel ?? "Todos"}</option>
+                    )}
+                    {field.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                ) : (
+                  <Input
+                    id={id}
+                    name={field.name}
+                    type={field.kind === "date" ? "date" : "search"}
+                    defaultValue={field.value ?? ""}
+                    placeholder={field.kind === "text" ? field.placeholder : undefined}
+                    autoComplete="off"
+                    maxLength={120}
+                  />
+                )}
+              </div>
+              {/* Justo bajo el primer campo: al desplegar, el botón no baja con los demás campos
+                (fase 17: antes iba debajo de todos y saltaba al abrir). */}
+              {index === 0 && fields.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="col-span-full w-full md:hidden"
+                  aria-expanded={expanded}
+                  aria-controls={moreId}
+                  onClick={() => setExpanded((value) => !value)}
                 >
-                  {field.emptyLabel === null ? null : (
-                    <option value="">{field.emptyLabel ?? "Todos"}</option>
-                  )}
-                  {field.options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </NativeSelect>
-              ) : (
-                <Input
-                  id={id}
-                  name={field.name}
-                  type={field.kind === "date" ? "date" : "search"}
-                  defaultValue={field.value ?? ""}
-                  placeholder={field.kind === "text" ? field.placeholder : undefined}
-                  autoComplete="off"
-                  maxLength={120}
-                />
-              )}
-            </div>
+                  <SlidersHorizontalIcon />
+                  {expanded ? "Menos filtros" : "Más filtros"}
+                  {hiddenActive > 0 ? ` (${hiddenActive})` : ""}
+                  <ChevronDownIcon
+                    aria-hidden
+                    className={cn(
+                      "transition-transform motion-safe:duration-200",
+                      expanded && "rotate-180",
+                    )}
+                  />
+                </Button>
+              ) : null}
+            </Fragment>
           );
         })}
       </div>
-      {fields.length > 1 ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full md:hidden"
-          aria-expanded={expanded}
-          aria-controls={moreId}
-          onClick={() => setExpanded((value) => !value)}
-        >
-          <SlidersHorizontalIcon />
-          {expanded ? "Menos filtros" : "Más filtros"}
-          {hiddenActive > 0 ? ` (${hiddenActive})` : ""}
-          <ChevronDownIcon
-            aria-hidden
-            className={cn(
-              "transition-transform motion-safe:duration-200",
-              expanded && "rotate-180",
-            )}
-          />
-        </Button>
-      ) : null}
       <FormActions
         // «Buscar» si hay un cuadro de texto; si solo hay filtros, «Aplicar».
         submitLabel={fields.some((field) => field.kind === "text") ? "Buscar" : "Aplicar"}

@@ -207,13 +207,26 @@ export function SelectionProvider({
   );
 }
 
-/** «Seleccionar», next to the count of the list. Hidden while choosing (the bar takes over). */
+/**
+ * «Seleccionar», always on the right of the line that heads the list: the count of a list, or
+ * the bar of a box of a record (`Section`'s `tools`). Hidden while choosing (the bar takes over).
+ */
 export function SelectionToggle({ className }: { className?: string }) {
   const context = useContext(SelectionContext);
   // Sin filas no hay nada que elegir.
   if (!context || context.selecting || context.shown === 0) return null;
   return (
-    <Button type="button" variant="outline" size="sm" className={className} onClick={context.start}>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className={className}
+      onClick={(event) => {
+        // En la barra de una caja, pulsarlo no la cierra.
+        event.preventDefault();
+        context.start();
+      }}
+    >
       Seleccionar
     </Button>
   );
@@ -253,20 +266,16 @@ export function SelectCheckbox({ item, className }: { item: SelectionItem; class
 /**
  * «Seleccionar todas», one single tick (decidido el 2026-11-19): in a list with pages it takes
  * everything that matches the filters, not only the page; otherwise, every row of the list.
- * Half ticked when only some are chosen.
+ * Empty or ticked, never half ticked: it is ticked only when everything is chosen.
  */
 function AllCheckbox({ context, className }: { context: SelectionState; className?: string }) {
   const { everything } = context;
   const checked = everything ? everything.checked : context.page === "all";
-  const some = everything ? context.count > 0 && !checked : context.page === "some";
   return (
     <input
       type="checkbox"
       checked={checked}
       disabled={everything?.loading}
-      ref={(input) => {
-        if (input) input.indeterminate = some;
-      }}
       onChange={everything ? everything.toggle : context.togglePage}
       aria-label={allLabel(context)}
       className={cn("accent-primary size-5 shrink-0 md:size-4", className)}
@@ -282,27 +291,31 @@ function allLabel(context: SelectionState): string {
     : "Seleccionar todas";
 }
 
-/** The column of ticks of a table: its header, with «Seleccionar todas», only while choosing. */
+/**
+ * The header of the column of ticks of a table, only while choosing. Empty: «Seleccionar
+ * todas» is the line above the table (`SelectAllRow`), as in every list.
+ */
 export function SelectHeaderCell() {
   const context = useContext(SelectionContext);
   if (!context?.selecting) return null;
   return (
     <th scope="col" className="w-10 px-3 py-2">
-      <AllCheckbox context={context} className="mt-0.5 align-middle" />
+      <span className="sr-only">Elegir</span>
     </th>
   );
 }
 
 /**
- * «Seleccionar todas» above a list, only while choosing. The whole line is pressed.
+ * «Seleccionar todas», a thin line right above the list, only while choosing: the same in
+ * every list, with its tick in line with the rows' ticks. The whole line is pressed.
  */
 export function SelectAllRow({ className }: { className?: string }) {
   const context = useContext(SelectionContext);
   if (!context?.selecting || context.shown === 0) return null;
   const error = context.everything?.error;
   return (
-    <div className={cn("bg-card rounded-lg border text-sm font-medium", className)}>
-      <label className="flex min-h-10 cursor-pointer items-center gap-3 px-3 py-2">
+    <div className={cn("text-sm font-medium", className)}>
+      <label className="flex min-h-9 w-fit cursor-pointer items-center gap-2 px-3 py-1.5">
         <AllCheckbox context={context} />
         {allLabel(context)}
         {context.everything?.loading
@@ -373,9 +386,12 @@ function SelectionBar({ title, selected, actions, onClose }: BarProps) {
     window.print();
   };
 
-  return (
+  // La barra y su hueco van al final de la página, fuera de la lista o la caja que elige: así
+  // ni los márgenes de la página la despegan del borde de abajo ni el hueco cae dentro de una
+  // caja.
+  return createPortal(
     <>
-      {/* Hueco al final de la página: la barra fija no tapa las últimas filas. */}
+      {/* Hueco: la barra fija no tapa las últimas filas. */}
       <div aria-hidden className={cn("md:h-20", actions ? "h-48" : "h-32")} />
       <section
         aria-label="Elegidos"
@@ -429,14 +445,15 @@ function SelectionBar({ title, selected, actions, onClose }: BarProps) {
               <PrinterIcon aria-hidden />
               Imprimir
             </Button>
-            <Button type="button" variant="ghost" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
           </div>
         </div>
       </section>
-      {printing ? createPortal(<PrintSheet title={title} labels={labels} />, document.body) : null}
-    </>
+      {printing ? <PrintSheet title={title} labels={labels} /> : null}
+    </>,
+    document.body,
   );
 }
 

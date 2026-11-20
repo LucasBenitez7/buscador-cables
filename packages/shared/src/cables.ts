@@ -157,6 +157,16 @@ export const CABLE_FIELD_LABELS: Record<
   deletedAt: "Baja",
 };
 
+/**
+ * The states whose values already say what changed («Sin timbrar → Timbrado»): in a list of
+ * changes they go without their field name, which would only repeat it (fase 17).
+ */
+export const SELF_EXPLAINED_CHANGE_LABELS: ReadonlySet<string> = new Set([
+  CABLE_FIELD_LABELS.installationStatus,
+  CABLE_FIELD_LABELS.connectionStatus,
+  CABLE_FIELD_LABELS.testStatus,
+]);
+
 /** Fields that only the load of the project lists writes (`pnpm data:load`), for the history. */
 export const PROJECT_FIELD_LABELS: Record<string, string> = {
   level: "Nivel",

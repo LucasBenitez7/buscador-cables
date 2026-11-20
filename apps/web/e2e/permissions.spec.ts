@@ -10,16 +10,21 @@ test.describe("consulta", () => {
   test("solo ve: ni alta, ni edición, ni acciones", async ({ page }) => {
     await page.goto("/cables");
     await expect(page.getByRole("link", { name: "Nuevo cable" })).toHaveCount(0);
-    await expect(nav(page).getByRole("link", { name: "Actividad", exact: true })).toHaveCount(0);
     await expect(nav(page).getByRole("link", { name: "Usuarios" })).toHaveCount(0);
 
     await openCable(page, CABLES.search.code);
     await expect(page.getByRole("link", { name: "Editar", exact: true })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Acciones" })).toHaveCount(0);
+
+    // «Actividad» la tiene (fase 17), pero solo la suya: sin elegir persona.
+    await nav(page).getByRole("link", { name: "Actividad", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Actividad" })).toBeVisible();
+    await expect(page.getByLabel("Quién")).toHaveCount(0);
   });
 
   test("las páginas sin permiso llevan al inicio", async ({ page }) => {
-    for (const path of ["/cables/new", "/activity", "/admin/users"]) {
+    // «Actividad» la tienen todos (cada uno ve la suya): ya no está en esta lista.
+    for (const path of ["/cables/new", "/admin/users"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { name: "Inicio" })).toBeVisible();
       await expect(page).toHaveURL(/\/$/);
@@ -45,18 +50,38 @@ test.describe("técnico", () => {
     await expect(page.getByRole("banner")).toContainText(USERS.technician.name);
   });
 
+  // Fase 17: una sola «Actividad»; quien no ve la de todos solo ve la suya, sin elegir persona.
   test("ve su actividad pero no la de todos", async ({ page }) => {
     await page.goto("/");
-    await expect(nav(page).getByRole("link", { name: "Mi actividad" })).toBeVisible();
-    await expect(nav(page).getByRole("link", { name: "Actividad", exact: true })).toHaveCount(0);
+    await expect(nav(page).getByRole("link", { name: "Actividad", exact: true })).toBeVisible();
+    await expect(nav(page).getByRole("link", { name: "Mi actividad" })).toHaveCount(0);
 
-    await page.goto("/activity");
-    await expect(page).toHaveURL(/\/$/);
+    await page.goto(`/activity?actor=${encodeURIComponent("otra-persona")}`);
+    await expect(page.getByRole("heading", { name: "Actividad" })).toBeVisible();
+    await expect(page.getByText("Lo que has registrado tú en los cables.")).toBeVisible();
+    await expect(page.getByLabel("Quién")).toHaveCount(0);
+
+    // Los enlaces antiguos a «Mi actividad» siguen llevando a su actividad.
+    await page.goto("/activity/me");
+    await expect(page).toHaveURL(/\/activity$/);
   });
 });
 
 test.describe("administrador", () => {
   test.use({ storageState: storageStatePath("admin") });
+
+  test("ve la actividad de todos y los enlaces a «Mi actividad» le dejan en la suya", async ({
+    page,
+  }) => {
+    await page.goto("/activity");
+    await expect(page.getByLabel("Quién")).toBeVisible();
+
+    // Con los filtros que traía el enlace antiguo.
+    await page.goto("/activity/me?action=LAID");
+    await expect(page).toHaveURL(/\/activity\?.*actor=/);
+    await expect(page).toHaveURL(/action=LAID/);
+    await expect(page.getByRole("heading", { name: "Actividad" })).toBeVisible();
+  });
 
   test("ve todas las secciones y marca la actual", async ({ page }) => {
     await page.goto("/cables");
@@ -68,19 +93,25 @@ test.describe("administrador", () => {
       "Equipos",
       "Ubicaciones",
       "Guardados",
-      "Actividad",
+      "Excel del día",
     ]);
-    // La administración va en "Gestión" (con el número de cuentas pendientes, si las hay) y
-    // "Mi actividad" en el menú con su nombre: la fila cabe siempre.
+    // Fase 17: en la fila, lo de cada día; en «Gestión», primero «Metros» y «Actividad», y
+    // después la administración (con el número de cuentas pendientes, si las hay).
     await nav(page)
       .getByRole("button", { name: /^Gestión/ })
       .click();
     const manage = page.getByRole("menu");
-    await expect(manage.getByRole("menuitem", { name: "Catálogos" })).toBeVisible();
-    await expect(manage.getByRole("menuitem", { name: /^Usuarios/ })).toBeVisible();
+    await expect(manage.getByRole("menuitem")).toHaveText([
+      "Metros",
+      "Actividad",
+      /^Pendientes de revisar/,
+      "Catálogos",
+      /^Usuarios/,
+      "Roles y permisos",
+    ]);
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: `Menú de ${USERS.admin.name}` }).click();
-    await expect(page.getByRole("menuitem", { name: "Mi actividad" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Mi actividad" })).toHaveCount(0);
     await expect(page.getByRole("menuitem", { name: "Cerrar sesión" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(nav(page).getByRole("link", { name: "Cables" })).toHaveAttribute(

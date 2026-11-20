@@ -2,7 +2,14 @@
 
 import { cn } from "cn";
 import Link from "next/link";
-import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  MoreHorizontalIcon,
+  MoveIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import {
   LOCATION_TYPE_LABELS,
@@ -109,6 +116,7 @@ export function LocationTree({
             <LocationForm mode="create" type="PLANT" parentId={null} onDone={close} />
           ) : (
             <Button size="sm" onClick={() => setForm({ kind: "add", parentId: "root" })}>
+              <PlusIcon aria-hidden />
               Nueva planta
             </Button>
           )
@@ -291,6 +299,7 @@ function TreeItem({
                 <span className="hidden items-center gap-1 md:pointer-fine:flex md:pointer-fine:opacity-0 md:pointer-fine:transition-opacity md:pointer-fine:group-focus-within:opacity-100 md:pointer-fine:group-hover:opacity-100">
                   {childType ? (
                     <Button size="xs" variant="ghost" onClick={addChild}>
+                      <PlusIcon aria-hidden />
                       Añadir {LOCATION_TYPE_LABELS[childType].toLowerCase()}
                     </Button>
                   ) : null}
@@ -299,6 +308,7 @@ function TreeItem({
                     variant="ghost"
                     onClick={() => setForm({ kind: "edit", id: node.id })}
                   >
+                    <PencilIcon aria-hidden />
                     Editar
                   </Button>
                   {node.type !== "PLANT" ? (
@@ -308,6 +318,7 @@ function TreeItem({
                       onClick={() => setForm({ kind: "move", id: node.id })}
                       aria-label={`Mover ${node.name}`}
                     >
+                      <MoveIcon aria-hidden />
                       Mover
                     </Button>
                   ) : null}
@@ -318,6 +329,7 @@ function TreeItem({
                     onClick={remove}
                     disabled={pending}
                   >
+                    <Trash2Icon aria-hidden />
                     Eliminar
                   </Button>
                 </span>
@@ -337,14 +349,17 @@ function TreeItem({
                   <DropdownMenuContent>
                     {childType ? (
                       <DropdownMenuItem onSelect={addChild}>
+                        <PlusIcon aria-hidden />
                         Añadir {LOCATION_TYPE_LABELS[childType].toLowerCase()}
                       </DropdownMenuItem>
                     ) : null}
                     <DropdownMenuItem onSelect={() => setForm({ kind: "edit", id: node.id })}>
+                      <PencilIcon aria-hidden />
                       Editar
                     </DropdownMenuItem>
                     {node.type !== "PLANT" ? (
                       <DropdownMenuItem onSelect={() => setForm({ kind: "move", id: node.id })}>
+                        <MoveIcon aria-hidden />
                         Mover
                       </DropdownMenuItem>
                     ) : null}
@@ -353,6 +368,7 @@ function TreeItem({
                       disabled={pending}
                       onSelect={remove}
                     >
+                      <Trash2Icon aria-hidden />
                       Eliminar
                     </DropdownMenuItem>
                   </DropdownMenuContent>

@@ -205,7 +205,7 @@ export function CableActions({
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
-                variant="ghost"
+                variant="secondary"
                 onClick={() => (picking ? setOpen(null) : close())}
               >
                 {picking ? "← Otra acción" : "Cancelar"}

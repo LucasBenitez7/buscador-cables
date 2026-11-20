@@ -160,58 +160,57 @@ export function ListToolbar({
           </Button>
         ) : null}
         {sort || filters.length > 0 ? (
-          <div
-            id={moreId}
-            className={cn(
-              "grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap",
-              !expanded && "max-md:hidden",
-            )}
-          >
-            {sort ? (
-              <div className="min-w-0 space-y-1.5 sm:w-52">
-                <Label htmlFor={idOf(sort.name)}>Orden</Label>
-                <NativeSelect id={idOf(sort.name)} name={sort.name} defaultValue={sort.value}>
-                  {sort.options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-            ) : null}
-            {filters.map((filter) =>
-              filter.kind === "checkbox" ? (
-                <label
-                  key={filter.name}
-                  className="col-span-2 flex min-h-10 cursor-pointer items-center gap-2 text-sm sm:col-span-1"
-                >
-                  <input
-                    type="checkbox"
-                    name={filter.name}
-                    value="1"
-                    defaultChecked={filter.checked}
-                    className="accent-primary size-4"
-                  />
-                  {filter.label}
-                </label>
-              ) : (
-                <div key={filter.name} className="min-w-0 space-y-1.5 sm:w-44">
-                  <Label htmlFor={idOf(filter.name)}>{filter.label}</Label>
-                  <NativeSelect
-                    id={idOf(filter.name)}
-                    name={filter.name}
-                    defaultValue={filter.value ?? ""}
-                  >
-                    <option value="">Todos</option>
-                    {filter.options.map((option) => (
+          // El envoltorio solo muestra u oculta; la rejilla va dentro. Con las dos cosas en el mismo
+          // elemento, entre 640 y 767 px «sm:flex» ganaba a «max-md:hidden» y el botón no cerraba
+          // nada (fase 17).
+          <div id={moreId} className={cn(!expanded && "max-md:hidden")}>
+            <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap">
+              {sort ? (
+                <div className="min-w-0 space-y-1.5 sm:w-52">
+                  <Label htmlFor={idOf(sort.name)}>Orden</Label>
+                  <NativeSelect id={idOf(sort.name)} name={sort.name} defaultValue={sort.value}>
+                    {sort.options.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
                   </NativeSelect>
                 </div>
-              ),
-            )}
+              ) : null}
+              {filters.map((filter) =>
+                filter.kind === "checkbox" ? (
+                  <label
+                    key={filter.name}
+                    className="col-span-2 flex min-h-10 cursor-pointer items-center gap-2 text-sm sm:col-span-1"
+                  >
+                    <input
+                      type="checkbox"
+                      name={filter.name}
+                      value="1"
+                      defaultChecked={filter.checked}
+                      className="accent-primary size-4"
+                    />
+                    {filter.label}
+                  </label>
+                ) : (
+                  <div key={filter.name} className="min-w-0 space-y-1.5 sm:w-44">
+                    <Label htmlFor={idOf(filter.name)}>{filter.label}</Label>
+                    <NativeSelect
+                      id={idOf(filter.name)}
+                      name={filter.name}
+                      defaultValue={filter.value ?? ""}
+                    >
+                      <option value="">Todos</option>
+                      {filter.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </div>
+                ),
+              )}
+            </div>
           </div>
         ) : null}
 

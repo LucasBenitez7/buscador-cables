@@ -4,12 +4,11 @@ import { notFound } from "next/navigation";
 import { cache, type ReactNode } from "react";
 import { TRAY_KIND_LABELS } from "@cables/shared";
 import { Section } from "@/components/detail";
-import { ListSummary } from "@/components/list-summary";
 import {
   SelectAllRow,
   SelectCheckbox,
-  SelectionAside,
   SelectionProvider,
+  SelectionToggle,
 } from "@/components/selection";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
@@ -49,18 +48,17 @@ export default async function SavedFolderPage({ params }: { params: Params }) {
     .map(({ id, name }) => ({ id, name }));
   const empty = folder.cables.length + folder.trays.length + folder.equipment.length === 0;
 
-  // Las tres listas eligen igual: la clave es el id de lo guardado; se copia el código.
+  // Las tres cajas eligen igual: la clave es el id de lo guardado; se copia el código.
   const list = (title: string, items: { itemId: string; code: string }[], rows: ReactNode) => (
     <SelectionProvider
       title={`${folder.name} · ${title.toLowerCase()}`}
       items={items.map((item) => ({ key: item.itemId, label: item.code }))}
       actions={<FolderChosenActions folderId={folder.id} others={others} />}
     >
-      <div className="space-y-3">
-        <ListSummary aside={<SelectionAside />}>{null}</ListSummary>
+      <Section title={`${title} (${items.length})`} collapsible tools={<SelectionToggle />}>
         <SelectAllRow />
         <ul className="bg-card divide-y rounded-lg border">{rows}</ul>
-      </div>
+      </Section>
     </SelectionProvider>
   );
 
@@ -90,9 +88,8 @@ export default async function SavedFolderPage({ params }: { params: Params }) {
         </p>
       ) : null}
 
-      {folder.cables.length > 0 ? (
-        <Section title={`Cables (${folder.cables.length})`} collapsible>
-          {list(
+      {folder.cables.length > 0
+        ? list(
             "Cables",
             folder.cables,
             folder.cables.map((cable) => {
@@ -134,13 +131,11 @@ export default async function SavedFolderPage({ params }: { params: Params }) {
                 </li>
               );
             }),
-          )}
-        </Section>
-      ) : null}
+          )
+        : null}
 
-      {folder.trays.length > 0 ? (
-        <Section title={`Bandejas (${folder.trays.length})`} collapsible>
-          {list(
+      {folder.trays.length > 0
+        ? list(
             "Bandejas",
             folder.trays,
             folder.trays.map((tray) => (
@@ -163,13 +158,11 @@ export default async function SavedFolderPage({ params }: { params: Params }) {
                 </p>
               </li>
             )),
-          )}
-        </Section>
-      ) : null}
+          )
+        : null}
 
-      {folder.equipment.length > 0 ? (
-        <Section title={`Equipos (${folder.equipment.length})`} collapsible>
-          {list(
+      {folder.equipment.length > 0
+        ? list(
             "Equipos",
             folder.equipment.map((equipment) => ({ ...equipment, code: equipment.equipment })),
             folder.equipment.map((equipment) => (
@@ -185,9 +178,8 @@ export default async function SavedFolderPage({ params }: { params: Params }) {
                 </p>
               </li>
             )),
-          )}
-        </Section>
-      ) : null}
+          )
+        : null}
     </article>
   );
 }

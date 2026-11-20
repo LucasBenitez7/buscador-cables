@@ -47,6 +47,7 @@ export function SearchFilters({ search, options }: Props) {
   const advancedActive = Boolean(
     search.manufacturer ||
     search.equipment ||
+    search.reel ||
     search.color ||
     hasActivityFilters(search) ||
     RANGES.some(
@@ -71,9 +72,14 @@ export function SearchFilters({ search, options }: Props) {
   const text = (value: number | string | undefined) =>
     value === undefined ? "" : String(value).replace(".", ",");
 
-  // En el móvil solo se ve el cuadro de búsqueda; el resto se despliega con "Filtros".
+  // En el móvil solo se ve el cuadro de búsqueda; el resto se despliega con "Filtros". En el
+  // portátil se ven también los tres estados; el resto, con "Más filtros" (fase 17).
   const { q: _q, sort: _sort, dir: _dir, page: _page, size: _size, ...filters } = search;
   const activeCount = Object.values(filters).filter((value) => value !== undefined).length;
+  const shownOnLaptop = [filters.installation, filters.connection, filters.test].filter(
+    (value) => value !== undefined,
+  ).length;
+  const hiddenCount = activeCount - shownOnLaptop;
 
   return (
     // La clave reinicia los campos cuando cambia la URL (botón atrás, "Limpiar").
@@ -84,8 +90,8 @@ export function SearchFilters({ search, options }: Props) {
       aria-label="Buscar cables"
       className="bg-card space-y-4 rounded-lg border p-4"
     >
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1 space-y-1.5 sm:min-w-56">
+      <div className="grid items-end gap-3 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]">
+        <div className="min-w-0 space-y-1.5">
           <Label htmlFor="q">Código, equipo o descripción</Label>
           <Input
             id="q"
@@ -100,13 +106,16 @@ export function SearchFilters({ search, options }: Props) {
         <Button
           type="button"
           variant="outline"
-          className="md:hidden"
+          className="md:order-last"
           aria-expanded={expanded}
           aria-controls="cable-filters"
           onClick={() => setExpanded((value) => !value)}
         >
           <SlidersHorizontalIcon />
-          Filtros{activeCount > 0 ? ` (${activeCount})` : ""}
+          <span className="md:hidden">Filtros{activeCount > 0 ? ` (${activeCount})` : ""}</span>
+          <span className="hidden md:inline">
+            Más filtros{hiddenCount > 0 ? ` (${hiddenCount})` : ""}
+          </span>
           {/* Gira al abrir el panel: se ve que el botón despliega algo. */}
           <ChevronDownIcon
             aria-hidden
@@ -116,9 +125,42 @@ export function SearchFilters({ search, options }: Props) {
             )}
           />
         </Button>
+        {/* Los estados: a la vista en el portátil; en el móvil, al desplegar "Filtros". */}
+        <div className={cn("gap-3 sm:grid-cols-2 md:contents", expanded ? "grid" : "hidden")}>
+          <Filter label="Instalación" htmlFor="installation">
+            <Select id="installation" name="installation" defaultValue={search.installation}>
+              {INSTALLATION_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {INSTALLATION_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </Filter>
+          <Filter label="Conexión" htmlFor="connection">
+            <Select id="connection" name="connection" defaultValue={search.connection}>
+              {CONNECTION_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {CONNECTION_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </Filter>
+          <Filter label="Timbrado" htmlFor="test">
+            <Select id="test" name="test" defaultValue={search.test}>
+              {TEST_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {TEST_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </Filter>
+        </div>
       </div>
 
-      <div id="cable-filters" className={cn("space-y-4 md:block", expanded ? "block" : "hidden")}>
+      <div
+        id="cable-filters"
+        className={cn("space-y-4 border-t pt-4", expanded ? "block" : "hidden")}
+      >
         <Filter label="Ubicación (incluye lo que contiene)" htmlFor="location">
           <SearchableSelect
             id="location"
@@ -143,33 +185,6 @@ export function SearchFilters({ search, options }: Props) {
               {CABLE_LEVELS.map((level) => (
                 <option key={level} value={level}>
                   {CABLE_LEVEL_LABELS[level]}
-                </option>
-              ))}
-            </Select>
-          </Filter>
-          <Filter label="Instalación" htmlFor="installation">
-            <Select id="installation" name="installation" defaultValue={search.installation}>
-              {INSTALLATION_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {INSTALLATION_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </Select>
-          </Filter>
-          <Filter label="Conexión" htmlFor="connection">
-            <Select id="connection" name="connection" defaultValue={search.connection}>
-              {CONNECTION_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {CONNECTION_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </Select>
-          </Filter>
-          <Filter label="Timbrado" htmlFor="test">
-            <Select id="test" name="test" defaultValue={search.test}>
-              {TEST_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {TEST_STATUS_LABELS[status]}
                 </option>
               ))}
             </Select>
@@ -199,7 +214,7 @@ export function SearchFilters({ search, options }: Props) {
 
         <details open={advancedActive} className="group">
           <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-sm transition-colors outline-none select-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
-            Más filtros
+            Equipo, bobina, color, medidas y movimientos
             {/* Gira al abrir: en escritorio también se ve que el bloque se despliega. */}
             <ChevronDownIcon
               aria-hidden
@@ -216,6 +231,16 @@ export function SearchFilters({ search, options }: Props) {
                 autoComplete="off"
                 spellCheck={false}
                 className="font-mono uppercase"
+              />
+            </Filter>
+            <Filter label="Bobina" htmlFor="reel">
+              <Input
+                id="reel"
+                name="reel"
+                defaultValue={search.reel ?? ""}
+                placeholder="Como en el Excel"
+                autoComplete="off"
+                spellCheck={false}
               />
             </Filter>
             <Filter label="Color" htmlFor="color">

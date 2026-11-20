@@ -1,39 +1,17 @@
-import type { Metadata } from "next";
-import { parseActivitySearch } from "@cables/shared";
-import { ActivityFilters } from "@/features/activity/components/activity-filters";
-import { PendingListProvider, PendingResults } from "@/components/pending-list";
-import { ActivityList } from "@/features/activity/components/activity-list";
-import { listActivity } from "@/server/activity/service";
+import { redirect } from "next/navigation";
+import { activityQuery, hasPermission, parseActivitySearch } from "@cables/shared";
 import { requireUser } from "@/server/session";
-
-export const metadata: Metadata = { title: "Mi actividad" };
-export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-/** The current user's own field actions. The person is never taken from the URL. */
+/**
+ * «Mi actividad» is now «Actividad» (fase 17). Old links land on the person's own activity with
+ * the filters they carried: filtered by «Yo» for who sees everyone's, and as they are for
+ * everybody else (who only ever sees their own).
+ */
 export default async function MyActivityPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
-  const { actor: _ignored, ...search } = parseActivitySearch(await searchParams);
-  const activity = await listActivity({ ...search, actor: user.id });
-
-  return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Mi actividad</h1>
-        <p className="text-muted-foreground text-sm">Lo que has registrado tú en los cables.</p>
-      </div>
-      <PendingListProvider>
-        <ActivityFilters basePath="/activity/me" search={search} />
-        <PendingResults>
-          <ActivityList
-            basePath="/activity/me"
-            search={search}
-            activity={activity}
-            showUser={false}
-          />
-        </PendingResults>
-      </PendingListProvider>
-    </div>
-  );
+  const search = parseActivitySearch(await searchParams);
+  const actor = hasPermission(user, "activity:view") ? user.id : undefined;
+  redirect(`/activity${activityQuery(search, { actor })}`);
 }

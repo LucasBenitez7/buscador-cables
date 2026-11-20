@@ -1041,6 +1041,30 @@ que su aviso se vea.
 
 ---
 
+## Fase 17 — Repaso de la interfaz y metros (v1.7.0)
+
+Añadida el 2026-11-19. Rama `feat/f17-ui-polish`. Cada cambio visual se enseñó antes en capturas.
+
+Decisiones que siguen valiendo:
+
+- **Menú**: en la fila, lo de cada día (Inicio, Cables, Bandejas, Equipos, Ubicaciones,
+  Guardados, Excel del día); en «Gestión», primero «Metros» y «Actividad». Quien no tiene
+  «Gestión» ve «Actividad» en la fila. En el móvil, una sola lista en ese orden, sin grupos.
+- **Actividad**: una sola página; quien ve la de todos elige persona («Yo» primero).
+- **Metros**: avance (cables tendidos con su longitud prevista: reales si los hay, si no los del
+  listado), desviación (bien hasta ±10 %, revisar desde ±25 %; por nivel y por área donde empieza
+  el cable: su origen o su primera bandeja) y bobinas (metros gastados; no se sabe lo que
+  traían). Los metros reales vienen de los dos Excel del día.
+- **Fichas**: una caja por bloque; las acciones con icono; «Añadir a carpetas» en vez de
+  «Guardar». «Seleccionar» a la derecha de la línea que encabeza cada lista.
+- **«Carga del proyecto»**: ya no se ofrece al subir un Excel.
+
+- [x] Fichas, selección, actividad, Excel del día, filtros, inicio y menú.
+- [x] «Metros»: avance, desviación y bobinas, con enlaces desde el inicio, la ficha y el buscador.
+- [x] Tests y E2E.
+
+---
+
 ## Entornos
 
 | Entorno    | Web            | Base de datos        | Email   | Rama     |

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useState, type ChangeEvent, type FormEvent } from "react";
-import { EXCEL_KIND_LABELS, excelPreviewParts, type ExcelKind } from "@cables/shared";
+import { EXCEL_KIND_LABELS, excelPreviewParts } from "@cables/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,6 @@ import {
 } from "@/features/excel-import/actions";
 import { readExcelFile, type ReadExcelResult } from "@/features/excel-import/read-excel";
 
-type Props = {
-  /** The load of the project, for an administrator while no Excel of the day was applied. */
-  projectLoadKinds: readonly ExcelKind[];
-};
-
 type Read = Extract<ReadExcelResult, { ok: true }> & { fileName: string };
 
 const number = new Intl.NumberFormat("es-ES");
@@ -26,12 +21,11 @@ const number = new Intl.NumberFormat("es-ES");
  * Picks the Excel, reads it in the browser and sends what it says in parts: nothing is
  * applied here, the next screen is the preview.
  */
-export function UploadExcelForm({ projectLoadKinds }: Props) {
+export function UploadExcelForm() {
   const router = useRouter();
   const ids = useId();
   const [read, setRead] = useState<Read | null>(null);
   const [excelDate, setExcelDate] = useState("");
-  const [projectLoad, setProjectLoad] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const busy = status !== null;
@@ -40,7 +34,6 @@ export function UploadExcelForm({ projectLoadKinds }: Props) {
     const file = event.target.files?.[0];
     setRead(null);
     setError(null);
-    setProjectLoad(false);
     if (!file) return;
     setStatus("Leyendo el Excel…");
     const result = await readExcelFile(file);
@@ -63,7 +56,8 @@ export function UploadExcelForm({ projectLoadKinds }: Props) {
       kind: read.kind,
       excelDate,
       fileName: read.fileName,
-      projectLoad,
+      // La carga del proyecto ya se hizo (fase 17): todo lo que se sube es del día.
+      projectLoad: false,
       rowCount: read.rows.length,
     });
     if (!started.ok) return stop(started.message);
@@ -122,18 +116,6 @@ export function UploadExcelForm({ projectLoadKinds }: Props) {
                 disabled={busy}
               />
             </div>
-            {projectLoadKinds.includes(read.kind) ? (
-              <label className="flex items-center gap-2 text-sm sm:pb-1.5">
-                <input
-                  type="checkbox"
-                  checked={projectLoad}
-                  onChange={(event) => setProjectLoad(event.target.checked)}
-                  disabled={busy}
-                  className="accent-primary size-4 shrink-0"
-                />
-                Carga del proyecto
-              </label>
-            ) : null}
           </div>
         </>
       ) : null}

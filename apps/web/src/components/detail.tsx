@@ -24,15 +24,25 @@ export function RecordTitle({ title, actions }: { title: string; actions?: React
 
 /** The look of `SectionLink`, also for a button that does the same kind of thing («Guardar»). */
 export const SECTION_LINK =
-  "text-primary border-primary/50 hover:border-primary focus-visible:ring-ring/50 border-b text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2";
+  "text-primary border-primary/50 hover:border-primary focus-visible:ring-ring/50 inline-flex items-center gap-1.5 border-b text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 [&_svg]:size-4 [&_svg]:shrink-0";
 
 /**
  * What can be done with a block or a record ("Ver en el buscador", "Editar"), next to its
  * title: plain text with a line under it, no box, so it does not compete with the title.
  */
-export function SectionLink({ href, children }: { href: string; children: ReactNode }) {
+export function SectionLink({
+  href,
+  icon,
+  children,
+}: {
+  href: string;
+  /** Before the words, like every action of a record (fase 17): «Editar» with its pencil. */
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <Link href={href} className={SECTION_LINK}>
+      {icon}
       {children}
     </Link>
   );
@@ -49,6 +59,7 @@ export function SectionLink({ href, children }: { href: string; children: ReactN
 export function Section({
   title,
   action,
+  tools,
   children,
   collapsible = false,
   defaultOpen = true,
@@ -56,6 +67,9 @@ export function Section({
 }: {
   title: string;
   action?: ReactNode;
+  /** On the right of the bar of a collapsible block, before «Ocultar», only while it is open
+   *  («Seleccionar»). */
+  tools?: ReactNode;
   children: ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
@@ -63,18 +77,24 @@ export function Section({
 }) {
   if (collapsible) {
     return (
+      // Una sola caja: el título es su cabecera y lo de dentro va debajo, en la misma caja, para
+      // que se vea a qué título pertenece. Cerrada, solo queda la cabecera y se acerca a la
+      // siguiente.
       <Collapsible
         id={id}
         defaultOpen={defaultOpen}
-        className="group/section scroll-mt-28 space-y-3"
+        className="group/section bg-card scroll-mt-28 overflow-hidden rounded-xl border not-open:mb-3"
       >
         {/* Toda la barra se pulsa, y dice con palabras qué pasa al pulsarla: no hace falta
             saber qué significa una flecha. */}
-        <summary className="bg-card hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-lg border px-3 py-1.5 transition-colors outline-none select-none focus-visible:ring-3 [&::-webkit-details-marker]:hidden">
+        <summary className="bg-muted hover:bg-border/70 focus-visible:ring-ring/50 flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 transition-colors outline-none select-none group-open/section:border-b focus-visible:ring-3 focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
           <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h2 className="text-[0.95rem] font-semibold">{title}</h2>
+            <h2 className="text-base font-semibold">{title}</h2>
             {action}
           </span>
+          {tools ? (
+            <span className="hidden shrink-0 group-open/section:inline-flex">{tools}</span>
+          ) : null}
           <span className="text-primary inline-flex shrink-0 items-center gap-1 text-sm font-medium">
             <span className="group-open/section:hidden">Mostrar</span>
             <span className="hidden group-open/section:inline">Ocultar</span>
@@ -84,7 +104,8 @@ export function Section({
             />
           </span>
         </summary>
-        <div className="space-y-3">{children}</div>
+        {/* Las listas de dentro, más oscuras que la caja: se distinguen sin otra caja igual. */}
+        <div className="[&_.bg-card]:bg-background space-y-3 p-2 sm:p-3">{children}</div>
       </Collapsible>
     );
   }

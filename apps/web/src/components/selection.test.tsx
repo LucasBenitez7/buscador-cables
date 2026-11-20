@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Section } from "./detail";
 import {
   SelectAllRow,
   SelectCheckbox,
   SelectionAside,
   SelectionProvider,
+  SelectionToggle,
   type SelectAllResult,
   type SelectionItem,
 } from "./selection";
@@ -78,6 +80,38 @@ describe("SelectionProvider", () => {
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
+  it("starts from the bar of a box without closing it, with the bar and its gap out of the box", () => {
+    const { container } = render(
+      <SelectionProvider title="Bandeja" items={items}>
+        <Section title="Pasan por aquí (3)" collapsible tools={<SelectionToggle />}>
+          <SelectAllRow />
+          <ul>
+            {items.map((item) => (
+              <li key={item.key}>
+                <SelectCheckbox item={item} />
+                {item.label}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      </SelectionProvider>,
+    );
+    const box = container.querySelector("details")!;
+    const button = screen.getByRole("button", { name: "Seleccionar" });
+    expect(box.querySelector("summary")!.contains(button)).toBe(true);
+
+    start();
+    expect(box.open).toBe(true);
+    expect(screen.getByRole("checkbox", { name: "Elegir 99XAT10W2001" })).toBeTruthy();
+    // El hueco para la barra fija va al final de la página, no dentro de la caja.
+    expect(box.querySelector("[aria-hidden]:empty")).toBeNull();
+    // Y la barra también, fuera de la caja: ningún margen de la página la despega de abajo.
+    const bar = screen.getByRole("region", { name: "Elegidos" });
+    expect(box.contains(bar)).toBe(false);
+    expect(bar.parentElement).toBe(document.body);
+    expect(bar.previousElementSibling?.matches("div[aria-hidden]:empty")).toBe(true);
+  });
+
   it("offers nothing to choose in an empty list", () => {
     render(<List shown={[]} />);
 
@@ -91,7 +125,9 @@ describe("SelectionProvider", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Elegir 99XAT10W2002" }));
     expect(status()).toBe("1 elegido");
     const all = screen.getByRole("checkbox", { name: "Seleccionar todas" }) as HTMLInputElement;
-    expect(all.indeterminate).toBe(true);
+    // Con solo algunos elegidos sigue vacía: nunca el guion de «a medias».
+    expect(all.indeterminate).toBe(false);
+    expect(all.checked).toBe(false);
     expect(screen.getByText("Seleccionar todas (3)")).toBeTruthy();
 
     fireEvent.click(all);

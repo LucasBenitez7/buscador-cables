@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 /** Lists longer than this show the first `INITIAL` items and a "Ver los N" button. */
 export const SHOW_MORE_LIMIT = 12;
@@ -18,6 +19,7 @@ export function ShowMore({
   className,
   noun = "elementos",
   label,
+  more,
 }: {
   items: ReactNode[];
   as?: "ul" | "ol";
@@ -26,8 +28,26 @@ export function ShowMore({
   noun?: string;
   /** Accessible name of the list, if it has one. */
   label?: string;
+  /**
+   * When `items` are only the first of a longer list (a location's 315 cables): how many there
+   * are and where to see them all. The button then takes there, with the real number, instead
+   * of opening only the ones brought.
+   */
+  more?: { total: number; href: string };
 }) {
   const [all, setAll] = useState(false);
+  if (more && more.total > items.length) {
+    return (
+      <div className="space-y-2">
+        <List aria-label={label} className={className}>
+          {items.slice(0, SHOW_MORE_INITIAL)}
+        </List>
+        <Link href={more.href} className={buttonVariants({ variant: "outline", size: "sm" })}>
+          Ver los {more.total.toLocaleString("es-ES")} {noun} en el buscador →
+        </Link>
+      </div>
+    );
+  }
   const cut = items.length > SHOW_MORE_LIMIT && !all;
   return (
     <div className="space-y-2">
