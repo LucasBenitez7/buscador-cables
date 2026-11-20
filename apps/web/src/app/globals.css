@@ -212,3 +212,12 @@
     break-inside: avoid;
   }
 }
+
+/*
+ * Con el hueco reservado, el bloqueo de scroll de los menús y diálogos (Radix) no tiene que
+ * dejar sitio a la barra: si lo hace, el sitio se cuenta dos veces y la página se mueve al
+ * abrirlos. Fuera de `@layer` y con más especificidad que la regla que inyecta Radix.
+ */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+}

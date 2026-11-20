@@ -4,12 +4,7 @@ import { notFound } from "next/navigation";
 import { cache, type ReactNode } from "react";
 import { TRAY_KIND_LABELS } from "@cables/shared";
 import { Section } from "@/components/detail";
-import {
-  SelectAllRow,
-  SelectCheckbox,
-  SelectionProvider,
-  SelectionToggle,
-} from "@/components/selection";
+import { SelectCheckbox, SelectionControl, SelectionProvider } from "@/components/selection";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { EquipmentLink } from "@/features/cables/components/equipment-link";
@@ -55,8 +50,8 @@ export default async function SavedFolderPage({ params }: { params: Params }) {
       items={items.map((item) => ({ key: item.itemId, label: item.code }))}
       actions={<FolderChosenActions folderId={folder.id} others={others} />}
     >
-      <Section title={`${title} (${items.length})`} collapsible tools={<SelectionToggle />}>
-        <SelectAllRow />
+      <Section title={`${title} (${items.length})`} collapsible>
+        <SelectionControl />
         <ul className="bg-card divide-y rounded-lg border">{rows}</ul>
       </Section>
     </SelectionProvider>

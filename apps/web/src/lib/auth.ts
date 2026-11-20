@@ -19,13 +19,13 @@ import {
 } from "@/server/auth-policy";
 import { drawingAccessCookie } from "@/server/drawings/access";
 import { sendEmail } from "@/server/email";
+import { SESSION_COOKIE_MAX_AGE_SECONDS, sessionExpiry } from "@/lib/session-expiry";
 import {
   assertLoginNotLocked,
   clearLoginFailures,
   recordLoginFailure,
 } from "@/server/login-throttle";
 
-export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
 export const EMAIL_VERIFICATION_EXPIRES_SECONDS = 60 * 60 * 24;
 
 const baseURL = env.BETTER_AUTH_URL ?? env.APP_URL;
@@ -106,9 +106,12 @@ export const auth = betterAuth({
     },
   },
 
+  // Cada sesión acaba el domingo a las 00:00 (Madrid), la misma hora para todos: se entra una
+  // vez por semana (fase 17, decidido con el usuario). La fecha la pone el hook de abajo y no
+  // se alarga al usar la web; `expiresIn` solo es la vida de la cookie, la más larga posible.
   session: {
-    expiresIn: SESSION_MAX_AGE_SECONDS,
-    updateAge: 60 * 60,
+    expiresIn: SESSION_COOKIE_MAX_AGE_SECONDS,
+    disableSessionRefresh: true,
   },
 
   rateLimit: authRateLimit,
@@ -120,6 +123,7 @@ export const auth = betterAuth({
         // desactivado podría volver a entrar con su contraseña.
         before: async (session) => {
           await assertAccountActive(session.userId);
+          return { data: { ...session, expiresAt: sessionExpiry(new Date()) } };
         },
       },
     },

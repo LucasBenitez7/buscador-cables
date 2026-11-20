@@ -89,7 +89,6 @@ export default async function UserEventsPage({ searchParams }: { searchParams: S
               {events.total.toLocaleString("es-ES")}
             </span>{" "}
             {events.total === 1 ? "cambio" : "cambios"}
-            {events.pageCount > 1 ? ` · página ${events.page} de ${events.pageCount}` : ""}
           </p>
           <UserEventList events={events.rows} />
           <Pagination

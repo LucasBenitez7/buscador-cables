@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal, flushSync } from "react-dom";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 
 /** One row that can be chosen: `key` identifies it, `label` is what is copied and printed. */
@@ -33,8 +33,6 @@ type SelectionState = {
   total: number;
   /** How many are chosen, in every page. */
   count: number;
-  /** Words of «Seleccionar todas»: a list with filters and pages, or one showing its first rows. */
-  scope: "filters" | "shown";
   /** Only in lists with pages: everything that matches the filters can be chosen at once. */
   everything?: {
     checked: boolean;
@@ -60,12 +58,6 @@ type Props = {
   selectAll?: () => Promise<SelectAllResult>;
   /** The filters (not the page): when it changes, the choice starts again. */
   resetKey?: string;
-  /**
-   * "filters" (default): a list with filters and pages («Seleccionar todas las que cumplen los
-   * filtros»). "shown": a list without filters that shows only its first rows, as a
-   * location's cables («Seleccionar todas»).
-   */
-  scope?: "filters" | "shown";
   /**
    * More buttons for the bar, before «Copiar» («Guardar», «Mover a…»). They read what is
    * chosen with `useChosen()`.
@@ -104,7 +96,6 @@ export function SelectionProvider({
   total = items.length,
   selectAll,
   resetKey = "",
-  scope = "filters",
   actions,
   children,
 }: Props) {
@@ -173,7 +164,6 @@ export function SelectionProvider({
     shown: items.length,
     count: selected.size,
     total,
-    scope,
     everything,
     start: () => {
       window.dispatchEvent(new CustomEvent(START_EVENT, { detail: id }));
@@ -208,40 +198,50 @@ export function SelectionProvider({
 }
 
 /**
- * «Seleccionar», always on the right of the line that heads the list: the count of a list, or
- * the bar of a box of a record (`Section`'s `tools`). Hidden while choosing (the bar takes over).
+ * «Seleccionar» and, once pressed, «Seleccionar todas» in the very same place and size (fase
+ * 17): nothing appears or disappears around it, so the list does not jump. It goes on its own
+ * line: under the count of a list, or first inside a box of a record, under its title.
  */
-export function SelectionToggle({ className }: { className?: string }) {
+export function SelectionControl({ className }: { className?: string }) {
   const context = useContext(SelectionContext);
   // Sin filas no hay nada que elegir.
-  if (!context || context.selecting || context.shown === 0) return null;
+  if (!context || context.shown === 0) return null;
+  if (!context.selecting) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={className}
+        onClick={context.start}
+      >
+        Seleccionar
+      </Button>
+    );
+  }
+  const error = context.everything?.error;
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className={className}
-      onClick={(event) => {
-        // En la barra de una caja, pulsarlo no la cierra.
-        event.preventDefault();
-        context.start();
-      }}
-    >
-      Seleccionar
-    </Button>
-  );
-}
-
-/**
- * What goes to the right of a list's count: «Seleccionar» and, after it, what the list already
- * had there (the «Por página» picker). The same in every list.
- */
-export function SelectionAside({ children }: { children?: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <SelectionToggle />
-      {children}
-    </div>
+    <span className={cn("inline-flex flex-col items-start gap-1", className)}>
+      <label
+        className={cn(
+          // La misma caja que el botón «Seleccionar» (alto incluido, en el móvil y en el
+          // portátil): al cambiar de uno a otro no se mueve nada.
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "cursor-pointer gap-2",
+        )}
+      >
+        <AllCheckbox context={context} />
+        {allLabel(context)}
+        {context.everything?.loading
+          ? null
+          : ` (${(context.everything ? context.total : context.shown).toLocaleString("es-ES")})`}
+      </label>
+      {error ? (
+        <span role="alert" className="text-destructive text-xs font-normal">
+          {error}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -283,17 +283,17 @@ function AllCheckbox({ context, className }: { context: SelectionState; classNam
   );
 }
 
-/** The words of «Seleccionar todas»: with pages and filters, it says it takes every page. */
+/** The words of «Seleccionar todas», or «Seleccionando…» while every page is asked for. */
 function allLabel(context: SelectionState): string {
   if (context.everything?.loading) return "Seleccionando…";
-  return context.everything && context.scope === "filters"
-    ? "Seleccionar todas las que cumplen los filtros"
-    : "Seleccionar todas";
+  // Corto en todas partes (fase 17): «Seleccionar todas (N)»; con páginas, N ya dice que son
+  // todas las que cumplen los filtros.
+  return "Seleccionar todas";
 }
 
 /**
  * The header of the column of ticks of a table, only while choosing. Empty: «Seleccionar
- * todas» is the line above the table (`SelectAllRow`), as in every list.
+ * todas» is `SelectionControl`, above the table, as in every list.
  */
 export function SelectHeaderCell() {
   const context = useContext(SelectionContext);
@@ -302,32 +302,6 @@ export function SelectHeaderCell() {
     <th scope="col" className="w-10 px-3 py-2">
       <span className="sr-only">Elegir</span>
     </th>
-  );
-}
-
-/**
- * «Seleccionar todas», a thin line right above the list, only while choosing: the same in
- * every list, with its tick in line with the rows' ticks. The whole line is pressed.
- */
-export function SelectAllRow({ className }: { className?: string }) {
-  const context = useContext(SelectionContext);
-  if (!context?.selecting || context.shown === 0) return null;
-  const error = context.everything?.error;
-  return (
-    <div className={cn("text-sm font-medium", className)}>
-      <label className="flex min-h-9 w-fit cursor-pointer items-center gap-2 px-3 py-1.5">
-        <AllCheckbox context={context} />
-        {allLabel(context)}
-        {context.everything?.loading
-          ? null
-          : ` (${(context.everything ? context.total : context.shown).toLocaleString("es-ES")})`}
-      </label>
-      {error ? (
-        <p role="alert" className="text-destructive px-3 pb-2 text-xs font-normal">
-          {error}
-        </p>
-      ) : null}
-    </div>
   );
 }
 

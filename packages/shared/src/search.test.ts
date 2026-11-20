@@ -96,8 +96,10 @@ describe("cableSearchQuery", () => {
 
   it("keeps a page size other than the default and drops the default one", () => {
     expect(cableSearchQuery({ q: "sh", size: 100 }, { page: 2 })).toBe("?q=sh&page=2&size=100");
-    expect(cableSearchQuery({ q: "sh", size: 25 })).toBe("?q=sh");
-    expect(parseCableSearch({ size: "50" }).size).toBe(50);
+    expect(cableSearchQuery({ q: "sh", size: 50 })).toBe("?q=sh");
+    expect(parseCableSearch({ size: "100" }).size).toBe(100);
+    // Fase 17: dos tamaños como mucho; los que ya no se ofrecen se ignoran.
+    expect(parseCableSearch({ size: "25" }).size).toBeUndefined();
     expect(parseCableSearch({ size: "5000" }).size).toBeUndefined();
   });
 

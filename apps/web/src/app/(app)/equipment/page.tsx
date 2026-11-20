@@ -8,12 +8,7 @@ import {
 } from "@cables/shared";
 import { ListToolbar } from "@/components/list-toolbar";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
-import {
-  SelectAllRow,
-  SelectCheckbox,
-  SelectionAside,
-  SelectionProvider,
-} from "@/components/selection";
+import { SelectCheckbox, SelectionControl, SelectionProvider } from "@/components/selection";
 import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { equipmentHref } from "@/lib/links";
 import { EQUIPMENT_LIMIT, EQUIPMENT_MAX, searchEquipment } from "@/server/equipment/service";
@@ -52,7 +47,7 @@ export default async function EquipmentSearchPage({
     ? matches.length === 0
       ? "Ningún equipo contiene ese código."
       : `${matches.length} ${matches.length === 1 ? "equipo" : "equipos"}${matches.length >= EQUIPMENT_LIMIT ? ` (los ${EQUIPMENT_LIMIT} ${which}; afina la búsqueda)` : ""}`
-    : `Los ${EQUIPMENT_LIMIT} equipos ${which}. Escribe un código para buscar uno.`;
+    : null;
 
   return (
     <div className="space-y-6">
@@ -90,11 +85,10 @@ export default async function EquipmentSearchPage({
             }}
             active={active}
             count={count}
-            countAside={matches.length > 0 ? <SelectionAside /> : null}
           />
 
           <PendingResults className="space-y-3">
-            <SelectAllRow />
+            <SelectionControl />
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {matches.map((match) => (
                 <li

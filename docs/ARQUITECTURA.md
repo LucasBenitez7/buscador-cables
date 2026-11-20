@@ -395,8 +395,9 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 ### Interfaz y metros (fase 17)
 
 - **Cajas de las fichas** (`Section` en `components/detail.tsx`): una sola caja con el título
-  como cabecera; `tools` pone acciones en esa cabecera (la de «Seleccionar», con su
-  `SelectionProvider` alrededor de la caja). La barra de lo elegido y su hueco se pintan al
+  como cabecera. «Seleccionar» (`SelectionControl`) va lo primero dentro de la caja, con su
+  `SelectionProvider` alrededor, y al pulsarlo se convierte en «Seleccionar todas (N)» en el
+  mismo sitio y tamaño: la lista no salta. La barra de lo elegido y su hueco se pintan al
   final del `body` (portal): ningún margen de la página la despega del borde.
 - **Una sola «Actividad»** (`/activity`): con `activity:view` se filtra por persona («Yo»
   primero, `features/activity/people.ts`); sin él, el servidor fija `actor` a la persona.
@@ -493,6 +494,10 @@ Si un envío falla, el cambio se hace igual y el fallo queda en el log (`scope: 
   queda en `UserEvent` (quién, a quién, roles), en la misma transacción que el cambio. Un
   trigger rechaza `UPDATE` y `DELETE`, como en `cable_event`.
 - Las cuentas pendientes o desactivadas no pueden abrir sesión (hook `session.create.before`).
+- Las sesiones acaban el domingo a las 00:00 (Madrid), la misma hora para todos, y no se alargan
+  al usar la web (`disableSessionRefresh`); quien entra a menos de 12 horas de ese domingo sigue
+  hasta el siguiente (`lib/session-expiry.ts`). Decidido el 2026-11-20 para no pedir la
+  contraseña a diario.
 - Nadie cambia su propio nombre, correo o imagen: el historial enseña el nombre actual de
   quien hizo cada cosa, así que `POST /api/auth/update-user` se rechaza (hook
   `user.update.before`). Los nombres los fija el registro o un administrador.

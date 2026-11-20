@@ -137,7 +137,8 @@ export function formatTraySize(size: {
 
 export const TRAY_PAGE_SIZE = 60;
 /** Page sizes the tray list offers (multiples of 3, it is a three-column grid). */
-export const TRAY_PAGE_SIZES = [TRAY_PAGE_SIZE, 120, 240] as const;
+/** Two sizes at most (fase 17): it is seldom changed, and so it fits next to the count. */
+export const TRAY_PAGE_SIZES = [TRAY_PAGE_SIZE, 120] as const;
 
 /** Orders of the tray list. The default is by code, A-Z. */
 export const TRAY_SORTS = ["code", "code-desc", "cables", "cables-asc", "waiting"] as const;

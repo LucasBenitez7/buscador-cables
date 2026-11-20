@@ -13,12 +13,7 @@ import { ListToolbar } from "@/components/list-toolbar";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
 import { PendingListProvider, PendingResults } from "@/components/pending-list";
-import {
-  SelectAllRow,
-  SelectCheckbox,
-  SelectionAside,
-  SelectionProvider,
-} from "@/components/selection";
+import { SelectCheckbox, SelectionControl, SelectionProvider } from "@/components/selection";
 import { trayHref } from "@/features/cables/components/cable-route";
 import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { selectAllTraysAction } from "@/features/trays/actions";
@@ -105,16 +100,14 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
             keep={search.size ? { size: String(search.size) } : {}}
             active={active}
             countAside={
-              <SelectionAside>
-                {result.total > TRAY_PAGE_SIZES[0] ? (
-                  <PageSizePicker
-                    sizes={TRAY_PAGE_SIZES}
-                    size={search.size}
-                    page={result.page}
-                    href={(size, page) => `/trays${trayQuery(search, { size, page })}`}
-                  />
-                ) : null}
-              </SelectionAside>
+              result.total > TRAY_PAGE_SIZES[0] ? (
+                <PageSizePicker
+                  sizes={TRAY_PAGE_SIZES}
+                  size={search.size}
+                  page={result.page}
+                  href={(size, page) => `/trays${trayQuery(search, { size, page })}`}
+                />
+              ) : null
             }
             count={
               <>
@@ -122,13 +115,12 @@ export default async function TraysPage({ searchParams }: { searchParams: Search
                   {result.total.toLocaleString("es-ES")}
                 </span>{" "}
                 {result.total === 1 ? "bandeja" : "bandejas"}
-                {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
               </>
             }
           />
 
           <PendingResults className="space-y-6">
-            <SelectAllRow />
+            <SelectionControl />
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {result.items.map((tray) => {
                 const size = formatTraySize(tray.size);

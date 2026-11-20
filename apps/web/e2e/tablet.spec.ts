@@ -19,3 +19,23 @@ for (const path of ["/trays", "/equipment", "/locations"]) {
     await expect(panel).toBeHidden();
   });
 }
+
+// El hueco de la barra está reservado y el menú no deja otro al bloquear el scroll: la página
+// no se mueve ni al alargarse ni al abrir el menú (2026-11-20).
+test("abrir el menú no mueve la página", async ({ page }) => {
+  await page.goto("/cables");
+  const width = () =>
+    page
+      .locator("header")
+      .first()
+      .evaluate((el) => el.clientWidth);
+  const before = await width();
+  expect(
+    await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter),
+  ).toBe("stable");
+
+  await page.getByRole("button", { name: /menú/i }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  expect(await page.evaluate(() => getComputedStyle(document.body).marginRight)).toBe("0px");
+  expect(await width()).toBe(before);
+});

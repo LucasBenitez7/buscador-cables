@@ -6,7 +6,8 @@ test.use({ storageState: storageStatePath("supervisor") });
 // Fase 17: la obra en metros, con sus tres pestañas y la bobina que lleva a sus cables.
 test("«Metros» enseña el avance, la desviación y las bobinas", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Metros tendidos" }).click();
+  await expect(page.getByText("Metros tendidos")).toBeVisible();
+  await page.getByRole("link", { name: "Ver metros" }).click();
 
   await expect(page.getByRole("heading", { name: "Metros", level: 1 })).toBeVisible();
   await expect(page.getByText("Metros tendidos")).toBeVisible();
