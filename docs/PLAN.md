@@ -1055,7 +1055,7 @@ y después) y se aplica cuando el usuario da el visto bueno.
 - [x] Una sola «Actividad» en el menú; quien ve la de todos filtra por persona.
 - [x] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».
 - [x] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
-- [ ] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.
+- [x] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.
 - [ ] Guardar en carpeta desde la ficha, sin confundirlo con guardar el cable.
 - [ ] Inicio: «Estado de los cables» con títulos claros y bloques mejor separados.
 - [ ] Tests y E2E.

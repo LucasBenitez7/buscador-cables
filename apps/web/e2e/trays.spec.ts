@@ -61,6 +61,8 @@ test("el buscador encuentra un cable por el equipo y filtra por nivel", async ({
   await page.goto("/cables");
 
   await page.getByLabel("Código, equipo o descripción").fill(ends[1].toLowerCase());
+  // En el portátil el nivel va en «Más filtros» (fase 17).
+  await page.getByRole("button", { name: /Más filtros/ }).click();
   await page.getByLabel("Nivel").selectOption("L2");
   await page.getByRole("button", { name: "Buscar" }).click();
 
