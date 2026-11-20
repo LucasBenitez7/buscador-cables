@@ -51,6 +51,8 @@ export type ExcelImportCard = {
   projectLoad: boolean;
   uploadedBy: string;
   uploadedAt: string;
+  /** When it finished being applied («19/11/26, 9:12»), or null while it is not. */
+  appliedAt: string | null;
   counts: ExcelPreviewCounts;
   /** Marked rows, and how many of them are already applied. */
   selected: number;
@@ -65,6 +67,7 @@ const cardSelect = {
   status: true,
   projectLoad: true,
   createdAt: true,
+  appliedAt: true,
   uploadedBy: { select: { name: true } },
 } satisfies Prisma.ExcelImportSelect;
 
@@ -88,6 +91,7 @@ async function toCard(
     projectLoad: excel.projectLoad,
     uploadedBy: excel.uploadedBy.name,
     uploadedAt: dateTime.format(excel.createdAt),
+    appliedAt: excel.appliedAt ? dateTime.format(excel.appliedAt) : null,
     counts,
     selected,
     applied,
@@ -99,17 +103,21 @@ export type ExcelKindOverview = {
   label: string;
   /** The preview waiting to be applied (or being applied). */
   current: ExcelImportCard | null;
-  /** The last Excel applied: its date and who uploaded it. */
-  lastApplied: { excelDay: string; appliedAt: string; uploadedBy: string } | null;
-  /** The load of the project is only the first one. */
-  projectLoadAvailable: boolean;
+  /** The last Excel applied: its file, its date, when it was applied and who uploaded it. */
+  lastApplied: {
+    id: string;
+    fileName: string;
+    excelDay: string;
+    appliedAt: string;
+    uploadedBy: string;
+  } | null;
 };
 
 /** For each Excel: the preview waiting and the last one applied. */
 export async function getExcelOverview(): Promise<ExcelKindOverview[]> {
   return Promise.all(
     EXCEL_KINDS.map(async (kind) => {
-      const [current, lastApplied, daily] = await Promise.all([
+      const [current, lastApplied] = await Promise.all([
         prisma.excelImport.findFirst({
           where: { kind, status: { in: ["PREVIEW", "APPLYING"] } },
           orderBy: { createdAt: "desc" },
@@ -118,9 +126,14 @@ export async function getExcelOverview(): Promise<ExcelKindOverview[]> {
         prisma.excelImport.findFirst({
           where: { kind, status: "APPLIED" },
           orderBy: [{ excelDate: "desc" }, { appliedAt: "desc" }],
-          select: { excelDate: true, appliedAt: true, uploadedBy: { select: { name: true } } },
+          select: {
+            id: true,
+            fileName: true,
+            excelDate: true,
+            appliedAt: true,
+            uploadedBy: { select: { name: true } },
+          },
         }),
-        prisma.excelImport.count({ where: { kind, status: "APPLIED", projectLoad: false } }),
       ]);
       return {
         kind,
@@ -128,12 +141,13 @@ export async function getExcelOverview(): Promise<ExcelKindOverview[]> {
         current: current ? await toCard(current) : null,
         lastApplied: lastApplied
           ? {
+              id: lastApplied.id,
+              fileName: lastApplied.fileName,
               excelDay: day(lastApplied.excelDate),
               appliedAt: dateTime.format(lastApplied.appliedAt!),
               uploadedBy: lastApplied.uploadedBy.name,
             }
           : null,
-        projectLoadAvailable: daily === 0,
       };
     }),
   );

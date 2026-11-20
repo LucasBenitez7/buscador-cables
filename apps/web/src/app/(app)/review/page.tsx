@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import {
   DISCREPANCY_VIEWS,
   DISCREPANCY_VIEW_LABELS,
   parseDiscrepancySearch,
   type DiscrepancyView,
 } from "@cables/shared";
-import { ChipRow } from "@/components/chip-row";
 import { Pagination } from "@/components/pagination";
+import { TabLinks } from "@/components/tab-links";
 import {
   DiscrepancyList,
   MarkDiscrepanciesSeen,
@@ -21,9 +20,6 @@ export const dynamic = "force-dynamic";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const number = new Intl.NumberFormat("es-ES");
-
-const CHIP =
-  "focus-visible:ring-ring/50 flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3";
 
 /** What a person marked in the web and an Excel contradicts, until somebody decides. */
 export default async function ReviewPage({ searchParams }: { searchParams: SearchParams }) {
@@ -42,34 +38,16 @@ export default async function ReviewPage({ searchParams }: { searchParams: Searc
       <h1 className="text-2xl font-semibold tracking-tight">Pendientes de revisar</h1>
       <MarkDiscrepanciesSeen />
 
-      <ChipRow aria-label="Qué discrepancias" className="-mx-4 gap-2 px-4 pb-1 sm:mx-0 sm:px-0">
-        {DISCREPANCY_VIEWS.map((item) => {
-          const selected = item === view;
-          return (
-            <Link
-              key={item}
-              href={href(item)}
-              aria-current={selected ? "page" : undefined}
-              className={
-                selected
-                  ? `${CHIP} bg-primary text-primary-foreground border-primary`
-                  : `${CHIP} bg-secondary text-foreground hover:bg-muted`
-              }
-            >
-              {DISCREPANCY_VIEW_LABELS[item]}
-              <span
-                className={
-                  selected
-                    ? "text-primary-foreground tabular-nums"
-                    : "text-foreground/80 tabular-nums"
-                }
-              >
-                {number.format(counts[item])}
-              </span>
-            </Link>
-          );
-        })}
-      </ChipRow>
+      <TabLinks
+        label="Qué discrepancias"
+        tabs={DISCREPANCY_VIEWS.map((item) => ({
+          key: item,
+          label: DISCREPANCY_VIEW_LABELS[item],
+          href: href(item),
+          selected: item === view,
+          count: number.format(counts[item]),
+        }))}
+      />
 
       {/* Siempre la lista, también vacía: el aviso de lo decidido no se pierde al vaciarse. */}
       <DiscrepancyList

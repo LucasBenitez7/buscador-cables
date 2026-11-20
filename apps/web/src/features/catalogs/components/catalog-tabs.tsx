@@ -1,10 +1,10 @@
 "use client";
 
-import { cn } from "cn";
 import { useState, type KeyboardEvent } from "react";
 import { CATALOG_KINDS, CATALOG_LABELS, type CatalogItem, type CatalogKind } from "@cables/shared";
 import { ChipRow } from "@/components/chip-row";
 import { CatalogSection } from "./catalog-section";
+import { TabCount, tabChipClass } from "@/components/tab-links";
 
 type Props = { catalogs: Record<CatalogKind, CatalogItem[]> };
 
@@ -48,22 +48,10 @@ export function CatalogTabs({ catalogs }: Props) {
               aria-controls={`panel-${kind}`}
               tabIndex={selected ? 0 : -1}
               onClick={() => setActive(kind)}
-              className={cn(
-                "focus-visible:ring-ring/50 flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3",
-                selected
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-secondary text-foreground hover:bg-muted",
-              )}
+              className={tabChipClass(selected)}
             >
               {CATALOG_LABELS[kind].plural}
-              <span
-                className={cn(
-                  "tabular-nums",
-                  selected ? "text-primary-foreground" : "text-foreground/80",
-                )}
-              >
-                {catalogs[kind].length}
-              </span>
+              <TabCount value={String(catalogs[kind].length)} selected={selected} />
             </button>
           );
         })}

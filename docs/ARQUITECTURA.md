@@ -392,6 +392,26 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   Todo pasa por `server/saved/service.ts`, que filtra siempre por `userId`: no hay permiso
   propio, basta la sesión.
 
+### Interfaz y metros (fase 17)
+
+- **Cajas de las fichas** (`Section` en `components/detail.tsx`): una sola caja con el título
+  como cabecera; `tools` pone acciones en esa cabecera (la de «Seleccionar», con su
+  `SelectionProvider` alrededor de la caja). La barra de lo elegido y su hueco se pintan al
+  final del `body` (portal): ningún margen de la página la despega del borde.
+- **Una sola «Actividad»** (`/activity`): con `activity:view` se filtra por persona («Yo»
+  primero, `features/activity/people.ts`); sin él, el servidor fija `actor` a la persona.
+  `/activity/me` redirige conservando los filtros.
+- **Metros** (`server/meters/service.ts`, `/meters`): consultas SQL agregadas sobre `cable`.
+  Lo tendido solo cuenta cables `LAID` con `lengthM` (con `actualLengthM` si lo hay), para
+  comparar con el mismo conjunto que lo previsto; los retirados y dados de baja no cuentan. El
+  área de un cable es la de su origen o, si no lo trae, la de la primera bandeja de su
+  recorrido. Umbrales y textos de la desviación en `packages/shared/src/meters.ts`. Las
+  bobinas se ordenan de forma natural y enlazan al buscador (`reel` en `CableSearch`).
+- **Pestañas en forma de pastilla**: `components/tab-links.tsx` (Metros, vista previa del
+  Excel, Pendientes de revisar y Catálogos).
+- `effect` forzado a ≥ 3.22.1 en `pnpm-workspace.yaml` (GHSA-7589-6fvf-x4pw, llega por
+  Prisma): quitar el override cuando Prisma lo traiga por sí mismo.
+
 ## Marca, cargas y avisos
 
 - **Logo** (una lupa cuyo mango es un cable con su conector): `apps/web/public/brand/logo.svg`

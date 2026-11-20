@@ -79,6 +79,11 @@ export const cableSearchSchema = z.object({
     .transform((value) => (value === "" ? undefined : normalizeTrayCode(value)))
     .optional()
     .catch(undefined),
+  /**
+   * Cables that came out of this reel, exactly as the Excel writes it (fase 17). As long as the
+   * Excel allows (100): a longer limit would drop the filter and show every cable.
+   */
+  reel: text(100),
   /** "1": only cables with a loose end (in `tray`, if given). */
   loose: z.literal("1").optional().catch(undefined),
   sectionMin: decimal,

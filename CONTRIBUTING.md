@@ -136,6 +136,8 @@ gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes "..."
 | `v1.2.1` | #53         | Listas más claras, carga visible e historial desde el 17/11        |
 | `v1.2.2` | #55         | Funciones en Frankfurt, barra de carga y «Cargando…» en la ficha   |
 | `v1.2.3` | #59         | Copia de seguridad diaria de la base y reglas de trabajo ordenadas |
+| `v1.6.0` | #66         | Fases 13 a 16: uso en campo, Excel del día, listados y guardados   |
+| `v1.7.0` | #68         | Fase 17: repaso de la interfaz y metros                            |
 
 Los PR #38, #43 y #51 llevaron mejoras a producción sin tag propio; quedan incluidas en la
 versión siguiente.

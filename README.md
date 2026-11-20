@@ -25,14 +25,16 @@ industrial, con sus bandejas y los planos de recorrido.
 
 ## Qué hace
 
-|                         |                                                                                                                                                          |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🔎 **Buscador**         | Por código, equipo o descripción, tolerante a guiones y mayúsculas, con filtros por ubicación, tipo, sección, longitud, estado, nivel, equipo y bandeja. |
-| 🧾 **Ficha del cable**  | Origen y destino, datos técnicos, recorrido por bandejas y el historial completo de quién hizo qué y cuándo.                                             |
-| 🗺️ **Planos**           | Cada hoja en teselas con zoom (también con dos dedos o teclado), la bandeja marcada y el recorrido del cable numerado sobre el plano.                    |
-| 🛠️ **Trabajo en campo** | Tender (también a medias, indicando dónde quedó la punta), enrollar, mover, conectar, desconectar y timbrar, desde el móvil.                             |
-| 👥 **Roles y cuentas**  | Consulta, Técnico, Supervisor y Administrador. Registro con aprobación eligiendo el rol, avisos por correo y auditoría de cuentas inmutable.             |
-| 📈 **Inicio por rol**   | Avance de la obra, actividad propia o del equipo y lo pendiente de aprobar.                                                                              |
+|                         |                                                                                                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🔎 **Buscador**         | Por código, equipo o descripción, tolerante a guiones y mayúsculas, con filtros por ubicación, tipo, sección, longitud, estado, nivel, equipo, bandeja y bobina. |
+| 🧾 **Ficha del cable**  | Origen y destino, datos técnicos, recorrido por bandejas, conexionado y el historial completo de quién hizo qué y cuándo.                                        |
+| 🗺️ **Planos**           | Cada hoja en teselas con zoom (también con dos dedos o teclado), la bandeja marcada y el recorrido del cable numerado sobre el plano.                            |
+| 🛠️ **Trabajo en campo** | Tender (también a medias, indicando dónde quedó la punta), conectar, desconectar, timbrar y corregir bornas, desde el móvil.                                     |
+| 📊 **Excel del día**    | El estado diario de los dos Excel, con vista previa y discrepancias que se revisan antes de cambiar nada.                                                        |
+| 📏 **Metros**           | Metros tendidos frente a previstos, desviación de los metros reales y bobinas con los cables que salieron de cada una.                                           |
+| 👥 **Roles y cuentas**  | Consulta, Técnico, Supervisor y Administrador, y roles a medida. Registro con aprobación, avisos por correo y auditoría de cuentas inmutable.                    |
+| 📈 **Inicio por rol**   | Avance de la obra en cables y en metros, actividad propia o del equipo y lo pendiente de aprobar o revisar.                                                      |
 
 ## Stack
 

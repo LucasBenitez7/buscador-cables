@@ -11,6 +11,8 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/85 active:bg-primary/75",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground active:bg-muted/70 aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/60 dark:hover:border-muted-foreground/50 dark:active:bg-input/80",
+        // «Cancelar» y parecidos: con fondo, sin borde, para distinguirlo de los botones con
+        // borde de al lado sin competir con el principal.
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

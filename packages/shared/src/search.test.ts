@@ -22,6 +22,13 @@ describe("project data filters", () => {
 });
 
 describe("parseCableSearch", () => {
+  // Fase 17: tan largo como el Excel deja escribir una bobina; si no, el filtro se perdía.
+  it("keeps a reel as long as the Excel allows", () => {
+    const reel = "B".repeat(100);
+    expect(parseCableSearch({ reel: `  ${reel} ` }).reel).toBe(reel);
+    expect(parseCableSearch({ reel: "B".repeat(101) }).reel).toBeUndefined();
+  });
+
   it("reads filters from the URL, accepting a decimal comma", () => {
     expect(
       parseCableSearch({

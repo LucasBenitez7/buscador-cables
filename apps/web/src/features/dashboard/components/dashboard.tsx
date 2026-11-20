@@ -8,6 +8,7 @@ import {
   INSTALLATION_STATUS_LABELS,
   TEST_STATUSES,
   TEST_STATUS_LABELS,
+  distanceText,
 } from "@cables/shared";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +40,7 @@ const percent = (value: number, total: number) =>
  * `getDashboard`): what a role may not see never reaches the browser.
  */
 export function Dashboard({ data }: { data: DashboardData }) {
-  const { progress, lastExcel, toReview, myActivity, team, admin } = data;
+  const { progress, meters, lastExcel, toReview, myActivity, team, admin } = data;
 
   // Columna lateral: lo más útil para cada rol junto al avance de la obra.
   const side = admin ? (
@@ -48,7 +49,7 @@ export function Dashboard({ data }: { data: DashboardData }) {
     <ActivityPanel
       title="Tu actividad reciente"
       entries={myActivity}
-      href="/activity/me"
+      href={data.myActivityHref}
       empty="Todavía no has registrado ningún movimiento."
       showUser={false}
     />
@@ -100,7 +101,7 @@ export function Dashboard({ data }: { data: DashboardData }) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <ProgressPanel progress={progress} lastExcel={lastExcel} />
+          <ProgressPanel progress={progress} meters={meters} lastExcel={lastExcel} />
         </div>
         {side}
       </div>
@@ -119,7 +120,7 @@ export function Dashboard({ data }: { data: DashboardData }) {
             <ActivityPanel
               title="Tu actividad reciente"
               entries={myActivity}
-              href="/activity/me"
+              href={data.myActivityHref}
               empty="Todavía no has registrado ningún movimiento."
               showUser={false}
             />
@@ -162,9 +163,11 @@ function Panel({
 
 function ProgressPanel({
   progress,
+  meters,
   lastExcel,
 }: {
   progress: CableProgress;
+  meters: DashboardData["meters"];
   lastExcel: DashboardData["lastExcel"];
 }) {
   const { total, laid, connected, installation } = progress;
@@ -190,6 +193,17 @@ function ProgressPanel({
         ) : null}
       </div>
       <Meter label="Tendidos" value={laid} total={total} barClassName={TONE_FILL.laid} />
+      {/* En metros (fase 17): el detalle por nivel, la desviación y las bobinas, en «Metros». */}
+      {meters.planned > 0 ? (
+        <Meter
+          label="Metros tendidos"
+          value={meters.laid}
+          total={meters.planned}
+          text={`${distanceText(meters.laid)} de ${distanceText(meters.planned)}`}
+          href="/meters"
+          barClassName={TONE_FILL.laid}
+        />
+      ) : null}
       <Meter
         label="Conectados"
         value={connected}
@@ -233,21 +247,33 @@ function Meter({
   label,
   value,
   total,
+  text,
+  href,
   barClassName,
 }: {
   label: string;
   value: number;
   total: number;
+  /** What follows the percent; by default «12 de 4524». */
+  text?: string;
+  /** Where the label leads, when there is more to see. */
+  href?: string;
   barClassName: string;
 }) {
   const pct = percent(value, total);
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-3 text-sm">
-        <span className="font-medium">{label}</span>
+        {href ? (
+          <Link href={href} className={cn(TEXT_LINK_SM, "font-medium")}>
+            {label}
+          </Link>
+        ) : (
+          <span className="font-medium">{label}</span>
+        )}
         <span className="text-muted-foreground">
           <span className="text-foreground font-semibold tabular-nums">{pct} %</span> ·{" "}
-          {count(value)} de {count(total)}
+          {text ?? `${count(value)} de ${count(total)}`}
         </span>
       </div>
       <div
@@ -268,7 +294,7 @@ function Meter({
 function StatusPanel({ progress, trays }: { progress: CableProgress; trays: number }) {
   return (
     <Panel title="Estado de los cables">
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <StatusList
           title="Instalación"
           rows={INSTALLATION_STATUSES.map((status) => ({
@@ -313,6 +339,17 @@ function StatusPanel({ progress, trays }: { progress: CableProgress; trays: numb
   );
 }
 
+/** The bar of a state, in the colour of its badge: the grey ones stay grey. */
+const BAR_COLOR: Record<(typeof INSTALLATION_VARIANT)[keyof typeof INSTALLATION_VARIANT], string> =
+  {
+    outline: "bg-muted-foreground/60",
+    success: "bg-success",
+    warning: "bg-warning",
+    destructive: "bg-destructive",
+    laid: "bg-laid",
+    pending: "bg-pending",
+  };
+
 function StatusList({
   title,
   rows,
@@ -329,8 +366,9 @@ function StatusList({
   total: number;
 }) {
   return (
-    <div className="space-y-2">
-      <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{title}</h3>
+    // Cada estado en su propia caja, con su título claro: se ve qué filas van con cuál.
+    <div className="bg-background space-y-2 rounded-lg border p-3">
+      <h3 className="border-b pb-2 text-sm font-semibold">{title}</h3>
       <ul className="space-y-1">
         {rows.map((row) => (
           <li key={row.key}>
@@ -343,7 +381,7 @@ function StatusList({
               </Badge>
               <span className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full" aria-hidden>
                 <span
-                  className="bg-muted-foreground/60 block h-full rounded-full"
+                  className={cn("block h-full rounded-full", BAR_COLOR[row.variant])}
                   style={{ width: `${percent(row.value, total)}%` }}
                 />
               </span>

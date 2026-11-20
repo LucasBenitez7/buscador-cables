@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderInputIcon, XIcon } from "lucide-react";
+import { FolderInputIcon, PencilIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "cn";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
@@ -107,7 +107,7 @@ export function FolderActions({ id, name }: { id: string; name: string }) {
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando…" : "Guardar"}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => setRenaming(false)}>
+          <Button type="button" variant="secondary" onClick={() => setRenaming(false)}>
             Cancelar
           </Button>
         </div>
@@ -123,6 +123,7 @@ export function FolderActions({ id, name }: { id: string; name: string }) {
   return (
     <>
       <button type="button" className={SECTION_LINK} onClick={() => setRenaming(true)}>
+        <PencilIcon aria-hidden />
         Renombrar
       </button>
       <button
@@ -134,6 +135,7 @@ export function FolderActions({ id, name }: { id: string; name: string }) {
         disabled={deleting}
         onClick={remove}
       >
+        <Trash2Icon aria-hidden />
         {deleting ? "Borrando…" : "Borrar carpeta"}
       </button>
       {state?.ok ? (

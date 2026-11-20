@@ -1,5 +1,6 @@
 "use client";
 
+import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useState, useTransition, type FormEvent } from "react";
 import { CATALOG_LABELS, type CatalogItem, type CatalogKind } from "@cables/shared";
 import { Button } from "@/components/ui/button";
@@ -148,6 +149,7 @@ export function CatalogSection({ kind, items }: Props) {
                     </span>
                     <span className="ml-auto flex gap-1">
                       <Button size="xs" variant="ghost" onClick={() => setEditingId(item.id)}>
+                        <PencilIcon aria-hidden />
                         Editar
                       </Button>
                       <Button
@@ -158,6 +160,7 @@ export function CatalogSection({ kind, items }: Props) {
                         disabled={pending}
                         aria-label={`Eliminar ${item.name}`}
                       >
+                        <Trash2Icon aria-hidden />
                         Eliminar
                       </Button>
                     </span>
@@ -220,7 +223,7 @@ function ItemForm({ kind, initial, submitLabel, pending, onSubmit, onCancel }: F
         {submitLabel}
       </Button>
       {onCancel ? (
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancelar
         </Button>
       ) : null}

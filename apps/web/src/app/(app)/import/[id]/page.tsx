@@ -9,9 +9,10 @@ import {
   type ExcelPreviewTab,
 } from "@cables/shared";
 import { ChangeList } from "@/components/change-list";
-import { ChipRow } from "@/components/chip-row";
 import { Pagination } from "@/components/pagination";
+import { TabLinks } from "@/components/tab-links";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CODE_LINK } from "@/components/ui/text-link";
 import {
   PreviewActions,
@@ -98,36 +99,41 @@ export default async function ExcelPreviewPage({
           pending={excel.selected - excel.applied}
           applying={excel.status === "APPLYING"}
         />
-      ) : null}
-
-      <ChipRow aria-label="Qué trae el Excel" className="-mx-4 gap-2 px-4 pb-1 sm:mx-0 sm:px-0">
-        {EXCEL_PREVIEW_TABS.map((item) => {
-          const selected = item === tab;
-          return (
-            <Link
-              key={item}
-              href={href(item)}
-              aria-current={selected ? "page" : undefined}
-              className={
-                selected
-                  ? "bg-primary text-primary-foreground border-primary focus-visible:ring-ring/50 flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap outline-none focus-visible:ring-3"
-                  : "bg-secondary text-foreground hover:bg-muted focus-visible:ring-ring/50 flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3"
-              }
-            >
-              {EXCEL_PREVIEW_TAB_LABELS[item]}
-              <span
-                className={
-                  selected
-                    ? "text-primary-foreground tabular-nums"
-                    : "text-foreground/80 tabular-nums"
-                }
-              >
-                {number.format(tabCount[item])}
+      ) : (
+        // Terminado: qué pasó y, a un clic, el siguiente Excel.
+        <div
+          role="status"
+          className={`bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 ${excel.status === "APPLIED" ? "border-success/50" : ""}`}
+        >
+          <p className="text-sm">
+            {excel.status === "APPLIED" ? (
+              <>
+                <span className="text-success font-medium">Aplicado</span>
+                {excel.appliedAt ? ` el ${excel.appliedAt}` : ""} · {number.format(excel.applied)}{" "}
+                {excel.applied === 1 ? "cable" : "cables"} actualizados
+              </>
+            ) : (
+              <span className="text-muted-foreground font-medium">
+                Vista previa descartada: no se aplicó nada.
               </span>
-            </Link>
-          );
-        })}
-      </ChipRow>
+            )}
+          </p>
+          <Button asChild>
+            <Link href="/import">Subir otro Excel</Link>
+          </Button>
+        </div>
+      )}
+
+      <TabLinks
+        label="Qué trae el Excel"
+        tabs={EXCEL_PREVIEW_TABS.map((item) => ({
+          key: item,
+          label: EXCEL_PREVIEW_TAB_LABELS[item],
+          href: href(item),
+          selected: item === tab,
+          count: number.format(tabCount[item]),
+        }))}
+      />
 
       {editable && preview.total > 0 ? (
         <SelectTabButtons importId={excel.id} kind={TAB_KIND[tab]} />

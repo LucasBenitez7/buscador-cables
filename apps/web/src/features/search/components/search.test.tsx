@@ -39,11 +39,28 @@ describe("SearchFilters", () => {
     expect(arrow()).toHaveClass("rotate-180");
   });
 
-  it("gives the «Más filtros» summary an arrow that turns when the block opens", () => {
+  it("gives the «Equipo, bobina, color, medidas y movimientos» summary an arrow that turns when it opens", () => {
     render(<SearchFilters search={{}} options={options} />);
-    const summary = screen.getByText("Más filtros").closest("summary");
+    const summary = screen
+      .getByText("Equipo, bobina, color, medidas y movimientos")
+      .closest("summary");
 
     expect(summary?.querySelector("svg")).toHaveClass("group-open:rotate-180");
+  });
+
+  // Fase 17: en el portátil los estados se ven siempre; «Más filtros» cuenta solo lo que esconde.
+  it("counts on «Más filtros» only the filters it hides, and every one on «Filtros»", () => {
+    render(
+      <SearchFilters
+        search={{ installation: "LAID", connection: "CONNECTED", level: "L1" }}
+        options={options}
+      />,
+    );
+    const button = screen.getByRole("button", { name: /Filtros/ });
+
+    expect(button).toHaveTextContent("Filtros (3)");
+    expect(button).toHaveTextContent("Más filtros (1)");
+    expect(screen.getByLabelText("Instalación")).toHaveValue("LAID");
   });
 
   it("navigates to a clean, shareable URL keeping the current order", () => {
@@ -64,12 +81,14 @@ describe("SearchFilters", () => {
     );
   });
 
-  it("shows the current filters and opens 'Más filtros' when one of them is active", () => {
+  it("shows the current filters and opens the extra block when one of them is active", () => {
     render(<SearchFilters search={{ q: "SH", color: "c1", sectionMin: 2.5 }} options={options} />);
 
     expect(screen.getByLabelText("Código, equipo o descripción")).toHaveValue("SH");
     expect(screen.getByLabelText("Sección (mm²): desde")).toHaveValue("2,5");
-    expect(screen.getByText("Más filtros").closest("details")).toHaveAttribute("open");
+    expect(
+      screen.getByText("Equipo, bobina, color, medidas y movimientos").closest("details"),
+    ).toHaveAttribute("open");
   });
 
   it("filters by who did what and when", () => {
@@ -83,11 +102,24 @@ describe("SearchFilters", () => {
     expect(push).toHaveBeenCalledWith("/cables?actor=u1&action=CONNECTED&from=2026-11-01");
   });
 
-  it("opens 'Más filtros' when a who / what / when filter is active", () => {
+  it("opens the extra block when a who / what / when filter is active", () => {
     render(<SearchFilters search={{ action: "MOVED" }} options={options} />);
 
-    expect(screen.getByText("Más filtros").closest("details")).toHaveAttribute("open");
+    expect(
+      screen.getByText("Equipo, bobina, color, medidas y movimientos").closest("details"),
+    ).toHaveAttribute("open");
     expect(screen.getByLabelText("Qué hizo")).toHaveValue("MOVED");
+  });
+
+  it("filters by the reel the cables came out of, with the extra block open", () => {
+    render(<SearchFilters search={{ reel: "B-101" }} options={options} />);
+
+    expect(screen.getByLabelText("Bobina")).toHaveValue("B-101");
+    expect(
+      screen.getByText("Equipo, bobina, color, medidas y movimientos").closest("details"),
+    ).toHaveAttribute("open");
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    expect(push).toHaveBeenCalledWith("/cables?reel=B-101");
   });
 
   it("filters by level, by tray and by the loose ends waiting in it", () => {

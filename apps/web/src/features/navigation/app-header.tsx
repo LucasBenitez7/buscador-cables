@@ -92,8 +92,9 @@ export function AppHeader({ items, user }: Props) {
           <SheetContent>
             <SheetTitle>Menú</SheetTitle>
             <SheetDescription className="sr-only">Secciones de la aplicación</SheetDescription>
-            <nav aria-label="Principal" className="flex flex-col gap-1">
-              {items.map((item) => (
+            {/* Una sola lista, en el orden del portátil: la fila y después «Gestión». */}
+            <nav aria-label="Principal" className="flex flex-col gap-1 overflow-y-auto">
+              {[...main, ...manage, ...own].map((item) => (
                 <NavLink
                   key={item.href}
                   item={item}

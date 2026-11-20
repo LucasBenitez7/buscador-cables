@@ -265,7 +265,7 @@ function Side({
     <div
       className={cn(
         "flex min-w-0 flex-col gap-1 rounded-md border p-3",
-        tone === "pending" && "border-warning/40 bg-warning/10",
+        tone === "pending" && "bg-background",
         tone === "chosen" && "border-primary bg-primary/10",
         tone === "discarded" && "bg-muted/30 opacity-60",
       )}

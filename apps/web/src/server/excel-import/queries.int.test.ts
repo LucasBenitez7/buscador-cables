@@ -54,8 +54,12 @@ describe("getExcelOverview", () => {
     expect(electrical).toMatchObject({
       kind: "ELECTRICAL",
       label: "Eléctrico",
-      projectLoadAvailable: false,
-      lastApplied: { excelDay: "15/11/2026", uploadedBy: "Sara" },
+      lastApplied: {
+        id: applied.importId,
+        fileName: "estado.xlsx",
+        excelDay: "15/11/2026",
+        uploadedBy: "Sara",
+      },
       current: {
         id: waiting.importId,
         excelDay: "16/11/2026",
@@ -68,7 +72,6 @@ describe("getExcelOverview", () => {
     expect(instrumentation).toMatchObject({
       current: null,
       lastApplied: null,
-      projectLoadAvailable: true,
     });
   });
 });

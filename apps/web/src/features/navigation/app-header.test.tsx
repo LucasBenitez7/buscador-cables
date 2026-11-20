@@ -93,6 +93,29 @@ describe("AppHeader", () => {
     expect(screen.getByRole("button", { name: "Abrir menú (2 pendientes)" })).toBeInTheDocument();
   });
 
+  // Fase 17: en el móvil, una sola lista en el orden del portátil (la fila y luego «Gestión»).
+  it("lists every section in the phone menu, in the order of the computer menu", () => {
+    render(
+      <AppHeader
+        items={[
+          { href: "/", label: "Inicio", match: "exact" },
+          { href: "/meters", label: "Metros", match: "prefix", place: "manage" },
+          { href: "/activity", label: "Actividad", match: "prefix", place: "manage" },
+          { href: "/import", label: "Excel del día", match: "prefix" },
+        ]}
+        user={{ name: "Ada", role: "Supervisor" }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menú" }));
+
+    const menu = within(screen.getByRole("dialog")).getByRole("navigation");
+    expect(
+      within(menu)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Inicio", "Excel del día", "Metros", "Actividad"]);
+  });
+
   it("shows no count when nothing waits", () => {
     render(
       <AppHeader

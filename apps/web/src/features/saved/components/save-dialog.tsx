@@ -89,7 +89,7 @@ export function SaveDialog({ refs, what, trigger, onSaved }: Props) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle>Guardar {what}</DialogTitle>
+            <DialogTitle>Añadir {what} a carpetas</DialogTitle>
           </DialogHeader>
           <form id={formId} onSubmit={submit} className="space-y-4">
             {loading || folders === null ? (
@@ -143,7 +143,7 @@ export function SaveDialog({ refs, what, trigger, onSaved }: Props) {
               </p>
             ) : null}
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={!canSave || saving || loading}>
@@ -157,7 +157,10 @@ export function SaveDialog({ refs, what, trigger, onSaved }: Props) {
   );
 }
 
-/** «Guardar» next to the code of a record (cable, tray, equipment). */
+/**
+ * «Añadir a carpetas» next to the code of a record (cable, tray, equipment). Not «Guardar»
+ * (fase 17): next to «Editar» it read as saving the record.
+ */
 export function SaveRecordButton({
   kind,
   itemKey,
@@ -173,14 +176,15 @@ export function SaveRecordButton({
       what={label}
       trigger={(open) => (
         <button type="button" onClick={open} className={SECTION_LINK}>
-          Guardar
+          <BookmarkIcon aria-hidden />
+          Añadir a carpetas
         </button>
       )}
     />
   );
 }
 
-/** «Guardar» in the bar of what is chosen in a list (fase 15). */
+/** «Añadir a carpetas» in the bar of what is chosen in a list (fase 15). */
 export function SaveChosenButton({ kind }: { kind: SavedKind }) {
   const { items, notify } = useChosen();
   const noun = kind === "CABLE" ? "cables" : kind === "TRAY" ? "bandejas" : "equipos";
@@ -194,7 +198,7 @@ export function SaveChosenButton({ kind }: { kind: SavedKind }) {
       trigger={(open) => (
         <Button type="button" variant="outline" disabled={items.length === 0} onClick={open}>
           <BookmarkIcon aria-hidden />
-          Guardar
+          Añadir a carpetas
         </Button>
       )}
     />
