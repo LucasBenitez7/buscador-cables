@@ -1073,7 +1073,8 @@ Decisiones que siguen valiendo:
 - [x] Encima de cada lista, el número y «Por página» en una fila (dos tamaños: cables 50/100,
       bandejas 60/120, actividad 50/100); el número de página, solo abajo.
 - [x] «Seleccionar» se convierte en «Seleccionar todas (N)» en el mismo sitio: la lista no salta.
-- [x] Sin el hueco fijo de la barra de desplazamiento: la página ya no se mueve al abrir el menú.
+- [x] La página no se mueve al abrir el menú ni al alargarse: el hueco de la barra sigue
+      reservado y el bloqueo de scroll ya no deja otro.
 
 ---
 
