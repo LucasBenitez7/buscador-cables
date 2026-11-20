@@ -73,6 +73,20 @@ describe("UserEvents", () => {
     );
   });
 
+  // El historial enseña el nombre de hoy: el cambio deja el de antes a la vista.
+  it("tells a change of name with the name before and after", () => {
+    expect(
+      describeUserEvent(
+        event({
+          action: "NAME_CHANGED",
+          actor: "Ana Pérez",
+          toRole: null,
+          details: { from: "ana@planta.example", to: "Ana Pérez" },
+        }),
+      ),
+    ).toBe("Ana Pérez cambió su nombre de «ana@planta.example» a «Ana Pérez»");
+  });
+
   // Fase 12: los cambios de roles y de permisos extra, también en palabras.
   it("tells changes to roles and extra permissions, with what was added and removed", () => {
     expect(

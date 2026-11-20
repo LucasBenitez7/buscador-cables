@@ -99,6 +99,7 @@ enum UserEventAction {
   ROLE_CREATED
   ROLE_UPDATED
   ROLE_DELETED
+  NAME_CHANGED // alguien se cambió su propio nombre (`details`: de y a)
 }
 
 /// Auditoría de las cuentas: quién creó, aprobó, cambió de rol o desactivó a quién. Nunca se

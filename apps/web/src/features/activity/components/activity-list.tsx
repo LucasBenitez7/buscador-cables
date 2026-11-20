@@ -64,6 +64,8 @@ type Props = {
   activity: ActivityPage;
   /** "Mi actividad" hides the name: it is always the current user. */
   showUser?: boolean;
+  /** Who manages accounts: the name opens the person's page (with their email) instead. */
+  profileLinks?: boolean;
   /** Today in Madrid ("2026-11-14"), for the day headings and the quick ranges. */
   today?: string;
 };
@@ -78,6 +80,7 @@ export function ActivityList({
   search,
   activity,
   showUser = true,
+  profileLinks = false,
   today = dayKey(new Date()),
 }: Props) {
   const ranges = <QuickRanges basePath={basePath} search={search} today={today} />;
@@ -135,7 +138,13 @@ export function ActivityList({
           </h2>
           <ol className="bg-card divide-y rounded-lg border">
             {day.entries.map((entry) => (
-              <Entry key={entry.id} entry={entry} basePath={basePath} showUser={showUser} />
+              <Entry
+                key={entry.id}
+                entry={entry}
+                basePath={basePath}
+                showUser={showUser}
+                profileLinks={profileLinks}
+              />
             ))}
           </ol>
         </section>
@@ -156,10 +165,12 @@ function Entry({
   entry,
   basePath,
   showUser,
+  profileLinks,
 }: {
   entry: ActivityEntry;
   basePath: string;
   showUser: boolean;
+  profileLinks: boolean;
 }) {
   return (
     <li className="flex gap-3 px-4 py-3 text-sm">
@@ -185,8 +196,16 @@ function Entry({
           {showUser ? (
             <>
               <Link
-                href={`${basePath}${activityQuery({ actor: entry.userId })}`}
-                title={`Ver solo los movimientos de ${entry.user}`}
+                href={
+                  profileLinks
+                    ? `/admin/users/${entry.userId}`
+                    : `${basePath}${activityQuery({ actor: entry.userId })}`
+                }
+                title={
+                  profileLinks
+                    ? `Ver la ficha de ${entry.user}`
+                    : `Ver solo los movimientos de ${entry.user}`
+                }
                 className="hover:text-primary focus-visible:ring-ring/50 rounded-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3"
               >
                 {entry.user}

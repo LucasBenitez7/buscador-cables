@@ -203,6 +203,28 @@ describe("AppHeader: menus on a computer", () => {
     }
   });
 
+  // «Mi cuenta» va con el nombre, no entre las secciones: en el móvil, junto a «Cerrar sesión».
+  it("puts the person's own things next to their name in the mobile menu", () => {
+    mocks.pathname = "/account";
+    const withAccount: NavItem[] = [
+      ...items,
+      { href: "/account", label: "Mi cuenta", match: "prefix", place: "user" },
+    ];
+    render(<AppHeader items={withAccount} user={{ name: "Ana", role: "Técnico" }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menú" }));
+    const menu = screen.getByRole("dialog");
+    const sections = within(menu).getByRole("navigation", { name: "Principal" });
+    expect(within(sections).queryByRole("link", { name: "Mi cuenta" })).toBeNull();
+    const account = within(menu).getByRole("link", { name: "Mi cuenta" });
+    expect(account).toHaveAttribute("href", "/account");
+    expect(account).toHaveAttribute("aria-current", "page");
+    expect(within(menu).getByRole("button", { name: "Cerrar sesión" })).toBeInTheDocument();
+
+    fireEvent.click(account);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("opens the person's menu with their activity and sign out", () => {
     render(<AppHeader items={manageItems} user={{ name: "Ada", role: "Administrador" }} />);
 

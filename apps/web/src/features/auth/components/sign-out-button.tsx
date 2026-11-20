@@ -29,7 +29,7 @@ export function SignOutButton() {
       onClick={signOut}
       disabled={pending}
       // Rojo, como «Cerrar sesión» en el menú de la cuenta del ordenador.
-      className="text-destructive hover:bg-destructive/15 hover:text-destructive"
+      className="text-destructive hover:bg-destructive/15 hover:text-destructive justify-start"
     >
       {pending ? "Saliendo…" : "Cerrar sesión"}
     </Button>

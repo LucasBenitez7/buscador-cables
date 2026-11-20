@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@cables/db";
 import { betterAuth } from "better-auth";
-import { createAuthMiddleware, isAPIError } from "better-auth/api";
+import { createAuthMiddleware, getSessionFromCtx, isAPIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { after } from "next/server";
@@ -25,6 +25,7 @@ import {
   clearLoginFailures,
   recordLoginFailure,
 } from "@/server/login-throttle";
+import { afterPasswordChange, changedPasswordOwner } from "@/server/password-change";
 
 export const EMAIL_VERIFICATION_EXPIRES_SECONDS = 60 * 60 * 24;
 
@@ -32,6 +33,7 @@ const baseURL = env.BETTER_AUTH_URL ?? env.APP_URL;
 
 const SIGN_IN_PATH = "/sign-in/email";
 const SIGN_OUT_PATH = "/sign-out";
+const CHANGE_PASSWORD_PATH = "/change-password";
 
 const signInEmail = (body: unknown): unknown =>
   typeof body === "object" && body !== null ? (body as { email?: unknown }).email : undefined;
@@ -149,6 +151,11 @@ export const auth = betterAuth({
       if (ctx.path === SIGN_IN_PATH) {
         await assertLoginNotLocked(signInEmail(ctx.body));
       }
+      // «Mi cuenta»: la contraseña actual tampoco se puede adivinar probando (fase 18).
+      if (ctx.path === CHANGE_PASSWORD_PATH) {
+        const session = await getSessionFromCtx(ctx);
+        if (session) await assertLoginNotLocked(session.user.email);
+      }
     }),
     after: createAuthMiddleware(async (ctx) => {
       if (ctx.path === SIGN_OUT_PATH) {
@@ -156,6 +163,13 @@ export const auth = betterAuth({
         // la sesión.
         const { name, value, ...options } = drawingAccessCookie("", 0);
         ctx.setCookie(name, value, options);
+        return;
+      }
+      if (ctx.path === CHANGE_PASSWORD_PATH) {
+        // Con éxito, Better Auth devuelve la persona; si falla, la sesión sigue siendo válida.
+        const { returned } = ctx.context;
+        const owner = changedPasswordOwner(returned) ?? (await getSessionFromCtx(ctx))?.user;
+        if (owner) await afterPasswordChange(owner, returned);
         return;
       }
       if (ctx.path !== SIGN_IN_PATH) {

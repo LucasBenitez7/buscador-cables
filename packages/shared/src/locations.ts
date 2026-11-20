@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HIDDEN_CHARACTERS_MESSAGE, isCleanLine } from "./text";
 
 /**
  * Location tree rules: Planta → Área → Unidad → Sitio.
@@ -78,7 +79,8 @@ const locationNameSchema = z
   .string({ error: "El nombre es obligatorio" })
   .trim()
   .min(1, "El nombre es obligatorio")
-  .max(100, "El nombre no puede superar 100 caracteres");
+  .max(100, "El nombre no puede superar 100 caracteres")
+  .refine(isCleanLine, HIDDEN_CHARACTERS_MESSAGE);
 
 export const createLocationSchema = z.object({
   name: locationNameSchema,

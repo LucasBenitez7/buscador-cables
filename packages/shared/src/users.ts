@@ -5,11 +5,33 @@ import { roleIdSchema } from "./roles";
 export const PASSWORD_MIN_LENGTH = 10;
 export const PASSWORD_MAX_LENGTH = 128;
 
+/**
+ * A person's name, as it shows in the history and the lists: only letters (any language,
+ * accents included), spaces, apostrophes, hyphens and dots, with at least two letters.
+ * Someone signed up with their email as their name, and the history then showed the email
+ * to everybody; this also keeps out phone numbers, links, markup and invisible characters.
+ */
+const PERSON_NAME = /^[\p{L}\p{M}' ’.-]+$/u;
+const LETTER = /\p{L}/gu;
+
 const nameField = z
   .string({ error: "El nombre es obligatorio" })
-  .trim()
-  .min(2, "El nombre debe tener al menos 2 caracteres")
-  .max(100, "El nombre no puede superar 100 caracteres");
+  .transform((value) => value.normalize("NFC").trim().replace(/\s+/g, " "))
+  .pipe(
+    z
+      .string()
+      .min(2, "El nombre debe tener al menos 2 caracteres")
+      .max(100, "El nombre no puede superar 100 caracteres")
+      .refine((value) => !value.includes("@"), "Escribe tu nombre y apellidos, no tu correo")
+      .refine(
+        (value) => PERSON_NAME.test(value),
+        "El nombre solo puede tener letras, espacios, guiones, apóstrofos y puntos",
+      )
+      .refine(
+        (value) => (value.match(LETTER) ?? []).length >= 2,
+        "El nombre debe tener al menos 2 letras",
+      ),
+  );
 
 // Trim first: Zod checks the format before a `.trim()` chained after `z.email()`, so a
 // pasted address with a space around it was rejected.
@@ -49,6 +71,28 @@ export const signUpSchema = signUpProfileSchema
     path: ["confirmPassword"],
   });
 
+/** «Mi cuenta»: the name only its owner changes (an administrator does not). */
+export const changeOwnNameSchema = z.object({ name: nameField });
+
+/** «Mi cuenta»: a new password, with the current one to prove it is its owner. */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z
+      .string({ error: "Escribe tu contraseña actual" })
+      .min(1, "Escribe tu contraseña actual")
+      .max(PASSWORD_MAX_LENGTH, "La contraseña es demasiado larga"),
+    newPassword: passwordField,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: "La contraseña nueva tiene que ser distinta de la actual",
+    path: ["newPassword"],
+  });
+
 export const changeRoleSchema = z.object({
   userId: z.string().min(1),
   role: roleIdSchema,
@@ -63,6 +107,8 @@ export const setUserActiveSchema = z.object({
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
+export type ChangeOwnNameInput = z.infer<typeof changeOwnNameSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ChangeRoleInput = z.infer<typeof changeRoleSchema>;
 export type SetUserActiveInput = z.infer<typeof setUserActiveSchema>;
 

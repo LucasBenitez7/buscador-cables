@@ -80,6 +80,18 @@ describe("prepareSignUpUser", () => {
     expect(error).toBeInstanceOf(APIError);
     expect((error as APIError).body?.code).toBe(AUTH_ERROR_CODES.INVALID_PROFILE);
   });
+
+  // Alguien se registró con su correo como nombre: el servidor también lo rechaza (la llamada
+  // a `/api/auth/sign-up/email` puede hacerse sin pasar por el formulario).
+  it.each(["luis@planta.example", "Luis 600123456", "https://planta.example"])(
+    "rejects %j as a name with INVALID_PROFILE",
+    (name) => {
+      const error = caught(() => prepareSignUpUser({ ...base, name }));
+
+      expect(error).toBeInstanceOf(APIError);
+      expect((error as APIError).body?.code).toBe(AUTH_ERROR_CODES.INVALID_PROFILE);
+    },
+  );
 });
 
 // Revisión F0-F7 (M1): `/api/auth/update-user` dejaba a cualquiera cambiarse el nombre y

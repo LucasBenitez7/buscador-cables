@@ -11,7 +11,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPrismaClient } from "@cables/db";
 import { hashPassword } from "better-auth/crypto";
-import { CABLES, LOCATIONS, PASSWORD, RECOVERY_USER, TRAYS, USERS } from "../support/data";
+import {
+  ACCOUNT_USER,
+  CABLES,
+  LOCATIONS,
+  PASSWORD,
+  RECOVERY_USER,
+  TRAYS,
+  USERS,
+} from "../support/data";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dbPackage = path.resolve(here, "../../../../packages/db");
@@ -68,7 +76,11 @@ async function prepare() {
 
   const password = await hashPassword(PASSWORD);
   const userIds: Record<string, string> = {};
-  for (const [key, user] of [...Object.entries(USERS), ["recovery", RECOVERY_USER] as const]) {
+  for (const [key, user] of [
+    ...Object.entries(USERS),
+    ["recovery", RECOVERY_USER] as const,
+    ["account", ACCOUNT_USER] as const,
+  ]) {
     const id = randomUUID();
     userIds[key] = id;
     await db.user.create({
