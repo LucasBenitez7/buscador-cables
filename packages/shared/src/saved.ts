@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HIDDEN_CHARACTERS_MESSAGE, isCleanLine } from "./text";
 
 /**
  * Guardados (fase 16): carpetas de una persona, de un solo nivel, con cables, bandejas y
@@ -26,7 +27,8 @@ export const savedFolderNameSchema = z
     z
       .string()
       .min(1, "El nombre es obligatorio")
-      .max(60, "El nombre no puede superar 60 caracteres"),
+      .max(60, "El nombre no puede superar 60 caracteres")
+      .refine(isCleanLine, HIDDEN_CHARACTERS_MESSAGE),
   );
 
 export const createSavedFolderSchema = z.object({ name: savedFolderNameSchema });

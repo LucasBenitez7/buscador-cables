@@ -6,6 +6,7 @@
  * `cableActionSchema`, checks the permission with `canRunCableAction` and computes the new
  * state with `applyCableAction` inside the same transaction that writes the CableEvent.
  */
+import { HIDDEN_CHARACTERS_MESSAGE, isCleanText } from "./text";
 import { z } from "zod";
 import {
   CONNECTION_STATUSES,
@@ -412,14 +413,20 @@ const optionalNotes = z
   .string()
   .optional()
   .transform((value) => value?.trim() ?? "")
-  .pipe(z.string().max(2000, "La nota no puede superar 2000 caracteres"))
+  .pipe(
+    z
+      .string()
+      .max(2000, "La nota no puede superar 2000 caracteres")
+      .refine(isCleanText, HIDDEN_CHARACTERS_MESSAGE),
+  )
   .transform((value) => (value === "" ? null : value));
 
 const reasonNotes = z
   .string({ error: "Indica el motivo" })
   .trim()
   .min(3, "Indica el motivo")
-  .max(2000, "El motivo no puede superar 2000 caracteres");
+  .max(2000, "El motivo no puede superar 2000 caracteres")
+  .refine(isCleanText, HIDDEN_CHARACTERS_MESSAGE);
 
 const common = { cableId: requiredId("Cable no válido"), version: versionSchema };
 const endField = z.enum(CABLE_ENDS, { error: "Elige qué extremo" });
