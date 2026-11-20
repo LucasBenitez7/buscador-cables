@@ -137,12 +137,15 @@ function Panel({
   title,
   href,
   linkLabel = "Ver todo",
+  more,
   className,
   children,
 }: {
   title: string;
   href?: string;
   linkLabel?: string;
+  /** A second link next to the first one («Ver metros» next to «Ver cables»). */
+  more?: { href: string; label: string };
   className?: string;
   children: ReactNode;
 }) {
@@ -150,10 +153,19 @@ function Panel({
     <section className={cn("bg-card space-y-4 rounded-lg border p-4", className)}>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{title}</h2>
-        {href ? (
-          <Link href={href} className={TEXT_LINK_SM}>
-            {linkLabel}
-          </Link>
+        {href || more ? (
+          <div className="flex flex-wrap justify-end gap-x-4 gap-y-1">
+            {href ? (
+              <Link href={href} className={TEXT_LINK_SM}>
+                {linkLabel}
+              </Link>
+            ) : null}
+            {more ? (
+              <Link href={more.href} className={TEXT_LINK_SM}>
+                {more.label}
+              </Link>
+            ) : null}
+          </div>
         ) : null}
       </div>
       {children}
@@ -172,7 +184,15 @@ function ProgressPanel({
 }) {
   const { total, laid, connected, installation } = progress;
   return (
-    <Panel title="Avance de la obra" href="/cables" linkLabel="Ver cables" className="h-full">
+    <Panel
+      title="Avance de la obra"
+      href="/cables"
+      linkLabel="Ver cables"
+      // Los metros tienen su página: el enlace va arriba, junto a «Ver cables», y no en el
+      // título de su barra (fase 17: subrayado entre las demás, no se entendía).
+      more={meters.planned > 0 ? { href: "/meters", label: "Ver metros" } : undefined}
+      className="h-full"
+    >
       <div className="space-y-1">
         <p className="text-muted-foreground text-sm">
           <span className="text-foreground text-3xl font-semibold tabular-nums">
@@ -200,7 +220,6 @@ function ProgressPanel({
           value={meters.laid}
           total={meters.planned}
           text={`${distanceText(meters.laid)} de ${distanceText(meters.planned)}`}
-          href="/meters"
           barClassName={TONE_FILL.laid}
         />
       ) : null}
@@ -248,7 +267,6 @@ function Meter({
   value,
   total,
   text,
-  href,
   barClassName,
 }: {
   label: string;
@@ -256,21 +274,13 @@ function Meter({
   total: number;
   /** What follows the percent; by default «12 de 4524». */
   text?: string;
-  /** Where the label leads, when there is more to see. */
-  href?: string;
   barClassName: string;
 }) {
   const pct = percent(value, total);
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-3 text-sm">
-        {href ? (
-          <Link href={href} className={cn(TEXT_LINK_SM, "font-medium")}>
-            {label}
-          </Link>
-        ) : (
-          <span className="font-medium">{label}</span>
-        )}
+        <span className="font-medium">{label}</span>
         <span className="text-muted-foreground">
           <span className="text-foreground font-semibold tabular-nums">{pct} %</span> ·{" "}
           {text ?? `${count(value)} de ${count(total)}`}

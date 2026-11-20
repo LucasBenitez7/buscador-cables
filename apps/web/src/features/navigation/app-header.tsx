@@ -4,7 +4,7 @@ import { cn } from "cn";
 import { ChevronDownIcon, MenuIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -93,7 +93,7 @@ export function AppHeader({ items, user }: Props) {
             <SheetTitle>Menú</SheetTitle>
             <SheetDescription className="sr-only">Secciones de la aplicación</SheetDescription>
             {/* Una sola lista, en el orden del portátil: la fila y después «Gestión». */}
-            <nav aria-label="Principal" className="flex flex-col gap-1 overflow-y-auto">
+            <ScrollHintNav>
               {[...main, ...manage, ...own].map((item) => (
                 <NavLink
                   key={item.href}
@@ -103,7 +103,7 @@ export function AppHeader({ items, user }: Props) {
                   onNavigate={() => setOpen(false)}
                 />
               ))}
-            </nav>
+            </ScrollHintNav>
             <div className="mt-auto space-y-3 border-t pt-4">
               <UserBadge user={user} />
               <SignOutButton />
@@ -162,6 +162,49 @@ const MENU_TRIGGER =
   "focus-visible:ring-ring/50 data-[state=open]:bg-accent inline-flex items-center gap-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3";
 
 /** "Gestión": the administration sections, with the sum of what waits in them. */
+/**
+ * The list of the phone menu. When it does not fit (a small phone), it scrolls on its own and
+ * fades out at the bottom with an arrow, so it is clear there is more below (fase 17); at the
+ * end of the list the fade goes away.
+ */
+function ScrollHintNav({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLElement>(null);
+  const [more, setMore] = useState(false);
+  const measure = useCallback(() => {
+    const nav = ref.current;
+    if (nav) setMore(nav.scrollTop + nav.clientHeight < nav.scrollHeight - 4);
+  }, []);
+  useEffect(() => {
+    const nav = ref.current;
+    if (!nav) return;
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [measure]);
+  return (
+    <div className="relative flex min-h-0 flex-col">
+      <nav
+        ref={ref}
+        aria-label="Principal"
+        onScroll={measure}
+        className="flex min-h-0 flex-col gap-1 overflow-y-auto"
+      >
+        {children}
+      </nav>
+      {more ? (
+        <div
+          aria-hidden
+          className="from-card via-card/80 pointer-events-none absolute inset-x-0 bottom-0 flex h-14 items-end justify-center bg-gradient-to-t to-transparent pb-1"
+        >
+          <ChevronDownIcon className="text-muted-foreground size-5" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ManageMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
   const active = items.some((item) => isActive(item, pathname));
   const waiting = items.reduce(
