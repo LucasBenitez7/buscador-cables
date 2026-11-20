@@ -123,7 +123,6 @@ export default async function LocationPage({ params }: { params: Params }) {
           items={location.someCables.map((cable) => ({ key: cable.id, label: cable.code }))}
           total={location.cables}
           selectAll={selectAllCablesAction.bind(null, { location: location.id })}
-          scope="shown"
           actions={<SaveChosenButton kind="CABLE" />}
         >
           <Section title={`Cables (${location.cables})`} collapsible>

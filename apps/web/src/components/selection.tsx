@@ -33,8 +33,6 @@ type SelectionState = {
   total: number;
   /** How many are chosen, in every page. */
   count: number;
-  /** Words of «Seleccionar todas»: a list with filters and pages, or one showing its first rows. */
-  scope: "filters" | "shown";
   /** Only in lists with pages: everything that matches the filters can be chosen at once. */
   everything?: {
     checked: boolean;
@@ -60,12 +58,6 @@ type Props = {
   selectAll?: () => Promise<SelectAllResult>;
   /** The filters (not the page): when it changes, the choice starts again. */
   resetKey?: string;
-  /**
-   * "filters" (default): a list with filters and pages («Seleccionar todas las que cumplen los
-   * filtros»). "shown": a list without filters that shows only its first rows, as a
-   * location's cables («Seleccionar todas»).
-   */
-  scope?: "filters" | "shown";
   /**
    * More buttons for the bar, before «Copiar» («Guardar», «Mover a…»). They read what is
    * chosen with `useChosen()`.
@@ -104,7 +96,6 @@ export function SelectionProvider({
   total = items.length,
   selectAll,
   resetKey = "",
-  scope = "filters",
   actions,
   children,
 }: Props) {
@@ -173,7 +164,6 @@ export function SelectionProvider({
     shown: items.length,
     count: selected.size,
     total,
-    scope,
     everything,
     start: () => {
       window.dispatchEvent(new CustomEvent(START_EVENT, { detail: id }));
@@ -223,11 +213,7 @@ export function SelectionControl({ className }: { className?: string }) {
         variant="outline"
         size="sm"
         className={className}
-        onClick={(event) => {
-          // En la barra de una caja, pulsarlo no la cierra.
-          event.preventDefault();
-          context.start();
-        }}
+        onClick={context.start}
       >
         Seleccionar
       </Button>
@@ -297,7 +283,7 @@ function AllCheckbox({ context, className }: { context: SelectionState; classNam
   );
 }
 
-/** The words of «Seleccionar todas»: with pages and filters, it says it takes every page. */
+/** The words of «Seleccionar todas», or «Seleccionando…» while every page is asked for. */
 function allLabel(context: SelectionState): string {
   if (context.everything?.loading) return "Seleccionando…";
   // Corto en todas partes (fase 17): «Seleccionar todas (N)»; con páginas, N ya dice que son

@@ -161,7 +161,6 @@ function NavLink({
 const MENU_TRIGGER =
   "focus-visible:ring-ring/50 data-[state=open]:bg-accent inline-flex items-center gap-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3";
 
-/** "Gestión": the administration sections, with the sum of what waits in them. */
 /**
  * The list of the phone menu. When it does not fit (a small phone), it scrolls on its own and
  * fades out at the bottom with an arrow, so it is clear there is more below (fase 17); at the
@@ -205,6 +204,7 @@ function ScrollHintNav({ children }: { children: ReactNode }) {
   );
 }
 
+/** "Gestión": the administration sections, with the sum of what waits in them. */
 function ManageMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
   const active = items.some((item) => isActive(item, pathname));
   const waiting = items.reduce(
