@@ -73,7 +73,8 @@ nuevo.
 ## Inicio
 
 Lo primero que ves: **un solo buscador para todo** y el avance de la obra (cables tendidos,
-metros tendidos, conectados y timbrados; «Metros tendidos» lleva a **Metros**). Escribe parte de un código, un equipo o el nombre de una ubicación y,
+metros tendidos, conectados y timbrados; «Ver metros», junto a «Ver cables», lleva a
+**Metros**). Escribe parte de un código, un equipo o el nombre de una ubicación y,
 mientras escribes, salen unos pocos cables, bandejas, equipos y ubicaciones que coinciden, cada
 uno con su enlace. Si escribes un código entero y pulsas **Buscar** (o Intro), te lleva
 directo a su ficha. Según el rol, también tu actividad reciente, el desglose por
@@ -217,14 +218,13 @@ lleva a todos.
 
 En cualquier lista (cables, bandejas, equipos, ubicaciones y las listas de las fichas de una
 bandeja, un equipo o una ubicación), **Seleccionar** pone una casilla en cada fila y una barra
-abajo con cuántos hay elegidos. Está siempre a la derecha de lo que encabeza la lista: junto
-al número de resultados o, en las cajas de una ficha, en la barra de la caja, junto a
-«Ocultar».
+abajo con cuántos hay elegidos. Va en su propia línea, encima de la lista: debajo del número
+de resultados o, en las cajas de una ficha, lo primero dentro de la caja, bajo el título.
 
-- Marca las filas una a una, o **Seleccionar todas** (la línea encima de la lista; su
-  casilla solo se marca cuando está todo elegido): en una lista con páginas elige todo lo que
-  cumple los filtros, no solo la página que se ve (hasta 5000). Lo elegido se mantiene al
-  cambiar de página y se vacía al cambiar los filtros.
+- Marca las filas una a una, o **Seleccionar todas (N)** (el mismo botón «Seleccionar», que
+  cambia en el mismo sitio; su casilla solo se marca cuando está todo elegido): en una lista
+  con páginas elige todo lo que cumple los filtros, no solo la página que se ve (hasta 5000).
+  Lo elegido se mantiene al cambiar de página y se vacía al cambiar los filtros.
 - **Copiar** copia los códigos, uno por línea, para pegarlos en un correo o un Excel; el botón
   dice «✓ Copiado».
 - **Imprimir** abre la impresión con una hoja limpia: el título, la fecha y los códigos. Desde
@@ -309,7 +309,7 @@ ofrece: todo lo que se sube ahora es un Excel del día.
 
 ## Metros
 
-**Gestión → Metros** (o «Metros tendidos» en el inicio, para cualquier rol) enseña la obra en
+**Gestión → Metros** (o «Ver metros» en el inicio, para cualquier rol) enseña la obra en
 metros:
 
 - **Avance**: metros tendidos de los previstos, en total y por nivel. Cuenta los cables tendidos

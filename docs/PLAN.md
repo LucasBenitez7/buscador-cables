@@ -1057,12 +1057,23 @@ Decisiones que siguen valiendo:
   el cable: su origen o su primera bandeja) y bobinas (metros gastados; no se sabe lo que
   traían). Los metros reales vienen de los dos Excel del día.
 - **Fichas**: una caja por bloque; las acciones con icono; «Añadir a carpetas» en vez de
-  «Guardar». «Seleccionar» a la derecha de la línea que encabeza cada lista.
+  «Guardar». «Seleccionar» en su propia línea encima de cada lista (desde el 2026-11-20).
 - **«Carga del proyecto»**: ya no se ofrece al subir un Excel.
 
 - [x] Fichas, selección, actividad, Excel del día, filtros, inicio y menú.
 - [x] «Metros»: avance, desviación y bobinas, con enlaces desde el inicio, la ficha y el buscador.
 - [x] Tests y E2E.
+
+## Repaso tras la fase 17 (2026-11-20, `fix/menu-meters-hint`)
+
+- [x] Menú del móvil: si no cabe, se difumina abajo con una flecha hasta el final de la lista.
+- [x] Inicio: «Ver metros» junto a «Ver cables»; «Metros tendidos» ya no es un enlace.
+- [x] Sesión hasta el domingo a las 00:00 (Madrid), sin alargarse al usar la web; quien entra a
+      menos de 12 horas sigue hasta el domingo siguiente.
+- [x] Encima de cada lista, el número y «Por página» en una fila (dos tamaños: cables 50/100,
+      bandejas 60/120, actividad 50/100); el número de página, solo abajo.
+- [x] «Seleccionar» se convierte en «Seleccionar todas (N)» en el mismo sitio: la lista no salta.
+- [x] Sin el hueco fijo de la barra de desplazamiento: la página ya no se mueve al abrir el menú.
 
 ---
 

@@ -395,8 +395,9 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 ### Interfaz y metros (fase 17)
 
 - **Cajas de las fichas** (`Section` en `components/detail.tsx`): una sola caja con el título
-  como cabecera; `tools` pone acciones en esa cabecera (la de «Seleccionar», con su
-  `SelectionProvider` alrededor de la caja). La barra de lo elegido y su hueco se pintan al
+  como cabecera. «Seleccionar» (`SelectionControl`) va lo primero dentro de la caja, con su
+  `SelectionProvider` alrededor, y al pulsarlo se convierte en «Seleccionar todas (N)» en el
+  mismo sitio y tamaño: la lista no salta. La barra de lo elegido y su hueco se pintan al
   final del `body` (portal): ningún margen de la página la despega del borde.
 - **Una sola «Actividad»** (`/activity`): con `activity:view` se filtra por persona («Yo»
   primero, `features/activity/people.ts`); sin él, el servidor fija `actor` a la persona.
