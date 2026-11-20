@@ -13,7 +13,7 @@ type Props = {
 };
 
 /**
- * "Por página: 25 · 50 · 100". Links, not a form: the size lives in the URL like everything
+ * "Por página: 50 · 100". Links, not a form: the size lives in the URL like everything
  * else. Switching keeps the first item on screen in view by recomputing the page.
  */
 export function PageSizePicker({ sizes, size, page, href }: Props) {

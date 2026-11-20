@@ -15,7 +15,8 @@ import {
  */
 export const ACTIVITY_PAGE_SIZE = 50;
 /** Page sizes the activity pages offer; the first one is the default. */
-export const ACTIVITY_PAGE_SIZES = [ACTIVITY_PAGE_SIZE, 100, 200] as const;
+/** Two sizes at most (fase 17): it is seldom changed, and so it fits next to the count. */
+export const ACTIVITY_PAGE_SIZES = [ACTIVITY_PAGE_SIZE, 100] as const;
 
 const optionalText = z
   .string()

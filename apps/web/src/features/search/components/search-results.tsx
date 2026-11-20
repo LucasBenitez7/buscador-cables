@@ -12,11 +12,10 @@ import { ListSummary } from "@/components/list-summary";
 import { PageSizePicker } from "@/components/page-size-picker";
 import { Pagination } from "@/components/pagination";
 import {
-  SelectAllRow,
   SelectCell,
   SelectCheckbox,
   SelectHeaderCell,
-  SelectionAside,
+  SelectionControl,
 } from "@/components/selection";
 import { PendingLink } from "@/components/pending-list";
 import { CODE_LINK } from "@/components/ui/text-link";
@@ -77,25 +76,22 @@ export function SearchResults({ search, result, actions }: Props) {
       ) : null}
       <ListSummary
         aside={
-          <SelectionAside>
-            {result.total > SEARCH_PAGE_SIZES[0] ? (
-              <PageSizePicker
-                sizes={SEARCH_PAGE_SIZES}
-                size={search.size}
-                page={result.page}
-                href={(size, page) => `/cables${cableSearchQuery(search, { size, page })}`}
-              />
-            ) : null}
-          </SelectionAside>
+          result.total > SEARCH_PAGE_SIZES[0] ? (
+            <PageSizePicker
+              sizes={SEARCH_PAGE_SIZES}
+              size={search.size}
+              page={result.page}
+              href={(size, page) => `/cables${cableSearchQuery(search, { size, page })}`}
+            />
+          ) : null
         }
       >
         <span className="text-foreground font-medium">{result.total.toLocaleString("es-ES")}</span>{" "}
         {result.total === 1 ? "cable" : "cables"}
-        {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : ""}
       </ListSummary>
 
       {/* Móvil: tarjetas, más fáciles de leer y de pulsar que una tabla estrecha. */}
-      <SelectAllRow />
+      <SelectionControl />
       <ul className="space-y-3 md:hidden">
         {result.items.map((cable) => (
           <li key={cable.id} className="bg-card space-y-2 rounded-lg border p-3 text-sm">

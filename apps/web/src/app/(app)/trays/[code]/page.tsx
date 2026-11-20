@@ -12,12 +12,7 @@ import {
   normalizeTrayCode,
 } from "@cables/shared";
 import { DataList, Item, JumpLinks, RecordTitle, Section, SectionLink } from "@/components/detail";
-import {
-  SelectAllRow,
-  SelectCheckbox,
-  SelectionProvider,
-  SelectionToggle,
-} from "@/components/selection";
+import { SelectCheckbox, SelectionControl, SelectionProvider } from "@/components/selection";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { SaveRecordButton } from "@/features/saved/components/save-dialog";
 import { SaveChosenButton } from "@/features/saved/components/save-dialog";
@@ -166,14 +161,9 @@ function CableList({
       items={cables.map((cable) => ({ key: cable.id, label: cable.code }))}
       actions={<SaveChosenButton kind="CABLE" />}
     >
-      <Section
-        title={`${title} (${cables.length})`}
-        collapsible
-        id={id}
-        tools={<SelectionToggle />}
-      >
+      <Section title={`${title} (${cables.length})`} collapsible id={id}>
+        <SelectionControl />
         {cables.length === 0 ? <p className="text-muted-foreground text-sm">{empty}</p> : null}
-        <SelectAllRow />
         {cables.length === 0 ? null : (
           <ShowMore
             as="ul"

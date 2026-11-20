@@ -66,13 +66,12 @@ describe("Dashboard", () => {
     expect(screen.getByRole("link", { name: "Revisar" })).toHaveAttribute("href", "/review");
   });
 
-  it("shows the metres laid of the planned ones, leading to «Metros»", () => {
+  it("shows the metres laid of the planned ones, with «Ver metros» next to «Ver cables»", () => {
     render(<Dashboard data={{ ...viewer, meters: { planned: 403_900, laid: 169_200 } }} />);
 
-    expect(screen.getByRole("link", { name: "Metros tendidos" })).toHaveAttribute(
-      "href",
-      "/meters",
-    );
+    // El enlace va arriba, junto a «Ver cables»; la barra lleva su nombre sin subrayar.
+    expect(screen.getByRole("link", { name: "Ver metros" })).toHaveAttribute("href", "/meters");
+    expect(screen.queryByRole("link", { name: "Metros tendidos" })).toBeNull();
     expect(screen.getByText(/169,2 km de 403,9 km/)).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Metros tendidos" })).toHaveAttribute(
       "aria-valuenow",
@@ -98,6 +97,7 @@ describe("Dashboard", () => {
     render(<Dashboard data={viewer} />);
 
     expect(screen.queryByText("Metros tendidos")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Ver metros" })).toBeNull();
   });
 
   it("shows no notice when nothing waits", () => {
