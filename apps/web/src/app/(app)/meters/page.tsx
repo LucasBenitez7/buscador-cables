@@ -157,7 +157,7 @@ async function DeviationTab() {
         </p>
       </Card>
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         <DeviationTable title="Por nivel" column="Nivel" rows={deviation.byLevel} />
         {/* Donde empieza el cable: su origen o, si no lo trae, su primera bandeja. */}
         <DeviationTable title="Por área" column="Área" rows={deviation.byArea} />
@@ -256,7 +256,7 @@ async function ReelsTab({ q }: { q: string }) {
           name: "q",
           label: "Bobina",
           value: q,
-          placeholder: "Como en el Excel",
+          placeholder: "Número de bobina",
           maxLength: 100,
         }}
         keep={{ tab: "bobinas" }}
@@ -338,7 +338,7 @@ function Card({
 }) {
   if (flush) {
     return (
-      <section className="bg-card rounded-lg border">
+      <section className="bg-card min-w-0 rounded-lg border">
         {title ? <h2 className="border-b px-4 py-3 text-base font-semibold">{title}</h2> : null}
         {children}
       </section>
@@ -367,13 +367,15 @@ function Bar({ percent, label }: { percent: number; label: string }) {
 }
 
 /**
- * The tables of «Metros»: the header stays under the menu while scrolling down a long table, so
- * each figure keeps its column name in sight. On a phone the table scrolls sideways instead (a
- * sideways scroll and a header fixed to the page cannot go together).
+ * The tables of «Metros»: the header stays in sight while scrolling down a long table, so each
+ * figure keeps its column name. On a computer it stays under the menu. On a phone the table also
+ * scrolls sideways, and a header cannot stay fixed to the page from inside a box that scrolls
+ * sideways: there the table scrolls inside its own box, at most 70 % of the screen tall, and the
+ * header stays at the top of that box.
  */
 function TableWrap({ children }: { children: ReactNode }) {
   return (
-    <div className="max-md:overflow-x-auto">
+    <div className="max-md:max-h-[70dvh] max-md:overflow-auto max-md:overscroll-x-contain">
       <table className="w-full min-w-[28rem] text-sm [&_td:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:first-child]:pl-4 [&_th:last-child]:pr-4">
         {children}
       </table>
@@ -385,7 +387,7 @@ function Th({ children, align }: { children: ReactNode; align?: "right" }) {
   return (
     <th
       scope="col"
-      className={`bg-muted text-muted-foreground border-b px-3 py-2.5 text-xs font-semibold tracking-wide whitespace-nowrap uppercase md:sticky md:top-14 md:z-10 ${align === "right" ? "text-right" : "text-left"}`}
+      className={`bg-muted text-muted-foreground sticky top-0 z-10 border-b px-3 py-2.5 text-xs font-semibold tracking-wide whitespace-nowrap uppercase md:top-14 ${align === "right" ? "text-right" : "text-left"}`}
     >
       {children}
     </th>
