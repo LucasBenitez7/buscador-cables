@@ -87,3 +87,52 @@ test("en las tarjetas se eligen cables y la barra de abajo los copia", async ({ 
   await expect(bar.getByRole("button", { name: "Copiar" })).toBeInViewport();
   await expect(bar.getByRole("button", { name: "Imprimir" })).toBeInViewport();
 });
+
+// Regresión: en «Desviación», las tablas de la rejilla («Por nivel», «Por área») ensanchaban la
+// página, y la de los 50 cables y la barra de arriba se veían cortadas.
+test("«Metros» cabe en la pantalla y la cabecera de cada tabla se queda a la vista", async ({
+  page,
+}) => {
+  for (const tab of ["avance", "desviacion", "bobinas"]) {
+    await page.goto(`/meters?tab=${tab}`);
+    await expect(page.getByRole("heading", { name: "Metros", level: 1 })).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `«${tab}» se sale de la pantalla`).toBeLessThanOrEqual(0);
+  }
+
+  // Cada tabla se desliza dentro de su caja, y su cabecera se pega arriba de esa caja: no puede
+  // pegarse a la página desde una caja que se desliza de lado.
+  for (const tab of ["desviacion", "bobinas"]) {
+    await page.goto(`/meters?tab=${tab}`);
+    const tables = page.locator("main table");
+    await expect(tables.first()).toBeVisible();
+    for (const table of await tables.all()) {
+      const layout = await table.evaluate((element) => {
+        const box = getComputedStyle(element.parentElement!);
+        const header = getComputedStyle(element.querySelector("th")!);
+        // La tarjeta recorta la cabecera (con fondo) a sus esquinas redondeadas.
+        const card = getComputedStyle(element.closest("section")!);
+        return {
+          overflowY: box.overflowY,
+          position: header.position,
+          top: header.top,
+          cardOverflow: card.overflow,
+        };
+      });
+      expect(layout).toEqual({
+        overflowY: "auto",
+        position: "sticky",
+        top: "0px",
+        cardOverflow: "clip",
+      });
+    }
+  }
+
+  await page.goto("/meters?tab=bobinas");
+  await expect(page.getByRole("searchbox", { name: "Bobina" })).toHaveAttribute(
+    "placeholder",
+    "Número de bobina",
+  );
+});

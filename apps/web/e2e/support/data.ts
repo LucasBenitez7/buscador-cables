@@ -132,6 +132,9 @@ export const CABLES = {
     status: "LAID",
     connection: "DISCONNECTED",
     ends: ["99BMC", "99XAD10AP001"],
+    // Metros reales y bobina, como los trae el Excel: «Metros» tiene así tablas que enseñar.
+    actualLengthM: 150,
+    reel: "B-E2E",
     wires: [
       ["BN", "X51", "11", "-", "U1"],
       ["BU", "X51", "12", "-", "V1"],

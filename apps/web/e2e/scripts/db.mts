@@ -152,6 +152,9 @@ async function prepare() {
         crossSectionMm2: 2.5,
         conductors: 3,
         lengthM: 120,
+        ...("actualLengthM" in cable
+          ? { actualLengthM: cable.actualLengthM, reel: cable.reel, reelStatus: "En obra" }
+          : {}),
         originId: origin.id,
         destinationId: destination.id,
         installationStatus: cable.status,

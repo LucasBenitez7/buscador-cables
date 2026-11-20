@@ -238,7 +238,7 @@ export function SearchFilters({ search, options }: Props) {
                 id="reel"
                 name="reel"
                 defaultValue={search.reel ?? ""}
-                placeholder="Como en el Excel"
+                placeholder="Número de bobina"
                 autoComplete="off"
                 spellCheck={false}
               />
