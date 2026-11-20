@@ -17,6 +17,11 @@ Funciona en el ordenador y en el móvil o la tableta, desde el navegador.
 3. **Esperar la aprobación:** un administrador revisa la cuenta y le da un rol. Cuando la
    aprueba, llega otro correo y ya puedes entrar.
 
+**Una vez por semana.** La sesión dura hasta el domingo a las 00:00: el domingo o el lunes
+se vuelve a entrar con el correo y la contraseña, y el resto de la semana no hace falta. Si
+entras el sábado por la noche, te dura hasta el domingo siguiente. Borrar el historial o los
+datos de las webs en el navegador también cierra la sesión.
+
 En el ordenador, el menú de arriba tiene lo de cada día: Inicio, Cables, Bandejas, Equipos,
 Ubicaciones, Guardados y, para quien lo sube, Excel del día. **Gestión** agrupa lo que se mira
 de vez en cuando: Metros, Actividad, Pendientes de revisar, Catálogos, Usuarios (con el número
