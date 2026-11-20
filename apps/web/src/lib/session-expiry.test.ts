@@ -50,4 +50,14 @@ describe("sessionExpiry", () => {
     const seconds = (sessionExpiry(start).getTime() - start.getTime()) / 1000;
     expect(seconds).toBeLessThanOrEqual(SESSION_COOKIE_MAX_AGE_SECONDS);
   });
+
+  it("never lasts longer than the cookie the week summer time ends", () => {
+    // Sábado 24/10/2026 a las 12:15 en Madrid (10:15 UTC): faltan menos de 12 horas, así que
+    // hasta el domingo 1/11, y esa semana el domingo 25 tiene 25 horas. Antes la cookie se iba
+    // una hora antes que la sesión.
+    const start = at("2026-10-24T10:15:00Z");
+    expect(sessionExpiry(start).toISOString()).toBe("2026-10-31T23:00:00.000Z");
+    const seconds = (sessionExpiry(start).getTime() - start.getTime()) / 1000;
+    expect(seconds).toBeLessThanOrEqual(SESSION_COOKIE_MAX_AGE_SECONDS);
+  });
 });

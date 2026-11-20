@@ -64,5 +64,9 @@ export function sessionExpiry(now: Date): Date {
   return end;
 }
 
-/** Longest a session can last (Saturday noon to the Sunday after next): the cookie's lifetime. */
-export const SESSION_COOKIE_MAX_AGE_SECONDS = (7 * 24 + MIN_SESSION_HOURS) * 60 * 60;
+/**
+ * Longest a session can last (Saturday noon to the Sunday after next): the cookie's lifetime.
+ * One hour more for the week summer time ends, which has 25 hours on its Sunday: without it,
+ * the cookie went an hour before the session.
+ */
+export const SESSION_COOKIE_MAX_AGE_SECONDS = (7 * 24 + MIN_SESSION_HOURS + 1) * 60 * 60;
