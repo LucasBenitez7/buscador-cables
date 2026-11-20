@@ -11,15 +11,15 @@ test("se guarda un cable desde su ficha en una carpeta nueva y se quita de ella"
   const folder = `Ficha ${Date.now()}`;
   await openCable(page, CABLES.search.code);
 
-  await page.getByRole("button", { name: "Guardar", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: `Guardar ${CABLES.search.code}` });
+  await page.getByRole("button", { name: "Añadir a carpetas", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: `Añadir ${CABLES.search.code} a carpetas` });
   await dialog.getByLabel("Nueva carpeta").fill(folder);
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText(`1 cable en «${folder}».`)).toBeVisible();
 
   // Al volver a abrirlo, la carpeta sale marcada.
-  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+  await page.getByRole("button", { name: "Añadir a carpetas", exact: true }).click();
   await expect(dialog.getByRole("checkbox", { name: folder })).toBeChecked();
   await dialog.getByRole("button", { name: "Cancelar" }).click();
 
@@ -54,8 +54,8 @@ test("se guardan de golpe los cables elegidos en el buscador", async ({ page }) 
   await page.getByText("Seleccionar todas (2)").click();
 
   const bar = page.getByRole("region", { name: "Elegidos" });
-  await bar.getByRole("button", { name: "Guardar" }).click();
-  const dialog = page.getByRole("dialog", { name: "Guardar 2 cables" });
+  await bar.getByRole("button", { name: "Añadir a carpetas" }).click();
+  const dialog = page.getByRole("dialog", { name: "Añadir 2 cables a carpetas" });
   await dialog.getByLabel("Nueva carpeta").fill(folder);
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect(dialog).toBeHidden();

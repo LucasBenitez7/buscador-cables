@@ -1,3 +1,4 @@
+import { SearchIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
@@ -67,7 +68,10 @@ export default async function TrayPage({ params }: { params: Params }) {
           actions={
             <>
               {tray.routeCables.length > 0 ? (
-                <SectionLink href={`/cables?tray=${encodeURIComponent(tray.code)}`}>
+                <SectionLink
+                  href={`/cables?tray=${encodeURIComponent(tray.code)}`}
+                  icon={<SearchIcon aria-hidden />}
+                >
                   Ver sus cables en el buscador
                 </SectionLink>
               ) : null}

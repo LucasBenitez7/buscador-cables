@@ -1,6 +1,6 @@
 import { prisma } from "@cables/db";
 import { beforeEach, describe, expect, it } from "vitest";
-import { getMetersDeviation, getMetersProgress, listReels } from "./service";
+import { getMetersDeviation, getMetersProgress, getReelStatus, listReels } from "./service";
 
 let area: string;
 let otherArea: string;
@@ -164,5 +164,11 @@ describe("listReels", () => {
       { reel: "B-2", status: null, cables: 1, metres: 60, withoutMetres: 0, lastLaidOn: null },
     ]);
     expect((await listReels("b-2")).map((row) => row.reel)).toEqual(["B-2"]);
+  });
+
+  it("says the state of one reel, or nothing when the Excel brings none", async () => {
+    expect(await getReelStatus("B-1")).toBe("En obra");
+    expect(await getReelStatus("B-2")).toBeNull();
+    expect(await getReelStatus("B-9")).toBeNull();
   });
 });

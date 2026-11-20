@@ -138,7 +138,7 @@ export async function getMetersDeviation(): Promise<MetersDeviation> {
       GROUP BY c."level"`,
     // Donde empieza el cable: su ubicación de origen y, si no tiene (los listados eléctricos no
     // la traen), la de la primera bandeja de su recorrido. El área es la segunda rama de esa
-    // ruta ("/80/80UB/…").
+    // ruta ("/99/99UX/…").
     prisma.$queryRaw<({ id: string | null; name: string | null } & Sums)[]>`
       SELECT a."id" AS id, a."name" AS name, count(*) AS cables,
         sum(c."lengthM") AS planned, sum(c."actualLengthM") AS actual
@@ -253,4 +253,12 @@ export async function listReels(q?: string): Promise<ReelRow[]> {
     withoutMetres: Number(row.without_metres),
     lastLaidOn: row.last_laid_on,
   }));
+}
+
+/** The states the Excel gives a reel («En Sitio»), for the notice above its cables. */
+export async function getReelStatus(reel: string): Promise<string | null> {
+  const rows = await prisma.$queryRaw<{ status: string | null }[]>`
+    SELECT string_agg(DISTINCT c."reelStatus", ' · ') AS status
+    FROM cable c WHERE c."deletedAt" IS NULL AND c."reel" = ${reel}`;
+  return rows[0]?.status ?? null;
 }

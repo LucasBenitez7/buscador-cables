@@ -1056,7 +1056,7 @@ y después) y se aplica cuando el usuario da el visto bueno.
 - [x] Excel del día: caja ordenada con el último archivo cargado y «Cargar otro Excel».
 - [x] Quitar la casilla «Carga del proyecto» (la primera carga ya está hecha).
 - [x] Cables en portátil: menos filtros a la vista y «Más filtros» bien visible.
-- [ ] Guardar en carpeta desde la ficha, sin confundirlo con guardar el cable.
+- [x] «Añadir a carpetas» en vez de «Guardar», e iconos en las acciones de las fichas y las filas.
 - [x] Inicio: «Estado de los cables» con títulos claros y bloques mejor separados.
 - [x] Metros reales frente a previstos: cuánto se desvía cada cable del listado y el total por
       área y por nivel, para detectar errores de medida o de recorrido.

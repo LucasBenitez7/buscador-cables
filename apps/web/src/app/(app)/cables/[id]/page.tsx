@@ -1,3 +1,4 @@
+import { PencilIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
@@ -126,7 +127,11 @@ export default async function CablePage({
           title={cable.code}
           actions={
             <>
-              {canEdit ? <SectionLink href={`/cables/${cable.id}/edit`}>Editar</SectionLink> : null}
+              {canEdit ? (
+                <SectionLink href={`/cables/${cable.id}/edit`} icon={<PencilIcon aria-hidden />}>
+                  Editar
+                </SectionLink>
+              ) : null}
               <SaveRecordButton kind="CABLE" itemKey={cable.id} label={cable.code} />
             </>
           }

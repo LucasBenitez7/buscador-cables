@@ -1,3 +1,4 @@
+import { SearchIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
@@ -72,7 +73,7 @@ export default async function LocationPage({ params }: { params: Params }) {
           title={location.name}
           actions={
             location.cables > 0 ? (
-              <SectionLink href={locationCablesHref(location.id)}>
+              <SectionLink href={locationCablesHref(location.id)} icon={<SearchIcon aria-hidden />}>
                 Ver sus cables en el buscador
               </SectionLink>
             ) : null

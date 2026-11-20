@@ -1,3 +1,4 @@
+import { SearchIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { ShowMore } from "@/components/show-more";
 import Link from "next/link";
@@ -111,7 +112,10 @@ export default async function EquipmentPage({
           title={equipment.equipment}
           actions={
             <>
-              <SectionLink href={equipmentCablesHref(equipment.equipment)}>
+              <SectionLink
+                href={equipmentCablesHref(equipment.equipment)}
+                icon={<SearchIcon aria-hidden />}
+              >
                 Ver sus cables en el buscador
               </SectionLink>
               <SaveRecordButton
