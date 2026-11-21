@@ -67,7 +67,17 @@ const toNumber = (value: { toNumber(): number } | null) => value?.toNumber() ?? 
 // What the app has now
 // ---------------------------------------------------------------------------
 
-type CableNow = ExcelCableSnapshot & { id: string; code: string; version: number };
+type CableNow = ExcelCableSnapshot & {
+  id: string;
+  code: string;
+  version: number;
+  excelOnly: boolean;
+};
+
+/** "99XAT10W0001.3" → "99XAT10W0001": a section of a circuit split in the project's lists. */
+const SECTION = /^(.+)\.(\d+)$/;
+export const circuitOf = (code: string) => SECTION.exec(code)?.[1] ?? null;
+const sectionNumber = (code: string) => Number(SECTION.exec(code)?.[2] ?? 0);
 
 async function cablesByCode(db: Db, codes: readonly string[]): Promise<Map<string, CableNow>> {
   const found = new Map<string, CableNow>();
@@ -79,6 +89,7 @@ async function cablesByCode(db: Db, codes: readonly string[]): Promise<Map<strin
         code: true,
         version: true,
         deletedAt: true,
+        excelOnly: true,
         installationStatus: true,
         connectionStatus: true,
         looseEnd: true,
@@ -97,6 +108,7 @@ async function cablesByCode(db: Db, codes: readonly string[]): Promise<Map<strin
         id: cable.id,
         code: cable.code,
         version: cable.version,
+        excelOnly: cable.excelOnly,
         deleted: cable.deletedAt !== null,
         installationStatus: cable.installationStatus,
         connectionStatus: cable.connectionStatus,
@@ -113,6 +125,63 @@ async function cablesByCode(db: Db, codes: readonly string[]): Promise<Map<strin
     }
   }
   return found;
+}
+
+/** The sections in the web of each circuit code, in order ("….1", "….2"…). */
+async function sectionsByCircuit(db: Db, codes: readonly string[]): Promise<Map<string, string[]>> {
+  const found = new Map<string, string[]>();
+  for (const part of chunks(codes)) {
+    const rows = await db.$queryRaw<{ code: string }[]>`
+      SELECT "code" FROM "cable"
+      WHERE "deletedAt" IS NULL AND "code" ~ '\\.[0-9]+$'
+        AND substring("code" from '^(.+)\\.[0-9]+$') = ANY(${part})`;
+    for (const { code } of rows) {
+      const circuit = circuitOf(code)!;
+      found.set(circuit, [...(found.get(circuit) ?? []), code]);
+    }
+  }
+  for (const sections of found.values()) {
+    sections.sort((a, b) => sectionNumber(a) - sectionNumber(b));
+  }
+  return found;
+}
+
+/**
+ * The rows as they apply to the web. The electrical Excel names a circuit by its code
+ * ("99XAT10W0001"), while the project's lists split it in sections, one cable each
+ * ("99XAT10W0001.1", ".2"…): the row of the circuit goes to every section, with the metres
+ * of one. A cable of the lists with that exact code wins; a copy created only from the Excel
+ * does not (see `removeCircuitCopies`). A section the file also names on its own keeps its
+ * own row.
+ */
+async function rowsForWeb(
+  db: Db,
+  rows: readonly ExcelStatusRow[],
+): Promise<{ rows: ExcelStatusRow[]; cables: Map<string, CableNow> }> {
+  const codes = rows.map((row) => row.code);
+  const [exact, sections] = await Promise.all([
+    cablesByCode(db, codes),
+    sectionsByCircuit(db, codes),
+  ]);
+  const named = new Set(codes);
+  const result: ExcelStatusRow[] = [];
+  const toFetch: string[] = [];
+  for (const row of rows) {
+    const cable = exact.get(row.code);
+    const own = sections.get(row.code)?.filter((code) => !named.has(code)) ?? [];
+    if ((cable && !cable.excelOnly && !cable.deleted) || own.length === 0) {
+      result.push(row);
+      continue;
+    }
+    for (const code of own) {
+      result.push({ ...row, code });
+      toFetch.push(code);
+    }
+  }
+  if (toFetch.length > 0) {
+    for (const [code, cable] of await cablesByCode(db, toFetch)) exact.set(code, cable);
+  }
+  return { rows: result, cables: exact };
 }
 
 /**
@@ -193,16 +262,14 @@ async function planRows(
   excel: { kind: ExcelKind; excelDate: string; projectLoad: boolean },
   rows: readonly ExcelStatusRow[],
 ): Promise<PlannedRow[]> {
-  const cables = await cablesByCode(
-    db,
-    rows.map((row) => row.code),
-  );
+  const forWeb = await rowsForWeb(db, rows);
+  const cables = forWeb.cables;
   const ids = [...cables.values()].map((cable) => cable.id);
   // The first load states the truth: no person's mark nor discrepancy counts.
   const [marks, open] = excel.projectLoad
     ? [new Map<string, WebStateMark>(), new Map<string, OpenDiscrepancy>()]
     : await Promise.all([webMarks(db, ids), openDiscrepancies(db, ids)]);
-  return rows.map((row) => {
+  return forWeb.rows.map((row) => {
     const cable = cables.get(row.code) ?? null;
     return {
       row,
@@ -491,6 +558,26 @@ export async function discardExcelPreview(actor: Actor, importId: string): Promi
   }, TRANSACTION);
 }
 
+/**
+ * Cancels one's own upload while it is still being prepared (or just ready, if the last part
+ * arrived meanwhile): it stays saved as discarded. Anything else is left as it is.
+ */
+export async function cancelExcelUpload(actor: Actor, importId: string): Promise<void> {
+  if (!hasPermission(actor, "import:run")) throw new ExcelImportError(NO_PERMISSION);
+  await prisma.$transaction(async (tx) => {
+    const excel = await tx.excelImport.findUnique({
+      where: { id: importId },
+      select: { kind: true, uploadedById: true },
+    });
+    if (!excel || excel.uploadedById !== actor.id) throw new ExcelImportError(NOT_FOUND);
+    await lockKind(tx, excel.kind);
+    await tx.excelImport.updateMany({
+      where: { id: importId, status: { in: ["UPLOADING", "PREVIEW"] } },
+      data: { status: "DISCARDED", discardedAt: new Date() },
+    });
+  }, TRANSACTION);
+}
+
 // ---------------------------------------------------------------------------
 // Apply, in batches
 // ---------------------------------------------------------------------------
@@ -663,6 +750,46 @@ async function recordDiscrepancy(
 }
 
 /**
+ * Before the Excel went to the sections of a circuit, it created a cable with the code of the
+ * circuit, only with the Excel's data. Once the sections get the Excel, that copy is removed
+ * (a soft delete, with its history), so the circuit is not counted twice.
+ */
+async function removeCircuitCopies(context: ApplyContext, sectionCodes: readonly string[]) {
+  const circuits = [...new Set(sectionCodes.map(circuitOf).filter((code) => code !== null))];
+  if (circuits.length === 0) return;
+  const { tx, now, source, uploadedById, importId } = context;
+  const copies = await tx.cable.findMany({
+    where: { code: { in: circuits }, excelOnly: true, deletedAt: null },
+    select: { id: true, code: true },
+  });
+  for (const copy of copies) {
+    await tx.cable.update({
+      where: { id: copy.id },
+      data: {
+        deletedAt: now,
+        version: { increment: 1 },
+        lastAction: "DELETED",
+        lastActionById: uploadedById,
+        lastActionAt: now,
+        lastActionSource: source,
+      },
+    });
+    await tx.cableEvent.create({
+      data: {
+        cableId: copy.id,
+        userId: uploadedById,
+        action: "DELETED",
+        changes: { deletedAt: { from: null, to: now.toISOString() } },
+        notes: `Copia del circuito: el Excel ya se aplica a sus tramos (${copy.code}.1…).`,
+        source,
+        excelImportId: importId,
+        createdAt: now,
+      },
+    });
+  }
+}
+
+/**
  * Applies the next batch of marked rows of a preview, deciding each row again against the
  * app as it is now (somebody may have acted since the preview). The screen calls it until
  * `done`. The last batch closes the Excel and notes the discrepancies it already agrees with.
@@ -733,6 +860,10 @@ export async function applyExcelBatch(actor: Actor, importId: string): Promise<E
         await recordDiscrepancy(context, cable, plan.conflict);
       }
     }
+    await removeCircuitCopies(
+      context,
+      planned.map(({ row }) => row.code),
+    );
     if (pending.length > 0) {
       await tx.excelImportRow.updateMany({
         where: { id: { in: pending.map((row) => row.id) } },

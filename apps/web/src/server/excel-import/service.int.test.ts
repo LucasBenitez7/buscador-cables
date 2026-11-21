@@ -11,6 +11,7 @@ import {
   ExcelImportError,
   addExcelPreviewPart,
   applyExcelBatch,
+  cancelExcelUpload,
   createExcelPreview,
   discardExcelPreview,
   finishExcelPreview,
@@ -491,5 +492,111 @@ describe("project load", () => {
     await expect(
       createExcelPreview(admin, input([row("ZZ-1")], { projectLoad: true })),
     ).rejects.toThrow("solo la primera");
+  });
+});
+
+describe("circuits split in sections", () => {
+  it("applies the row of a circuit to each of its sections, not to a new cable", async () => {
+    await newCable("ZZ-7.1", { installationStatus: "UNVERIFIED", lengthM: 40 });
+    await newCable("ZZ-7.2", { installationStatus: "UNVERIFIED", lengthM: 40 });
+    await newCable("ZZ-7.PE", { installationStatus: "NOT_LAID" });
+    const summary = await createExcelPreview(supervisor, input([row("ZZ-7")]));
+    expect(summary.counts).toEqual({ changes: 2, created: 0, discrepancies: 0 });
+    const saved = await prisma.excelImportRow.findMany({
+      where: { importId: summary.importId },
+      orderBy: { code: "asc" },
+    });
+    expect(saved.map((item) => item.code)).toEqual(["ZZ-7.1", "ZZ-7.2"]);
+
+    await applyAll(supervisor, summary.importId);
+    for (const code of ["ZZ-7.1", "ZZ-7.2"]) {
+      const cable = await cableOf(code);
+      expect(cable).toMatchObject({ installationStatus: "LAID", connectionStatus: "CONNECTED" });
+      expect(cable.actualLengthM?.toNumber()).toBe(40);
+      expect(cable.actualLengthTotalM?.toNumber()).toBe(80);
+    }
+    expect((await cableOf("ZZ-7.PE")).installationStatus).toBe("NOT_LAID");
+    expect(await prisma.cable.count({ where: { code: "ZZ-7" } })).toBe(0);
+  });
+
+  it("a section the Excel names on its own keeps its own row", async () => {
+    await newCable("ZZ-8.1");
+    await newCable("ZZ-8.2");
+    const summary = await createExcelPreview(
+      supervisor,
+      input([
+        row("ZZ-8"),
+        row("ZZ-8.2", { installationStatus: "NOT_LAID", connectionStatus: null }),
+      ]),
+    );
+    await applyAll(supervisor, summary.importId);
+    expect((await cableOf("ZZ-8.1")).installationStatus).toBe("LAID");
+    expect((await cableOf("ZZ-8.2")).installationStatus).toBe("NOT_LAID");
+  });
+
+  it("a cable of the lists with the code of the circuit wins over the sections", async () => {
+    await newCable("ZZ-9");
+    await newCable("ZZ-9.1");
+    const summary = await createExcelPreview(supervisor, input([row("ZZ-9")]));
+    await applyAll(supervisor, summary.importId);
+    expect((await cableOf("ZZ-9")).installationStatus).toBe("LAID");
+    expect((await cableOf("ZZ-9.1")).installationStatus).toBe("NOT_LAID");
+  });
+
+  it("removes the copy an older Excel made of the circuit, keeping its history", async () => {
+    const copy = await newCable("ZZ-6", { excelOnly: true, installationStatus: "LAID" });
+    await newCable("ZZ-6.1", { installationStatus: "UNVERIFIED" });
+    await newCable("ZZ-6.2", { installationStatus: "UNVERIFIED" });
+    const summary = await createExcelPreview(supervisor, input([row("ZZ-6")]));
+    expect(summary.counts).toEqual({ changes: 2, created: 0, discrepancies: 0 });
+    // The preview touches nothing.
+    expect((await cableOf("ZZ-6")).deletedAt).toBeNull();
+
+    await applyAll(supervisor, summary.importId);
+    const removed = await cableOf("ZZ-6");
+    expect(removed.deletedAt).not.toBeNull();
+    expect(removed.lastAction).toBe("DELETED");
+    expect(
+      await prisma.cableEvent.findFirst({ where: { cableId: copy.id, action: "DELETED" } }),
+    ).toMatchObject({ source: "EXCEL", excelImportId: summary.importId });
+    expect((await cableOf("ZZ-6.1")).installationStatus).toBe("LAID");
+  });
+
+  it("a copy of a cable that is not a circuit stays", async () => {
+    await newCable("ZZ-5", { excelOnly: true });
+    const summary = await createExcelPreview(supervisor, input([row("ZZ-5")]));
+    await applyAll(supervisor, summary.importId);
+    const cable = await cableOf("ZZ-5");
+    expect(cable.deletedAt).toBeNull();
+    expect(cable.installationStatus).toBe("LAID");
+  });
+});
+
+describe("cancelExcelUpload", () => {
+  it("discards one's own upload while it is prepared, and nothing else", async () => {
+    const importId = await startExcelPreview(supervisor, {
+      kind: "ELECTRICAL",
+      excelDate: "2026-11-16",
+      fileName: "estado.xlsx",
+      projectLoad: false,
+      rowCount: 1,
+    });
+    await expect(cancelExcelUpload(admin, importId)).rejects.toThrow(ExcelImportError);
+    await expect(cancelExcelUpload(technician, importId)).rejects.toThrow(ExcelImportError);
+    await cancelExcelUpload(supervisor, importId);
+    expect(await prisma.excelImport.findUniqueOrThrow({ where: { id: importId } })).toMatchObject({
+      status: "DISCARDED",
+    });
+    await expect(
+      addExcelPreviewPart(supervisor, { importId, rows: [row("ZZ-1")], ignored: [] }),
+    ).rejects.toThrow("sustituido");
+
+    await newCable("ZZ-2");
+    const applied = await createExcelPreview(supervisor, input([row("ZZ-2")]));
+    await applyAll(supervisor, applied.importId);
+    await cancelExcelUpload(supervisor, applied.importId);
+    expect(
+      await prisma.excelImport.findUniqueOrThrow({ where: { id: applied.importId } }),
+    ).toMatchObject({ status: "APPLIED" });
   });
 });
