@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   startExcelUploadAction: vi.fn(),
   addExcelPartAction: vi.fn(),
   finishExcelUploadAction: vi.fn(),
+  cancelExcelUploadAction: vi.fn(),
   setExcelRowsAction: vi.fn(),
   discardExcelAction: vi.fn(),
   applyExcelBatchAction: vi.fn(),
@@ -121,6 +122,50 @@ describe("UploadExcelForm", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Preparar vista previa" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Está repetido.");
+    expect(mocks.finishExcelUploadAction).not.toHaveBeenCalled();
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+});
+
+describe("UploadExcelForm: quitar y cancelar", () => {
+  const readOk = () =>
+    mocks.readExcelFile.mockResolvedValue({
+      ok: true,
+      kind: "INSTRUMENTATION",
+      rows: [row("ZZ-1")],
+      ignored: [],
+      excelDate: "2026-11-16",
+    });
+
+  it("«Quitar archivo» empties the form", async () => {
+    readOk();
+    render(<UploadExcelForm />);
+    expect(screen.queryByRole("button", { name: "Quitar archivo" })).toBeNull();
+
+    pickFile();
+    fireEvent.click(await screen.findByRole("button", { name: "Quitar archivo" }));
+    expect(screen.queryByText("Instrumentación")).toBeNull();
+    expect(screen.queryByLabelText("Fecha del Excel")).toBeNull();
+    expect(screen.getByRole("button", { name: "Preparar vista previa" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Quitar archivo" })).toBeNull();
+  });
+
+  it("«Cancelar» stops a preview being prepared and discards what the server has", async () => {
+    readOk();
+    let sendPart: (value: { ok: true }) => void = () => {};
+    mocks.startExcelUploadAction.mockResolvedValue({ ok: true, importId: "i2" });
+    mocks.addExcelPartAction.mockReturnValue(new Promise((resolve) => (sendPart = resolve)));
+    mocks.cancelExcelUploadAction.mockResolvedValue({ ok: true });
+    render(<UploadExcelForm />);
+
+    pickFile();
+    fireEvent.click(await screen.findByRole("button", { name: "Preparar vista previa" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText("Instrumentación")).toBeNull();
+
+    sendPart({ ok: true });
+    await waitFor(() => expect(mocks.cancelExcelUploadAction).toHaveBeenCalledWith("i2"));
     expect(mocks.finishExcelUploadAction).not.toHaveBeenCalled();
     expect(mocks.push).not.toHaveBeenCalled();
   });

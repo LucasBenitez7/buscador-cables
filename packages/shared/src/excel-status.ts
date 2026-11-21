@@ -22,7 +22,18 @@ export const EXCEL_KIND_LABELS: Record<ExcelKind, string> = {
 export type ExcelCell = string | number | boolean | Date | null | undefined;
 
 type ExcelField =
-  "code" | "status" | "laidOn" | "company" | "reel" | "reelStatus" | "actualLength" | "sections";
+  | "code"
+  | "status"
+  | "laidOn"
+  | "company"
+  | "reel"
+  | "reelStatus"
+  | "actualLength"
+  | "sections"
+  | "plannedConnectorsOrigin"
+  | "plannedConnectorsDestination"
+  | "connectorsOrigin"
+  | "connectorsDestination";
 
 type ColumnSpec = {
   field: ExcelField;
@@ -69,6 +80,11 @@ export const EXCEL_SHEETS: Record<ExcelKind, SheetSpec> = {
       { field: "company", names: ["Company Real", "Empresa real", "Empresa"] },
       { field: "reel", names: ["Bobina Real en campo", "Bobina usada", "Bobina"] },
       { field: "reelStatus", names: ["Estado Bobina"] },
+      // The connection of a laid cable: the connectors fitted at each end against the planned.
+      { field: "plannedConnectorsOrigin", names: ["Connections Origin (ud)"] },
+      { field: "plannedConnectorsDestination", names: ["Connections Destination (ud)"] },
+      { field: "connectorsOrigin", names: ["Conectores Instalados Origen"] },
+      { field: "connectorsDestination", names: ["Conectores Instalados Destino"] },
     ],
   },
 };
@@ -146,7 +162,7 @@ export function excelDateFromFileName(fileName: string): string | null {
 /** What a status of the Excel means in the app; null: the row is ignored. */
 type StatusMeaning = {
   installationStatus: "LAID" | "NOT_LAID";
-  /** Null: the file says nothing about the connection (instrumentation). */
+  /** Null: the connectors of each end say it (instrumentation, `connectionByConnectors`). */
   connectionStatus: ConnectionStatus | null;
 };
 
@@ -161,8 +177,29 @@ const ELECTRICAL_STATUSES: Record<string, StatusMeaning> = {
 const INSTRUMENTATION_STATUSES: Record<string, StatusMeaning> = {
   // A cable that is not laid cannot be connected.
   "no tendido": { installationStatus: "NOT_LAID", connectionStatus: "DISCONNECTED" },
+  // Its connection comes from the connectors (see `connectionByConnectors`).
   tendido: { installationStatus: "LAID", connectionStatus: null },
 };
+
+/**
+ * The connection of a laid instrumentation cable: an end is connected when all its planned
+ * connectors are fitted (or some, when none are planned).
+ */
+export function connectionByConnectors(ends: {
+  plannedOrigin: number | null;
+  origin: number | null;
+  plannedDestination: number | null;
+  destination: number | null;
+}): ConnectionStatus {
+  const connected = (planned: number | null, fitted: number | null) =>
+    fitted !== null && fitted > 0 && fitted >= (planned ?? 0);
+  const origin = connected(ends.plannedOrigin, ends.origin);
+  const destination = connected(ends.plannedDestination, ends.destination);
+  if (origin && destination) return "CONNECTED";
+  if (origin) return "ORIGIN_ONLY";
+  if (destination) return "DESTINATION_ONLY";
+  return "DISCONNECTED";
+}
 
 const STATUSES: Record<ExcelKind, Record<string, StatusMeaning>> = {
   ELECTRICAL: ELECTRICAL_STATUSES,
@@ -356,10 +393,20 @@ export function readExcelStatus(
         ? (lengths.metres.get(code) ?? null)
         : positive(cell(values, "actualLength"));
     const sections = wholeNumber(cell(values, "sections"));
+    const connectionStatus =
+      laid && meaning.connectionStatus === null
+        ? connectionByConnectors({
+            plannedOrigin: count(cell(values, "plannedConnectorsOrigin")),
+            origin: count(cell(values, "connectorsOrigin")),
+            plannedDestination: count(cell(values, "plannedConnectorsDestination")),
+            destination: count(cell(values, "connectorsDestination")),
+          })
+        : meaning.connectionStatus;
     rows.push({
       row,
       code,
       ...meaning,
+      connectionStatus,
       laidOn: laid ? day(cell(values, "laidOn")) : null,
       company: text(cell(values, "company")),
       reel: text(cell(values, "reel")),
@@ -404,6 +451,12 @@ function number(value: ExcelCell): number | null {
 function positive(value: ExcelCell): number | null {
   const parsed = number(value);
   return parsed !== null && parsed > 0 ? parsed : null;
+}
+
+/** A count of things: zero or more, null when the cell says nothing. */
+function count(value: ExcelCell): number | null {
+  const parsed = number(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
 }
 
 function wholeNumber(value: ExcelCell): number | null {
@@ -462,8 +515,8 @@ const metres = (value: number) => `${String(value).replace(".", ",")} m`;
 
 /**
  * The length rows of a cable: «Longitud» alone, or «Longitud prevista» and «Longitud real»
- * when the Excel brings the real metres. A circuit of several sections says the metres of
- * each cable and of the whole circuit.
+ * when the Excel brings the real metres. The Excel counts the cables of the whole circuit (its
+ * sections times the cables of each): it says the metres of each cable and of the circuit.
  */
 export function cableLengthItems(cable: {
   lengthM: number | null;
@@ -480,7 +533,7 @@ export function cableLengthItems(cable: {
   const sections = cable.actualSections ?? 1;
   const real =
     sections > 1 && cable.actualLengthTotalM !== null
-      ? `${metres(cable.actualLengthM)} por tramo · ${metres(cable.actualLengthTotalM)} en total, ${sections} tramos`
+      ? `${metres(cable.actualLengthM)} por cable · ${metres(cable.actualLengthTotalM)} en todo el circuito (${sections} cables)`
       : metres(cable.actualLengthM);
   return [
     { label: "Longitud prevista", value: planned },

@@ -1076,6 +1076,21 @@ Decisiones que siguen valiendo:
 - [x] La página no se mueve al abrir el menú ni al alargarse: el hueco de la barra sigue
       reservado y el bloqueo de scroll ya no deja otro.
 
+## Repaso de los Excel (2026-11-21, `fix/excel-circuit-sections`)
+
+Cruzados los dos Excel del 16/11 con la web, columna a columna.
+
+- [x] El eléctrico nombra el circuito y la web lo tiene en tramos (`….1`, `.2`…): la fila se
+      aplica a cada tramo, y la copia sin nivel que creaba la carga se da de baja.
+- [x] No se puede dar de alta a mano un cable con el código de un circuito que ya está en tramos.
+- [x] «Metros» cuenta los cables en paralelo de cada tramo (L3 y L4), como el Excel.
+- [x] Instrumentación: la conexión sale de los conectores instalados en cada punta.
+- [x] «Subir Excel del día»: «Quitar archivo» y «Cancelar» mientras se prepara la vista previa.
+
+Decidido no cambiar (2026-11-21): «Check» y «Error» se siguen ignorando, aunque traigan fecha y
+metros. Los cables que solo están en el Excel o solo en la web, y los metros reales del doble de
+lo previsto, son datos del Excel o de los listados.
+
 ---
 
 ## Entornos

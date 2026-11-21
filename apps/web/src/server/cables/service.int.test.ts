@@ -131,6 +131,16 @@ describe("createCable", () => {
     await expect(createCable(actor, createInput())).rejects.toThrow(/dado de baja/);
   });
 
+  it("rejects the code of a circuit that is already in sections, not its sections", async () => {
+    await createCable(actor, createInput({ code: "SH-60.1" }));
+    await createCable(actor, createInput({ code: "SH-60.PE" }));
+    await expect(createCable(actor, createInput({ code: "SH-60" }))).rejects.toThrow(
+      "SH-60 es un circuito que ya está en tramos (SH-60.1…)",
+    );
+    await createCable(actor, createInput({ code: "SH-60.2" }));
+    await createCable(actor, createInput({ code: "SH-61" }));
+  });
+
   it("rejects references that no longer exist and writes nothing", async () => {
     await expect(createCable(actor, createInput({ colorId: "missing" }))).rejects.toThrow(
       "El color elegido ya no existe.",

@@ -6,6 +6,7 @@ import {
   ExcelImportError,
   addExcelPreviewPart,
   applyExcelBatch,
+  cancelExcelUpload,
   discardExcelPreview,
   finishExcelPreview,
   setExcelRowsSelected,
@@ -65,6 +66,15 @@ export async function finishExcelUploadAction(importId: unknown) {
     const summary = await finishExcelPreview(user, String(importId));
     revalidatePath(IMPORT_PATH);
     return summary;
+  });
+}
+
+/** «Cancelar» while the preview is being prepared. */
+export async function cancelExcelUploadAction(importId: unknown) {
+  return run(async ({ user }) => {
+    await cancelExcelUpload(user, String(importId));
+    revalidatePath(IMPORT_PATH);
+    return {};
   });
 }
 

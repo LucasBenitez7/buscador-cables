@@ -126,20 +126,21 @@ gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes "..."
 
 ### Versiones publicadas
 
-| Tag      | PR a `main` | Qué trae                                                           |
-| -------- | ----------- | ------------------------------------------------------------------ |
-| `v0.1.0` | —           | Fase 0: fundamentos del repositorio                                |
-| `v0.2.0` | —           | Fase 1: autenticación y usuarios                                   |
-| `v1.0.0` | #35         | Primer despliegue en producción (fases 2 a 10)                     |
-| `v1.1.0` | #49         | Fase 11: conexionado (salió junto con la fase 12)                  |
-| `v1.2.0` | #49         | Fase 12: roles y permisos desde la web                             |
-| `v1.2.1` | #53         | Listas más claras, carga visible e historial desde el 17/11        |
-| `v1.2.2` | #55         | Funciones en Frankfurt, barra de carga y «Cargando…» en la ficha   |
-| `v1.2.3` | #59         | Copia de seguridad diaria de la base y reglas de trabajo ordenadas |
-| `v1.6.0` | #66         | Fases 13 a 16: uso en campo, Excel del día, listados y guardados   |
-| `v1.7.0` | #68         | Fase 17: repaso de la interfaz y metros                            |
-| `v1.7.1` | #71         | Sesión semanal, listas sin saltos y repaso tras la fase 17         |
-| `v1.8.0` | #74         | «Mi cuenta» y nada de correos como nombre                          |
+| Tag      | PR a `main` | Qué trae                                                            |
+| -------- | ----------- | ------------------------------------------------------------------- |
+| `v0.1.0` | —           | Fase 0: fundamentos del repositorio                                 |
+| `v0.2.0` | —           | Fase 1: autenticación y usuarios                                    |
+| `v1.0.0` | #35         | Primer despliegue en producción (fases 2 a 10)                      |
+| `v1.1.0` | #49         | Fase 11: conexionado (salió junto con la fase 12)                   |
+| `v1.2.0` | #49         | Fase 12: roles y permisos desde la web                              |
+| `v1.2.1` | #53         | Listas más claras, carga visible e historial desde el 17/11         |
+| `v1.2.2` | #55         | Funciones en Frankfurt, barra de carga y «Cargando…» en la ficha    |
+| `v1.2.3` | #59         | Copia de seguridad diaria de la base y reglas de trabajo ordenadas  |
+| `v1.6.0` | #66         | Fases 13 a 16: uso en campo, Excel del día, listados y guardados    |
+| `v1.7.0` | #68         | Fase 17: repaso de la interfaz y metros                             |
+| `v1.7.1` | #71         | Sesión semanal, listas sin saltos y repaso tras la fase 17          |
+| `v1.8.0` | #74         | «Mi cuenta» y nada de correos como nombre                           |
+| `v1.8.1` | #77         | «Metros» bien en el móvil, con la cabecera de las tablas a la vista |
 
 Los PR #38, #43 y #51 llevaron mejoras a producción sin tag propio; quedan incluidas en la
 versión siguiente.

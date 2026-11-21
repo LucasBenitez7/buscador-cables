@@ -10,13 +10,22 @@ import { escapeLike } from "@/server/like";
 const ACTIVE = Prisma.sql`c."deletedAt" IS NULL AND c."installationStatus" <> 'RETIRED'`;
 
 /**
+ * Cables of one record: a section of a circuit may hold several in parallel (3 single cores,
+ * "1 de 6" with 3 cables each). Its length is the one of each cable, so the metres of the
+ * record are that length times its cables, as the Excel counts them.
+ */
+const CABLES = Prisma.sql`COALESCE(c."cablesPerCircuit", 1)`;
+
+/**
  * Metres laid of a cable laid end to end: the real ones when the Excel brings them, the planned
  * ones otherwise. A cable laid only in part counts nothing: how far it got is not known. Nor
  * does one without a planned length: the planned total leaves it out, so the laid metres must
  * too, or «X de Y» would compare two different sets of cables.
  */
 const LAID_METRES = Prisma.sql`CASE WHEN c."installationStatus" = 'LAID' AND c."lengthM" IS NOT NULL
-  THEN COALESCE(c."actualLengthM", c."lengthM") ELSE 0 END`;
+  THEN COALESCE(c."actualLengthM", c."lengthM") * ${CABLES} ELSE 0 END`;
+const PLANNED_METRES = Prisma.sql`c."lengthM" * ${CABLES}`;
+const ACTUAL_METRES = Prisma.sql`c."actualLengthM" * ${CABLES}`;
 
 const toNumber = (value: Prisma.Decimal | number | bigint | null): number =>
   value === null ? 0 : Number(value);
@@ -56,7 +65,7 @@ export async function getMetersProgress(): Promise<MetersProgress> {
   >`
     SELECT c."level" AS level, count(*) AS cables,
       count(*) FILTER (WHERE c."lengthM" IS NULL) AS without_length,
-      sum(c."lengthM") AS planned, sum(${LAID_METRES}) AS laid
+      sum(${PLANNED_METRES}) AS planned, sum(${LAID_METRES}) AS laid
     FROM cable c WHERE ${ACTIVE}
     GROUP BY c."level"`;
   const byLevel = [...CABLE_LEVELS, null].flatMap((level) => {
@@ -135,7 +144,7 @@ export async function getMetersDeviation(): Promise<MetersDeviation> {
   const [levels, areas, top] = await Promise.all([
     prisma.$queryRaw<({ level: CableLevel | null } & Sums)[]>`
       SELECT c."level" AS level, count(*) AS cables,
-        sum(c."lengthM") AS planned, sum(c."actualLengthM") AS actual
+        sum(${PLANNED_METRES}) AS planned, sum(${ACTUAL_METRES}) AS actual
       FROM cable c WHERE ${COMPARED}
       GROUP BY c."level"`,
     // Donde empieza el cable: su ubicación de origen y, si no tiene (los listados eléctricos no
@@ -143,7 +152,7 @@ export async function getMetersDeviation(): Promise<MetersDeviation> {
     // ruta ("/99/99UX/…").
     prisma.$queryRaw<({ id: string | null; name: string | null } & Sums)[]>`
       SELECT a."id" AS id, a."name" AS name, count(*) AS cables,
-        sum(c."lengthM") AS planned, sum(c."actualLengthM") AS actual
+        sum(${PLANNED_METRES}) AS planned, sum(${ACTUAL_METRES}) AS actual
       FROM cable c
       LEFT JOIN location o ON o."id" = c."originId"
       LEFT JOIN LATERAL (
@@ -240,7 +249,7 @@ export async function listReels(q?: string): Promise<ReelRow[]> {
   >`
     SELECT c."reel" AS reel,
       string_agg(DISTINCT c."reelStatus", ' · ') AS status,
-      count(*) AS cables, sum(c."actualLengthM") AS metres,
+      count(*) AS cables, sum(${ACTUAL_METRES}) AS metres,
       count(*) FILTER (WHERE c."actualLengthM" IS NULL) AS without_metres,
       max(c."laidOn") AS last_laid_on
     FROM cable c
