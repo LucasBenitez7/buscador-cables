@@ -276,30 +276,39 @@ El lector es `readExcelStatus()` (`packages/shared/src/excel-status.ts`): busca 
 columnas **por su nombre**, con nombres alternativos y sin importar mayúsculas, espacios ni
 tildes (`EXCEL_SHEETS`). Si falta una columna, no lee nada y dice cuál.
 
-| Dato                   | Eléctrico (hoja «MASTER CABLE»)                    | Instrumentación (hoja «Tabl IC Maestra»)             |
-| ---------------------- | -------------------------------------------------- | ---------------------------------------------------- |
-| Código                 | «Cable Code»                                       | «TAG»                                                |
-| Estado                 | «Estado cable (unificado)»                         | «ESTADO»                                             |
-| Fecha real de tendido  | «Fecha tendido»                                    | «Fecha de tendido»                                   |
-| Empresa que lo tendió  | «Company Real»                                     | «Company Real»                                       |
-| Bobina y su estado     | «Bobina usada» (o «Bobina»), «Estado Bobina»       | «Bobina Real en campo» (o «Bobina»), «Estado Bobina» |
-| Metros reales y tramos | «Cantidad de metros [REAL]», «Numero de secciones» | — (solo la longitud del listado)                     |
+| Dato                   | Eléctrico (hoja «MASTER CABLE»)                    | Instrumentación (hoja «Tabl IC Maestra»)                                              |
+| ---------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Código                 | «Cable Code»                                       | «TAG»                                                                                 |
+| Estado                 | «Estado cable (unificado)»                         | «ESTADO»                                                                              |
+| Fecha real de tendido  | «Fecha tendido»                                    | «Fecha de tendido»                                                                    |
+| Empresa que lo tendió  | «Company Real»                                     | «Company Real»                                                                        |
+| Bobina y su estado     | «Bobina usada» (o «Bobina»), «Estado Bobina»       | «Bobina Real en campo» (o «Bobina»), «Estado Bobina»                                  |
+| Metros reales y tramos | «Cantidad de metros [REAL]», «Numero de secciones» | — (solo la longitud del listado)                                                      |
+| Conexión               | — (va en el estado)                                | «Conectores Instalados Origen/Destino» frente a «Connections Origin/Destination (ud)» |
 
 Traducción del estado:
 
-| Excel             | App                                                   |
-| ----------------- | ----------------------------------------------------- |
-| No Tendido        | No tendido (y desconectado)                           |
-| Tendido           | Tendido, sin conectar (instrumentación: sin conexión) |
-| Conectado Origen  | Tendido, conectado en origen                          |
-| Conectado Destino | Tendido, conectado en destino                         |
-| Conectado         | Tendido, conectado                                    |
+| Excel             | App                                                           |
+| ----------------- | ------------------------------------------------------------- |
+| No Tendido        | No tendido (y desconectado)                                   |
+| Tendido           | Tendido, sin conectar (instrumentación: según los conectores) |
+| Conectado Origen  | Tendido, conectado en origen                                  |
+| Conectado Destino | Tendido, conectado en destino                                 |
+| Conectado         | Tendido, conectado                                            |
 
 - Se ignoran «Check», «Error» y la columna «Correcto/Incorrecto»; las filas sin estado, con un
   código no válido o con un código repetido salen como ignoradas, con la fila y el motivo.
-- Los metros reales son los del circuito entero: los de cada tramo son metros / número de
-  secciones (936 m en 18 secciones son 52 m por cable). Un cable no tendido no tiene fecha
-  ni metros reales.
+- Instrumentación: una punta está conectada cuando tiene instalados todos sus conectores
+  previstos (o alguno, si no hay previstos); con las dos, «Conectado».
+- El eléctrico nombra cada circuito por su código (`99XAT10W0001`), y los listados lo parten en
+  tramos con sufijo (`99XAT10W0001.1`, `.2`…): la fila del circuito se aplica a cada tramo. Si
+  en la web hay un cable con el código exacto del circuito, gana ese. Las copias del circuito
+  que creó la carga antes de esto se dan de baja al aplicar el siguiente Excel.
+- Los metros reales son los del circuito entero, y «Numero de secciones» cuenta todos sus
+  cables: tramos × cables en paralelo de cada tramo («Numero de cables por seccion» no se usa).
+  Cada cable tiene metros / número de secciones (936 m en 18 secciones son 52 m por cable). En
+  «Metros», un tramo cuenta su longitud por sus cables en paralelo, como el Excel. Un cable no
+  tendido no tiene fecha ni metros reales.
 - Las fechas pueden venir como fecha, como número de serie de Excel o como texto `d/m/aaaa`.
   La fecha del Excel se saca del nombre del archivo (`…_16.11.26.xlsx` → 16/11/2026).
 - Con el Excel del 16/11/2026: el eléctrico da ~1.710 cables y el de instrumentación ~2.580.

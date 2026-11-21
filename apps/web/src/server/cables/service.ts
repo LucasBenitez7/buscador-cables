@@ -100,6 +100,19 @@ async function assertCodeAvailable(db: Db, code: string, exceptId?: string) {
         : `Ya existe un cable con el código ${code}.`,
     );
   }
+  // A circuit split in sections ("….1", "….2") is in the web only as its sections: a cable
+  // with the code of the circuit would be the same one twice.
+  const sections = await db.cable.findMany({
+    where: { code: { startsWith: `${code}.` }, deletedAt: null },
+    select: { code: true },
+    take: 50,
+  });
+  const section = sections.find((cable) => /^\.\d+$/.test(cable.code.slice(code.length)));
+  if (section) {
+    throw new CableServiceError(
+      `${code} es un circuito que ya está en tramos (${section.code}…): usa el código de cada tramo.`,
+    );
+  }
 }
 
 /** Every referenced catalog item and location must exist. */

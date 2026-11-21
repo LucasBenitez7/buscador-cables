@@ -63,6 +63,10 @@ const INSTRUMENTATION_HEADER = [
   "Correcto/Incorrecto",
   "Estado Bobina",
   "Company Real",
+  "Connections Origin (ud)",
+  "Connections Destination (ud)",
+  "Conectores Instalados Origen",
+  "Conectores Instalados Destino",
 ];
 
 describe("normalizeHeader", () => {
@@ -282,9 +286,51 @@ describe("readExcelStatus: instrumentation", () => {
     "Correcto",
     extra[2] ?? null,
     extra[3] ?? null,
+    extra[4] ?? null,
+    extra[5] ?? null,
+    extra[6] ?? null,
+    extra[7] ?? null,
   ];
 
-  it("lays without saying anything about the connection, and has no metres without pullings", () => {
+  it("connects each end when all its planned connectors are fitted", () => {
+    const connectors = (planned: [number | null, number | null], fitted: ExcelCell[]) => [
+      null,
+      null,
+      null,
+      null,
+      planned[0],
+      planned[1],
+      ...fitted,
+    ];
+    const result = readExcelStatus("INSTRUMENTATION", [
+      INSTRUMENTATION_HEADER,
+      row("90XX10W1", "Tendido", connectors([2, 2], [2, 2])),
+      row("90XX10W2", "Tendido", connectors([17, 17], [17, 0])),
+      row("90XX10W3", "Tendido", connectors([1, 1], [null, 1])),
+      row("90XX10W4", "Tendido", connectors([4, 4], [4, 3])),
+      row("90XX10W5", "Tendido", connectors([null, null], [1, "2"])),
+      row("90XX10W6", "No Tendido", connectors([1, 1], [1, 1])),
+    ]);
+    expect(result.ok && result.rows.map((item) => [item.code, item.connectionStatus])).toEqual([
+      ["90XX10W1", "CONNECTED"],
+      ["90XX10W2", "ORIGIN_ONLY"],
+      ["90XX10W3", "DESTINATION_ONLY"],
+      ["90XX10W4", "ORIGIN_ONLY"],
+      ["90XX10W5", "CONNECTED"],
+      // A cable that is not laid cannot be connected.
+      ["90XX10W6", "DISCONNECTED"],
+    ]);
+  });
+
+  it("needs the columns of the connectors", () => {
+    expect(readExcelStatus("INSTRUMENTATION", [INSTRUMENTATION_HEADER.slice(0, -1)])).toEqual({
+      ok: false,
+      kind: "INSTRUMENTATION",
+      missingColumns: ["Conectores Instalados Destino"],
+    });
+  });
+
+  it("lays without connectors, and has no metres without pullings", () => {
     const result = readExcelStatus("INSTRUMENTATION", [
       INSTRUMENTATION_HEADER,
       row("90XX10W1", "Tendido", [301, new Date(Date.UTC(2026, 9, 1)), "En obra", "Montajes Sur"]),
@@ -297,7 +343,7 @@ describe("readExcelStatus: instrumentation", () => {
         row: 2,
         code: "90XX10W1",
         installationStatus: "LAID",
-        connectionStatus: null,
+        connectionStatus: "DISCONNECTED",
         laidOn: "2026-10-01",
         company: "Montajes Sur",
         reel: "301",
@@ -376,7 +422,7 @@ describe("cable record texts", () => {
       cableLengthItems({ ...base, actualLengthM: 52, actualLengthTotalM: 936, actualSections: 18 }),
     ).toContainEqual({
       label: "Longitud real",
-      value: "52 m por tramo · 936 m en total, 18 tramos",
+      value: "52 m por cable · 936 m en todo el circuito (18 cables)",
     });
   });
 
