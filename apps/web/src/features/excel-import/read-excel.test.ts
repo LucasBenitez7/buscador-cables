@@ -22,6 +22,10 @@ const instrumentationHeader = [
   "Company Real",
   "Bobina Real en campo",
   "Estado Bobina",
+  "Connections Origin (ud)",
+  "Connections Destination (ud)",
+  "Conectores Instalados Origen",
+  "Conectores Instalados Destino",
 ];
 
 /** A reader that only knows the sheets it is given. */
@@ -56,17 +60,7 @@ describe("readExcelFile", () => {
     const result = await readExcelFile(
       file("instrumentacion.xlsx"),
       sheets({
-        "Tabla IC Maestra": [
-          [
-            "TAG",
-            "ESTADO",
-            "Fecha de tendido",
-            "Company Real",
-            "Bobina Real en campo",
-            "Estado Bobina",
-          ],
-          ["ZZ-3", "Tendido"],
-        ],
+        "Tabla IC Maestra": [instrumentationHeader, ["ZZ-3", "Tendido"]],
         Table: [
           ["DATE", "CABLE TAG", "PULLED [m]"],
           [null, "ZZ-3", 47],

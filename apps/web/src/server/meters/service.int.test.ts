@@ -190,3 +190,36 @@ describe("listReels", () => {
     expect(await getReelStatus("B-9")).toBeNull();
   });
 });
+
+describe("sections with cables in parallel", () => {
+  it("count the metres of each of their cables, as the Excel does", async () => {
+    // Un tramo de un circuito con 3 cables en paralelo de 40 m: 120 m previstos, 126 m reales.
+    await prisma.cable.create({
+      data: {
+        code: "ZZ-10.1",
+        level: "L4",
+        circuit: "1 de 2",
+        cablesPerCircuit: 3,
+        installationStatus: "LAID",
+        lengthM: 40,
+        actualLengthM: 42,
+        reel: "B-3",
+      },
+    });
+
+    const progress = await getMetersProgress();
+    expect(progress.byLevel.find((row) => row.key === "L4")).toMatchObject({
+      cables: 1,
+      planned: 120,
+      laid: 126,
+    });
+    const deviation = await getMetersDeviation();
+    expect(deviation.byLevel.find((row) => row.key === "L4")).toMatchObject({
+      planned: 120,
+      actual: 126,
+    });
+    // Each of its cables deviates the same: +5 %.
+    expect(Math.round(deviation.top.find((cable) => cable.code === "ZZ-10.1")!.percent)).toBe(5);
+    expect((await listReels("B-3"))[0]).toMatchObject({ cables: 1, metres: 126 });
+  });
+});
