@@ -147,18 +147,20 @@ export function UploadExcelForm() {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={!read || !excelDate || busy}>
-          Preparar vista previa
-        </Button>
+        {/* Mientras lee o prepara, en vez del botón, lo que está haciendo (y «Cancelar»). */}
+        {status ? (
+          <p role="status" className="text-sm font-medium">
+            {status}
+          </p>
+        ) : (
+          <Button type="submit" disabled={!read || !excelDate}>
+            Preparar vista previa
+          </Button>
+        )}
         {busy || read ? (
           <Button type="button" variant="secondary" onClick={reset}>
             {busy ? "Cancelar" : "Quitar archivo"}
           </Button>
-        ) : null}
-        {status ? (
-          <p role="status" className="text-muted-foreground text-sm">
-            {status}
-          </p>
         ) : null}
       </div>
       {error ? (
