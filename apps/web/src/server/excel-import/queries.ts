@@ -110,12 +110,14 @@ export type ExcelKindOverview = {
     excelDay: string;
     appliedAt: string;
     uploadedBy: string;
+    /** Applied after the last one of the other kind: what was uploaded last. */
+    latest: boolean;
   } | null;
 };
 
 /** For each Excel: the preview waiting and the last one applied. */
 export async function getExcelOverview(): Promise<ExcelKindOverview[]> {
-  return Promise.all(
+  const kinds = await Promise.all(
     EXCEL_KINDS.map(async (kind) => {
       const [current, lastApplied] = await Promise.all([
         prisma.excelImport.findFirst({
@@ -135,22 +137,27 @@ export async function getExcelOverview(): Promise<ExcelKindOverview[]> {
           },
         }),
       ]);
-      return {
-        kind,
-        label: EXCEL_KIND_LABELS[kind],
-        current: current ? await toCard(current) : null,
-        lastApplied: lastApplied
-          ? {
-              id: lastApplied.id,
-              fileName: lastApplied.fileName,
-              excelDay: day(lastApplied.excelDate),
-              appliedAt: dateTime.format(lastApplied.appliedAt!),
-              uploadedBy: lastApplied.uploadedBy.name,
-            }
-          : null,
-      };
+      return { kind, current: current ? await toCard(current) : null, lastApplied };
     }),
   );
+  const newest = Math.max(
+    ...kinds.map(({ lastApplied }) => lastApplied?.appliedAt?.getTime() ?? 0),
+  );
+  return kinds.map(({ kind, current, lastApplied }) => ({
+    kind,
+    label: EXCEL_KIND_LABELS[kind],
+    current,
+    lastApplied: lastApplied
+      ? {
+          id: lastApplied.id,
+          fileName: lastApplied.fileName,
+          excelDay: day(lastApplied.excelDate),
+          appliedAt: dateTime.format(lastApplied.appliedAt!),
+          uploadedBy: lastApplied.uploadedBy.name,
+          latest: lastApplied.appliedAt!.getTime() === newest,
+        }
+      : null,
+  }));
 }
 
 export type ExcelPreviewRowView = {
