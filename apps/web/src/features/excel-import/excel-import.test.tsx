@@ -160,6 +160,8 @@ describe("UploadExcelForm: quitar y cancelar", () => {
 
     pickFile();
     fireEvent.click(await screen.findByRole("button", { name: "Preparar vista previa" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Preparando la vista previa");
+    expect(screen.queryByRole("button", { name: "Preparar vista previa" })).toBeNull();
     fireEvent.click(await screen.findByRole("button", { name: "Cancelar" }));
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByText("Instrumentación")).toBeNull();
@@ -184,6 +186,22 @@ describe("PreviewActions", () => {
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
     expect(window.confirm).toHaveBeenCalledWith("¿Aplicar 250 cables del Excel del 16/11/2026?");
     expect(mocks.applyExcelBatchAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("while it applies, says so instead of showing the buttons", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    let finish: (value: unknown) => void = () => {};
+    mocks.applyExcelBatchAction.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    render(<PreviewActions importId="i1" excelDay="16/11/2026" pending={250} applying={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar/ }));
+    expect(screen.getByRole("status")).toHaveTextContent(/Aplicando….*0 de 250/);
+    expect(screen.queryByRole("button")).toBeNull();
+
+    finish({ ok: true, applied: 250, remaining: 0, done: true });
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: /Aplicar/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Descartar" })).toBeInTheDocument();
   });
 
   it("does nothing without confirming, and stops at the first error", async () => {
