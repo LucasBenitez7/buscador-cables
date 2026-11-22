@@ -71,9 +71,15 @@ function KindCard({ item }: { item: ExcelKindOverview }) {
 
       {/* El último aplicado, con su archivo a la vista: lo que hay ahora en la web. */}
       <div className="space-y-1.5 border-t pt-3 text-sm">
-        <h3 className="text-muted-foreground font-medium">Último aplicado</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-muted-foreground font-medium">Último aplicado</h3>
+          {/* De los dos, el que se aplicó después: lo último que se subió. */}
+          {lastApplied?.latest ? <Badge variant="info">El más reciente</Badge> : null}
+        </div>
         {lastApplied ? (
-          <div className="bg-background space-y-2 rounded-md border px-3 py-2.5">
+          <div
+            className={`bg-background space-y-2 rounded-md border px-3 py-2.5 ${lastApplied.latest ? "border-primary/60" : ""}`}
+          >
             <Link
               href={`/import/${lastApplied.id}`}
               className={`${INLINE_LINK} font-medium break-all`}

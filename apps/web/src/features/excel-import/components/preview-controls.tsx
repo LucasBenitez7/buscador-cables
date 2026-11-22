@@ -122,7 +122,6 @@ export function PreviewActions({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [discarding, startDiscard] = useTransition();
-  const running = progress !== null;
 
   async function apply() {
     const label = pending === 1 ? "1 cable" : `${number.format(pending)} cables`;
@@ -153,17 +152,23 @@ export function PreviewActions({
 
   return (
     <div className="bg-card flex flex-wrap items-center gap-3 rounded-lg border p-3">
-      <Button type="button" onClick={apply} disabled={running || discarding || pending === 0}>
-        {applying ? "Seguir aplicando" : "Aplicar"}
-        <span className="tabular-nums">({number.format(pending)})</span>
-      </Button>
-      {applying ? null : (
-        <Button type="button" variant="outline" onClick={discard} disabled={running || discarding}>
-          Descartar
-        </Button>
+      {progress ? null : (
+        <>
+          <Button type="button" onClick={apply} disabled={discarding || pending === 0}>
+            {applying ? "Seguir aplicando" : "Aplicar"}
+            <span className="tabular-nums">({number.format(pending)})</span>
+          </Button>
+          {applying ? null : (
+            <Button type="button" variant="outline" onClick={discard} disabled={discarding}>
+              Descartar
+            </Button>
+          )}
+        </>
       )}
       {progress ? (
         <div role="status" className="flex min-w-48 flex-1 items-center gap-3 text-sm">
+          {/* Mientras se aplica no hay botones: solo lo que se está haciendo y cuánto falta. */}
+          <span className="font-medium">Aplicando…</span>
           <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
             <div
               className="bg-primary h-full transition-[width]"

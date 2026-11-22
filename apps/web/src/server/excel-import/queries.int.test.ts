@@ -59,6 +59,8 @@ describe("getExcelOverview", () => {
         fileName: "estado.xlsx",
         excelDay: "15/11/2026",
         uploadedBy: "Sara",
+        // The only one applied: the newest.
+        latest: true,
       },
       current: {
         id: waiting.importId,
@@ -73,6 +75,25 @@ describe("getExcelOverview", () => {
       current: null,
       lastApplied: null,
     });
+  });
+
+  it("marks the Excel applied last of the two kinds", async () => {
+    await prisma.cable.create({ data: { code: "ZZ-1" } });
+    const electrical = await upload([row("ZZ-1")]);
+    await applyExcelBatch(supervisor, electrical.importId);
+    const instrumentation = await createExcelPreview(supervisor, {
+      kind: "INSTRUMENTATION",
+      excelDate: "2026-11-15",
+      fileName: "estado-ic.xlsx",
+      ignored: [],
+      rows: [{ ...row("ZZ-1", { connectionStatus: "CONNECTED" }), row: 2 }],
+    });
+    await applyExcelBatch(supervisor, instrumentation.importId);
+
+    // Applied later, although its Excel is of an earlier day.
+    const [first, second] = await getExcelOverview();
+    expect(first?.lastApplied?.latest).toBe(false);
+    expect(second?.lastApplied?.latest).toBe(true);
   });
 });
 

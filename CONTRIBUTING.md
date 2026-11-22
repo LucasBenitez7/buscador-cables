@@ -141,6 +141,7 @@ gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes "..."
 | `v1.7.1` | #71         | Sesión semanal, listas sin saltos y repaso tras la fase 17          |
 | `v1.8.0` | #74         | «Mi cuenta» y nada de correos como nombre                           |
 | `v1.8.1` | #77         | «Metros» bien en el móvil, con la cabecera de las tablas a la vista |
+| `v1.8.2` | #80         | Excel aplicado a los tramos, cables en paralelo y conexiones de L1  |
 
 Los PR #38, #43 y #51 llevaron mejoras a producción sin tag propio; quedan incluidas en la
 versión siguiente.

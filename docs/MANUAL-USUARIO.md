@@ -298,7 +298,10 @@ vista previa), la fecha del Excel, cuándo se aplicó y quién lo subió.
 **Qué cambia el Excel en un cable:** el estado (tendido o no tendido) y la conexión, la fecha de
 tendido, la empresa, la bobina y los metros reales. Nunca el origen, el destino, el tipo ni la
 longitud del listado. En instrumentación, los metros reales salen de la hoja «Table» (los
-metros tendidos de cada tirada); si un cable aparece dos veces, vale la tirada más nueva. Una
+metros tendidos de cada tirada); si un cable aparece dos veces, vale la tirada más nueva. La
+conexión de instrumentación sale de los conectores instalados en cada punta: conectada cuando
+tiene todos los previstos. El eléctrico nombra cada circuito sin sufijo y la web lo tiene en
+tramos (`….1`, `.2`…): lo del Excel llega a cada tramo, con los metros de un cable. Una
 **celda vacía no borra** lo que ya tiene el cable. Las filas con estados que no se usan
 («Check», «Error»…) se ignoran. Los cables que no salen en el Excel no se tocan. En el
 historial, lo del Excel sale con su fecha y quién lo subió.
@@ -314,7 +317,8 @@ metros:
 
 - **Avance**: metros tendidos de los previstos, en total y por nivel. Cuenta los cables tendidos
   de punta a punta que tienen longitud en el listado, con sus metros reales si el Excel los trae
-  y si no con los del listado.
+  y si no con los del listado. Un tramo con varios cables en paralelo (L3 y L4) cuenta los metros
+  de todos ellos, como el Excel.
 - **Desviación**: los metros reales frente a los del listado, por nivel y por área (donde empieza
   el cable: su origen o, si no lo trae, su primera bandeja), y los 50 cables que más se desvían.
   En verde hasta ±10 %; en naranja hasta ±25 %; en rojo, **revisar**: una medida o un recorrido
