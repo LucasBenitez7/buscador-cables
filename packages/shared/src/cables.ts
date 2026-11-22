@@ -206,7 +206,7 @@ export const EXCEL_FIELD_LABELS: Record<string, string> = {
   reelStatus: "Estado de la bobina",
   actualLengthM: "Longitud real (m)",
   actualLengthTotalM: "Metros reales del circuito",
-  actualSections: "Tramos del circuito",
+  actualSections: "Cables del circuito",
 };
 
 // ---------------------------------------------------------------------------
