@@ -94,6 +94,7 @@ export type SeedCable = {
   laidOn: Date | null;
   companyId: string | null;
   reel: string | null;
+  plannedReel: string | null;
   reelStatus: string | null;
   actualLengthM: number | null;
   actualLengthTotalM: number | null;
@@ -778,6 +779,7 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
     | "laidOn"
     | "companyId"
     | "reel"
+    | "plannedReel"
     | "reelStatus"
     | "actualLengthM"
     | "actualLengthTotalM"
@@ -848,6 +850,8 @@ export function generateSeedData(options: { cables?: number; seed?: number } = {
       laidOn: fromExcel ? new Date(Date.UTC(2026, 5, 1 + excelRandom.int(0, 165))) : null,
       companyId: fromExcel ? excelRandom.pick(companies).id : null,
       reel: fromExcel ? `B-${excelRandom.int(100, 480)}` : null,
+      // La estimada, tendido o no: sin sorteo, para no mover el resto de los datos.
+      plannedReel: cables.length % 10 === 0 ? null : `B-${100 + ((cables.length * 37) % 381)}`,
       reelStatus: fromExcel ? excelRandom.pick(["En obra", "En almacén"]) : null,
       actualLengthM,
       actualLengthTotalM: actualLengthM === null ? null : actualLengthM * (sections ?? 1),

@@ -26,6 +26,7 @@ const row = (code: string, overrides: Partial<ExcelStatusRow> = {}): ExcelStatus
   laidOn: "2026-11-10",
   company: "Montajes Ficticios",
   reel: null,
+  plannedReel: null,
   reelStatus: null,
   actualLengthTotalM: null,
   sections: null,

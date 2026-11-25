@@ -48,6 +48,7 @@ const notLaid = (code: string): ExcelStatusRow => ({
   laidOn: null,
   company: null,
   reel: null,
+  plannedReel: null,
   reelStatus: null,
   actualLengthTotalM: null,
   sections: null,
