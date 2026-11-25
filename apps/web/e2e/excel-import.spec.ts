@@ -1,11 +1,11 @@
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { CABLES, storageStatePath } from "./support/data";
-import { cableHeader, openCable } from "./support/cables";
+import { cableHeader, openCable, openSection } from "./support/cables";
 
 /**
  * Excel inventado: un cable que cambia, uno que contradice lo tendido en la web, uno nuevo y
- * una fila «Check» que no se usa.
+ * una fila «Check» que no se usa; las bobinas estimadas, en su tabla total.
  */
 const EXCEL = path.join(__dirname, "__fixtures__", "estado-electrico_16.11.26.xlsx");
 
@@ -47,6 +47,11 @@ test.describe("supervisora", () => {
     await openCable(page, CABLES.excel.code);
     await expect(cableHeader(page)).toContainText("Tendido");
     await expect(cableHeader(page)).toContainText("Solo origen");
+    // Las dos bobinas: la estimada (de la tabla total) y la que se usó.
+    await openSection(page, "Datos del cable");
+    const row = (label: string) => page.getByText(label, { exact: true }).locator("..");
+    await expect(row("Bobina estimada")).toContainText("B-E2E-03");
+    await expect(row("Bobina real")).toContainText("B-E2E-01 · En obra");
 
     await page.goto("/import");
     // El último aplicado, con el nombre de su archivo.
