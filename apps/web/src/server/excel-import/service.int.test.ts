@@ -52,6 +52,7 @@ const row = (code: string, overrides: Partial<ExcelStatusRow> = {}): ExcelStatus
   laidOn: "2026-11-10",
   company: "Montajes Ficticios",
   reel: "B-01",
+  plannedReel: "B-09",
   reelStatus: "En obra",
   actualLengthTotalM: 80,
   sections: 2,
@@ -132,6 +133,7 @@ describe("createExcelPreview", () => {
           laidOn: null,
           company: null,
           reel: null,
+          plannedReel: null,
           reelStatus: null,
           actualLengthTotalM: null,
           sections: null,
@@ -272,6 +274,7 @@ describe("applyExcelBatch", () => {
     expect(one.company?.name).toBe("Montajes Ficticios");
     expect(one.laidOn?.toISOString().slice(0, 10)).toBe("2026-11-10");
     expect(one.actualLengthM?.toNumber()).toBe(40);
+    expect(one.plannedReel).toBe("B-09");
 
     const two = await cableOf("ZZ-2");
     expect(two.installationStatus).toBe("LAID");

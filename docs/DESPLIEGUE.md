@@ -126,8 +126,10 @@ git ignora.
    `NODE_ENV` lo pone Vercel. Los secretos, nuevos: nunca los de local ni los de CI.
 
 5. **Settings → Domains**: añade el dominio y crea el registro DNS que indique Vercel.
-6. Despliega `main` (**Deployments → Redeploy**, o con el siguiente merge a `main`).
-7. Los despliegues de otras ramas (Preview) fallan en las migraciones mientras no tengan su
+6. **Analytics → Enable** (Web Analytics): las visitas de la web. Sin activarlo, la app no
+   manda nada.
+7. Despliega `main` (**Deployments → Redeploy**, o con el siguiente merge a `main`).
+8. Los despliegues de otras ramas (Preview) fallan en las migraciones mientras no tengan su
    propia base: es lo esperado. Para un entorno de pruebas, crea otra base en Railway y pon
    sus variables en el entorno _Preview_.
 
@@ -177,6 +179,11 @@ contra la URL de migración). La app ve las hojas nuevas en menos de un minuto.
 (qué parte: `request`, `email`, `drawings`, `cron`…), el mensaje y la ruta (sin la query, que
 puede llevar datos del cliente). Si hace falta más (avisos por correo, trazas agrupadas), se
 añade Sentry.
+
+**Visitas.** Vercel → **Analytics**: visitas y visitantes por día, páginas más vistas,
+países y dispositivos. Sin cookies; cada visita llega sin lo que va tras «?» o «#» (búsquedas,
+filtros, enlaces de contraseña) y las fichas se cuentan por tipo (`/cables/[id]`), no una por
+cable. Solo se carga en Vercel (`VERCEL=1`), no en local ni en los E2E.
 
 **Limpieza.** Cada día a las 04:00 UTC Vercel Cron borra los tokens de correo caducados, las
 sesiones caducadas y los contadores de intentos de más de un día.

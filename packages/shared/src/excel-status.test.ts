@@ -7,7 +7,9 @@ import {
   findExcelSheet,
   formatExcelDay,
   normalizeHeader,
+  findPlannedReelSheet,
   readExcelLengths,
+  readExcelPlannedReels,
   readExcelStatus,
   reelText,
   type ExcelCell,
@@ -200,6 +202,8 @@ describe("readExcelStatus: electrical", () => {
       laidOn: "2026-07-11",
       company: "Montajes Norte",
       reel: "B-101",
+      // The electrical sheet has no planned reel: it comes from the total table.
+      plannedReel: null,
       reelStatus: "En obra",
       actualLengthTotalM: 936,
       sections: 18,
@@ -243,6 +247,42 @@ describe("readExcelStatus: electrical", () => {
     );
 
     expect(rows.map((row) => row.laidOn)).toEqual(["2026-07-11", "2026-07-11", null]);
+  });
+
+  it("takes the planned reel of each cable from the total table, laid or not", () => {
+    const result = readExcelStatus(
+      "ELECTRICAL",
+      [
+        ELECTRICAL_HEADER,
+        electrical({ code: "ZZ-1", status: "Tendido", reel: "XX-Y1-100", usedReel: "B-101" }),
+        electrical({ code: "ZZ-2", status: "No Tendido", reelStatus: "En Sitio" }),
+        electrical({ code: "ZZ-3", status: "No Tendido" }),
+      ],
+      {
+        plannedReels: new Map([
+          ["ZZ-1", "B-100"],
+          ["ZZ-2", "B-102"],
+        ]),
+      },
+    );
+
+    expect(
+      result.ok && result.rows.map((row) => [row.code, row.plannedReel, row.reel, row.reelStatus]),
+    ).toEqual([
+      ["ZZ-1", "B-100", "B-101", null],
+      ["ZZ-2", "B-102", null, "En Sitio"],
+      ["ZZ-3", null, null, null],
+    ]);
+  });
+
+  it("never takes «Bobina» as the reel actually used", () => {
+    const header = ELECTRICAL_HEADER.filter((name) => name !== "Bobina usada ");
+
+    expect(readExcelStatus("ELECTRICAL", [header])).toEqual({
+      ok: false,
+      kind: "ELECTRICAL",
+      missingColumns: ["Bobina usada"],
+    });
   });
 
   it("treats Excel errors and empty cells as no data", () => {
@@ -322,6 +362,22 @@ describe("readExcelStatus: instrumentation", () => {
     ]);
   });
 
+  it("reads the planned reel of «Bobina» apart from the one used", () => {
+    const result = readExcelStatus("INSTRUMENTATION", [
+      INSTRUMENTATION_HEADER,
+      row("90XX10W1", "Tendido", ["B-201"]),
+      row("90XX10W2", "No Tendido", [null, null, "En Sitio"]),
+    ]);
+
+    expect(
+      result.ok &&
+        result.rows.map((item) => [item.code, item.plannedReel, item.reel, item.reelStatus]),
+    ).toEqual([
+      ["90XX10W1", "B-200", "B-201", null],
+      ["90XX10W2", "B-200", null, "En Sitio"],
+    ]);
+  });
+
   it("needs the columns of the connectors", () => {
     expect(readExcelStatus("INSTRUMENTATION", [INSTRUMENTATION_HEADER.slice(0, -1)])).toEqual({
       ok: false,
@@ -347,6 +403,7 @@ describe("readExcelStatus: instrumentation", () => {
         laidOn: "2026-10-01",
         company: "Montajes Sur",
         reel: "301",
+        plannedReel: "B-200",
         reelStatus: "En obra",
         actualLengthTotalM: null,
         sections: null,
@@ -373,6 +430,7 @@ describe("excelStatusRowSchema", () => {
     laidOn: "2026-07-11",
     company: null,
     reel: null,
+    plannedReel: null,
     reelStatus: null,
     actualLengthTotalM: null,
     sections: null,
@@ -525,7 +583,7 @@ describe("readExcelLengths", () => {
         [1, "90XX10W1", null, null, null, "Tendido", null, null, null],
         [2, "90XX10W2", null, null, null, "No Tendido", null, null, null],
       ],
-      { metres: lengths.metres, ignored: [{ row: 9, code: "90XX10W9", reason: "x" }] },
+      { lengths: { metres: lengths.metres, ignored: [{ row: 9, code: "90XX10W9", reason: "x" }] } },
     );
 
     expect(result.ok && result.rows).toEqual([
@@ -538,5 +596,52 @@ describe("readExcelLengths", () => {
       expect.objectContaining({ code: "90XX10W2", actualLengthM: null, actualLengthTotalM: null }),
     ]);
     expect(result.ok && result.ignored).toEqual([{ row: 9, code: "90XX10W9", reason: "x" }]);
+  });
+});
+
+describe("findPlannedReelSheet", () => {
+  it("finds the total table by its shape, not by the word in the middle", () => {
+    expect(
+      findPlannedReelSheet("ELECTRICAL", [
+        "Resumen",
+        "Table EMPRESA TOTAL (Format Orig)",
+        "MASTER CABLE",
+        "table  empresa total ",
+      ]),
+    ).toBe("table  empresa total ");
+    expect(findPlannedReelSheet("ELECTRICAL", ["Tabla Otra Total"])).toBe("Tabla Otra Total");
+    expect(findPlannedReelSheet("ELECTRICAL", ["Table", "TABLE ", "Tabla total"])).toBeNull();
+    expect(findPlannedReelSheet("INSTRUMENTATION", ["Table EMPRESA TOTAL"])).toBeNull();
+  });
+});
+
+describe("readExcelPlannedReels", () => {
+  const header = ["Rev. Cable List", "Cable Code", "Drum estimated", "Drum used"];
+
+  it("keeps the first planned reel of each cable and skips rows without one", () => {
+    const result = readExcelPlannedReels("ELECTRICAL", [
+      header,
+      [1, "zz 1", " B-100 ", "B-101"],
+      [1, "ZZ-2", null, "B-102"],
+      [1, "ZZ-1", "B-900", null],
+      [1, "ZZ#3", "B-103", null],
+      [1, "ZZ-4", "#N/A", null],
+    ]);
+
+    expect(result.ok && [...result.plannedReels]).toEqual([["ZZ-1", "B-100"]]);
+  });
+
+  it("says which columns are missing", () => {
+    expect(readExcelPlannedReels("ELECTRICAL", [["Cable Code", "Drum used"]])).toEqual({
+      ok: false,
+      missingColumns: ["Drum estimated"],
+    });
+  });
+
+  it("has no total table to read in the instrumentation file", () => {
+    expect(readExcelPlannedReels("INSTRUMENTATION", [header])).toEqual({
+      ok: false,
+      missingColumns: [],
+    });
   });
 });

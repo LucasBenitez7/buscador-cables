@@ -282,7 +282,8 @@ tildes (`EXCEL_SHEETS`). Si falta una columna, no lee nada y dice cuál.
 | Estado                 | «Estado cable (unificado)»                         | «ESTADO»                                                                              |
 | Fecha real de tendido  | «Fecha tendido»                                    | «Fecha de tendido»                                                                    |
 | Empresa que lo tendió  | «Company Real»                                     | «Company Real»                                                                        |
-| Bobina y su estado     | «Bobina usada» (o «Bobina»), «Estado Bobina»       | «Bobina Real en campo» (o «Bobina»), «Estado Bobina»                                  |
+| Bobina real y estado   | «Bobina usada», «Estado Bobina»                    | «Bobina Real en campo», «Estado Bobina»                                               |
+| Bobina estimada        | «Drum estimated» de la hoja «Table … TOTAL»        | «Bobina» (la misma que «Drum estimated» de su tabla total)                            |
 | Metros reales y tramos | «Cantidad de metros [REAL]», «Numero de secciones» | — (solo la longitud del listado)                                                      |
 | Conexión               | — (va en el estado)                                | «Conectores Instalados Origen/Destino» frente a «Connections Origin/Destination (ud)» |
 
@@ -309,6 +310,10 @@ Traducción del estado:
   Cada cable tiene metros / número de secciones (936 m en 18 secciones son 52 m por cable). En
   «Metros», un tramo cuenta su longitud por sus cables en paralelo, como el Excel. Un cable no
   tendido no tiene fecha ni metros reales.
+- La bobina estimada es la que se pide usar; la real, la que se usó. En el eléctrico,
+  «Bobina» no es ninguna de las dos (es otro código), y la estimada solo está en la tabla total;
+  por eso «Bobina» nunca vale como bobina real. Un cable no tendido no tiene bobina real, pero
+  sí estimada (a 17/11, todos los de instrumentación y 137 de los 186 eléctricos).
 - Las fechas pueden venir como fecha, como número de serie de Excel o como texto `d/m/aaaa`.
   La fecha del Excel se saca del nombre del archivo (`…_16.11.26.xlsx` → 16/11/2026).
 - Con el Excel del 16/11/2026: el eléctrico da ~1.710 cables y el de instrumentación ~2.580.

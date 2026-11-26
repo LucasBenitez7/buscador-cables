@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { readExcelFile, type SheetReader } from "./read-excel";
+import { readExcelFile, type SheetNamesReader, type SheetReader } from "./read-excel";
 
 // Datos inventados.
 const file = (name: string) => new File(["x"], name);
@@ -20,6 +20,7 @@ const instrumentationHeader = [
   "ESTADO",
   "Fecha de tendido",
   "Company Real",
+  "Bobina",
   "Bobina Real en campo",
   "Estado Bobina",
   "Connections Origin (ud)",
@@ -34,24 +35,47 @@ const sheets =
   async (_file, sheet) =>
     (tables[sheet] as never) ?? null;
 
+/** The names of those same sheets. */
+const names =
+  (tables: Record<string, unknown[][]>): SheetNamesReader =>
+  async () =>
+    Object.keys(tables);
+
+/** Reads a file made of these sheets. */
+const read = (name: string, tables: Record<string, unknown[][]>) =>
+  readExcelFile(file(name), sheets(tables), names(tables));
+
 describe("readExcelFile", () => {
   it("finds the electrical Excel by its sheet and reads the date of the file name", async () => {
-    const result = await readExcelFile(
-      file("estado electrico rev2_16.11.26.xlsx"),
-      sheets({
-        "MASTER CABLE": [
-          electricalHeader,
-          ["ZZ-1", "Conectado", null, "Montajes Ficticios", "B-1", null, 40, 2],
-          ["ZZ-2", "Check", null, null, null, null, null, null],
-        ],
-      }),
-    );
+    const result = await read("estado electrico rev2_16.11.26.xlsx", {
+      "MASTER CABLE": [
+        electricalHeader,
+        ["ZZ-1", "Conectado", null, "Montajes Ficticios", "B-1", null, 40, 2],
+        ["ZZ-2", "Check", null, null, null, null, null, null],
+      ],
+      "Table EMPRESA TOTAL (Format Orig)": [
+        ["Cable Code", "Drum estimated"],
+        ["ZZ-1", "B-8"],
+      ],
+      "Table EMPRESA TOTAL": [
+        ["Cable Code", "Drum estimated", "Drum used"],
+        ["ZZ-1", "B-7", "B-1"],
+      ],
+    });
 
     expect(result).toMatchObject({
       ok: true,
       kind: "ELECTRICAL",
       excelDate: "2026-11-16",
-      rows: [{ code: "ZZ-1", connectionStatus: "CONNECTED", actualLengthM: 20 }],
+      rows: [
+        {
+          code: "ZZ-1",
+          connectionStatus: "CONNECTED",
+          actualLengthM: 20,
+          reel: "B-1",
+          plannedReel: "B-7",
+        },
+      ],
       ignored: [{ code: "ZZ-2" }],
     });
   });
@@ -60,7 +84,7 @@ describe("readExcelFile", () => {
     const result = await readExcelFile(
       file("instrumentacion.xlsx"),
       sheets({
-        "Tabla IC Maestra": [instrumentationHeader, ["ZZ-3", "Tendido"]],
+        "Tabla IC Maestra": [instrumentationHeader, ["ZZ-3", "Tendido", null, null, "B-9"]],
         Table: [
           ["DATE", "CABLE TAG", "PULLED [m]"],
           [null, "ZZ-3", 47],
@@ -72,7 +96,7 @@ describe("readExcelFile", () => {
       ok: true,
       kind: "INSTRUMENTATION",
       excelDate: null,
-      rows: [{ code: "ZZ-3", actualLengthM: 47 }],
+      rows: [{ code: "ZZ-3", actualLengthM: 47, plannedReel: "B-9", reel: null }],
     });
   });
 
@@ -90,6 +114,22 @@ describe("readExcelFile", () => {
     expect(
       await readExcelFile(file("ic.xlsx"), sheets({ "Tabl IC Maestra": [["TAG", "Fecha"]] })),
     ).toEqual({ ok: false, message: expect.stringContaining("«Tabl IC Maestra»: ESTADO") });
+  });
+
+  it("asks for the total table with the planned reels in the electrical Excel", async () => {
+    const main = { "MASTER CABLE": [electricalHeader, ["ZZ-1", "No Tendido"]] };
+
+    expect(await read("ele.xlsx", main)).toEqual({
+      ok: false,
+      message:
+        "El Excel no tiene la hoja «Table … TOTAL» con las bobinas estimadas («Drum estimated»).",
+    });
+    expect(
+      await read("ele.xlsx", { ...main, "Tabla OTRA Total": [["Cable Code", "Drum used"]] }),
+    ).toEqual({
+      ok: false,
+      message: "Faltan columnas en la hoja «Tabla OTRA Total»: Drum estimated.",
+    });
   });
 
   it("says which columns are missing, and that the sheet is not there", async () => {

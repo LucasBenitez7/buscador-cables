@@ -97,6 +97,7 @@ async function cablesByCode(db: Db, codes: readonly string[]): Promise<Map<strin
         laidOn: true,
         company: { select: { name: true } },
         reel: true,
+        plannedReel: true,
         reelStatus: true,
         actualLengthM: true,
         actualLengthTotalM: true,
@@ -117,6 +118,7 @@ async function cablesByCode(db: Db, codes: readonly string[]): Promise<Map<strin
         laidOn: dayOf(cable.laidOn),
         company: cable.company?.name ?? null,
         reel: cable.reel,
+        plannedReel: cable.plannedReel,
         reelStatus: cable.reelStatus,
         actualLengthM: toNumber(cable.actualLengthM),
         actualLengthTotalM: toNumber(cable.actualLengthTotalM),
@@ -626,6 +628,7 @@ async function cableData(
         data.companyId = to === null ? null : await companyId(tx, companies, String(to));
         break;
       case "reel":
+      case "plannedReel":
       case "reelStatus":
         data[field] = to as string | null;
         break;

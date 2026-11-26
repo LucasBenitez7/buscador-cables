@@ -16,6 +16,7 @@
     "@cables/db": "workspace:*",
     "@cables/shared": "workspace:*",
     "@next/env": "^16.4.6",
+    "@vercel/analytics": "2.0.1",
     "aws4fetch": "1.0.20",
     "better-auth": "1.7.23",
     "class-variance-authority": "^0.7.1",

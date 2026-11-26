@@ -202,7 +202,8 @@ export const PROJECT_FIELD_LABELS: Record<string, string> = {
 export const EXCEL_FIELD_LABELS: Record<string, string> = {
   laidOn: "Fecha de tendido",
   company: "Empresa",
-  reel: "Bobina",
+  reel: "Bobina real",
+  plannedReel: "Bobina estimada",
   reelStatus: "Estado de la bobina",
   actualLengthM: "Longitud real (m)",
   actualLengthTotalM: "Metros reales del circuito",

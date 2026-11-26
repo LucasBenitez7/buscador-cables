@@ -135,6 +135,7 @@ export type ExcelCableSnapshot = ExcelCableState & {
   laidOn: string | null;
   company: string | null;
   reel: string | null;
+  plannedReel: string | null;
   reelStatus: string | null;
   actualLengthM: number | null;
   actualLengthTotalM: number | null;
@@ -178,6 +179,7 @@ const DATA_FIELDS: Record<ExcelKind, readonly ExcelDataField[]> = {
     "laidOn",
     "company",
     "reel",
+    "plannedReel",
     "reelStatus",
     "actualLengthM",
     "actualLengthTotalM",
@@ -187,6 +189,7 @@ const DATA_FIELDS: Record<ExcelKind, readonly ExcelDataField[]> = {
     "laidOn",
     "company",
     "reel",
+    "plannedReel",
     "reelStatus",
     "actualLengthM",
     "actualLengthTotalM",
@@ -197,6 +200,7 @@ type ExcelDataField =
   | "laidOn"
   | "company"
   | "reel"
+  | "plannedReel"
   | "reelStatus"
   | "actualLengthM"
   | "actualLengthTotalM"

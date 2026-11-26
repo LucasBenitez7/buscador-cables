@@ -128,7 +128,9 @@ export type CableDetail = {
     /** Real date of laying, "YYYY-MM-DD". */
     laidOn: string | null;
     company: string | null;
+    /** The reel actually used and the planned one. */
     reel: string | null;
+    plannedReel: string | null;
     reelStatus: string | null;
     /** Real metres of this cable, of the whole circuit and how many sections it has. */
     actualLengthM: number | null;
@@ -426,6 +428,7 @@ export async function getCableDetail(
       laidOn: cable.laidOn ? cable.laidOn.toISOString().slice(0, 10) : null,
       company: cable.company?.name ?? null,
       reel: cable.reel,
+      plannedReel: cable.plannedReel,
       reelStatus: cable.reelStatus,
       actualLengthM: toNumber(cable.actualLengthM),
       actualLengthTotalM: toNumber(cable.actualLengthTotalM),
