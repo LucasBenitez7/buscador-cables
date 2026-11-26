@@ -143,6 +143,7 @@ gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes "..."
 | `v1.8.1` | #77         | «Metros» bien en el móvil, con la cabecera de las tablas a la vista |
 | `v1.8.2` | #80         | Excel aplicado a los tramos, cables en paralelo y conexiones de L1  |
 | `v1.8.3` | #83         | «Excel del día» más claro: el más reciente y el avance al aplicar   |
+| `v1.9.0` | #90         | Bobina estimada y real en la ficha, y visitas con Vercel Analytics  |
 
 Los PR #38, #43 y #51 llevaron mejoras a producción sin tag propio; quedan incluidas en la
 versión siguiente.
