@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
+import { WebAnalytics } from "@/components/web-analytics";
 import { env } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -56,6 +57,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang="es" className="dark" suppressHydrationWarning>
       <body className={cn("min-h-full antialiased", geistSans.variable, geistMono.variable)}>
         {children}
+        {/* Las visitas, solo donde Vercel las recoge: fuera (local, E2E) su script no existe. */}
+        {process.env.VERCEL === "1" ? <WebAnalytics /> : null}
       </body>
     </html>
   );
