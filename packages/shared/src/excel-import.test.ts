@@ -18,6 +18,7 @@ const row = (overrides: Partial<ExcelStatusRow> = {}): ExcelStatusRow => ({
   laidOn: "2026-07-11",
   company: "Montajes Ficticios",
   reel: "B-01",
+  plannedReel: null,
   reelStatus: "En obra",
   actualLengthTotalM: 120,
   sections: 2,
@@ -34,6 +35,7 @@ const cable = (overrides: Partial<ExcelCableSnapshot> = {}): ExcelCableSnapshot 
   laidOn: null,
   company: null,
   reel: null,
+  plannedReel: null,
   reelStatus: null,
   actualLengthM: null,
   actualLengthTotalM: null,
@@ -92,6 +94,37 @@ describe("planExcelRow", () => {
         installationStatus: { from: "NOT_LAID", to: "LAID" },
         reel: { from: null, to: "B-01" },
       },
+    });
+  });
+
+  it("writes the planned reel, laid or not", () => {
+    const result = plan({
+      row: row({
+        installationStatus: "NOT_LAID",
+        laidOn: null,
+        company: null,
+        reel: null,
+        plannedReel: "B-07",
+        reelStatus: "En Sitio",
+        actualLengthTotalM: null,
+        sections: null,
+        actualLengthM: null,
+      }),
+    });
+
+    expect(result).toEqual({
+      kind: "CHANGE",
+      changes: {
+        plannedReel: { from: null, to: "B-07" },
+        reelStatus: { from: null, to: "En Sitio" },
+      },
+      agreesWithDiscrepancyId: null,
+    });
+    expect(
+      plan({ cable: synced({ plannedReel: "B-07" }), row: row({ plannedReel: "B-08" }) }),
+    ).toMatchObject({
+      kind: "CHANGE",
+      changes: { plannedReel: { from: "B-07", to: "B-08" } },
     });
   });
 

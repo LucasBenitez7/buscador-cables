@@ -364,8 +364,10 @@ model Cable {
   laidOn             DateTime? @db.Date
   companyId          String?
   company            Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  /// Bobina de la que salió y su estado ("En obra"…), tal como los escribe el Excel.
+  /// Bobina de la que salió (la real), la que se pidió usar (la estimada) y su estado
+  /// ("En Sitio"…), tal como los escribe el Excel.
   reel               String?
+  plannedReel        String?
   reelStatus         String?
   /// Metros reales de este cable (un tramo del circuito) y del circuito entero, y en cuántos
   /// tramos se reparte (solo el Excel eléctrico).

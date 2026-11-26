@@ -110,6 +110,11 @@ cable». Debajo, dos pestañas:
   conectada, y, plegadas, las **bornas** (la tabla de hilos con el regletero y la borna de cada
   uno en origen y en destino, y los puentes).
 
+En «Datos del cable», el apartado **Tendido** trae lo del Excel del día: fecha, empresa y las
+dos bobinas. La **bobina estimada** es la que se pide usar; la **bobina real**, la que se
+usó (pulsándola, el buscador enseña sus cables). Un cable no tendido solo tiene la estimada,
+con el estado de la bobina («En Sitio»…).
+
 Cada bloque se abre y se cierra pulsando su barra («Mostrar» / «Ocultar»); los planos no se
 pliegan. «Ir a» salta a cada bloque. El historial va al final, plegado, en las dos pestañas.
 Si un cable tiene varias hojas de plano, se elige con los botones «Hoja …» de encima del
@@ -296,7 +301,7 @@ En **Excel del día**, cada tipo enseña su **último aplicado**: el nombre del 
 vista previa), la fecha del Excel, cuándo se aplicó y quién lo subió.
 
 **Qué cambia el Excel en un cable:** el estado (tendido o no tendido) y la conexión, la fecha de
-tendido, la empresa, la bobina y los metros reales. Nunca el origen, el destino, el tipo ni la
+tendido, la empresa, las bobinas (estimada y real) y los metros reales. Nunca el origen, el destino, el tipo ni la
 longitud del listado. En instrumentación, los metros reales salen de la hoja «Table» (los
 metros tendidos de cada tirada); si un cable aparece dos veces, vale la tirada más nueva. La
 conexión de instrumentación sale de los conectores instalados en cada punta: conectada cuando
@@ -326,7 +331,7 @@ metros:
 - **Bobinas**: cada bobina con su estado, sus cables, los metros gastados y el último día de
   tendido. Al pulsarla, el buscador enseña sus cables (para copiarlos o imprimirlos si la bobina
   sale defectuosa). De una bobina no se sabe cuántos metros traía: se ve lo gastado, no lo que
-  queda.
+  queda. Cuenta la bobina real, no la estimada.
 
 Los metros reales llegan con los Excel del día: el eléctrico y la hoja de tendidos del de
 instrumentación.

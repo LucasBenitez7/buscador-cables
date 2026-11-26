@@ -27,6 +27,7 @@ type ExcelField =
   | "laidOn"
   | "company"
   | "reel"
+  | "plannedReel"
   | "reelStatus"
   | "actualLength"
   | "sections"
@@ -48,8 +49,10 @@ type SheetSpec = {
 };
 
 /**
- * Sheets and columns of each file. The reel takes the first name found: the reel actually
- * used before the planned one.
+ * Sheets and columns of each file. Two reels: the one actually used («Bobina usada», «Bobina
+ * Real en campo») and the planned one, which the site is asked to use. The instrumentation file
+ * keeps the planned one in «Bobina»; the electrical one, only in its total table
+ * (`EXCEL_PLANNED_REEL_SHEETS`).
  */
 export const EXCEL_SHEETS: Record<ExcelKind, SheetSpec> = {
   ELECTRICAL: {
@@ -62,7 +65,7 @@ export const EXCEL_SHEETS: Record<ExcelKind, SheetSpec> = {
       },
       { field: "laidOn", names: ["Fecha tendido", "Fecha de tendido"] },
       { field: "company", names: ["Company Real", "Empresa real", "Empresa"] },
-      { field: "reel", names: ["Bobina usada", "Bobina real", "Bobina"] },
+      { field: "reel", names: ["Bobina usada", "Bobina real", "Drum used"] },
       { field: "reelStatus", names: ["Estado Bobina"] },
       {
         field: "actualLength",
@@ -78,7 +81,11 @@ export const EXCEL_SHEETS: Record<ExcelKind, SheetSpec> = {
       { field: "status", names: ["ESTADO", "Estado cable"] },
       { field: "laidOn", names: ["Fecha de tendido", "Fecha tendido"] },
       { field: "company", names: ["Company Real", "Empresa real", "Empresa"] },
-      { field: "reel", names: ["Bobina Real en campo", "Bobina usada", "Bobina"] },
+      {
+        field: "reel",
+        names: ["Bobina Real en campo", "Bobina usada", "Bobina real", "Drum used"],
+      },
+      { field: "plannedReel", names: ["Bobina", "Bobina estimada", "Drum estimated"] },
       { field: "reelStatus", names: ["Estado Bobina"] },
       // The connection of a laid cable: the connectors fitted at each end against the planned.
       { field: "plannedConnectorsOrigin", names: ["Connections Origin (ud)"] },
@@ -110,6 +117,41 @@ export const EXCEL_LENGTH_SHEETS: Partial<Record<ExcelKind, LengthSheetSpec>> = 
     date: ["DATE", "Fecha"],
   },
 };
+
+/**
+ * The sheet with the planned reel of each cable, when the main sheet does not keep it: the
+ * electrical file has it only in its total table («Table … TOTAL»), in «Drum estimated». The
+ * middle word of the sheet name changes from file to file, so the sheet is found by its shape;
+ * its copy «… TOTAL (Format Orig)» is not it.
+ */
+type PlannedReelSheetSpec = {
+  /** How the normalized name of the sheet looks. */
+  sheetName: RegExp;
+  /** What the messages call the sheet when it is not there. */
+  description: string;
+  code: readonly string[];
+  reel: readonly string[];
+};
+
+export const EXCEL_PLANNED_REEL_SHEETS: Partial<Record<ExcelKind, PlannedReelSheetSpec>> = {
+  ELECTRICAL: {
+    sheetName: /^tabl[ae] \S+ total$/,
+    description: "«Table … TOTAL» con las bobinas estimadas («Drum estimated»)",
+    code: ["Cable Code", "Código del cable"],
+    reel: ["Drum estimated", "Bobina estimada"],
+  },
+};
+
+/** The sheet with the planned reels of a kind among the sheets of a workbook, or null. */
+export function findPlannedReelSheet(
+  kind: ExcelKind,
+  sheetNames: readonly string[],
+): string | null {
+  const spec = EXCEL_PLANNED_REEL_SHEETS[kind];
+  return spec
+    ? (sheetNames.find((name) => spec.sheetName.test(normalizeHeader(name))) ?? null)
+    : null;
+}
 
 /** "  Fecha  de Tendído " → "fecha de tendido": how two headers are compared. */
 export function normalizeHeader(text: string): string {
@@ -222,7 +264,9 @@ export const excelStatusRowSchema = z.object({
   /** Real date of laying, "YYYY-MM-DD". */
   laidOn: z.iso.date().nullable(),
   company: z.string().trim().min(1).max(TEXT_LIMIT).nullable(),
+  /** The reel actually used and the planned one. */
   reel: z.string().trim().min(1).max(TEXT_LIMIT).nullable(),
+  plannedReel: z.string().trim().min(1).max(TEXT_LIMIT).nullable(),
   reelStatus: z.string().trim().min(1).max(TEXT_LIMIT).nullable(),
   /** Real metres of the whole circuit (one section in instrumentation). */
   actualLengthTotalM: z.number().positive().max(10_000_000).nullable(),
@@ -248,6 +292,15 @@ export type ExcelLengths = {
 
 export type ExcelLengthsResult =
   { ok: true; lengths: ExcelLengths } | { ok: false; missingColumns: string[] };
+
+/** The planned reel of each cable, read from the total table. */
+export type ExcelPlannedReels = ReadonlyMap<string, string>;
+
+export type ExcelPlannedReelsResult =
+  { ok: true; plannedReels: ExcelPlannedReels } | { ok: false; missingColumns: string[] };
+
+/** What some files keep in other sheets than the main one. */
+export type ExcelExtraSheets = { lengths?: ExcelLengths; plannedReels?: ExcelPlannedReels };
 
 /** Position of the first header with any of the names, or -1. */
 function columnOf(headers: readonly string[], names: readonly string[]): number {
@@ -327,16 +380,51 @@ export function readExcelLengths(
 }
 
 /**
+ * Reads the total table of a kind for its planned reels. Rows without a valid code or without
+ * a reel are skipped; a cable written down twice keeps its first reel.
+ */
+export function readExcelPlannedReels(
+  kind: ExcelKind,
+  table: readonly ExcelCell[][],
+): ExcelPlannedReelsResult {
+  const spec = EXCEL_PLANNED_REEL_SHEETS[kind];
+  const [header = [], ...body] = table;
+  const headers = header.map((cell) => (typeof cell === "string" ? normalizeHeader(cell) : ""));
+  const code = spec ? columnOf(headers, spec.code) : -1;
+  const reel = spec ? columnOf(headers, spec.reel) : -1;
+  const missingColumns = spec
+    ? [
+        [code, spec.code],
+        [reel, spec.reel],
+      ]
+        .filter(([at]) => at === -1)
+        .map(([, names]) => (names as readonly string[])[0]!)
+    : [];
+  if (!spec || missingColumns.length > 0) return { ok: false, missingColumns };
+
+  const plannedReels = new Map<string, string>();
+  for (const values of body) {
+    const parsed = cableCodeSchema.safeParse(text(values[code]));
+    const planned = text(values[reel]);
+    if (parsed.success && planned !== null && !plannedReels.has(parsed.data)) {
+      plannedReels.set(parsed.data, planned);
+    }
+  }
+  return { ok: true, plannedReels };
+}
+
+/**
  * Reads the sheet of a kind, given as rows of cells with the header first. Rows without a
  * code are skipped silently (blank lines); rows with an ignored status («Check», «Error»), no
  * status, an invalid code or a code already read are returned in `ignored` with the reason.
  * The real metres come from the sheet itself (electrical) or from `lengths`, read apart from
- * the sheet of the pullings (instrumentation).
+ * the sheet of the pullings (instrumentation); the planned reel, from the sheet itself
+ * (instrumentation) or from `plannedReels`, read apart from the total table (electrical).
  */
 export function readExcelStatus(
   kind: ExcelKind,
   table: readonly ExcelCell[][],
-  lengths?: ExcelLengths,
+  { lengths, plannedReels }: ExcelExtraSheets = {},
 ): ExcelReadResult {
   const [header = [], ...body] = table;
   const headers = header.map((cell) => (typeof cell === "string" ? normalizeHeader(cell) : ""));
@@ -410,6 +498,9 @@ export function readExcelStatus(
       laidOn: laid ? day(cell(values, "laidOn")) : null,
       company: text(cell(values, "company")),
       reel: text(cell(values, "reel")),
+      plannedReel: plannedReels
+        ? (plannedReels.get(code) ?? null)
+        : text(cell(values, "plannedReel")),
       reelStatus: text(cell(values, "reelStatus")),
       actualLengthTotalM: total,
       sections: kind === "ELECTRICAL" ? sections : null,

@@ -26,6 +26,7 @@ export const CHANGE_FIELD_ORDER = [
   "laidOn",
   "company",
   "reel",
+  "plannedReel",
   "reelStatus",
   "actualLengthM",
   "actualLengthTotalM",

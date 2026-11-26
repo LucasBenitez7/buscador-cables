@@ -273,8 +273,14 @@ export default async function CablePage({
                       : null}
                   </Item>
                   <Item label="Empresa">{cable.excel.company}</Item>
+                  {/* La que se pidió usar; sin bobina real, el estado va con ella. */}
+                  <Item label="Bobina estimada">
+                    {cable.excel.reel
+                      ? cable.excel.plannedReel
+                      : reelText(cable.excel.plannedReel, cable.excel.reelStatus)}
+                  </Item>
                   {/* La bobina lleva a sus cables: si sale defectuosa, qué revisar (fase 17). */}
-                  <Item label="Bobina">
+                  <Item label="Bobina real">
                     {cable.excel.reel ? (
                       <>
                         <Link
@@ -285,9 +291,7 @@ export default async function CablePage({
                         </Link>
                         {cable.excel.reelStatus ? ` · ${cable.excel.reelStatus}` : ""}
                       </>
-                    ) : (
-                      reelText(null, cable.excel.reelStatus)
-                    )}
+                    ) : null}
                   </Item>
                   {lengths
                     .filter((item) => item.label === "Longitud real")
