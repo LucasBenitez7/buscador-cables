@@ -527,6 +527,9 @@ Si un envío falla, el cambio se hace igual y el fallo queda en el log (`scope: 
   y con el nonce de cada petición (`strict-dynamic`), nada de otros sitios, `frame-ancestors
 'none'`, `object-src 'none'`. Por eso todas las páginas se generan en cada petición (el
   layout raíz llama a `connection()`): una página estática no llevaría el nonce.
+- Visitas con Vercel Web Analytics (`components/web-analytics.tsx`), solo en Vercel: sin
+  cookies, su script sale de la propia web (`/_vercel/insights`) y cada visita se manda sin la
+  query ni el `#` (`withoutQuery`), que pueden llevar búsquedas o tokens.
 - Logs del servidor en JSON, una línea por evento (`server/log.ts`); los errores no
   controlados llegan por `onRequestError` (`instrumentation.ts`), con la ruta sin la query.
 - La app usa en producción un usuario de la base sin propiedad de las tablas ni `TRUNCATE`
