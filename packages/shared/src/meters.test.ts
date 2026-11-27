@@ -49,12 +49,11 @@ describe("texts", () => {
 });
 
 describe("parseMetersSearch", () => {
-  it("reads the tab and the search, and falls back to «Avance» on anything else", () => {
-    expect(parseMetersSearch({ tab: "bobinas", q: " B-1 " })).toEqual({ tab: "bobinas", q: "B-1" });
+  it("reads the tab and falls back to «Avance» on anything else", () => {
+    expect(parseMetersSearch({ tab: "desviacion" })).toEqual({ tab: "desviacion" });
     expect(parseMetersSearch({ tab: "otra" })).toEqual({ tab: "avance" });
-    expect(parseMetersSearch({ tab: ["desviacion", "bobinas"], q: "" })).toEqual({
-      tab: "desviacion",
-    });
-    expect(parseMetersSearch({ q: "x".repeat(101) }).q).toBeUndefined();
+    expect(parseMetersSearch({ tab: ["desviacion", "avance"] })).toEqual({ tab: "desviacion" });
+    // «Bobinas» ya no es una pestaña: la página lleva a su propia página antes de leerla.
+    expect(parseMetersSearch({ tab: "bobinas" })).toEqual({ tab: "avance" });
   });
 });

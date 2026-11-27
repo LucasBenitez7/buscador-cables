@@ -63,20 +63,12 @@ export function distanceText(metres: number): string {
   return `${decimals(0).format(metres)} m`;
 }
 
-/** The tabs of «Metros» (fase 17). */
-export const METERS_TABS = ["avance", "desviacion", "bobinas"] as const;
+/** The tabs of «Metros» (fase 17). The reels have their own page since the fase 18. */
+export const METERS_TABS = ["avance", "desviacion"] as const;
 export type MetersTab = (typeof METERS_TABS)[number];
 
 const metersSearchSchema = z.object({
   tab: z.enum(METERS_TABS).catch("avance"),
-  /** Part of a reel, in «Bobinas». */
-  q: z
-    .string()
-    .trim()
-    .max(100)
-    .transform((value) => (value === "" ? undefined : value))
-    .optional()
-    .catch(undefined),
 });
 
 export type MetersSearch = z.infer<typeof metersSearchSchema>;
