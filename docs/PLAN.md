@@ -36,9 +36,10 @@ hizo qué y cuándo.
 | 15   | Listados: imprimir y ordenar  | v1.5.0  | Elegir filas, PDF y copiar nombres, ordenar por más   |
 | 16   | Guardados y roles             | v1.6.0  | Guardados con carpetas, roles uno al lado del otro    |
 | 17   | Repaso de la interfaz, metros | v1.7.0  | Metros y bobinas, una Actividad, fichas y menú        |
+| 18   | Bobinas                       | v1.10.0 | Buscador de bobinas: metros, tiradas y pendientes     |
 
-**Total: 19 fases (0 a 17, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
-13 a la 15, el 2026-11-18; la 16 y la 17, el 2026-11-19).** El 2026-11-13 la fase 6 se
+**Total: 20 fases (0 a 18, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
+13 a la 15, el 2026-11-18; la 16 y la 17, el 2026-11-19; la 18, el 2026-11-27).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
@@ -1097,6 +1098,34 @@ lo previsto, son datos del Excel o de los listados.
       sin código de listado, el documento de la ficha es el nombre del PDF (también arregla 45
       fichas eléctricas que tenían un número de página como documento).
 - [ ] Cargarlo en producción (`data:render` → `data:upload` → `data:load`).
+
+## Fase 18 — Bobinas (v1.10.0)
+
+Añadida el 2026-11-27. Rama `feat/f18-reels`. Cada cambio visual se enseñó antes en capturas.
+
+Decisiones:
+
+- **Solo los dos Excel del día.** Cada uno trae sus bobinas en «Seguimientos Bobina cable» (las
+  cifras de las que se siguen) y «DrumsR01» (todas, con sus metros recibidos), y sus tiradas en
+  la hoja de tiradas («Bobina-Tag» en el eléctrico, «Table» en instrumentación). Otros listados
+  de bobinas que circulan son extractos de «DrumsR01»: no se suben.
+- Una bobina se distingue por su número de almacén en el eléctrico y por drum y número en
+  instrumentación (un drum entregado en dos trozos, «3» y «3B»). Los dos Excel numeran desde 1:
+  un cable solo se cruza con las bobinas de su Excel.
+- Las cifras de una bobina son las del seguimiento; sin seguimiento, lo recibido menos lo de
+  sus tiradas. Si el seguimiento y las tiradas no cuadran, la ficha lo dice con las dos cifras.
+- El tramo de una tirada eléctrica sale del conductor («…T3C2»: tramo 3); «Núm. Circt.» es el
+  total de tramos. Un tramo que la web no tiene no se lleva a otro.
+- Los pendientes de una bobina: los cables por tender cuya bobina estimada es ella.
+- Las bobinas nunca bloquean el Excel del día: si faltan sus hojas o columnas, se sube igual,
+  las bobinas quedan como estaban y el formulario lo avisa.
+- «Metros» pierde su pestaña «Bobinas»: sus enlaces llevan a la página nueva.
+
+- [x] Lector de las hojas de bobinas y de tiradas, y envío con el Excel del día.
+- [x] Tablas `reel` y `reel_pull`, escritas al aplicar el Excel.
+- [x] «Bobinas»: buscador, filtros, ficha con metros, tiradas y pendientes; enlaces desde la
+      ficha del cable.
+- [x] Tests unitarios, de integración y E2E.
 
 ---
 

@@ -328,13 +328,27 @@ metros:
   el cable: su origen o, si no lo trae, su primera bandeja), y los 50 cables que más se desvían.
   En verde hasta ±10 %; en naranja hasta ±25 %; en rojo, **revisar**: una medida o un recorrido
   equivocados. La ficha de cada cable dice también su desviación junto a la longitud real.
-- **Bobinas**: cada bobina con su estado, sus cables, los metros gastados y el último día de
-  tendido. Al pulsarla, el buscador enseña sus cables (para copiarlos o imprimirlos si la bobina
-  sale defectuosa). De una bobina no se sabe cuántos metros traía: se ve lo gastado, no lo que
-  queda. Cuenta la bobina real, no la estimada.
+  Los metros reales llegan con los Excel del día: el eléctrico y la hoja de tendidos del de
+  instrumentación.
 
-Los metros reales llegan con los Excel del día: el eléctrico y la hoja de tendidos del de
-instrumentación.
+## Bobinas
+
+**Bobinas** (en el menú, junto a Bandejas) tiene todas las bobinas de los dos Excel del día:
+
+- **Buscar** por el número de almacén (el que lleva escrito la bobina), el drum, la solicitud
+  («…DRUM 10») o el tipo de cable. Lo escrito tal cual sale primero. Se filtra por Excel
+  (eléctrico o instrumentación) y por metros: **con metros**, **agotada** o **revisar** (se usó
+  más de lo recibido). Se ordena por bobina, por metros restantes o por tiradas pendientes.
+- **La ficha** de cada bobina dice cuánto traía, cuánto se ha usado y cuánto queda, las tiradas
+  hechas y pendientes y los metros que piden las pendientes. Avisa si no llega para ellas, si
+  el Excel no cuadra consigo mismo o si el drum está en varios trozos.
+- **Tiradas**: cada una con su fecha, su cable (y su conductor en el eléctrico), los metros y
+  por dónde iba la bobina («de 500 m a 440 m»).
+- **Pendientes de tirar**: los cables por tender que tienen esta bobina como estimada.
+- En la ficha del cable, la bobina real y la estimada llevan a la ficha de la bobina.
+
+Se actualiza sola al aplicar los Excel del día. Una bobina que no está en el seguimiento del
+Excel calcula lo usado sumando sus tiradas.
 
 ### Pendientes de revisar
 

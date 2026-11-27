@@ -322,6 +322,22 @@ Traducción del estado:
 - Con el Excel del 16/11/2026: el eléctrico da ~1.710 cables y el de instrumentación ~2.580.
   Con la web cruzan ~4.140; ~205 están solo en el Excel y ~320 solo en la web.
 
+### Bobinas (fase 18)
+
+| Hoja                        | Qué trae                                                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| «Seguimientos Bobina cable» | Una fila por bobina seguida: «Nro Solicitud», «Drum Identification», «… TAG NUMBER», metros recibidos, usados y restantes, tiradas reales y pendientes, «Mts estimados» (lo que piden las pendientes) |
+| «DrumsR01»                  | Todas las bobinas del proyecto con sus metros recibidos; en el eléctrico, también su código de ingeniería                                                                                             |
+| «Bobina-Tag» (eléctrico)    | Una fila por conductor tirado: «Cable Code», «TAG Cable» («…T3C2»: tramo 3, conductor 2), «Bobina Real», marcas de inicio y fin, metros y fecha                                                       |
+| «Table» (instrumentación)   | Una fila por tirada: «CABLE TAG», «CABLE DRUM TAG», «CABLE DRUM Nº», metros y fecha                                                                                                                   |
+
+- A 17/11/2026: ~230 bobinas eléctricas y ~370 de instrumentación. Las tiradas de
+  instrumentación cuadran con el seguimiento en todas las bobinas; en el eléctrico, en ~3 de
+  cada 4 (el resto son tiradas repetidas o atrasadas en una de las dos hojas).
+- Hay restantes negativos (se gastó más de lo recibido): la web los marca «Revisar».
+- Algunas bobinas de fibra llegan como varias con un solo nombre: la lista de almacén las
+  repite y el seguimiento las cuenta como una.
+
 ## Dónde se ve en la app
 
 - **Ficha del cable**: extremos (equipo, cubículo o prensaestopas, KKS, sala) y recorrido
