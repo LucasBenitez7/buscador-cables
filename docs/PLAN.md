@@ -1149,6 +1149,12 @@ Decisiones:
 - [x] Hojas con red marks (`pnpm data:render`) y selector «Plano / Con red marks» en el visor.
 - [x] Tests unitarios, de integración y E2E.
 
+## Repaso del menú (2026-11-27, `fix/nav-manage-excel`)
+
+- [x] La fila del menú se montaba con el nombre: «Excel del día» pasa a «Gestión» y se llama
+      «Excel» (no se sube cada día), entre «Metros» y «Actividad». Con la fila más corta, los
+      botones van más separados y la cabecera sigue alineada con el contenido.
+
 ---
 
 ## Entornos

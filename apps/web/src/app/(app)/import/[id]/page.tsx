@@ -35,9 +35,7 @@ const loadPreview = cache(getExcelPreview);
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const preview = await loadPreview((await params).id, {});
   return {
-    title: preview
-      ? `${preview.excel.kindLabel} · Excel del ${preview.excel.excelDay}`
-      : "Excel del día",
+    title: preview ? `${preview.excel.kindLabel} · Excel del ${preview.excel.excelDay}` : "Excel",
   };
 }
 
@@ -76,7 +74,7 @@ export default async function ExcelPreviewPage({
       <header className="space-y-2">
         <p className="text-muted-foreground text-sm">
           <Link href="/import" className={INLINE_LINK}>
-            Excel del día
+            Excel
           </Link>{" "}
           › Vista previa
         </p>

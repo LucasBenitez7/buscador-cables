@@ -22,11 +22,11 @@ se vuelve a entrar con el correo y la contraseña, y el resto de la semana no ha
 entras el sábado por la noche, te dura hasta el domingo siguiente. Borrar el historial o los
 datos de las webs en el navegador también cierra la sesión.
 
-En el ordenador, el menú de arriba tiene lo de cada día: Inicio, Cables, Bandejas, Equipos,
-Ubicaciones, Guardados y, para quien lo sube, Excel del día. **Gestión** agrupa lo que se mira
-de vez en cuando: Metros, Actividad, Pendientes de revisar, Catálogos, Usuarios (con el número
-de cuentas pendientes) y Roles y permisos. Quien no tiene «Gestión» ve **Actividad** en la fila
-de arriba. El botón con **tu nombre** abre «Cerrar sesión». En el móvil está todo en el botón
+En el ordenador, el menú de arriba tiene lo de cada día: Inicio, Cables, Bandejas, Bobinas,
+Equipos, Ubicaciones y Guardados. **Gestión** agrupa lo que se mira de vez en cuando: Metros,
+Excel (para quien lo sube), Actividad, Pendientes de revisar, Catálogos, Usuarios (con el número
+de cuentas pendientes) y Roles y permisos. Quien no tiene «Gestión» ve **Actividad** (y, si sube
+Excel, **Excel**) en la fila de arriba. El botón con **tu nombre** abre «Cerrar sesión». En el móvil está todo en el botón
 ☰, en una sola lista y en ese mismo orden.
 
 **Fichas largas.** Arriba de cada ficha (cable, bandeja, equipo) hay una barra **«Ir a»**
@@ -284,10 +284,10 @@ Los enlaces antiguos a «Mi actividad» siguen llevando a la actividad propia.
 - Una corrección de bornas ocupa **una línea** («corrigió las bornas de 3 hilos en origen»).
   «Ver qué cambió» abre su página con cada hilo, antes y después.
 
-## Excel del día
+## Excel
 
-El estado de la obra llega en dos Excel, eléctrico e instrumentación, que se actualizan cada
-día. Se suben desde **Excel del día**, en el menú (supervisor y administrador).
+El estado de la obra llega en dos Excel, eléctrico e instrumentación, que se actualizan a menudo.
+Se suben desde **Gestión → Excel** (supervisor y administrador).
 
 1. **Elige el archivo.** El navegador lo lee y reconoce si es el eléctrico o el de
    instrumentación por su hoja. Propone la **fecha del Excel** sacada del nombre del archivo;

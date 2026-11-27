@@ -118,7 +118,7 @@ export function UploadExcelForm() {
 
   return (
     <form onSubmit={onSubmit} className="bg-card space-y-4 rounded-lg border p-4">
-      <h2 className="text-base font-semibold">Subir Excel del día</h2>
+      <h2 className="text-base font-semibold">Subir Excel</h2>
 
       <div className="max-w-xl space-y-1.5">
         <label htmlFor={`${ids}-file`} className="text-sm font-medium">
