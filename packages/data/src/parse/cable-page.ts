@@ -93,10 +93,14 @@ function emptyEnd(): RawCableEnd {
   };
 }
 
+/**
+ * The list the sheet belongs to ("Code: XX-YYY-LST-0100"). A working copy of the binder prints
+ * "Code: 40 of 131" instead: that is the page count, not a document.
+ */
 function documentCode({ runs, height }: PdfPage): string | null {
   for (const run of runs) {
     if (run.top > height * 0.12) continue;
-    const match = /^Code:\s*(\S+)/i.exec(run.text);
+    const match = /^Code:\s*([A-Z0-9]+(?:-[A-Z0-9]+)+)(?:\s|$)/i.exec(run.text);
     if (match) return match[1]!;
   }
   return null;

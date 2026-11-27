@@ -170,6 +170,53 @@ describe("DrawingViewer", () => {
   });
 });
 
+describe("DrawingViewer: red marks", () => {
+  it("switches between the sheet and its copy with the red marks of quality (fase 19)", async () => {
+    render(
+      <DrawingViewer
+        imageKey="EJ-ICO-DRW-0001_52"
+        redMarksKey="EJ-ICO-DRW-0001_52_redmarks"
+        width={2000}
+        height={1000}
+        marks={[]}
+        label="Plano EJ-ICO-DRW-0001, hoja 52"
+      />,
+    );
+    const switcher = screen.getByRole("group", { name: "Versión del plano" });
+    expect(within(switcher).getByRole("button", { name: "Plano" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(within(switcher).getByRole("button", { name: "Con red marks" }));
+
+    expect(
+      await screen.findByRole("application", {
+        name: "Plano EJ-ICO-DRW-0001, hoja 52, con red marks",
+      }),
+    ).toBeInTheDocument();
+    expect(within(switcher).getByRole("button", { name: "Con red marks" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("shows no switch for a sheet without red marks", () => {
+    render(
+      <DrawingViewer
+        imageKey="EJ-ELE-DRW-0024_02"
+        redMarksKey={null}
+        width={2000}
+        height={1000}
+        marks={[]}
+        label="Plano EJ-ELE-DRW-0024, hoja 02"
+      />,
+    );
+
+    expect(screen.queryByRole("group", { name: "Versión del plano" })).toBeNull();
+  });
+});
+
 describe("markFrame", () => {
   it("frames the text with a margin, centred on it, in the drawing's coordinates", () => {
     const frame = markFrame({ x: 0.5, y: 0.5, w: 0.04, h: 0.01, kind: "label" }, 0.5);
@@ -232,7 +279,7 @@ describe("TrayDrawings", () => {
     title: null,
     sourcePage: 1,
     marks: [],
-    image: { key: "EJ-ELE-DRW-0024_02", width: 2384, height: 1684 },
+    image: { key: "EJ-ELE-DRW-0024_02", width: 2384, height: 1684, redMarks: null },
     ...overrides,
   });
 

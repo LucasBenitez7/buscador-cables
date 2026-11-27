@@ -57,6 +57,7 @@ export function TrayDrawings({ code, sheets }: { code: string; sheets: TraySheet
             width={sheet.image.width}
             height={sheet.image.height}
             marks={sheet.marks}
+            redMarksKey={sheet.image.redMarks}
             label={`${name(sheet)}${sheet.title ? ` (${sheet.title})` : ""}`}
           />
           <p className="text-muted-foreground text-xs">

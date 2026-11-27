@@ -11,6 +11,12 @@ import {
   type ExcelKind,
   type ExcelStatusRow,
 } from "./excel-status";
+import {
+  EXCEL_MAX_REEL_PULLS,
+  excelReelPullSchema,
+  excelReelsSchema,
+  reelKey,
+} from "./excel-reels";
 import { firstParams, pageSchema, type RawSearchParams } from "./url-params";
 
 /** Most rows a file may bring: the real ones have a few thousand. */
@@ -32,15 +38,44 @@ const ignoredRowSchema = z.object({
 export const EXCEL_UPLOAD_CHUNK = 1000;
 
 /** First step of an upload: what the file is and how many rows will arrive. */
-export const excelPreviewStartSchema = z.object({
-  kind: z.enum(EXCEL_KINDS, { error: "Tipo de Excel no válido" }),
-  excelDate: z.iso.date({ error: "Indica la fecha del Excel" }),
-  fileName: z.string().trim().min(1, "Falta el nombre del archivo").max(300),
-  /** The first load of the project: admins only, never shown, no discrepancies. */
-  projectLoad: z.boolean().default(false),
-  rowCount: z.number().int().min(0).max(EXCEL_MAX_ROWS, "El Excel tiene demasiadas filas"),
-});
+export const excelPreviewStartSchema = z
+  .object({
+    kind: z.enum(EXCEL_KINDS, { error: "Tipo de Excel no válido" }),
+    excelDate: z.iso.date({ error: "Indica la fecha del Excel" }),
+    fileName: z.string().trim().min(1, "Falta el nombre del archivo").max(300),
+    /** The first load of the project: admins only, never shown, no discrepancies. */
+    projectLoad: z.boolean().default(false),
+    rowCount: z.number().int().min(0).max(EXCEL_MAX_ROWS, "El Excel tiene demasiadas filas"),
+    /** Its reels (fase 18); null when the file has neither of their sheets. */
+    reels: excelReelsSchema.nullable().default(null),
+    /** How many pullings of the reels will arrive; null when the file has no sheet of them. */
+    reelPullCount: z
+      .number()
+      .int()
+      .min(0)
+      .max(EXCEL_MAX_REEL_PULLS, "El Excel tiene demasiadas tiradas de bobinas")
+      .nullable()
+      .default(null),
+  })
+  .superRefine((start, ctx) => {
+    const seen = new Set<string>();
+    for (const reel of start.reels ?? []) {
+      const key = reelKey(start.kind, reel);
+      if (seen.has(key)) {
+        ctx.addIssue({ code: "custom", message: "Una bobina está repetida en el Excel" });
+        return;
+      }
+      seen.add(key);
+    }
+  });
 export type ExcelPreviewStart = z.input<typeof excelPreviewStartSchema>;
+
+/** One part of the pullings of the reels of an upload (fase 18). */
+export const excelReelPullsPartSchema = z.object({
+  importId: z.string().min(1).max(100),
+  pulls: z.array(excelReelPullSchema).min(1).max(EXCEL_UPLOAD_CHUNK),
+});
+export type ExcelReelPullsPart = z.input<typeof excelReelPullsPartSchema>;
 
 /** One part of the rows of an upload, with the ignored rows of that part. */
 export const excelPreviewPartSchema = z

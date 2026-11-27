@@ -8,6 +8,7 @@ import { UploadExcelForm } from "./components/upload-excel-form";
 const mocks = vi.hoisted(() => ({
   startExcelUploadAction: vi.fn(),
   addExcelPartAction: vi.fn(),
+  addExcelReelPullsAction: vi.fn(),
   finishExcelUploadAction: vi.fn(),
   cancelExcelUploadAction: vi.fn(),
   setExcelRowsAction: vi.fn(),
@@ -54,21 +55,28 @@ beforeEach(() => {
 
 describe("UploadExcelForm", () => {
   it("reads the file, proposes its date and sends it in parts before opening the preview", async () => {
+    const reel = { drum: null, tag: "1", tracked: true, pieces: null };
+    const pull = { row: 2, code: "ZZ-1", tag: "1" };
     mocks.readExcelFile.mockResolvedValue({
       ok: true,
       kind: "ELECTRICAL",
       rows: Array.from({ length: 1001 }, (_, index) => row(`ZZ-${index}`)),
       ignored: [],
       excelDate: "2026-11-16",
+      reels: [reel],
+      reelPulls: Array.from({ length: 1500 }, () => pull),
+      reelWarning: null,
     });
     mocks.startExcelUploadAction.mockResolvedValue({ ok: true, importId: "i1" });
     mocks.addExcelPartAction.mockResolvedValue({ ok: true });
+    mocks.addExcelReelPullsAction.mockResolvedValue({ ok: true });
     mocks.finishExcelUploadAction.mockResolvedValue({ ok: true, importId: "i1" });
     render(<UploadExcelForm />);
 
     pickFile();
     expect(await screen.findByText("Eléctrico")).toBeInTheDocument();
     expect(screen.getByText(/1001 cables/)).toBeInTheDocument();
+    expect(screen.getByText(/1 bobinas/)).toBeInTheDocument();
     expect(screen.getByLabelText("Fecha del Excel")).toHaveValue("2026-11-16");
     expect(screen.queryByLabelText("Carga del proyecto")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Preparar vista previa" }));
@@ -80,8 +88,40 @@ describe("UploadExcelForm", () => {
       fileName: "estado_16.11.26.xlsx",
       projectLoad: false,
       rowCount: 1001,
+      reels: [reel],
+      reelPullCount: 1500,
     });
     expect(mocks.addExcelPartAction).toHaveBeenCalledTimes(2);
+    // Las tiradas de las bobinas, también por partes.
+    expect(mocks.addExcelReelPullsAction).toHaveBeenCalledTimes(2);
+    expect(mocks.addExcelReelPullsAction.mock.calls[1]![0].pulls).toHaveLength(500);
+  });
+
+  it("goes on without the reels when their sheets cannot be read, and says so", async () => {
+    mocks.readExcelFile.mockResolvedValue({
+      ok: true,
+      kind: "INSTRUMENTATION",
+      rows: [row("ZZ-1")],
+      ignored: [],
+      excelDate: "2026-11-16",
+      reels: null,
+      reelPulls: null,
+      reelWarning: "Bobinas sin actualizar. Faltan columnas en la hoja «Table»: CABLE DRUM TAG.",
+    });
+    mocks.startExcelUploadAction.mockResolvedValue({ ok: true, importId: "i1" });
+    mocks.addExcelPartAction.mockResolvedValue({ ok: true });
+    mocks.finishExcelUploadAction.mockResolvedValue({ ok: true, importId: "i1" });
+    render(<UploadExcelForm />);
+
+    pickFile();
+    expect(await screen.findByText(/Bobinas sin actualizar/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Preparar vista previa" }));
+
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/import/i1"));
+    expect(mocks.startExcelUploadAction).toHaveBeenCalledWith(
+      expect.objectContaining({ reels: null, reelPullCount: null }),
+    );
+    expect(mocks.addExcelReelPullsAction).not.toHaveBeenCalled();
   });
 
   it("never offers the project load any more, and shows why a file is refused", async () => {

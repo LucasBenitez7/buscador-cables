@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { EXCEL_KIND_LABELS, excelPreviewParts } from "@cables/shared";
+import { EXCEL_KIND_LABELS, EXCEL_UPLOAD_CHUNK, excelPreviewParts } from "@cables/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   addExcelPartAction,
+  addExcelReelPullsAction,
   cancelExcelUploadAction,
   finishExcelUploadAction,
   startExcelUploadAction,
@@ -68,6 +69,8 @@ export function UploadExcelForm() {
       // La carga del proyecto ya se hizo (fase 17): todo lo que se sube es del día.
       projectLoad: false,
       rowCount: read.rows.length,
+      reels: read.reels ?? null,
+      reelPullCount: read.reelPulls ? read.reelPulls.length : null,
     });
     if (cancelled()) {
       if (started.ok) void cancelExcelUploadAction(started.importId);
@@ -79,6 +82,16 @@ export function UploadExcelForm() {
         setStatus(`Preparando la vista previa… ${index + 1} de ${parts.length}`);
       }
       const sent = await addExcelPartAction({ importId: started.importId, ...part });
+      if (cancelled()) return void cancelExcelUploadAction(started.importId);
+      if (!sent.ok) return stop(sent.message);
+    }
+    // Las tiradas de las bobinas (fase 18), también por partes.
+    const pulls = read.reelPulls ?? [];
+    for (let at = 0; at < pulls.length; at += EXCEL_UPLOAD_CHUNK) {
+      const sent = await addExcelReelPullsAction({
+        importId: started.importId,
+        pulls: pulls.slice(at, at + EXCEL_UPLOAD_CHUNK),
+      });
       if (cancelled()) return void cancelExcelUploadAction(started.importId);
       if (!sent.ok) return stop(sent.message);
     }
@@ -126,7 +139,13 @@ export function UploadExcelForm() {
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge variant="info">{EXCEL_KIND_LABELS[read.kind]}</Badge>
             <span className="tabular-nums">{number.format(read.rows.length)} cables</span>
+            {read.reels ? (
+              <span className="text-muted-foreground tabular-nums">
+                · {number.format(read.reels.length)} bobinas
+              </span>
+            ) : null}
           </div>
+          {read.reelWarning ? <p className="text-warning text-sm">{read.reelWarning}</p> : null}
 
           <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_1fr] sm:items-end">
             <div className="space-y-1.5">

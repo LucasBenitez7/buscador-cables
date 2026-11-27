@@ -14,7 +14,7 @@ import {
   type TraySearch,
   type TraySort,
 } from "@cables/shared";
-import { hasDrawingImage } from "@/server/drawings/store";
+import { hasDrawingImage, redMarksOf } from "@/server/drawings/store";
 import { escapeLike } from "@/server/like";
 import { SELECT_ALL_MAX } from "@/server/select-all";
 
@@ -61,8 +61,11 @@ export type TraySheet = {
   title: string | null;
   sourcePage: number | null;
   marks: DrawingMark[];
-  /** Tiles of the sheet (`/api/drawings/<key>.dzi`); null until `pnpm data:render` draws it. */
-  image: { key: string; width: number; height: number } | null;
+  /**
+   * Tiles of the sheet (`/api/drawings/<key>.dzi`); null until `pnpm data:render` draws it.
+   * `redMarks`: the same sheet with the red marks of quality, when there is one (fase 19).
+   */
+  image: { key: string; width: number; height: number; redMarks: string | null } | null;
 };
 
 export type TrayDetail = TrayListItem & {
@@ -330,6 +333,7 @@ async function traySheets(
               key: row.drawingSheet.imageKey,
               width: row.drawingSheet.width,
               height: row.drawingSheet.height,
+              redMarks: await redMarksOf(row.drawingSheet.imageKey),
             }
           : null,
     })),

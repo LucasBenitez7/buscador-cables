@@ -247,10 +247,24 @@ y se borran las de cables que ya no están. `--only drawings|cables` dibuja solo
 
 ### Si cambian los planos
 
-1. Sustituye el PDF en `private-data/source/`.
+1. Sustituye el PDF en `private-data/source/` y lleva el anterior a `private-data/archivo/`.
 2. `pnpm data:extract` → `pnpm data:render` → `pnpm data:load`.
 
+Si la cabecera de las fichas no trae el código del listado (una copia de trabajo pone
+«Code: 40 of 131»), el documento de la ficha es el nombre del PDF.
+
 Las marcas se recalculan del texto del PDF: no hay que colocar nada a mano.
+
+### Equipos y red marks (fase 19)
+
+- Los códigos de planta escritos en las hojas («99CJU17», «99EKH21GH010») se cruzan con los
+  equipos que nombran los listados en las puntas de sus cables. A 27/11/2026, 1.208 de 2.207
+  (1.033 por su código y 175 por el de su instrumento, sin la pieza «-B01»).
+- Las red marks de calidad: un PDF escaneado por plano en `private-data/source/redmarks/`,
+  con el nombre empezando por el número del plano («…-DRW-0001 red marks.pdf») y las páginas en
+  el orden de las hojas. `pnpm data:render` (o `--only redmarks`) coloca cada página sobre su
+  hoja y la dibuja; dice cuánto encaja cada una y cuáles salta. Tarda unos minutos por PDF.
+- Para actualizarlas: sustituir el PDF, `pnpm data:render --only redmarks` y `pnpm data:upload`.
 
 ## Conexionado (fase 11)
 
@@ -318,6 +332,22 @@ Traducción del estado:
   La fecha del Excel se saca del nombre del archivo (`…_16.11.26.xlsx` → 16/11/2026).
 - Con el Excel del 16/11/2026: el eléctrico da ~1.710 cables y el de instrumentación ~2.580.
   Con la web cruzan ~4.140; ~205 están solo en el Excel y ~320 solo en la web.
+
+### Bobinas (fase 18)
+
+| Hoja                        | Qué trae                                                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| «Seguimientos Bobina cable» | Una fila por bobina seguida: «Nro Solicitud», «Drum Identification», «… TAG NUMBER», metros recibidos, usados y restantes, tiradas reales y pendientes, «Mts estimados» (lo que piden las pendientes) |
+| «DrumsR01»                  | Todas las bobinas del proyecto con sus metros recibidos; en el eléctrico, también su código de ingeniería                                                                                             |
+| «Bobina-Tag» (eléctrico)    | Una fila por conductor tirado: «Cable Code», «TAG Cable» («…T3C2»: tramo 3, conductor 2), «Bobina Real», marcas de inicio y fin, metros y fecha                                                       |
+| «Table» (instrumentación)   | Una fila por tirada: «CABLE TAG», «CABLE DRUM TAG», «CABLE DRUM Nº», metros y fecha                                                                                                                   |
+
+- A 17/11/2026: ~230 bobinas eléctricas y ~370 de instrumentación. Las tiradas de
+  instrumentación cuadran con el seguimiento en todas las bobinas; en el eléctrico, en ~3 de
+  cada 4 (el resto son tiradas repetidas o atrasadas en una de las dos hojas).
+- Hay restantes negativos (se gastó más de lo recibido): la web los marca «Revisar».
+- Algunas bobinas de fibra llegan como varias con un solo nombre: la lista de almacén las
+  repite y el seguimiento las cuenta como una.
 
 ## Dónde se ve en la app
 

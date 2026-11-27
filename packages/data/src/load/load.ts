@@ -24,9 +24,11 @@ import {
 import { z } from "zod";
 import {
   projectCableSchema,
+  projectEquipmentSchema,
   projectSheetSchema,
   projectTraySchema,
   type ProjectCable,
+  type ProjectEquipment,
   type ProjectRouteStep,
   type ProjectSheet,
   type ProjectTray,
@@ -53,6 +55,8 @@ export type LoadSummary = {
   cableTypes: { created: number };
   sheets: { created: number; updated: number; removed: number };
   trays: { created: number; updated: number; unchanged: number };
+  /** Equipment found on the plans, and the sheets where they are (fase 19). */
+  equipment: { equipment: number; sheets: number } | null;
   cables: { created: number; updated: number; unchanged: number; skipped: number };
   /** Cables loaded earlier from the lists that the new lists no longer include. */
   missingFromLists: string[];
@@ -134,8 +138,11 @@ const ROLLBACK = Symbol("dry run");
 
 export async function loadProjectData(
   client: PrismaClient,
-  /** `sheets` may be missing in an extraction made before the drawings had sheets. */
-  input: { cables: unknown; trays: unknown; sheets?: unknown },
+  /**
+   * `sheets` may be missing in an extraction made before the drawings had sheets, and
+   * `equipment` in one made before the fase 19: then what is stored stays.
+   */
+  input: { cables: unknown; trays: unknown; sheets?: unknown; equipment?: unknown },
   { userId, now = new Date(), onProgress = () => {}, dryRun = false }: LoadOptions,
 ): Promise<LoadSummary> {
   // The files come from disk: validate them again before writing anything.
@@ -143,8 +150,10 @@ export async function loadProjectData(
   const trays = z.array(projectTraySchema).parse(input.trays);
   const sheets =
     input.sheets === undefined ? null : z.array(projectSheetSchema).parse(input.sheets);
+  const equipment =
+    input.equipment === undefined ? null : z.array(projectEquipmentSchema).parse(input.equipment);
   const run = (db: Db, within: Within) =>
-    loadValidated(db, within, { cables, trays, sheets }, { userId, now, onProgress });
+    loadValidated(db, within, { cables, trays, sheets, equipment }, { userId, now, onProgress });
 
   if (!dryRun) {
     return run(client, (write) => client.$transaction(write));
@@ -171,7 +180,13 @@ async function loadValidated(
     cables,
     trays,
     sheets,
-  }: { cables: ProjectCable[]; trays: ProjectTray[]; sheets: ProjectSheet[] | null },
+    equipment,
+  }: {
+    cables: ProjectCable[];
+    trays: ProjectTray[];
+    sheets: ProjectSheet[] | null;
+    equipment: ProjectEquipment[] | null;
+  },
   { userId, now, onProgress }: Required<Pick<LoadOptions, "userId" | "now" | "onProgress">>,
 ): Promise<LoadSummary> {
   const summary: LoadSummary = {
@@ -179,6 +194,7 @@ async function loadValidated(
     cableTypes: { created: 0 },
     sheets: { created: 0, updated: 0, removed: 0 },
     trays: { created: 0, updated: 0, unchanged: 0 },
+    equipment: null,
     cables: { created: 0, updated: 0, unchanged: 0, skipped: 0 },
     missingFromLists: [],
     issues: [],
@@ -195,6 +211,10 @@ async function loadValidated(
   );
   const trayIds = await loadTrays(db, within, trays, locations, sheetIds, summary);
   onProgress(`Bandejas: ${summary.trays.created} nuevas, ${summary.trays.updated} actualizadas`);
+  if (equipment) {
+    summary.equipment = await within((tx) => loadEquipment(tx, equipment, sheetIds));
+    onProgress(`Equipos en los planos: ${summary.equipment.equipment}`);
+  }
   await loadCables(
     db,
     within,
@@ -204,6 +224,32 @@ async function loadValidated(
     onProgress,
   );
   return summary;
+}
+
+// ---------------------------------------------------------------------------
+// Equipment on the plans (fase 19): all of it again, it is only what the drawings say
+// ---------------------------------------------------------------------------
+
+async function loadEquipment(
+  db: Db,
+  equipment: readonly ProjectEquipment[],
+  sheetIds: Map<string, string>,
+): Promise<{ equipment: number; sheets: number }> {
+  await db.equipmentDrawing.deleteMany({});
+  const rows = equipment.flatMap((item) =>
+    item.drawings.map((entry) => ({
+      equipment: item.tag,
+      drawing: entry.drawing,
+      sheet: entry.sheet,
+      title: entry.title,
+      sourcePage: entry.sourcePage,
+      drawnAs: entry.drawnAs,
+      marks: entry.marks,
+      sheetId: sheetIds.get(drawingSheetKey(entry)) ?? null,
+    })),
+  );
+  for (const batch of chunks(rows)) await db.equipmentDrawing.createMany({ data: batch });
+  return { equipment: equipment.length, sheets: rows.length };
 }
 
 // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import {
   excelPreviewPartSchema,
   excelPreviewParts,
   excelPreviewStartSchema,
+  excelReelPullsPartSchema,
   excelRowSelectionSchema,
   excelStatusRowSchema,
   formatExcelDay,
@@ -23,6 +24,7 @@ import {
   type WebStateMark,
 } from "@cables/shared";
 import { isUniqueViolation } from "@/server/prisma-errors";
+import { applyExcelReels } from "@/server/reels/apply";
 
 export class ExcelImportError extends Error {}
 
@@ -357,6 +359,9 @@ export async function startExcelPreview(actor: Actor, rawInput: unknown): Promis
         status: "UPLOADING",
         uploadedById: actor.id,
         rowCount: input.rowCount,
+        reels:
+          input.reels === null ? Prisma.DbNull : (input.reels as unknown as Prisma.InputJsonArray),
+        reelPullCount: input.reelPullCount,
         ignored: [],
         agreeingDiscrepancyIds: [],
         createdAt: now,
@@ -386,6 +391,7 @@ async function uploadInProgress(tx: Db, actor: Actor, importId: string) {
       rowCount: true,
       receivedCount: true,
       ignored: true,
+      reelPullCount: true,
     },
   });
   if (current.status !== "UPLOADING") {
@@ -465,6 +471,41 @@ export async function addExcelPreviewPart(actor: Actor, rawInput: unknown): Prom
   }, TRANSACTION);
 }
 
+/**
+ * The pullings of the reels, once per part (fase 18): saved with the upload, they count once
+ * it is applied. Nothing of the cables is touched.
+ */
+export async function addExcelReelPullsPart(actor: Actor, rawInput: unknown): Promise<void> {
+  const parsed = excelReelPullsPartSchema.safeParse(rawInput);
+  if (!parsed.success) invalid(parsed.error);
+  const part = parsed.data;
+
+  await prisma.$transaction(async (tx) => {
+    const excel = await uploadInProgress(tx, actor, part.importId);
+    const saved = await tx.reelPull.count({ where: { importId: part.importId } });
+    if (saved + part.pulls.length > (excel.reelPullCount ?? 0)) {
+      throw new ExcelImportError("Han llegado más tiradas de bobinas de las que tiene el Excel.");
+    }
+    const decimal = (value: number | null) => (value === null ? null : new Prisma.Decimal(value));
+    await tx.reelPull.createMany({
+      data: part.pulls.map((pull) => ({
+        importId: part.importId,
+        kind: excel.kind,
+        row: pull.row,
+        code: pull.code,
+        conductor: pull.conductor,
+        circuit: pull.circuit,
+        tag: pull.tag,
+        drum: pull.drum,
+        startM: decimal(pull.startM),
+        endM: decimal(pull.endM),
+        pulledM: decimal(pull.pulledM),
+        pulledOn: pull.pulledOn === null ? null : dateOf(pull.pulledOn),
+      })),
+    });
+  }, TRANSACTION);
+}
+
 /** Last step: with every row received, the preview is ready to review and apply. */
 export async function finishExcelPreview(
   actor: Actor,
@@ -474,6 +515,12 @@ export async function finishExcelPreview(
     const excel = await uploadInProgress(tx, actor, importId);
     if (excel.receivedCount !== excel.rowCount) {
       throw new ExcelImportError("No han llegado todas las filas del Excel: súbelo otra vez.");
+    }
+    const pulls = await tx.reelPull.count({ where: { importId } });
+    if (pulls !== (excel.reelPullCount ?? 0)) {
+      throw new ExcelImportError(
+        "No han llegado todas las tiradas de las bobinas: súbelo otra vez.",
+      );
     }
     await tx.excelImport.update({ where: { id: importId }, data: { status: "PREVIEW" } });
     return {
@@ -816,6 +863,8 @@ export async function applyExcelBatch(actor: Actor, importId: string): Promise<E
         projectLoad: true,
         uploadedById: true,
         agreeingDiscrepancyIds: true,
+        reels: true,
+        reelPullCount: true,
       },
     });
     if (current.status === "APPLIED") throw new ExcelImportError("Este Excel ya está aplicado.");
@@ -881,6 +930,13 @@ export async function applyExcelBatch(actor: Actor, importId: string): Promise<E
       await tx.excelImport.update({
         where: { id: importId },
         data: { status: "APPLIED", appliedAt: now },
+      });
+      await applyExcelReels(tx, {
+        importId,
+        kind: current.kind,
+        excelDate: current.excelDate,
+        reels: current.reels,
+        pullsRead: current.reelPullCount !== null,
       });
       if (current.agreeingDiscrepancyIds.length > 0) {
         await tx.cableDiscrepancy.updateMany({

@@ -52,6 +52,18 @@ describe("cable sheets with missing blocks", () => {
     });
   });
 
+  it("takes the file as the document when the header prints a page count instead", async () => {
+    const raw = parseCableSheet(
+      await pageOf(instrumentSheet({ code: "99XAB10T1-W8001", header: "Code: 40 of 131" })),
+    )!;
+
+    expect(raw.document).toBeNull();
+    expect(normalizeCableSheet(raw, "Lista IC.pdf", "f1").cable).toMatchObject({
+      sourceDocument: "Lista IC",
+      sourceFile: "Lista IC.pdf",
+    });
+  });
+
   it("drops a sheet without a code", async () => {
     const raw = parseCableSheet(await pageOf(instrumentSheet({ code: "99XAB10T1-W8001" })))!;
 
@@ -114,6 +126,7 @@ describe("formatReport", () => {
       cables: [],
       trays: [],
       sheets: [],
+      equipment: [],
       issues: [
         {
           severity: "error",
@@ -131,6 +144,7 @@ describe("formatReport", () => {
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
         wiring: { cables: 0, wires: 0, jumpers: 0 },
+        equipment: { total: 0, exact: 0, related: 0 },
       },
     });
 
@@ -145,6 +159,7 @@ describe("formatReport", () => {
       cables: [],
       trays: [],
       sheets: [],
+      equipment: [],
       issues: Array.from({ length: 205 }, (_, index) => ({
         severity: "warning" as const,
         file: "lista.pdf",
@@ -159,6 +174,7 @@ describe("formatReport", () => {
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
         wiring: { cables: 0, wires: 0, jumpers: 0 },
+        equipment: { total: 0, exact: 0, related: 0 },
       },
     };
 
@@ -257,6 +273,7 @@ describe("what the extraction leaves out is reported", () => {
       cables: [],
       trays: [],
       sheets: [],
+      equipment: [],
       issues: [],
       stats: {
         files: [{ name: "lista|v2.pdf", pages: 1, cableSheets: 1, drawingSheets: 0 }],
@@ -265,6 +282,7 @@ describe("what the extraction leaves out is reported", () => {
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
         wiring: { cables: 0, wires: 0, jumpers: 0 },
+        equipment: { total: 0, exact: 0, related: 0 },
       },
     });
 

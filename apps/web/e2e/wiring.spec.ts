@@ -58,6 +58,12 @@ test.describe("técnico", () => {
     await expect(page.getByRole("heading", { level: 1, name: "99BMC" })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Regletero X51/ })).toBeVisible();
     await expect(page.getByRole("link", { name: code })).toBeVisible();
+
+    // Fase 19: dónde está, por la sala de sus cables; sin planos cargados en esta base.
+    const where = page.locator("#donde");
+    await expect(where.getByText("No aparece en los planos cargados.")).toBeVisible();
+    await where.getByRole("link", { name: /Armario A$/ }).click();
+    await expect(page).toHaveURL(/\/locations\/e2e-origin$/);
   });
 });
 

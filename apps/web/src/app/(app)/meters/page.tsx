@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   CABLE_LEVEL_LABELS,
@@ -9,10 +10,7 @@ import {
   DEVIATION_OK_PERCENT,
   DEVIATION_REVIEW_PERCENT,
   distanceText,
-  formatExcelDay,
 } from "@cables/shared";
-import { ListToolbar } from "@/components/list-toolbar";
-import { PendingListProvider, PendingResults } from "@/components/pending-list";
 import { TabLinks } from "@/components/tab-links";
 import { CODE_LINK } from "@/components/ui/text-link";
 import { DeviationBadge } from "@/features/meters/components/deviation-badge";
@@ -21,7 +19,6 @@ import {
   TOP_DEVIATIONS,
   getMetersDeviation,
   getMetersProgress,
-  listReels,
   type DeviationRow,
 } from "@/server/meters/service";
 import { requireUser } from "@/server/session";
@@ -34,7 +31,6 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const TAB_LABELS: Record<MetersTab, string> = {
   avance: "Avance",
   desviacion: "Desviación",
-  bobinas: "Bobinas",
 };
 
 const number = new Intl.NumberFormat("es-ES", { useGrouping: "always" });
@@ -42,19 +38,21 @@ const percentOf = (part: number, total: number) => (total > 0 ? (part / total) *
 
 /**
  * «Metros» (fase 17): the works in metres. «Avance»: metres laid of the planned ones.
- * «Desviación»: real metres against the list, to find wrong measures or routes. «Bobinas»: what
- * came out of each reel, to know what to check if one turns out faulty.
+ * «Desviación»: real metres against the list, to find wrong measures or routes. The reels,
+ * a tab here in the fase 17, have their own page since the fase 18: the old links go there.
  */
 export default async function MetersPage({ searchParams }: { searchParams: SearchParams }) {
   await requireUser();
-  const { tab, q = "" } = parseMetersSearch(await searchParams);
+  const params = await searchParams;
+  if (params.tab === "bobinas") redirect("/reels");
+  const { tab } = parseMetersSearch(params);
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Metros</h1>
         <p className="text-muted-foreground text-sm">
-          La obra en metros: lo tendido, lo que se desvía del listado y las bobinas.
+          La obra en metros: lo tendido y lo que se desvía del listado.
         </p>
       </div>
 
@@ -70,7 +68,6 @@ export default async function MetersPage({ searchParams }: { searchParams: Searc
 
       {tab === "avance" ? <ProgressTab /> : null}
       {tab === "desviacion" ? <DeviationTab /> : null}
-      {tab === "bobinas" ? <ReelsTab q={q} /> : null}
     </div>
   );
 }
@@ -242,87 +239,6 @@ function DeviationTable({
         </tbody>
       </TableWrap>
     </Card>
-  );
-}
-
-async function ReelsTab({ q }: { q: string }) {
-  const reels = await listReels(q || undefined);
-  return (
-    <PendingListProvider>
-      <ListToolbar
-        action="/meters"
-        label="Buscar bobinas"
-        search={{
-          name: "q",
-          label: "Bobina",
-          value: q,
-          placeholder: "Número de bobina",
-          maxLength: 100,
-        }}
-        keep={{ tab: "bobinas" }}
-        active={q !== ""}
-        count={
-          <>
-            <span className="text-foreground font-medium">{number.format(reels.length)}</span>{" "}
-            {reels.length === 1 ? "bobina" : "bobinas"}
-          </>
-        }
-      />
-      <PendingResults>
-        {reels.length === 0 ? (
-          <p
-            role="status"
-            className="text-muted-foreground rounded-lg border p-6 text-center text-sm"
-          >
-            {q ? "Ninguna bobina coincide con la búsqueda." : "El Excel todavía no trae bobinas."}
-          </p>
-        ) : (
-          <Card flush>
-            <TableWrap>
-              <thead>
-                <tr>
-                  <Th>Bobina</Th>
-                  <Th>Estado</Th>
-                  <Th align="right">Cables</Th>
-                  <Th align="right">Metros gastados</Th>
-                  <Th align="right">Último tendido</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {reels.map((reel) => (
-                  <tr key={reel.reel} className="hover:bg-muted/40 border-t transition-colors">
-                    <Td>
-                      {/* Sus cables, en el buscador: con seleccionar, copiar e imprimir. */}
-                      <Link
-                        href={`/cables?reel=${encodeURIComponent(reel.reel)}`}
-                        className={`${INLINE_LINK} font-mono font-medium`}
-                      >
-                        {reel.reel}
-                      </Link>
-                    </Td>
-                    <Td>{reel.status ?? "—"}</Td>
-                    <Td align="right">{number.format(reel.cables)}</Td>
-                    <Td align="right">
-                      {distanceText(reel.metres)}
-                      {reel.withoutMetres > 0 ? (
-                        <span className="text-muted-foreground block text-xs">
-                          {reel.withoutMetres} sin metros
-                        </span>
-                      ) : null}
-                    </Td>
-                    <Td align="right">
-                      {reel.lastLaidOn
-                        ? formatExcelDay(reel.lastLaidOn.toISOString().slice(0, 10))
-                        : "—"}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </TableWrap>
-          </Card>
-        )}
-      </PendingResults>
-    </PendingListProvider>
   );
 }
 
