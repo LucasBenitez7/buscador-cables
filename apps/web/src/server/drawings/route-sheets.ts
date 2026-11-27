@@ -7,7 +7,7 @@ import {
   type DrawingMark,
   type InstallationStatus,
 } from "@cables/shared";
-import { hasDrawingImage } from "./store";
+import { hasDrawingImage, redMarksOf } from "./store";
 
 /** A tray of the route on a sheet: its step number and how far the cable got there. */
 export type RouteSheetMark = DrawingMark & {
@@ -29,6 +29,8 @@ export type RouteSheet = {
   trays: number;
   /** Whether the tray where the loose end waits is on this sheet. */
   hasLooseEnd: boolean;
+  /** The same sheet with the red marks of quality, when it has been drawn (fase 19). */
+  redMarksKey?: string | null;
 };
 
 type Route = readonly { trayCode: string | null }[];
@@ -163,7 +165,7 @@ export async function getRouteSheets(route: Route, state: RouteState): Promise<R
   for (const key of new Set(rows.map((row) => row.drawingSheet!.imageKey))) {
     if (await hasDrawingImage(key)) drawn.add(key);
   }
-  return buildRouteSheets(
+  const sheets = buildRouteSheets(
     rows
       .filter((row) => drawn.has(row.drawingSheet!.imageKey))
       .map((row) => {
@@ -172,5 +174,8 @@ export async function getRouteSheets(route: Route, state: RouteState): Promise<R
       }),
     route,
     state,
+  );
+  return Promise.all(
+    sheets.map(async (sheet) => ({ ...sheet, redMarksKey: await redMarksOf(sheet.key) })),
   );
 }

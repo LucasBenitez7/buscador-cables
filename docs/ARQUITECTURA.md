@@ -435,6 +435,22 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
 - Páginas `/reels` y `/reels/[id]`; la ficha del cable enlaza sus bobinas
   (`reelLinksOfCable`).
 
+### Dónde está cada equipo (fase 19)
+
+- **Sala**: `getEquipment` junta las ubicaciones de los extremos de sus cables que acaban en él.
+- **Plano**: `drawnTags` (`packages/data/src/parse/drawing-marks.ts`) lee los códigos de planta
+  de cada hoja con su posición; `buildEquipment` (`extract/equipment.ts`) los cruza con los
+  equipos de los listados (exacto, o el instrumento más largo que empieza el código) y deja
+  `equipment.json`. `data:load` lo sustituye entero en `equipment_drawing`, enlazado a
+  `drawing_sheet`.
+- **Red marks** (`render/render-red-marks.ts`): un PDF por plano en
+  `private-data/source/redmarks/`. `alignPage` busca giro, escala y desplazamiento (en grueso y
+  luego en fino) con la proporción de líneas del escaneo que caen sobre las de la hoja; exige
+  `MIN_FIT` y ganar a las hojas vecinas por `MIN_MARGIN`. Las teselas van a `<clave>_redmarks`
+  con el tamaño de la hoja; `renderSheets` no las borra (`isRedMarksKey`) y `data:upload` las
+  sube como cualquier hoja. La web sabe si existen por el manifiesto (`redMarksOf`), sin tocar
+  la base, y `DrawingViewer` enseña el selector cuando recibe `redMarksKey`.
+
 ## Marca, cargas y avisos
 
 - **Logo** (una lupa cuyo mango es un cable con su conector): `apps/web/public/brand/logo.svg`

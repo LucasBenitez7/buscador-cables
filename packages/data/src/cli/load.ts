@@ -43,6 +43,8 @@ async function main() {
   const [cables, trays] = await Promise.all([read("cables.json"), read("trays.json")]);
   // Extracciones anteriores a las hojas de plano no tienen sheets.json: se cargan sin ellas.
   const sheets = await read("sheets.json").catch(() => undefined);
+  // Y las anteriores a la fase 19, sin equipment.json: los equipos en los planos no se tocan.
+  const equipment = await read("equipment.json").catch(() => undefined);
 
   const db = createPrismaClient(url);
   try {
@@ -82,7 +84,7 @@ async function main() {
     const started = Date.now();
     const summary = await loadProjectData(
       db,
-      { cables, trays, sheets },
+      { cables, trays, sheets, equipment },
       {
         userId: user.id,
         dryRun,
@@ -95,6 +97,9 @@ async function main() {
       `Carga ${dryRun ? "de prueba " : ""}terminada en ${Math.round((Date.now() - started) / 1000)} s.\n` +
         `  Ubicaciones nuevas: ${summary.locations.created}. Tipos nuevos: ${summary.cableTypes.created}.\n` +
         `  Bandejas: ${t.created} nuevas, ${t.updated} actualizadas, ${t.unchanged} sin cambios.\n` +
+        (summary.equipment
+          ? `  Equipos en los planos: ${summary.equipment.equipment}, en ${summary.equipment.sheets} hojas.\n`
+          : "") +
         `  Cables: ${c.created} nuevos, ${c.updated} actualizados, ${c.unchanged} sin cambios, ${c.skipped} omitidos.`,
     );
     if (summary.missingFromLists.length > 0) {

@@ -31,7 +31,15 @@ type Props = {
   label: string;
   /** What is shown, for the texts: a drawing ("plano") or the page of a list ("hoja"). */
   noun?: "plano" | "hoja";
+  /**
+   * The same sheet with the red marks of quality (fase 19), when there is one: a switch above
+   * the viewer shows it instead of the sheet, with the same marks.
+   */
+  redMarksKey?: string | null;
 };
+
+const LAYER =
+  "flex flex-1 items-center justify-center rounded-md px-3 py-1 text-sm outline-none transition-colors focus-visible:ring-ring/50 focus-visible:ring-3";
 
 type OpenSeadragonModule = typeof OpenSeadragon;
 
@@ -128,7 +136,54 @@ const FAR_WIDTH = 2200;
  * fingers), opened centred on the first mark. The images come from `/api/drawings`, which only
  * answers signed-in users.
  */
-export function DrawingViewer({ imageKey, width, height, marks, label, noun = "plano" }: Props) {
+export function DrawingViewer({ redMarksKey, ...props }: Props) {
+  const [layer, setLayer] = useState<"sheet" | "redmarks">("sheet");
+  if (!redMarksKey) return <SheetViewer {...props} />;
+  const layers = [
+    { id: "sheet", label: "Plano" },
+    { id: "redmarks", label: "Con red marks" },
+  ] as const;
+  return (
+    <div className="space-y-2">
+      <div
+        role="group"
+        aria-label="Versión del plano"
+        className="bg-muted/60 flex gap-1 rounded-lg border p-0.5 md:max-w-sm"
+      >
+        {layers.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            aria-pressed={layer === item.id}
+            onClick={() => setLayer(item.id)}
+            className={
+              layer === item.id
+                ? `${LAYER} bg-primary text-primary-foreground font-semibold shadow-sm`
+                : `${LAYER} text-foreground hover:bg-muted font-medium`
+            }
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <SheetViewer
+        key={layer}
+        {...props}
+        imageKey={layer === "redmarks" ? redMarksKey : props.imageKey}
+        label={layer === "redmarks" ? `${props.label}, con red marks` : props.label}
+      />
+    </div>
+  );
+}
+
+function SheetViewer({
+  imageKey,
+  width,
+  height,
+  marks,
+  label,
+  noun = "plano",
+}: Omit<Props, "redMarksKey">) {
   const frame = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const viewer = useRef<Viewer | null>(null);

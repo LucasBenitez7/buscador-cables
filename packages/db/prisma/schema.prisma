@@ -542,7 +542,7 @@ model TrayDrawing {
 /// Hoja de los planos de recorrido. Su imagen son teselas (`<imageKey>.dzi`) que dibuja
 /// `pnpm data:render` en el almacén de planos, fuera de git.
 model DrawingSheet {
-  id          String        @id @default(cuid())
+  id          String             @id @default(cuid())
   drawing     String
   sheet       String
   title       String?
@@ -551,14 +551,37 @@ model DrawingSheet {
   /// Tamaño de la hoja en puntos: da la proporción para colocar las marcas.
   width       Int
   height      Int
-  imageKey    String        @unique
+  imageKey    String             @unique
   /// Cambia cuando cambia el texto de la hoja (otra revisión).
   fingerprint String
-  updatedAt   DateTime      @updatedAt
+  updatedAt   DateTime           @updatedAt
   trays       TrayDrawing[]
+  equipment   EquipmentDrawing[]
 
   @@unique([drawing, sheet])
   @@map("drawing_sheet")
+}
+
+/// Dónde está dibujado un equipo (fase 19): las hojas del plano de recorridos en las que está
+/// escrito su código. Lo escribe solo `pnpm data:load`, entero cada vez.
+model EquipmentDrawing {
+  id           String        @id @default(cuid())
+  /// El equipo como lo escriben los listados en la punta de sus cables.
+  equipment    String
+  drawing      String
+  sheet        String
+  title        String?
+  sourcePage   Int?
+  /// Lo que escribe la hoja: el equipo, o su instrumento sin la pieza («…CF001A1»).
+  drawnAs      String
+  /// Dónde está su código en la hoja: [{ x, y, w, h, kind: "label" }], en fracción de la hoja.
+  marks        Json          @default("[]")
+  sheetId      String?
+  drawingSheet DrawingSheet? @relation(fields: [sheetId], references: [id], onDelete: SetNull)
+
+  @@unique([equipment, drawing, sheet])
+  @@index([sheetId])
+  @@map("equipment_drawing")
 }
 
 /// Tramo del recorrido en los listados de instrumentación.

@@ -61,3 +61,14 @@ export function cableSheetKey(code: string): string {
 
 /** Whether a manifest key is a cable page (one image) and not a drawing sheet (tiles). */
 export const isCableSheetKey = (key: string) => key.startsWith(CABLE_SHEET_PREFIX);
+
+/**
+ * A sheet with the red marks of the quality checks drawn on it (fase 19): the tiles of a
+ * scanned copy of the sheet, aligned with the sheet so that the same marks fall in place. It
+ * lives next to the sheet as `<key>_redmarks`.
+ */
+export const RED_MARKS_SUFFIX = "_redmarks";
+
+export const redMarksKey = (sheetKey: string) => `${sheetKey}${RED_MARKS_SUFFIX}`;
+
+export const isRedMarksKey = (key: string) => key.endsWith(RED_MARKS_SUFFIX);

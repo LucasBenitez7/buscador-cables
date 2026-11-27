@@ -255,6 +255,17 @@ Si la cabecera de las fichas no trae el código del listado (una copia de trabaj
 
 Las marcas se recalculan del texto del PDF: no hay que colocar nada a mano.
 
+### Equipos y red marks (fase 19)
+
+- Los códigos de planta escritos en las hojas («99CJU17», «99EKH21GH010») se cruzan con los
+  equipos que nombran los listados en las puntas de sus cables. A 27/11/2026, 1.208 de 2.207
+  (1.033 por su código y 175 por el de su instrumento, sin la pieza «-B01»).
+- Las red marks de calidad: un PDF escaneado por plano en `private-data/source/redmarks/`,
+  con el nombre empezando por el número del plano («…-DRW-0001 red marks.pdf») y las páginas en
+  el orden de las hojas. `pnpm data:render` (o `--only redmarks`) coloca cada página sobre su
+  hoja y la dibuja; dice cuánto encaja cada una y cuáles salta. Tarda unos minutos por PDF.
+- Para actualizarlas: sustituir el PDF, `pnpm data:render --only redmarks` y `pnpm data:upload`.
+
 ## Conexionado (fase 11)
 
 La tabla `INTERCONNECTION` de cada ficha da, por hilo, el regletero o bloque y la borna o

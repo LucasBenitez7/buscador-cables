@@ -5,7 +5,14 @@
  */
 import { parseTrayCode, parseTraySize } from "@cables/shared";
 import { findLabel } from "../pdf/layout";
-import { sectionFlags, trayLabels, type SectionFlag, type TrayLabel } from "./drawing-marks";
+import {
+  drawnTags,
+  sectionFlags,
+  trayLabels,
+  type DrawnTag,
+  type SectionFlag,
+  type TrayLabel,
+} from "./drawing-marks";
 import type { PdfPage, TextRun } from "../pdf/read-pdf";
 
 export type RawDrawingTray = { code: string; size: string | null };
@@ -22,6 +29,8 @@ export type RawDrawingSheet = {
   height: number;
   labels: TrayLabel[];
   flags: SectionFlag[];
+  /** Plant codes written on it (equipment, panels): where each equipment is, fase 19. */
+  tags: DrawnTag[];
   /**
    * Changes when the text of the sheet changes, title block included (a new revision adds a
    * row): `data:render` only draws again the sheets whose fingerprint changed.
@@ -130,6 +139,7 @@ export function parseDrawingSheet(page: PdfPage): RawDrawingSheet {
     height: Math.round(page.height),
     labels: trayLabels(page),
     flags: sectionFlags(page),
+    tags: drawnTags(page),
     fingerprint: page.fingerprint,
   };
 }

@@ -8,6 +8,8 @@ datos reales no pueden aparecer en el código, en los tests, en la documentació
 mensajes de commit. Tampoco el nombre del cliente.
 
 - `source/`: solo los PDFs vigentes que leen los comandos (listados y plano de recorridos).
+  En `source/redmarks/`, los planos escaneados con las red marks de calidad, uno por plano y
+  con su número al principio del nombre.
   `pnpm data:extract` lee todos los PDF de aquí: no dejes versiones viejas ni otros PDF.
 - `extracted/`: lo que deja la extracción (datos normalizados e informe).
 - `drawings/`: las teselas de los planos y las hojas de cada cable (`pnpm data:render`).

@@ -124,6 +124,24 @@ export const projectTraySchema = z.object({
   ),
 });
 
+/**
+ * Where an equipment is drawn (fase 19): the sheets where its code is written, with what the
+ * sheet writes («drawnAs»: the tag, or the instrument without its part) and where.
+ */
+export const projectEquipmentSchema = z.object({
+  tag: text(120),
+  drawings: z.array(
+    z.object({
+      drawing: text(80),
+      sheet: text(10),
+      title: optionalText(300),
+      sourcePage: z.number().int().positive(),
+      drawnAs: text(120),
+      marks: z.array(trayMarkSchema),
+    }),
+  ),
+});
+
 /** A sheet of the routing drawings: what `data:render` draws and `data:load` stores. */
 export const projectSheetSchema = z.object({
   drawing: text(80),
@@ -143,6 +161,7 @@ export type ProjectWire = z.infer<typeof projectWireSchema>;
 export type ProjectJumper = z.infer<typeof projectJumperSchema>;
 export type ProjectTray = z.infer<typeof projectTraySchema>;
 export type ProjectSheet = z.infer<typeof projectSheetSchema>;
+export type ProjectEquipment = z.infer<typeof projectEquipmentSchema>;
 export type TrayMark = z.infer<typeof trayMarkSchema>;
 
 export type IssueSeverity = "error" | "warning";
@@ -160,6 +179,7 @@ export type ExtractionResult = {
   cables: ProjectCable[];
   trays: ProjectTray[];
   sheets: ProjectSheet[];
+  equipment: ProjectEquipment[];
   issues: ExtractionIssue[];
   stats: {
     files: { name: string; pages: number; cableSheets: number; drawingSheets: number }[];
@@ -170,5 +190,7 @@ export type ExtractionResult = {
     trayMarks: { label: number; flag: number; tableOnly: number };
     /** Cables with a wiring table, and the wires and jumpers read. */
     wiring: { cables: number; wires: number; jumpers: number };
+    /** Equipment of the lists found on the plans: by their tag, or by their instrument. */
+    equipment: { total: number; exact: number; related: number };
   };
 };

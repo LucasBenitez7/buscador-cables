@@ -151,6 +151,10 @@ agrupados por regletero, con sus bornas, el equipo del otro lado y si **esa punt
 conectada. «Solo pendientes de conectar» deja los que faltan. Es la forma de trabajar armario
 a armario. El código de un equipo, en cualquier ficha, lleva a su página.
 
+Arriba, **Dónde está**: el plano con el equipo marcado (si aparece en varias hojas, se elige
+arriba; si el plano solo escribe su instrumento, lo dice) y la sala donde acaban sus cables,
+con enlace a la ubicación. Si no aparece en ningún plano, lo dice.
+
 ## Registrar trabajo en un cable
 
 En la ficha, el botón **Registrar acción** está siempre abajo, a mano con el pulgar. Al pulsarlo
@@ -191,6 +195,9 @@ En el plano:
   los planos y en la hoja original de un cable). Se sale con «Salir de pantalla completa» o con
   Esc.
 - «Ir a la marca» y «Siguiente» saltan entre las marcas.
+- **Plano / Con red marks**: en las hojas que calidad ha revisado, cambia al plano escaneado con
+  sus marcas en rojo (la posición real de bandejas y equipos ya comprobados), con las mismas
+  marcas de la web encima.
 - Con el plano seleccionado, también con el teclado: flechas para moverlo, «+» y «−» para
   acercar o alejar y 0 para verlo entero.
 

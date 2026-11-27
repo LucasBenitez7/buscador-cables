@@ -16,7 +16,9 @@ const wire = (position: number, originPoint: string) => ({
 });
 
 beforeEach(async () => {
-  await prisma.$executeRawUnsafe('TRUNCATE "cable_event", "cable", "user" CASCADE');
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE "cable_event", "cable", "user", "equipment_drawing", "drawing_sheet", "location" CASCADE',
+  );
   await prisma.cable.create({
     data: {
       code: "99A",
@@ -96,5 +98,61 @@ describe("getEquipment", () => {
     expect(await getEquipment("99NADA")).toBeNull();
     expect(await getEquipment("X".repeat(121))).toBeNull();
     expect(await getEquipment("  ")).toBeNull();
+  });
+});
+
+describe("getEquipment: where it is (fase 19)", () => {
+  it("gives the rooms its cables end in, the most used first", async () => {
+    const plant = await prisma.location.create({
+      data: { code: "99", name: "Planta 99", type: "PLANT", path: "/99" },
+    });
+    const room = await prisma.location.create({
+      data: {
+        code: "99UXA16RA001",
+        name: "99UXA16RA001",
+        type: "AREA",
+        parentId: plant.id,
+        path: "/99/99UXA16RA001",
+      },
+    });
+    await prisma.cable.updateMany({ where: { code: "99A" }, data: { originId: room.id } });
+    await prisma.cable.updateMany({
+      where: { code: "99B" },
+      data: { destinationId: room.id, originId: plant.id },
+    });
+
+    const equipment = await getEquipment("99bma10");
+
+    expect(equipment?.locations).toEqual([
+      { id: room.id, name: "Planta 99 › 99UXA16RA001", cables: 2 },
+    ]);
+    // El otro extremo de 99B está en la planta, pero ese es el de 99CXJ11.
+    expect((await getEquipment("99CXJ11"))?.locations).toEqual([
+      { id: plant.id, name: "Planta 99", cables: 1 },
+    ]);
+  });
+
+  it("gives the sheets where it is drawn, without an image until it is rendered", async () => {
+    await prisma.equipmentDrawing.create({
+      data: {
+        equipment: "99BMA10",
+        drawing: "EJ-ICO-DRW-0001",
+        sheet: "52",
+        drawnAs: "99BMA10",
+        marks: [{ x: 0.1, y: 0.2, w: 0.01, h: 0.005, kind: "label" }],
+      },
+    });
+
+    expect((await getEquipment("99BMA10"))?.drawings).toEqual([
+      {
+        drawing: "EJ-ICO-DRW-0001",
+        sheet: "52",
+        title: null,
+        drawnAs: "99BMA10",
+        marks: [{ x: 0.1, y: 0.2, w: 0.01, h: 0.005, kind: "label" }],
+        image: null,
+      },
+    ]);
+    expect((await getEquipment("99CXJ11"))?.drawings).toEqual([]);
   });
 });

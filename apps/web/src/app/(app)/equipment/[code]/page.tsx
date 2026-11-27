@@ -23,7 +23,8 @@ import { SaveRecordButton } from "@/features/saved/components/save-dialog";
 import { SaveChosenButton } from "@/features/saved/components/save-dialog";
 import { TEST_VARIANT } from "@/features/cables/components/cable-status-badges";
 import { EquipmentLink } from "@/features/cables/components/equipment-link";
-import { INLINE_LINK, equipmentCablesHref } from "@/lib/links";
+import { EquipmentDrawings } from "@/features/drawings/components/equipment-drawings";
+import { INLINE_LINK, equipmentCablesHref, locationHref } from "@/lib/links";
 import { filterEquipmentGroups } from "@/server/equipment/group";
 import { getEquipment } from "@/server/equipment/service";
 import { requireUser, whenSignedIn } from "@/server/session";
@@ -132,6 +133,34 @@ export default async function EquipmentPage({
           · {totals.tested} timbrados
         </p>
       </header>
+
+      {/* Fase 19: dónde está, por las salas en las que acaban sus cables y por el plano. */}
+      <Section title="Dónde está" id="donde">
+        {equipment.drawings.length > 0 ? (
+          <EquipmentDrawings tag={equipment.equipment} sheets={equipment.drawings} />
+        ) : (
+          <p className="text-muted-foreground text-sm">No aparece en los planos cargados.</p>
+        )}
+        {equipment.locations.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Sus cables no dicen en qué sala está.</p>
+        ) : (
+          <ul className="bg-card divide-y rounded-lg border">
+            {equipment.locations.map((location) => (
+              <li
+                key={location.id}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-3 py-2 text-sm"
+              >
+                <Link href={locationHref(location.id)} className={INLINE_LINK}>
+                  {location.name}
+                </Link>
+                <span className="text-muted-foreground tabular-nums">
+                  {location.cables} {location.cables === 1 ? "cable" : "cables"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
       <PendingListProvider>
         <FilterForm

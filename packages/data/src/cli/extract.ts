@@ -47,6 +47,7 @@ async function main() {
     write("cables.json", result.cables),
     write("trays.json", result.trays),
     write("sheets.json", result.sheets),
+    write("equipment.json", result.equipment),
     write("report.json", { stats: result.stats, issues: result.issues }),
     writeFile(path.join(out, "report.md"), formatReport(result), "utf8"),
   ]);
