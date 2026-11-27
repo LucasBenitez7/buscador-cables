@@ -37,9 +37,10 @@ hizo qué y cuándo.
 | 16   | Guardados y roles             | v1.6.0  | Guardados con carpetas, roles uno al lado del otro    |
 | 17   | Repaso de la interfaz, metros | v1.7.0  | Metros y bobinas, una Actividad, fichas y menú        |
 | 18   | Bobinas                       | v1.10.0 | Buscador de bobinas: metros, tiradas y pendientes     |
+| 19   | Dónde está cada equipo        | v1.11.0 | Sala y plano del equipo, planos con red marks         |
 
-**Total: 20 fases (0 a 18, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
-13 a la 15, el 2026-11-18; la 16 y la 17, el 2026-11-19; la 18, el 2026-11-27).** El 2026-11-13 la fase 6 se
+**Total: 21 fases (0 a 19, más la 4.5 añadida el 2026-11-11; la 11 y la 12, el 2026-11-16; de la
+13 a la 15, el 2026-11-18; la 16 y la 17, el 2026-11-19; la 18 y la 19, el 2026-11-27).** El 2026-11-13 la fase 6 se
 cerró con el diseño y los E2E; la carga de los datos reales del proyecto pasó a ser la fase 7 y
 la importación masiva y el panel, la 8. Al terminar la fase 10 se publica la **v1.0.0**.
 
@@ -1125,6 +1126,27 @@ Decisiones:
 - [x] Tablas `reel` y `reel_pull`, escritas al aplicar el Excel.
 - [x] «Bobinas»: buscador, filtros, ficha con metros, tiradas y pendientes; enlaces desde la
       ficha del cable.
+- [x] Tests unitarios, de integración y E2E.
+
+## Fase 19 — Dónde está cada equipo (v1.11.0)
+
+Añadida el 2026-11-27. Rama `feat/f19-equipment-location`. Cada cambio visual se enseñó antes.
+
+Decisiones:
+
+- Con lo que ya hay, sin esperar a otros Excel de equipos: la sala sale de los extremos de sus
+  cables y la posición, de su código escrito en las hojas del plano de recorridos.
+- Si una hoja no tiene el código entero, vale el de su instrumento («…CF001A1» por
+  «…CF001A1-B01»); nunca un sistema suelto. La ficha lo dice («En el plano como …»).
+- Las red marks de calidad son un PDF escaneado por plano, con sus páginas en el orden de las
+  hojas. Cada página se gira, escala y mueve hasta encajar con su hoja y se dibuja del mismo
+  tamaño: las marcas de bandejas y equipos caen en su sitio. Si no encaja, o encaja casi igual
+  con la hoja de al lado, no se dibuja y se avisa.
+- Los recuadros y líneas rojas son dibujo: la web no lee qué equipo marcan.
+
+- [x] Ficha del equipo: «Dónde está», con su sala y el plano con el equipo marcado.
+- [x] Extracción y carga de los equipos en los planos (`equipment.json`, `equipment_drawing`).
+- [x] Hojas con red marks (`pnpm data:render`) y selector «Plano / Con red marks» en el visor.
 - [x] Tests unitarios, de integración y E2E.
 
 ---
