@@ -17,8 +17,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // Solo lo nuevo desde que abrió «Pendientes de revisar», y sin sumarlo al botón del menú.
   const toReview = canReview ? await countNewDiscrepancies(user.id) : 0;
 
-  // Cada uno ve solo las secciones que su rol permite. Fase 17: en la fila, lo de cada día
-  // (con «Excel del día» para quien lo sube); en «Gestión», lo que se mira de vez en cuando.
+  // Cada uno ve solo las secciones que su rol permite. Fase 17: en la fila, lo de cada día; en
+  // «Gestión», lo que se mira de vez en cuando (desde la fase 19, también «Excel»).
   const management: NavItem[] = [
     ...(canReview
       ? [
@@ -67,9 +67,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         ]
       : []),
   ];
-  // Quien tiene «Gestión» encuentra ahí, primero, «Metros» y «Actividad». Quien no la tiene
-  // (técnico, consulta) ve «Actividad» en la fila y llega a «Metros» desde el inicio y la ficha.
+  // Quien tiene «Gestión» encuentra ahí, primero, «Metros», «Excel» y «Actividad»; quien no la
+  // tiene (técnico, consulta) ve «Excel» (si lo sube) y «Actividad» en la fila, y llega a «Metros»
+  // desde el inicio. Así la fila cabe junto al nombre (revisión de la fase 19).
   const withManagement = management.length > 0;
+  const excel = hasPermission(user, "import:run")
+    ? [{ href: "/import", label: "Excel", match: "prefix" } as const]
+    : [];
   const items: NavItem[] = [
     { href: "/", label: "Inicio", match: "exact" },
     { href: "/cables", label: "Cables", match: "prefix" },
@@ -78,16 +82,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     { href: "/equipment", label: "Equipos", match: "prefix" },
     { href: "/locations", label: "Ubicaciones", match: "prefix" },
     { href: "/saved", label: "Guardados", match: "prefix" },
-    ...(hasPermission(user, "import:run")
-      ? [{ href: "/import", label: "Excel del día", match: "prefix" } as const]
-      : []),
     ...(withManagement
       ? [
           { href: "/meters", label: "Metros", match: "prefix", place: "manage" } as const,
+          ...excel.map((item) => ({ ...item, place: "manage" }) as const),
           { href: "/activity", label: "Actividad", match: "prefix", place: "manage" } as const,
           ...management,
         ]
-      : [{ href: "/activity", label: "Actividad", match: "prefix" } as const]),
+      : [...excel, { href: "/activity", label: "Actividad", match: "prefix" } as const]),
     // Lo de cada uno, en el menú con su nombre (en el móvil, junto a su nombre).
     { href: "/account", label: "Mi cuenta", match: "prefix", place: "user" },
   ];

@@ -15,7 +15,7 @@ test.describe("supervisora", () => {
 
   test("sube el Excel del día, revisa la vista previa y lo aplica", async ({ page }) => {
     await page.goto("/import");
-    await expect(page.getByRole("heading", { name: "Excel del día", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Excel", level: 1 })).toBeVisible();
 
     await page.getByLabel("Archivo").setInputFiles(EXCEL);
     await expect(page.getByText("3 cables")).toBeVisible();

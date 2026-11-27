@@ -101,7 +101,7 @@ describe("AppHeader", () => {
           { href: "/", label: "Inicio", match: "exact" },
           { href: "/meters", label: "Metros", match: "prefix", place: "manage" },
           { href: "/activity", label: "Actividad", match: "prefix", place: "manage" },
-          { href: "/import", label: "Excel del día", match: "prefix" },
+          { href: "/import", label: "Excel", match: "prefix" },
         ]}
         user={{ name: "Ada", role: "Supervisor" }}
       />,
@@ -113,7 +113,7 @@ describe("AppHeader", () => {
       within(menu)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Inicio", "Excel del día", "Metros", "Actividad"]);
+    ).toEqual(["Inicio", "Excel", "Metros", "Actividad"]);
   });
 
   it("shows no count when nothing waits", () => {

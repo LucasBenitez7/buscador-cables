@@ -29,7 +29,7 @@ type Failure = { ok: false; message: string };
 
 function fail(error: unknown): Failure {
   if (error instanceof ExcelImportError) return { ok: false, message: error.message };
-  logError("import", "Error con el Excel del día", error);
+  logError("import", "Error con el Excel", error);
   return { ok: false, message: "No se pudo completar la operación. Inténtalo de nuevo." };
 }
 

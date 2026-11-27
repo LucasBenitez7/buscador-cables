@@ -57,7 +57,7 @@ export default async function ReelsPage({ searchParams }: { searchParams: Search
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Bobinas</h1>
         <p className="text-muted-foreground text-sm">
-          Las bobinas de los Excel del día: metros recibidos, usados y restantes, y sus tiradas.
+          Las bobinas de los Excel: metros recibidos, usados y restantes, y sus tiradas.
         </p>
       </div>
 
@@ -125,7 +125,7 @@ export default async function ReelsPage({ searchParams }: { searchParams: Search
             >
               {active
                 ? "Ninguna bobina coincide con la búsqueda."
-                : "Todavía no hay bobinas: llegan con los Excel del día."}
+                : "Todavía no hay bobinas: llegan con los Excel."}
             </p>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

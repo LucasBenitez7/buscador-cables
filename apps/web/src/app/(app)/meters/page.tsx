@@ -150,7 +150,7 @@ async function DeviationTab() {
         <p className="text-muted-foreground text-xs">
           Hasta ±{DEVIATION_OK_PERCENT} % está dentro de lo previsto; más de ±
           {DEVIATION_REVIEW_PERCENT} %, conviene revisar la medida o el recorrido. Los metros reales
-          vienen de los Excel del día: el eléctrico y la hoja de tendidos del de instrumentación.
+          vienen de los Excel: el eléctrico y la hoja de tendidos del de instrumentación.
         </p>
       </Card>
 

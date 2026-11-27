@@ -272,7 +272,7 @@ export default async function CablePage({
                   <Item label="Tensión nominal">{cable.voltageRating}</Item>
                   <Item label="Composición">{cable.composition}</Item>
                 </DataList>
-                {/* Lo que trae el Excel del día. */}
+                {/* Lo que trae el Excel. */}
                 <DataList title="Tendido">
                   <Item label="Fecha">
                     {cable.excel.laidOn
