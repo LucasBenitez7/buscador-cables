@@ -162,6 +162,8 @@ export function powerSheet(spec: PowerSheetSpec): PdfPageSpec {
 
 export type InstrumentSheetSpec = {
   code: string;
+  /** Header text: the list code, or the page count of a working copy ("Code: 40 of 131"). */
+  header?: string;
   footer?: string;
   altCode?: string;
   revision?: string;
@@ -216,7 +218,7 @@ export function instrumentSheet(spec: InstrumentSheetSpec): PdfPageSpec {
     width: 595,
     height: 842,
     texts: [
-      ...t("Code: EJ-ICO-LST-0100", 504.5, 22.6),
+      ...t(spec.header ?? "Code: EJ-ICO-LST-0100", 504.5, 22.6),
       ...t("CABLE ID", 19.8, 69.6),
       ...t(":", 48, 69.6),
       ...t(spec.code, 90.9, 69.5),

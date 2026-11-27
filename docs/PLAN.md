@@ -1091,6 +1091,13 @@ Decidido no cambiar (2026-11-21): «Check» y «Error» se siguen ignorando, aun
 metros. Los cables que solo están en el Excel o solo en la web, y los metros reales del doble de
 lo previsto, son datos del Excel o de los listados.
 
+## Binder IC nuevo (2026-11-27, `fix/ic-binder-header`)
+
+- [x] La copia de trabajo del listado de instrumentación pone «Code: 40 of 131» en la cabecera:
+      sin código de listado, el documento de la ficha es el nombre del PDF (también arregla 45
+      fichas eléctricas que tenían un número de página como documento).
+- [ ] Cargarlo en producción (`data:render` → `data:upload` → `data:load`).
+
 ---
 
 ## Entornos

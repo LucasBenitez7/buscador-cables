@@ -247,8 +247,11 @@ y se borran las de cables que ya no están. `--only drawings|cables` dibuja solo
 
 ### Si cambian los planos
 
-1. Sustituye el PDF en `private-data/source/`.
+1. Sustituye el PDF en `private-data/source/` y lleva el anterior a `private-data/archivo/`.
 2. `pnpm data:extract` → `pnpm data:render` → `pnpm data:load`.
+
+Si la cabecera de las fichas no trae el código del listado (una copia de trabajo pone
+«Code: 40 of 131»), el documento de la ficha es el nombre del PDF.
 
 Las marcas se recalculan del texto del PDF: no hay que colocar nada a mano.
 
