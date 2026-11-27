@@ -52,6 +52,18 @@ describe("cable sheets with missing blocks", () => {
     });
   });
 
+  it("takes the file as the document when the header prints a page count instead", async () => {
+    const raw = parseCableSheet(
+      await pageOf(instrumentSheet({ code: "99XAB10T1-W8001", header: "Code: 40 of 131" })),
+    )!;
+
+    expect(raw.document).toBeNull();
+    expect(normalizeCableSheet(raw, "Lista IC.pdf", "f1").cable).toMatchObject({
+      sourceDocument: "Lista IC",
+      sourceFile: "Lista IC.pdf",
+    });
+  });
+
   it("drops a sheet without a code", async () => {
     const raw = parseCableSheet(await pageOf(instrumentSheet({ code: "99XAB10T1-W8001" })))!;
 

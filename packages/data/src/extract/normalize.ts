@@ -237,7 +237,8 @@ export function normalizeCableSheet(
       composition: clean(raw.composition),
       diagram: cell(raw.diagram),
       notes: clean(raw.observations),
-      sourceDocument: clean(raw.document),
+      // Without a list code in the header, the file still says where the sheet came from.
+      sourceDocument: clean(raw.document) ?? sourceFile.replace(/\.pdf$/i, ""),
       sourceFile,
       sourcePage: raw.page,
       sourceFingerprint,
