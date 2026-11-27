@@ -58,7 +58,7 @@ export function AppHeader({ items, user }: Props) {
             <BrandLogo className="size-7" />
             Buscador de Cables
           </Link>
-          <nav aria-label="Principal" className="hidden items-center gap-1 xl:flex">
+          <nav aria-label="Principal" className="hidden items-center gap-1.5 xl:flex">
             {main.map((item) => (
               <NavLink key={item.href} item={item} active={isActive(item, pathname)} />
             ))}

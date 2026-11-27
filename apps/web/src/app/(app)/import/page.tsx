@@ -7,7 +7,7 @@ import { UploadExcelForm } from "@/features/excel-import/components/upload-excel
 import { getExcelOverview, type ExcelKindOverview } from "@/server/excel-import/queries";
 import { requirePermission } from "@/server/session";
 
-export const metadata: Metadata = { title: "Excel del día" };
+export const metadata: Metadata = { title: "Excel" };
 export const dynamic = "force-dynamic";
 
 const number = new Intl.NumberFormat("es-ES");
@@ -18,7 +18,7 @@ export default async function ImportPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Excel del día</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Excel</h1>
       <UploadExcelForm />
       <div className="grid gap-4 md:grid-cols-2">
         {overview.map((item) => (

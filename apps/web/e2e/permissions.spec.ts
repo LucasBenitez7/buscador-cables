@@ -94,16 +94,16 @@ test.describe("administrador", () => {
       "Equipos",
       "Ubicaciones",
       "Guardados",
-      "Excel del día",
     ]);
-    // Fase 17: en la fila, lo de cada día; en «Gestión», primero «Metros» y «Actividad», y
-    // después la administración (con el número de cuentas pendientes, si las hay).
+    // En la fila, lo de cada día; en «Gestión», primero «Metros», «Excel» y «Actividad» (desde la
+    // revisión de la fase 19, para que la fila quepa junto al nombre), y después la administración.
     await nav(page)
       .getByRole("button", { name: /^Gestión/ })
       .click();
     const manage = page.getByRole("menu");
     await expect(manage.getByRole("menuitem")).toHaveText([
       "Metros",
+      "Excel",
       "Actividad",
       /^Pendientes de revisar/,
       "Catálogos",

@@ -32,7 +32,7 @@ export class ExcelImportError extends Error {}
 type Actor = { id: string; role: string; permissions: readonly string[] };
 type Db = Prisma.TransactionClient;
 
-const NO_PERMISSION = "No tienes permiso para subir el Excel del día.";
+const NO_PERMISSION = "No tienes permiso para subir el Excel.";
 const ONLY_ADMIN = "Solo un administrador puede hacer la carga del proyecto.";
 const NOT_FOUND = "Esa vista previa ya no existe.";
 const CONFLICT =
@@ -330,7 +330,7 @@ export async function startExcelPreview(actor: Actor, rawInput: unknown): Promis
       });
       if (daily > 0) {
         throw new ExcelImportError(
-          "Ya se han aplicado Excel del día de este tipo: la carga del proyecto es solo la primera.",
+          "Ya se han aplicado Excel de este tipo: la carga del proyecto es solo la primera.",
         );
       }
     }
