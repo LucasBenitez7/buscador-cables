@@ -126,6 +126,7 @@ describe("formatReport", () => {
       cables: [],
       trays: [],
       sheets: [],
+      equipment: [],
       issues: [
         {
           severity: "error",
@@ -143,6 +144,7 @@ describe("formatReport", () => {
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
         wiring: { cables: 0, wires: 0, jumpers: 0 },
+        equipment: { total: 0, exact: 0, related: 0 },
       },
     });
 
@@ -157,6 +159,7 @@ describe("formatReport", () => {
       cables: [],
       trays: [],
       sheets: [],
+      equipment: [],
       issues: Array.from({ length: 205 }, (_, index) => ({
         severity: "warning" as const,
         file: "lista.pdf",
@@ -171,6 +174,7 @@ describe("formatReport", () => {
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
         wiring: { cables: 0, wires: 0, jumpers: 0 },
+        equipment: { total: 0, exact: 0, related: 0 },
       },
     };
 
@@ -269,6 +273,7 @@ describe("what the extraction leaves out is reported", () => {
       cables: [],
       trays: [],
       sheets: [],
+      equipment: [],
       issues: [],
       stats: {
         files: [{ name: "lista|v2.pdf", pages: 1, cableSheets: 1, drawingSheets: 0 }],
@@ -277,6 +282,7 @@ describe("what the extraction leaves out is reported", () => {
         traysOnlyInRoutes: 0,
         trayMarks: { label: 0, flag: 0, tableOnly: 0 },
         wiring: { cables: 0, wires: 0, jumpers: 0 },
+        equipment: { total: 0, exact: 0, related: 0 },
       },
     });
 

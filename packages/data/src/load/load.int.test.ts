@@ -433,6 +433,60 @@ describe("loadProjectData: drawing sheets", () => {
     });
   });
 
+  // Fase 19: dónde está dibujado cada equipo, entero cada vez y enlazado a su hoja.
+  it("stores the equipment on the plans, replacing the earlier ones", async () => {
+    const equipment = (tag: string, sheetNumber: string) => ({
+      tag,
+      drawings: [
+        {
+          drawing: "EJ-ELE-DRW-0024",
+          sheet: sheetNumber,
+          title: null,
+          sourcePage: Number(sheetNumber),
+          drawnAs: tag,
+          marks: [{ x: 0.1, y: 0.2, w: 0.01, h: 0.005, kind: "label" as const }],
+        },
+      ],
+    });
+    const load = (items: ReturnType<typeof equipment>[]) =>
+      loadProjectData(
+        db,
+        { cables: [], trays: [marked], sheets: [sheet("02")], equipment: items },
+        { userId },
+      );
+
+    expect(
+      (await load([equipment("99CJU17", "02"), equipment("99CJU18", "07")])).equipment,
+    ).toEqual({ equipment: 2, sheets: 2 });
+    expect(
+      await db.equipmentDrawing.findMany({
+        orderBy: { equipment: "asc" },
+        select: {
+          equipment: true,
+          sheet: true,
+          marks: true,
+          drawingSheet: { select: { imageKey: true } },
+        },
+      }),
+    ).toEqual([
+      {
+        equipment: "99CJU17",
+        sheet: "02",
+        marks: [{ x: 0.1, y: 0.2, w: 0.01, h: 0.005, kind: "label" }],
+        drawingSheet: { imageKey: "EJ-ELE-DRW-0024_02" },
+      },
+      // Una hoja que no está cargada: el equipo se guarda igual, sin imagen.
+      { equipment: "99CJU18", sheet: "07", marks: expect.any(Array), drawingSheet: null },
+    ]);
+
+    await load([equipment("99CJU19", "02")]);
+    expect((await db.equipmentDrawing.findMany()).map((row) => row.equipment)).toEqual(["99CJU19"]);
+
+    // Una extracción anterior a la fase 19 no los toca.
+    await loadProjectData(db, { cables: [], trays: [marked], sheets: [sheet("02")] }, { userId });
+    expect(await db.equipmentDrawing.count()).toBe(1);
+  });
+
   it("loads an older extraction without sheets and keeps the stored ones", async () => {
     await loadSheets([sheet("02")]);
 

@@ -35,21 +35,24 @@ const TABLE_LABEL_SPAN = 80;
 
 const round = (value: number) => Math.round(value * 10_000) / 10_000;
 
-/** Every tray code token with its centre (a run may hold a code and its size). */
-function codeTokens(runs: readonly TextRun[]) {
+/**
+ * Every token a function accepts, with its centre (a run may hold a code and its size). The
+ * function gives the code the token is, or null.
+ */
+function tokensOf(runs: readonly TextRun[], accept: (part: string) => string | null) {
   const tokens: { code: string; run: TextRun; cx: number; cy: number; length: number }[] = [];
   for (const run of runs) {
     const parts = run.text.split(" ");
     let offset = 0;
     for (const part of parts) {
-      const parsed = parseTrayCode(part);
-      if (parsed) {
+      const code = accept(part);
+      if (code !== null) {
         // Centre of the token along the run, in proportion to its characters.
         const share = (offset + part.length / 2) / run.text.length - 0.5;
         const length = run.x1 - run.x0;
         const radians = (run.angle * Math.PI) / 180;
         tokens.push({
-          code: parsed.code,
+          code,
           run,
           cx: run.cx + share * length * Math.cos(radians),
           cy: run.cy - share * length * Math.sin(radians),
@@ -60,6 +63,40 @@ function codeTokens(runs: readonly TextRun[]) {
     }
   }
   return tokens;
+}
+
+/** Every tray code token with its centre. */
+const codeTokens = (runs: readonly TextRun[]) =>
+  tokensOf(runs, (part) => parseTrayCode(part)?.code ?? null);
+
+/** Box of a token as fractions of the sheet: a code written upwards is tall and narrow. */
+function boxOf(page: PdfPage, token: ReturnType<typeof tokensOf>[number]) {
+  const upright = Math.abs(Math.sin((token.run.angle * Math.PI) / 180)) > 0.7;
+  const [along, across] = [token.length, token.run.size * 1.2];
+  return {
+    x: round(token.cx / page.width),
+    y: round(token.cy / page.height),
+    w: round((upright ? across : along) / page.width),
+    h: round((upright ? along : across) / page.height),
+  };
+}
+
+/** A code of the plant written on the sheet (equipment, panel, junction box), fase 19. */
+export type DrawnTag = { tag: string; x: number; y: number; w: number; h: number };
+
+/**
+ * KKS-shaped codes of the plant: unit, system and number ("99CJU17"), maybe with the equipment
+ * after it ("99EKH21GH010"). Leading «+» or «=» (installation and function marks) and trailing
+ * punctuation are left out.
+ */
+const PLANT_TAG = /^[+=]?(\d{2}[A-Z]{3}\d{2}[A-Z0-9]*)[,;:.]?$/;
+
+/** The plant codes written on a sheet that are not trays, with where they are. */
+export function drawnTags(page: PdfPage): DrawnTag[] {
+  return tokensOf(page.runs, (part) => {
+    const match = PLANT_TAG.exec(part.toUpperCase());
+    return match && !parseTrayCode(match[1]!) ? match[1]! : null;
+  }).map((token) => ({ tag: token.code, ...boxOf(page, token) }));
 }
 
 /**
@@ -97,19 +134,11 @@ function isInTable(
 
 export function trayLabels(page: PdfPage): TrayLabel[] {
   const tokens = codeTokens(page.runs);
-  return tokens.map((token) => {
-    // Along the text and across it; a code written upwards is tall and narrow.
-    const upright = Math.abs(Math.sin((token.run.angle * Math.PI) / 180)) > 0.7;
-    const [along, across] = [token.length, token.run.size * 1.2];
-    return {
-      code: token.code,
-      x: round(token.cx / page.width),
-      y: round(token.cy / page.height),
-      w: round((upright ? across : along) / page.width),
-      h: round((upright ? along : across) / page.height),
-      inTable: isInTable(token, tokens, page.runs),
-    };
-  });
+  return tokens.map((token) => ({
+    code: token.code,
+    ...boxOf(page, token),
+    inTable: isInTable(token, tokens, page.runs),
+  }));
 }
 
 /**

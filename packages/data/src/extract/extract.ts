@@ -8,6 +8,7 @@ import { parseCableSheet } from "../parse/cable-page";
 import { traySection } from "../parse/drawing-marks";
 import { parseDrawingSheet, type RawDrawingSheet } from "../parse/drawing-page";
 import { readPdfPages } from "../pdf/read-pdf";
+import { buildEquipment } from "./equipment";
 import { compareRevisions, normalizeCableSheet } from "./normalize";
 import {
   projectCableSchema,
@@ -42,6 +43,7 @@ export async function extractProjectData(
     traysOnlyInRoutes: 0,
     trayMarks: { label: 0, flag: 0, tableOnly: 0 },
     wiring: { cables: 0, wires: 0, jumpers: 0 },
+    equipment: { total: 0, exact: 0, related: 0 },
   };
 
   for (const file of files) {
@@ -129,7 +131,9 @@ export async function extractProjectData(
   }
   const sheets = buildSheets(drawingSheets);
   const trays = buildTrays(drawingSheets, cables, issues, stats);
-  return { cables, trays, sheets, issues, stats };
+  const drawnEquipment = buildEquipment(drawingSheets, cables, sheetTitles(drawingSheets));
+  stats.equipment = drawnEquipment.stats;
+  return { cables, trays, sheets, equipment: drawnEquipment.equipment, issues, stats };
 }
 
 /** Sheet titles come from the index page of each drawing. */
