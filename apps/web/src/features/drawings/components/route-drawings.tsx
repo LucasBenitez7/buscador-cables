@@ -37,6 +37,7 @@ export function RouteDrawings({ sheets }: { sheets: RouteSheet[] }) {
         width={sheet.width}
         height={sheet.height}
         marks={sheet.marks}
+        redMarksKey={sheet.redMarksKey}
         label={`Recorrido del cable en el plano ${sheet.drawing}, hoja ${sheet.sheet}`}
       />
       <StatusLegend note="Los números son los tramos del recorrido." items={ROUTE_LEGEND} />

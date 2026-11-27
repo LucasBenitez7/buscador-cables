@@ -10,6 +10,7 @@ import {
   drawingsBucket,
   environmentSchema,
   isCableSheetKey,
+  redMarksKey,
   type DrawingsBucket,
   type DrawingsManifest,
 } from "@cables/shared";
@@ -182,4 +183,10 @@ export async function hasDrawingImage(key: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** The key of the sheet with the red marks of quality (fase 19), when it has been drawn. */
+export async function redMarksOf(imageKey: string): Promise<string | null> {
+  const key = redMarksKey(imageKey);
+  return (await hasDrawingImage(key)) ? key : null;
 }
