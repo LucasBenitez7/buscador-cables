@@ -9,7 +9,7 @@ describe("ReelNotice", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Cables de la bobina B-101 · En obra");
     expect(screen.getByRole("link", { name: "Ver todas las bobinas" })).toHaveAttribute(
       "href",
-      "/meters?tab=bobinas",
+      "/reels",
     );
     expect(screen.getByRole("link", { name: "Quitar filtro" })).toHaveAttribute(
       "href",

@@ -27,7 +27,7 @@ export function ReelNotice({
         {status ? <span className="text-muted-foreground"> · {status}</span> : null}
       </p>
       <p className="flex flex-wrap gap-x-4 gap-y-1">
-        <Link href="/meters?tab=bobinas" className={INLINE_LINK}>
+        <Link href="/reels" className={INLINE_LINK}>
           Ver todas las bobinas
         </Link>
         <Link href={clearHref} className={INLINE_LINK}>

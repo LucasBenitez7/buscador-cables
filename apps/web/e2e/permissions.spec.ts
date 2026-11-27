@@ -90,6 +90,7 @@ test.describe("administrador", () => {
       "Inicio",
       "Cables",
       "Bandejas",
+      "Bobinas",
       "Equipos",
       "Ubicaciones",
       "Guardados",
