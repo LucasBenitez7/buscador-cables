@@ -1,7 +1,6 @@
 import "server-only";
 import { Prisma, prisma } from "@cables/db";
 import { CABLE_LEVELS, CABLE_LEVEL_LABELS, lengthDeviation, type CableLevel } from "@cables/shared";
-import { escapeLike } from "@/server/like";
 
 /**
  * «Metros» (fase 17): the works measured in metres, not only in cables. Every query leaves out
@@ -220,51 +219,6 @@ export async function getMetersDeviation(): Promise<MetersDeviation> {
       };
     }),
   };
-}
-
-export type ReelRow = {
-  reel: string;
-  /** The states the Excel gives it ("En obra"), when it brings any. */
-  status: string | null;
-  cables: number;
-  /** Real metres of its cables; those without them are counted apart. */
-  metres: number;
-  withoutMetres: number;
-  /** The last day one of its cables was laid. */
-  lastLaidOn: Date | null;
-};
-
-/** Every reel the Excel names, with its cables and the metres taken from it. */
-export async function listReels(q?: string): Promise<ReelRow[]> {
-  const filter = q ? Prisma.sql`AND c."reel" ILIKE ${`%${escapeLike(q)}%`}` : Prisma.empty;
-  const rows = await prisma.$queryRaw<
-    {
-      reel: string;
-      status: string | null;
-      cables: bigint;
-      metres: Prisma.Decimal | null;
-      without_metres: bigint;
-      last_laid_on: Date | null;
-    }[]
-  >`
-    SELECT c."reel" AS reel,
-      string_agg(DISTINCT c."reelStatus", ' · ') AS status,
-      count(*) AS cables, sum(${ACTUAL_METRES}) AS metres,
-      count(*) FILTER (WHERE c."actualLengthM" IS NULL) AS without_metres,
-      max(c."laidOn") AS last_laid_on
-    FROM cable c
-    WHERE c."deletedAt" IS NULL AND c."reel" IS NOT NULL ${filter}
-    GROUP BY c."reel"
-    -- Orden natural: «99, 100, 1000» y «B-2, B-10», no el del texto («100, 1000, 99»).
-    ORDER BY substring(c."reel" from '^[^0-9]*'), length(c."reel"), c."reel"`;
-  return rows.map((row) => ({
-    reel: row.reel,
-    status: row.status,
-    cables: Number(row.cables),
-    metres: toNumber(row.metres),
-    withoutMetres: Number(row.without_metres),
-    lastLaidOn: row.last_laid_on,
-  }));
 }
 
 /** The states the Excel gives a reel («En Sitio»), for the notice above its cables. */

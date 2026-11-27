@@ -74,6 +74,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     { href: "/", label: "Inicio", match: "exact" },
     { href: "/cables", label: "Cables", match: "prefix" },
     { href: "/trays", label: "Bandejas", match: "prefix" },
+    { href: "/reels", label: "Bobinas", match: "prefix" },
     { href: "/equipment", label: "Equipos", match: "prefix" },
     { href: "/locations", label: "Ubicaciones", match: "prefix" },
     { href: "/saved", label: "Guardados", match: "prefix" },

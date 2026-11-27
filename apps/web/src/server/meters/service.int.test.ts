@@ -1,6 +1,6 @@
 import { prisma } from "@cables/db";
 import { beforeEach, describe, expect, it } from "vitest";
-import { getMetersDeviation, getMetersProgress, getReelStatus, listReels } from "./service";
+import { getMetersDeviation, getMetersProgress, getReelStatus } from "./service";
 
 let area: string;
 let otherArea: string;
@@ -153,37 +153,7 @@ describe("getMetersDeviation", () => {
   });
 });
 
-describe("listReels", () => {
-  it("lists each reel with its cables, the real metres taken and those still without them", async () => {
-    expect(await listReels()).toEqual([
-      {
-        reel: "B-1",
-        status: "En obra",
-        cables: 2,
-        metres: 110,
-        withoutMetres: 1,
-        lastLaidOn: new Date("2026-11-10"),
-      },
-      { reel: "B-2", status: null, cables: 1, metres: 60, withoutMetres: 0, lastLaidOn: null },
-    ]);
-    expect((await listReels("b-2")).map((row) => row.reel)).toEqual(["B-2"]);
-  });
-
-  it("sorts the reels by their number, not as text", async () => {
-    await prisma.cable.createMany({
-      data: ["1000", "99", "100", "B-10"].map((reel, index) => ({ code: `ZZ-R${index}`, reel })),
-    });
-
-    expect((await listReels()).map((row) => row.reel)).toEqual([
-      "99",
-      "100",
-      "1000",
-      "B-1",
-      "B-2",
-      "B-10",
-    ]);
-  });
-
+describe("getReelStatus", () => {
   it("says the state of one reel, or nothing when the Excel brings none", async () => {
     expect(await getReelStatus("B-1")).toBe("En obra");
     expect(await getReelStatus("B-2")).toBeNull();
@@ -220,6 +190,5 @@ describe("sections with cables in parallel", () => {
     });
     // Each of its cables deviates the same: +5 %.
     expect(Math.round(deviation.top.find((cable) => cable.code === "ZZ-10.1")!.percent)).toBe(5);
-    expect((await listReels("B-3"))[0]).toMatchObject({ cables: 1, metres: 126 });
   });
 });

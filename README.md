@@ -32,7 +32,8 @@ industrial, con sus bandejas y los planos de recorrido.
 | 🗺️ **Planos**           | Cada hoja en teselas con zoom (también con dos dedos o teclado), la bandeja marcada y el recorrido del cable numerado sobre el plano.                            |
 | 🛠️ **Trabajo en campo** | Tender (también a medias, indicando dónde quedó la punta), conectar, desconectar, timbrar y corregir bornas, desde el móvil.                                     |
 | 📊 **Excel del día**    | El estado diario de los dos Excel, con vista previa y discrepancias que se revisan antes de cambiar nada.                                                        |
-| 📏 **Metros**           | Metros tendidos frente a previstos, desviación de los metros reales y bobinas con los cables que salieron de cada una.                                           |
+| 📏 **Metros**           | Metros tendidos frente a previstos y desviación de los metros reales, por nivel y por área.                                                                      |
+| 🧵 **Bobinas**          | Cada bobina con lo que traía, lo usado y lo que queda, sus tiradas cable a cable y lo que falta por tirar de ella.                                               |
 | 👥 **Roles y cuentas**  | Consulta, Técnico, Supervisor y Administrador, y roles a medida. Registro con aprobación, avisos por correo y auditoría de cuentas inmutable.                    |
 | 📈 **Inicio por rol**   | Avance de la obra en cables y en metros, actividad propia o del equipo y lo pendiente de aprobar o revisar.                                                      |
 

@@ -730,13 +730,98 @@ model ExcelImport {
   createdAt              DateTime           @default(now())
   appliedAt              DateTime?
   discardedAt            DateTime?
+  /// Bobinas que trae el Excel (fase 18), validadas al subirlo: sustituyen a las de su tipo
+  /// al aplicarlo. Null si el Excel no tiene sus hojas: las de antes se quedan.
+  reels                  Json?
+  /// Tiradas de las bobinas que trae su hoja, contadas por el navegador: deben llegar todas.
+  /// Null si el Excel no tiene esa hoja: las de antes se quedan.
+  reelPullCount          Int?
   rows                   ExcelImportRow[]
   events                 CableEvent[]
   discrepancies          CableDiscrepancy[]
+  reelsApplied           Reel[]
+  reelPulls              ReelPull[]
 
   @@index([kind, status])
   @@index([status, excelDate])
   @@map("excel_import")
+}
+
+/// Una bobina de los Excel del día (fase 18): las hojas «Seguimientos Bobina cable» y
+/// «DrumsR01». Las escribe solo el Excel al aplicarse; nadie las edita en la web. Sus cables se
+/// buscan al consultar, por la bobina real y la estimada de cada cable.
+model Reel {
+  id           String      @id @default(cuid())
+  kind         ExcelKind
+  /// Cómo se distingue de las otras de su tipo (`reelKey`): el número de almacén en el
+  /// eléctrico; el drum y el número en instrumentación.
+  key          String
+  /// Nombre de fábrica («Drum Identification»).
+  drum         String?
+  /// Número de almacén, el que lleva escrito la bobina.
+  tag          String?
+  /// Código de las tablas de ingeniería, si la lista de almacén lo trae.
+  code         String?
+  /// «Nro Solicitud»: el nombre de la bobina en obra.
+  request      String?
+  description  String?
+  voltage      String?
+  pickedUpOn   DateTime?   @db.Date
+  receivedM    Decimal?    @db.Decimal(12, 2)
+  usedM        Decimal?    @db.Decimal(12, 2)
+  /// Puede ser negativo: el Excel dice que se usó más de lo recibido.
+  remainingM   Decimal?    @db.Decimal(12, 2)
+  pulls        Int?
+  pendingPulls Int?
+  /// Metros que piden las tiradas pendientes.
+  pendingM     Decimal?    @db.Decimal(12, 2)
+  otherM       Decimal?    @db.Decimal(12, 2)
+  deliveredOn  DateTime?   @db.Date
+  deliveredM   Decimal?    @db.Decimal(12, 2)
+  /// En la hoja de seguimiento; si no, solo en la lista de almacén, sin sus cifras.
+  tracked      Boolean
+  /// Veces que la nombra la lista de almacén (varias bobinas con un solo nombre).
+  pieces       Int?
+  /// El Excel que la escribió por última vez.
+  importId     String
+  import       ExcelImport @relation(fields: [importId], references: [id], onDelete: Restrict)
+  excelDate    DateTime    @db.Date
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([kind, key])
+  @@index([tag])
+  @@index([drum])
+  @@map("reel")
+}
+
+/// Una tirada de una bobina (fase 18): una fila de la hoja de tiradas del Excel («Bobina-Tag»
+/// en el eléctrico, un conductor por fila; «Table» en instrumentación). Llegan al subir el Excel y
+/// cuentan desde que se aplica: entonces se borran las de los Excel anteriores de su tipo.
+model ReelPull {
+  id        String      @id @default(cuid())
+  importId  String
+  import    ExcelImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  kind      ExcelKind
+  /// Fila de la hoja, para ordenar como el Excel.
+  row       Int
+  /// Código del cable tal como lo escribe el Excel (el del circuito en el eléctrico).
+  code      String
+  /// Conductor del eléctrico («…T3C2»: tramo 3, conductor 2) y su tramo.
+  conductor String?
+  circuit   Int?
+  /// La bobina: número de almacén y drum.
+  tag       String?
+  drum      String?
+  /// Marcas de metros de la bobina al empezar y al acabar, y lo tirado.
+  startM    Decimal?    @db.Decimal(12, 2)
+  endM      Decimal?    @db.Decimal(12, 2)
+  pulledM   Decimal?    @db.Decimal(12, 2)
+  pulledOn  DateTime?   @db.Date
+
+  @@index([importId])
+  @@index([kind, tag])
+  @@index([code])
+  @@map("reel_pull")
 }
 
 /// Una fila de la vista previa: un cable que el Excel cambia, crea o contradice.

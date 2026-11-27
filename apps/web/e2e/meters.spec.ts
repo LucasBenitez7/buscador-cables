@@ -3,8 +3,10 @@ import { storageStatePath } from "./support/data";
 
 test.use({ storageState: storageStatePath("supervisor") });
 
-// Fase 17: la obra en metros, con sus tres pestañas y la bobina que lleva a sus cables.
-test("«Metros» enseña el avance, la desviación y las bobinas", async ({ page }) => {
+// Fase 17: la obra en metros, con sus pestañas. Las bobinas tienen su página desde la fase 18.
+test("«Metros» enseña el avance y la desviación, y las bobinas van a su página", async ({
+  page,
+}) => {
   await page.goto("/");
   await expect(page.getByText("Metros tendidos")).toBeVisible();
   await page.getByRole("link", { name: "Ver metros" }).click();
@@ -20,6 +22,10 @@ test("«Metros» enseña el avance, la desviación y las bobinas", async ({ page
     "page",
   );
 
-  await tabs.getByRole("link", { name: "Bobinas" }).click();
+  await expect(tabs.getByRole("link", { name: "Bobinas" })).toHaveCount(0);
+
+  // Los enlaces de antes a la pestaña llevan a la página de las bobinas.
+  await page.goto("/meters?tab=bobinas");
+  await expect(page).toHaveURL(/\/reels$/);
   await expect(page.getByRole("search", { name: "Buscar bobinas" })).toBeVisible();
 });

@@ -637,3 +637,6 @@ export function reelText(reel: string | null, reelStatus: string | null): string
   const parts = [reel, reelStatus].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? parts.join(" · ") : null;
 }
+
+/** The cell readers, for the other sheets of the same files (the reels, `excel-reels.ts`). */
+export const excelCell = { text, number, day } as const;

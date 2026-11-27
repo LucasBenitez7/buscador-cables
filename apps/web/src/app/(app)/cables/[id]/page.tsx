@@ -42,6 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { CableStatusBadges } from "@/features/cables/components/cable-status-badges";
 import { DeviationBadge } from "@/features/meters/components/deviation-badge";
 import { getCableDetail } from "@/server/cables/detail";
+import { reelLinksOfCable, type CableReelLink } from "@/server/reels/service";
 import { requireUser, whenSignedIn } from "@/server/session";
 
 export const dynamic = "force-dynamic";
@@ -98,9 +99,15 @@ export default async function CablePage({
   const canEdit = !cable.deleted && hasPermission(user, "cable:update");
   // Dados de baja: sin acciones. El resto ve solo lo que su rol permite.
   const availability = cable.deleted ? [] : cableActionAvailability(user, cable.state);
-  const [routeSheets, hasSheet] = await Promise.all([
+  const [routeSheets, hasSheet, reelLinks] = await Promise.all([
     view === "recorrido" ? getRouteSheets(cable.route, cable.state) : Promise.resolve([]),
     view === "conexionado" ? hasDrawingImage(sheetKey) : Promise.resolve(false),
+    reelLinksOfCable({
+      id: cable.id,
+      code: cable.code,
+      level: cable.level,
+      plannedReel: cable.excel.plannedReel,
+    }),
   ]);
   const correctableEvents = canRunCableAction(user, "CORRECTION")
     ? cable.history.map((entry) => ({
@@ -275,13 +282,23 @@ export default async function CablePage({
                   <Item label="Empresa">{cable.excel.company}</Item>
                   {/* La que se pidió usar; sin bobina real, el estado va con ella. */}
                   <Item label="Bobina estimada">
-                    {cable.excel.reel
-                      ? cable.excel.plannedReel
-                      : reelText(cable.excel.plannedReel, cable.excel.reelStatus)}
+                    {reelLinks.planned.length > 0 ? (
+                      <ReelLinks
+                        links={reelLinks.planned}
+                        status={cable.excel.reel ? null : cable.excel.reelStatus}
+                      />
+                    ) : cable.excel.reel ? (
+                      cable.excel.plannedReel
+                    ) : (
+                      reelText(cable.excel.plannedReel, cable.excel.reelStatus)
+                    )}
                   </Item>
-                  {/* La bobina lleva a sus cables: si sale defectuosa, qué revisar (fase 17). */}
+                  {/* La bobina lleva a su ficha (fase 18): sus metros y todo lo tirado de ella.
+                      Sin ficha, a sus cables en el buscador (fase 17). */}
                   <Item label="Bobina real">
-                    {cable.excel.reel ? (
+                    {reelLinks.real.length > 0 ? (
+                      <ReelLinks links={reelLinks.real} status={cable.excel.reelStatus} />
+                    ) : cable.excel.reel ? (
                       <>
                         <Link
                           href={`/cables?reel=${encodeURIComponent(cable.excel.reel)}`}
@@ -528,5 +545,22 @@ export default async function CablePage({
         ]}
       />
     </article>
+  );
+}
+
+/** «26 · EJ-DRUM 10 · En Sitio»: each reel links to its record (fase 18). */
+function ReelLinks({ links, status }: { links: CableReelLink[]; status: string | null }) {
+  return (
+    <>
+      {links.map((link, index) => (
+        <span key={link.id}>
+          {index > 0 ? " / " : ""}
+          <Link href={`/reels/${link.id}`} className={INLINE_LINK}>
+            {link.label}
+          </Link>
+        </span>
+      ))}
+      {status ? ` · ${status}` : ""}
+    </>
   );
 }

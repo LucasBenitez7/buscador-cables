@@ -81,23 +81,57 @@ describe("readExcelFile", () => {
   });
 
   it("finds the instrumentation Excel by any of its sheet names", async () => {
-    const result = await readExcelFile(
-      file("instrumentacion.xlsx"),
-      sheets({
-        "Tabla IC Maestra": [instrumentationHeader, ["ZZ-3", "Tendido", null, null, "B-9"]],
-        Table: [
-          ["DATE", "CABLE TAG", "PULLED [m]"],
-          [null, "ZZ-3", 47],
-        ],
-      }),
-    );
+    const result = await read("instrumentacion.xlsx", {
+      "Tabla IC Maestra": [instrumentationHeader, ["ZZ-3", "Tendido", null, null, "B-9"]],
+      Table: [
+        ["DATE", "CABLE TAG", "PULLED [m]"],
+        [null, "ZZ-3", 47],
+      ],
+    });
 
     expect(result).toMatchObject({
       ok: true,
       kind: "INSTRUMENTATION",
       excelDate: null,
       rows: [{ code: "ZZ-3", actualLengthM: 47, plannedReel: "B-9", reel: null }],
+      // Sin las hojas de bobinas, los cables se leen igual y el formulario dice por qué.
+      reels: null,
+      reelPulls: null,
+      reelWarning: "Bobinas sin actualizar. Faltan columnas en la hoja «Table»: CABLE DRUM TAG.",
     });
+  });
+
+  it("reads the reels and their pullings, each sheet once", async () => {
+    const tables = {
+      "Tabl IC Maestra": [instrumentationHeader, ["ZZ-3", "Tendido", null, null, "EJ7"]],
+      Table: [
+        ["DATE", "CABLE TAG", "CABLE DRUM TAG", "CABLE DRUM Nº", "PULLED [m]"],
+        [null, "ZZ-3", 7, "EJ7", 47],
+      ],
+      "Seguimientos Bobina cable": [
+        [
+          "Drum Identification",
+          "EJ TAG NUMBER",
+          "Metros Recibidos",
+          "Metros Usados",
+          "Metros Restantes",
+          "Tiradas reales",
+          "Tiradas pendientes",
+        ],
+        ["EJ7", 7, 500, 47, 453, 1, 0],
+      ],
+    };
+    const reader = vi.fn(sheets(tables));
+
+    const result = await readExcelFile(file("ic.xlsx"), reader, names(tables));
+
+    expect(result).toMatchObject({
+      ok: true,
+      reels: [{ drum: "EJ7", tag: "7", usedM: 47, tracked: true }],
+      reelPulls: [{ code: "ZZ-3", tag: "7", drum: "EJ7", pulledM: 47 }],
+      reelWarning: null,
+    });
+    expect(reader.mock.calls.filter(([, sheet]) => sheet === "Table")).toHaveLength(1);
   });
 
   it("asks for the sheet of the pullings in the instrumentation Excel", async () => {

@@ -409,11 +409,31 @@ Añadido el 2026-11-13 para cargar los listados y planos del proyecto (estructur
   comparar con el mismo conjunto que lo previsto; los retirados y dados de baja no cuentan. El
   área de un cable es la de su origen o, si no lo trae, la de la primera bandeja de su
   recorrido. Umbrales y textos de la desviación en `packages/shared/src/meters.ts`. Las
-  bobinas se ordenan de forma natural y enlazan al buscador (`reel` en `CableSearch`).
+  bobinas tienen su página desde la fase 18.
 - **Pestañas en forma de pastilla**: `components/tab-links.tsx` (Metros, vista previa del
   Excel, Pendientes de revisar y Catálogos).
 - `effect` forzado a ≥ 3.22.1 en `pnpm-workspace.yaml` (GHSA-7589-6fvf-x4pw, llega por
   Prisma): quitar el override cuando Prisma lo traiga por sí mismo.
+
+### Bobinas (fase 18)
+
+- **Lectores** puros en `packages/shared/src/excel-reels.ts`: `readExcelReels` (seguimiento y
+  lista de almacén, unidas por `reelKey`) y `readExcelReelPulls` (la hoja de tiradas). Columnas
+  por nombre; las cabeceras que cambian de palabra («… TAG NUMBER») se buscan por patrón.
+- **Subida**: las bobinas van en `startExcelPreview` (`ExcelImport.reels`, JSON validado) con el
+  número de tiradas que llegarán (`reelPullCount`); las tiradas, por partes
+  (`addExcelReelPullsPart`, a `reel_pull`). `finishExcelPreview` comprueba que han llegado
+  todas. Las bobinas nunca bloquean el Excel: sin sus hojas, `reels` y `reelPullCount` son null.
+- **Al aplicar** (`server/reels/apply.ts`, en el último lote): las bobinas sustituyen a las de su
+  tipo conservando su id (`@@unique([kind, key])`) y se borran las tiradas de los Excel
+  anteriores de su tipo. Solo cuentan las tiradas de Excel aplicados.
+- **Cruce** al consultar (`server/reels/service.ts` y `packages/shared/src/reels.ts`): cada
+  tirada busca su bobina (`createPullReelFinder`) y su cable (`pullCableCode`: el tramo, si no
+  el código); los pendientes salen de la bobina estimada (`createReelMatcher`,
+  `pendingByReel`). El tipo de un cable sale de su nivel (L1 instrumentación) o, sin nivel, de
+  su último evento del Excel.
+- Páginas `/reels` y `/reels/[id]`; la ficha del cable enlaza sus bobinas
+  (`reelLinksOfCable`).
 
 ## Marca, cargas y avisos
 

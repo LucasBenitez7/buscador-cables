@@ -5,6 +5,7 @@ import type { ActionResult } from "@/lib/action-result";
 import {
   ExcelImportError,
   addExcelPreviewPart,
+  addExcelReelPullsPart,
   applyExcelBatch,
   cancelExcelUpload,
   discardExcelPreview,
@@ -57,6 +58,14 @@ export async function startExcelUploadAction(input: unknown) {
 export async function addExcelPartAction(input: unknown) {
   return run(async ({ user }) => {
     await addExcelPreviewPart(user, input);
+    return {};
+  });
+}
+
+/** One part of the pullings of the reels (fase 18). */
+export async function addExcelReelPullsAction(input: unknown) {
+  return run(async ({ user }) => {
+    await addExcelReelPullsPart(user, input);
     return {};
   });
 }

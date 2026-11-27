@@ -2,17 +2,25 @@ import {
   EXCEL_KINDS,
   EXCEL_LENGTH_SHEETS,
   EXCEL_PLANNED_REEL_SHEETS,
+  EXCEL_REEL_PULL_SHEETS,
+  EXCEL_REEL_SHEETS,
   EXCEL_SHEETS,
   excelDateFromFileName,
   findPlannedReelSheet,
+  normalizeHeader,
   readExcelLengths,
   readExcelPlannedReels,
+  readExcelReelPulls,
+  readExcelReels,
   readExcelStatus,
+  reelSheetMessage,
   type ExcelCell,
   type ExcelIgnoredRow,
   type ExcelKind,
   type ExcelLengths,
   type ExcelPlannedReels,
+  type ExcelReel,
+  type ExcelReelPull,
   type ExcelStatusRow,
 } from "@cables/shared";
 
@@ -24,6 +32,12 @@ export type ReadExcelResult =
       ignored: ExcelIgnoredRow[];
       /** From the name of the file, "YYYY-MM-DD"; null when it does not carry one. */
       excelDate: string | null;
+      /** Its reels (fase 18); null when it has neither of their sheets. */
+      reels: ExcelReel[] | null;
+      /** The pullings of its reels; null when it has no sheet of them. */
+      reelPulls: ExcelReelPull[] | null;
+      /** Why its reels or pullings could not be read: the cables go on without them. */
+      reelWarning: string | null;
     }
   | { ok: false; message: string };
 
@@ -109,6 +123,67 @@ async function readPlannedReels(
   return { ok: true, plannedReels: result.plannedReels };
 }
 
+/** The sheet with one of the names among the ones of the file, ignoring case and spaces. */
+function sheetNamed(sheetNames: readonly string[], wanted: readonly string[]): string | null {
+  for (const name of wanted) {
+    const found = sheetNames.find((sheet) => normalizeHeader(sheet) === normalizeHeader(name));
+    if (found !== undefined) return found;
+  }
+  return null;
+}
+
+type ReelsRead = {
+  reels: ExcelReel[] | null;
+  reelPulls: ExcelReelPull[] | null;
+  reelWarning: string | null;
+};
+
+/**
+ * The reels of a file (fase 18), from its follow-up and its stock list, and the pullings of
+ * each one. They never stop the Excel of the day: a sheet that lacks columns is left out (its
+ * reels or pullings stay as the last Excel left them) and the form says why.
+ */
+async function readReels(
+  file: File,
+  kind: ExcelKind,
+  readSheet: SheetReader,
+  readSheetNames: SheetNamesReader,
+): Promise<ReelsRead> {
+  const warnings: string[] = [];
+  const sheetNames = await readSheetNames(file);
+  const read = async (wanted: readonly string[]) => {
+    const name = sheetNamed(sheetNames, wanted);
+    const table = name === null ? null : await readSheet(file, name);
+    return name === null || !table ? null : { name, table };
+  };
+  const tracking = await read(EXCEL_REEL_SHEETS.tracking);
+  const stock = await read(EXCEL_REEL_SHEETS.stock);
+  let reels: ExcelReel[] | null = null;
+  if (tracking || stock) {
+    const result = readExcelReels(kind, {
+      tracking: tracking?.table ?? null,
+      stock: stock?.table ?? null,
+    });
+    if (result.ok) reels = result.reels;
+    else {
+      const sheet = result.sheet === "tracking" ? tracking! : stock!;
+      warnings.push(reelSheetMessage(result, sheet.name));
+    }
+  }
+  const pullSheet = await read(EXCEL_REEL_PULL_SHEETS[kind]);
+  let reelPulls: ExcelReelPull[] | null = null;
+  if (pullSheet) {
+    const result = readExcelReelPulls(kind, pullSheet.table);
+    if (result.ok) reelPulls = result.pulls;
+    else warnings.push(missing(pullSheet.name, result.missingColumns).message);
+  }
+  return {
+    reels,
+    reelPulls,
+    reelWarning: warnings.length > 0 ? `Bobinas sin actualizar. ${warnings.join(" ")}` : null,
+  };
+}
+
 /**
  * Reads an Excel of the day in the browser: finds which of the two it is by its sheet, and
  * reads only the sheets it needs (the files have many). The server validates it all again.
@@ -118,6 +193,17 @@ export async function readExcelFile(
   readSheet: SheetReader = readWithLibrary,
   readSheetNames: SheetNamesReader = sheetNamesWithLibrary,
 ): Promise<ReadExcelResult> {
+  // Una hoja se lee una sola vez aunque la pidan dos lectores («Table»: metros y tiradas).
+  const sheets = new Map<string, Promise<ExcelCell[][] | null>>();
+  const uncached = readSheet;
+  readSheet = (sheetFile, sheet) => {
+    let table = sheets.get(sheet);
+    if (!table) {
+      table = uncached(sheetFile, sheet);
+      sheets.set(sheet, table);
+    }
+    return table;
+  };
   try {
     for (const kind of EXCEL_KINDS) {
       for (const sheet of EXCEL_SHEETS[kind].sheetNames) {
@@ -130,6 +216,11 @@ export async function readExcelFile(
         if (!lengths.ok) return lengths;
         const planned = await readPlannedReels(file, kind, readSheet, readSheetNames);
         if (!planned.ok) return planned;
+        const reels = await readReels(file, kind, readSheet, readSheetNames).catch(() => ({
+          reels: null,
+          reelPulls: null,
+          reelWarning: "Bobinas sin actualizar: no se pudieron leer sus hojas.",
+        }));
         const result = readExcelStatus(kind, table, {
           lengths: lengths.lengths,
           plannedReels: planned.plannedReels,
@@ -141,6 +232,7 @@ export async function readExcelFile(
           rows: result.rows,
           ignored: result.ignored,
           excelDate: excelDateFromFileName(file.name),
+          ...reels,
         };
       }
     }
