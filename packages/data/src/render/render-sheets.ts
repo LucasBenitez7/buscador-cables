@@ -12,7 +12,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { createCanvas } from "@napi-rs/canvas";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { isCableSheetKey } from "@cables/shared";
+import { isCableSheetKey, isRedMarksKey } from "@cables/shared";
 import sharp from "sharp";
 import type { ProjectSheet } from "../extract/schema";
 
@@ -69,8 +69,9 @@ export async function renderSheets(options: {
     if (!wanted.has(sheetKey(sheet))) wanted.set(sheetKey(sheet), sheet);
   }
   for (const key of Object.keys(manifest)) {
-    // The cable pages share the manifest: `renderCablePages` looks after them.
-    if (wanted.has(key) || isCableSheetKey(key)) continue;
+    // The cable pages and the red marks share the manifest: `renderCablePages` and
+    // `renderRedMarks` look after them.
+    if (wanted.has(key) || isCableSheetKey(key) || isRedMarksKey(key)) continue;
     await removeTiles(outDir, key);
     delete manifest[key];
     summary.removed += 1;
