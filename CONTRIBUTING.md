@@ -145,6 +145,7 @@ gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes "..."
 | `v1.8.3`  | #83         | «Excel del día» más claro: el más reciente y el avance al aplicar   |
 | `v1.9.0`  | #90         | Bobina estimada y real en la ficha, y visitas con Vercel Analytics  |
 | `v1.10.0` | #96         | Fases 18 y 19: bobinas, dónde está cada equipo y red marks          |
+| `v1.10.1` | #99         | Menú más holgado, con «Excel» en Gestión                            |
 
 Los PR #38, #43 y #51 llevaron mejoras a producción sin tag propio; quedan incluidas en la
 versión siguiente.
